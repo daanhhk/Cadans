@@ -13,11 +13,14 @@ live tot cutover.
 
 **Fase 0 — monorepo-scaffold COMPLEET.** Lokale gate groen
 (lint + typecheck + test + build). Baseline vitest = **1/0**.
+CI groen op GitHub Actions. NB: pnpm 11.9 vereist Node ≥ 22.13 → CI en lokaal
+draaien **Node 24**. De allereerste CI-run (Node 20) faalde in `setup-node`
+omdat pnpm 11.9 onder Node 20 `node:sqlite` mist; opgelost door de Node-bump.
 
 ## Stack
 
 - pnpm workspaces, TypeScript strict, vitest, Biome (lint+format),
-  GitHub Actions CI. Node >= 20.
+  GitHub Actions CI. Node >= 22 (CI + lokaal = Node 24; pnpm 11.9 vloer).
 - **packages/engine** — pure TS (geen DB/env/fetch).
 - **apps/web** — Vite + React + TS + vite-plugin-pwa.
 - **workers/api** — Hono + Drizzle-skelet (nog geen schema).
