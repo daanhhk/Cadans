@@ -51,6 +51,32 @@
           "allowTrailingCommas": true
         }
       }
+    },
+    {
+      "includes": ["packages/engine/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off",
+            "noImplicitAnyLet": "off",
+            "noAssignInExpressions": "off",
+            "noGlobalIsNan": "off",
+            "noGlobalIsFinite": "off"
+          },
+          "correctness": {
+            "noInnerDeclarations": "off",
+            "noUnusedImports": "off",
+            "noUnusedVariables": "off",
+            "noUnusedFunctionParameters": "off"
+          },
+          "complexity": {
+            "useOptionalChain": "off"
+          },
+          "style": {
+            "useTemplate": "off"
+          }
+        }
+      }
     }
   ]
 }

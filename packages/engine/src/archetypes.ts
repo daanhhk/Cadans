@@ -1,0 +1,1397 @@
+/**
+ * archetypes.ts — doel-agnostische archetype-laag + goalWorkout_-selector.
+ * Port of training/src/Archetypes.gs (pure). Cross-module: COACH_INTENT_ENGINE_TYPE_
+ * + intentFromType_ from ./coach are used only inside function bodies (ES live
+ * bindings → the planner↔archetypes↔coach cycle resolves at call time).
+ */
+import { COACH_INTENT_ENGINE_TYPE_, intentFromType_ } from "./coach";
+import { bpmBelow, bpmRange, wattsRange } from "./utils";
+import { pctZoneBucket_, tssFromZoneMinutes_ } from "./zones";
+
+export const ARCHETYPE_STRUCTUURTYPES = [
+  "steady",
+  "intervals",
+  "pyramid",
+  "microburst",
+  "sandwich",
+  "race_sim",
+];
+
+export const ARCHETYPE_EFFECT_TAGS = [
+  "herstel",
+  "duur",
+  "tempo",
+  "sweetspot",
+  "drempel",
+  "vo2",
+];
+
+export const ARCHETYPE_LOAD_FROM_BUCKET_: any = {
+  rust: "low",
+  z2: "low",
+  tempo: "high",
+  drempel: "high",
+  anaeroob: "anaerobic",
+};
+
+export function archBpm_(kind: string, lthr: number): string {
+  if (!lthr) return "—";
+  if (kind === "warmup") return bpmBelow(lthr, 85);
+  if (kind === "cooldown") return "—";
+  if (kind === "work") return bpmRange(lthr, 88, 100);
+  return bpmRange(lthr, 78, 90); // steady / fill
+}
+
+export function expandArchetype_(rec: any, ctx: any): any {
+  ctx = ctx || {};
+  const ftp = ctx.ftp,
+    lthr = ctx.lthr || null;
+  const mf = ctx.mesoFactor != null ? ctx.mesoFactor : 1.0;
+  const fo = ctx.faseOffset || 0;
+  const doelMin = ctx.doelMin != null ? ctx.doelMin : rec.duurRange[0];
+  function adj(p: number): number {
+    return Math.round(p * mf) + fo;
+  }
+  function r1(x: number): number {
+    return Math.round(x * 10) / 10;
+  }
+
+  const blokken: any[] = [],
+    structuur: any[] = [];
+  function emit(
+    label: string,
+    durMin: number,
+    durStr: string,
+    pctLo: number,
+    pctHi: number,
+    kind: string,
+    note?: string,
+  ): number {
+    const min = r1(durMin);
+    const mid = Math.round((pctLo + pctHi) / 2);
+    blokken.push({
+      minuten: min,
+      zone: pctZoneBucket_(mid),
+      pctLo: pctLo,
+      pctHi: pctHi,
+    });
+    structuur.push([
+      label,
+      durStr,
+      wattsRange(ftp, pctLo, pctHi),
+      archBpm_(kind, lthr),
+      note || "",
+    ]);
+    return min;
+  }
+
+  // (3) warmup
+  const w = rec.warmup;
+  const wLo = w.pctLo != null ? adj(w.pctLo) : adj(w.pct);
+  const wHi = w.pctHi != null ? adj(w.pctHi) : adj(w.pct);
+  let preMin = emit(
+    "Warmup",
+    w.durMin,
+    `${w.durMin} min`,
+    wLo,
+    wHi,
+    "warmup",
+    "Inrijden, opbouwend",
+  );
+
+  // (2) core
+  rec.core.forEach((c: any) => {
+    if (c.kind === "steady") {
+      const p = adj(c.pct);
+      preMin += emit(
+        c.label,
+        c.durMin,
+        `${c.durMin} min`,
+        p,
+        p,
+        "work",
+        c.note || "Stabiel",
+      );
+    } else {
+      // int
+      const onMin = c.onMin != null ? c.onMin : c.onSec / 60;
+      const offMin = c.offMin != null ? c.offMin : c.offSec / 60;
+      const onUnit = c.onMin != null ? "min" : "sec";
+      const offUnit = c.offMin != null ? "min" : "sec";
+      const onVal = c.onMin != null ? c.onMin : c.onSec;
+      const offVal = c.offMin != null ? c.offMin : c.offSec;
+      let onLo: number, onHi: number;
+      if (c.onPctLo != null && c.onPctHi != null) {
+        onLo = adj(c.onPctLo);
+        onHi = adj(c.onPctHi);
+      } else {
+        const op = adj(c.onPct);
+        onLo = op;
+        onHi = op;
+      }
+      const onMid = Math.round((onLo + onHi) / 2);
+      const offP = adj(c.offPct);
+      structuur.push([
+        c.label,
+        `${c.reps}x ${onVal} ${onUnit}`,
+        wattsRange(ftp, onLo, onHi),
+        archBpm_("work", lthr),
+        `${offVal} ${offUnit} rust @ ${offP}%`,
+      ]);
+      for (let rr = 0; rr < c.reps; rr++) {
+        if (onMin > 0) {
+          blokken.push({
+            minuten: r1(onMin),
+            zone: pctZoneBucket_(onMid),
+            pctLo: onLo,
+            pctHi: onHi,
+          });
+          preMin += r1(onMin);
+        }
+        if (offMin > 0) {
+          blokken.push({
+            minuten: r1(offMin),
+            zone: pctZoneBucket_(offP),
+            pctLo: offP,
+            pctHi: offP,
+          });
+          preMin += r1(offMin);
+        }
+      }
+    }
+  });
+
+  // (4) fill-endurance
+  const cd = rec.cooldown;
+  const cLo = cd.pctLo != null ? adj(cd.pctLo) : adj(cd.pct);
+  const cHi = cd.pctHi != null ? adj(cd.pctHi) : adj(cd.pct);
+  const fixed = preMin + cd.durMin;
+  const fillMin = Math.round(doelMin - fixed);
+  const tooLong =
+    doelMin < fixed ? { available: doelMin, needed: fixed } : null;
+  if (fillMin >= 1) {
+    const fp = adj(rec.fill.pct);
+    emit(
+      "Z2 endurance",
+      fillMin,
+      `${fillMin} min`,
+      fp,
+      fp,
+      "steady",
+      "Aanvullende duur — rustige Z2",
+    );
+  }
+  emit(
+    "Cooldown",
+    cd.durMin,
+    `${cd.durMin} min`,
+    cLo,
+    cHi,
+    "cooldown",
+    "Easy uit",
+  );
+
+  // (7) zones + intent + totaalMin
+  const intent: any = { low: 0, high: 0, anaerobic: 0 };
+  let totaal = 0;
+  const zoneSet: any = {};
+  blokken.forEach((b: any) => {
+    totaal += b.minuten;
+    const lf = ARCHETYPE_LOAD_FROM_BUCKET_[b.zone] || "low";
+    intent[lf] += b.minuten;
+    zoneSet[lf] = true;
+  });
+  intent.low = Math.round(intent.low);
+  intent.high = Math.round(intent.high);
+  intent.anaerobic = Math.round(intent.anaerobic);
+  const zones = ["low", "high", "anaerobic"].filter((z) => zoneSet[z]);
+
+  const out: any = {
+    naam: rec.naam,
+    focus: rec.focus,
+    zones: zones,
+    totaalMin: totaal,
+    structuur: structuur,
+    intent: intent,
+    blokken: blokken,
+    tss: tssFromZoneMinutes_(intent),
+    eindopmerking: rec.eindopmerking,
+  };
+  if (tooLong) out.tooLong = tooLong;
+  return out;
+}
+
+export function archetypeFixtures_(): any[] {
+  return [
+    {
+      id: "fx_steady_duur",
+      structuurtype: "steady",
+      effectTags: ["duur"],
+      zone: 2,
+      duurRange: [75, 180],
+      warmup: { durMin: 10, pctLo: 50, pctHi: 65 },
+      core: [{ kind: "steady", label: "Z2 base", durMin: 60, pct: 65 }],
+      cooldown: { durMin: 5, pctLo: 45, pctHi: 55 },
+      fill: { zone: 2, pct: 65 },
+      naam: "Fixture Steady Duur",
+      focus: "aerobic base",
+      eindopmerking: "Test-fixture steady.",
+    },
+    {
+      id: "fx_drempel_int",
+      structuurtype: "intervals",
+      effectTags: ["drempel"],
+      zone: 4,
+      duurRange: [60, 120],
+      warmup: { durMin: 12, pctLo: 50, pctHi: 65 },
+      core: [
+        {
+          kind: "int",
+          label: "Drempel",
+          reps: 3,
+          onMin: 12,
+          onPct: 98,
+          offMin: 4,
+          offPct: 55,
+        },
+      ],
+      cooldown: { durMin: 8, pctLo: 45, pctHi: 55 },
+      fill: { zone: 2, pct: 65 },
+      naam: "Fixture Drempel Intervallen",
+      focus: "sustained threshold",
+      eindopmerking: "Test-fixture intervals.",
+    },
+    {
+      id: "fx_microburst_vo2",
+      structuurtype: "microburst",
+      effectTags: ["vo2"],
+      zone: 5,
+      duurRange: [35, 75],
+      warmup: { durMin: 12, pctLo: 50, pctHi: 65 },
+      core: [
+        {
+          kind: "int",
+          label: "Microbursts",
+          reps: 9,
+          onSec: 30,
+          onPct: 118,
+          offSec: 15,
+          offPct: 50,
+        },
+      ],
+      cooldown: { durMin: 8, pctLo: 45, pctHi: 55 },
+      fill: { zone: 2, pct: 65 },
+      naam: "Fixture Microburst",
+      focus: "vo2 capacity",
+      eindopmerking: "Test-fixture microburst.",
+    },
+  ];
+}
+
+export const ARCHETYPES: any[] = [
+  // ── DREMPEL ──
+  {
+    id: "threshold_long",
+    structuurtype: "intervals",
+    effectTags: ["drempel"],
+    zone: 4,
+    duurRange: [82, 120],
+    warmup: { durMin: 15, pctLo: 55, pctHi: 75 },
+    core: [
+      {
+        kind: "int",
+        label: "Drempel",
+        reps: 3,
+        onMin: 14,
+        onPctLo: 95,
+        onPctHi: 102,
+        offMin: 5,
+        offPct: 55,
+      },
+    ],
+    cooldown: { durMin: 10, pctLo: 45, pctHi: 55 },
+    fill: { zone: 2, pct: 65 },
+    naam: "Drempel lang 3×14",
+    focus: "sustained threshold",
+    eindopmerking: "Lange drempelblokken — pacen als een alpine col.",
+  },
+  {
+    id: "threshold_overunder",
+    structuurtype: "intervals",
+    effectTags: ["drempel"],
+    zone: 4,
+    duurRange: [54, 90],
+    warmup: { durMin: 15, pctLo: 55, pctHi: 75 },
+    core: [
+      {
+        kind: "steady",
+        label: "Over",
+        durMin: 3,
+        pct: 105,
+        note: "Boven FTP — lactaat opbouwen",
+      },
+      {
+        kind: "steady",
+        label: "Under",
+        durMin: 4,
+        pct: 92,
+        note: "Onder FTP — klaren, niet uitrusten",
+      },
+      {
+        kind: "steady",
+        label: "Herstel",
+        durMin: 4,
+        pct: 55,
+        note: "Easy tussen de sets",
+      },
+      { kind: "steady", label: "Over", durMin: 3, pct: 105, note: "Boven FTP" },
+      { kind: "steady", label: "Under", durMin: 4, pct: 92, note: "Onder FTP" },
+      {
+        kind: "steady",
+        label: "Herstel",
+        durMin: 4,
+        pct: 55,
+        note: "Easy tussen de sets",
+      },
+      { kind: "steady", label: "Over", durMin: 3, pct: 105, note: "Boven FTP" },
+      {
+        kind: "steady",
+        label: "Under",
+        durMin: 4,
+        pct: 92,
+        note: "Onder FTP, afsluiten",
+      },
+    ],
+    cooldown: { durMin: 10, pctLo: 45, pctHi: 55 },
+    fill: { zone: 2, pct: 65 },
+    naam: "Drempel over-under 3 sets",
+    focus: "lactate clearance",
+    eindopmerking: "Wisselen boven/onder FTP — leert klaren onder druk.",
+  },
+  // ── SWEET SPOT ──
+  {
+    id: "sweetspot_long",
+    structuurtype: "intervals",
+    effectTags: ["sweetspot"],
+    zone: 4,
+    duurRange: [103, 135],
+    warmup: { durMin: 15, pctLo: 55, pctHi: 70 },
+    core: [
+      {
+        kind: "int",
+        label: "Sweet Spot",
+        reps: 3,
+        onMin: 20,
+        onPctLo: 88,
+        onPctHi: 93,
+        offMin: 6,
+        offPct: 50,
+      },
+    ],
+    cooldown: { durMin: 10, pctLo: 45, pctHi: 55 },
+    fill: { zone: 2, pct: 65 },
+    naam: "Sweet Spot lang 3×20",
+    focus: "climbing endurance",
+    eindopmerking: "Lange sweet-spot blokken — uren in de klim-zone.",
+  },
+  {
+    id: "sweetspot_pyramid",
+    structuurtype: "pyramid",
+    effectTags: ["sweetspot"],
+    zone: 4,
+    duurRange: [89, 120],
+    warmup: { durMin: 12, pctLo: 55, pctHi: 70 },
+    core: [
+      { kind: "steady", label: "SS 10", durMin: 10, pct: 88, note: "Opbouwen" },
+      {
+        kind: "steady",
+        label: "Herstel",
+        durMin: 3,
+        pct: 55,
+        note: "Kort lossen",
+      },
+      {
+        kind: "steady",
+        label: "SS 15",
+        durMin: 15,
+        pct: 90,
+        note: "Middenblok",
+      },
+      {
+        kind: "steady",
+        label: "Herstel",
+        durMin: 3,
+        pct: 55,
+        note: "Kort lossen",
+      },
+      { kind: "steady", label: "SS 20", durMin: 20, pct: 92, note: "Piekblok" },
+      {
+        kind: "steady",
+        label: "Herstel",
+        durMin: 3,
+        pct: 55,
+        note: "Kort lossen",
+      },
+      { kind: "steady", label: "SS 15", durMin: 15, pct: 90, note: "Afbouwen" },
+    ],
+    cooldown: { durMin: 8, pctLo: 45, pctHi: 55 },
+    fill: { zone: 2, pct: 65 },
+    naam: "Sweet Spot piramide",
+    focus: "climbing endurance",
+    eindopmerking: "Oplopend/aflopend — variatie binnen de sweet spot.",
+  },
+  {
+    id: "sweetspot_short",
+    structuurtype: "intervals",
+    effectTags: ["sweetspot"],
+    zone: 4,
+    duurRange: [52, 90],
+    warmup: { durMin: 12, pctLo: 55, pctHi: 70 },
+    core: [
+      {
+        kind: "int",
+        label: "Sweet Spot",
+        reps: 2,
+        onMin: 12,
+        onPctLo: 88,
+        onPctHi: 92,
+        offMin: 4,
+        offPct: 50,
+      },
+    ],
+    cooldown: { durMin: 8, pctLo: 45, pctHi: 55 },
+    fill: { zone: 2, pct: 65 },
+    naam: "Sweet Spot kort 2×12",
+    focus: "sweet spot",
+    eindopmerking: "Korte sweet-spot dosis — past in een doordeweekse sessie.",
+  },
+  {
+    id: "sweetspot_2x10",
+    structuurtype: "intervals",
+    effectTags: ["sweetspot"],
+    zone: 4,
+    restrictTo: ["onderhoud"],
+    duurRange: [35, 45],
+    warmup: { durMin: 6, pctLo: 55, pctHi: 70 },
+    core: [
+      {
+        kind: "int",
+        label: "Sweet Spot",
+        reps: 2,
+        onMin: 10,
+        onPctLo: 88,
+        onPctHi: 92,
+        offMin: 2,
+        offPct: 50,
+      },
+    ],
+    cooldown: { durMin: 5, pctLo: 45, pctHi: 55 },
+    fill: { zone: 2, pct: 65 },
+    naam: "Sweet Spot 2×10 kort",
+    focus: "sweet spot",
+    eindopmerking:
+      "Korte sweet-spot-onderhoudsdosis — twee blokken binnen 30-45 min.",
+  },
+  // ── VO2 ──
+  {
+    id: "vo2_long",
+    structuurtype: "intervals",
+    effectTags: ["vo2"],
+    zone: 5,
+    duurRange: [65, 100],
+    warmup: { durMin: 15, pctLo: 55, pctHi: 80 },
+    core: [
+      {
+        kind: "int",
+        label: "VO2 5×4",
+        reps: 5,
+        onMin: 4,
+        onPctLo: 110,
+        onPctHi: 115,
+        offMin: 4,
+        offPct: 50,
+      },
+    ],
+    cooldown: { durMin: 10, pctLo: 45, pctHi: 55 },
+    fill: { zone: 2, pct: 65 },
+    naam: "VO2max 5×4",
+    focus: "vo2 capacity",
+    eindopmerking: "Klassieke 5×4 — maximaal aerobe prikkel.",
+  },
+  {
+    id: "vo2_hill_repeats",
+    structuurtype: "intervals",
+    effectTags: ["vo2"],
+    zone: 5,
+    duurRange: [59, 95],
+    warmup: { durMin: 15, pctLo: 55, pctHi: 80 },
+    core: [
+      {
+        kind: "int",
+        label: "Hill reps",
+        reps: 9,
+        onSec: 90,
+        onPctLo: 112,
+        onPctHi: 118,
+        offMin: 2,
+        offPct: 50,
+      },
+    ],
+    cooldown: { durMin: 12, pctLo: 45, pctHi: 55 },
+    fill: { zone: 2, pct: 65 },
+    naam: "VO2 Hill Repeats 9×90s",
+    focus: "explosive climbing",
+    eindopmerking: "Korte explosieve klim-efforts — punchy beklimmingen.",
+  },
+  {
+    id: "vo2_microburst",
+    structuurtype: "microburst",
+    effectTags: ["vo2"],
+    zone: 5,
+    duurRange: [35, 70],
+    warmup: { durMin: 15, pctLo: 55, pctHi: 80 },
+    core: [
+      {
+        kind: "int",
+        label: "Microbursts 30/30",
+        reps: 10,
+        onSec: 30,
+        onPctLo: 120,
+        onPctHi: 130,
+        offSec: 30,
+        offPct: 50,
+      },
+    ],
+    cooldown: { durMin: 10, pctLo: 45, pctHi: 55 },
+    fill: { zone: 2, pct: 65 },
+    naam: "Anaerobe capaciteit 10×30/30",
+    focus: "anaerobic capacity",
+    eindopmerking: "Snelle herhalingen — anaerobe capaciteit + herstel.",
+  },
+  {
+    id: "vo2_pyramid",
+    structuurtype: "pyramid",
+    effectTags: ["vo2"],
+    zone: 5,
+    duurRange: [42, 75],
+    warmup: { durMin: 15, pctLo: 55, pctHi: 80 },
+    core: [
+      { kind: "steady", label: "VO2 1", durMin: 1, pct: 115, note: "Opbouwen" },
+      { kind: "steady", label: "Herstel", durMin: 2, pct: 50, note: "Lossen" },
+      { kind: "steady", label: "VO2 2", durMin: 2, pct: 115, note: "Door" },
+      { kind: "steady", label: "Herstel", durMin: 2, pct: 50, note: "Lossen" },
+      { kind: "steady", label: "VO2 3", durMin: 3, pct: 115, note: "Piek" },
+      { kind: "steady", label: "Herstel", durMin: 2, pct: 50, note: "Lossen" },
+      { kind: "steady", label: "VO2 2", durMin: 2, pct: 115, note: "Afbouwen" },
+      { kind: "steady", label: "Herstel", durMin: 2, pct: 50, note: "Lossen" },
+      {
+        kind: "steady",
+        label: "VO2 1",
+        durMin: 1,
+        pct: 115,
+        note: "Afsluiten",
+      },
+    ],
+    cooldown: { durMin: 10, pctLo: 45, pctHi: 55 },
+    fill: { zone: 2, pct: 65 },
+    naam: "VO2 piramide 1-2-3-2-1",
+    focus: "vo2 capacity",
+    eindopmerking: "Oplopende VO2-treden — variatie in de prikkel.",
+  },
+
+  // ── VO2 (zone 5) ──
+  {
+    id: "vo2_4x5",
+    structuurtype: "intervals",
+    effectTags: ["vo2"],
+    zone: 5,
+    duurRange: [61, 100],
+    warmup: { durMin: 15, pctLo: 55, pctHi: 80 },
+    core: [
+      {
+        kind: "int",
+        label: "VO2 4×5",
+        reps: 4,
+        onMin: 5,
+        onPctLo: 106,
+        onPctHi: 112,
+        offMin: 4,
+        offPct: 50,
+      },
+    ],
+    cooldown: { durMin: 10, pctLo: 45, pctHi: 55 },
+    fill: { zone: 2, pct: 65 },
+    naam: "VO2max 4×5",
+    focus: "vo2 capacity",
+    eindopmerking: "Langere VO2-blokken — iets lager, langer aanhouden.",
+  },
+  {
+    id: "vo2_40_20",
+    structuurtype: "microburst",
+    effectTags: ["vo2"],
+    zone: 5,
+    duurRange: [37, 75],
+    warmup: { durMin: 15, pctLo: 55, pctHi: 80 },
+    core: [
+      {
+        kind: "int",
+        label: "VO2 40/20",
+        reps: 12,
+        onSec: 40,
+        onPctLo: 120,
+        onPctHi: 125,
+        offSec: 20,
+        offPct: 55,
+      },
+    ],
+    cooldown: { durMin: 10, pctLo: 45, pctHi: 55 },
+    fill: { zone: 2, pct: 65 },
+    naam: "VO2max 40/20",
+    focus: "vo2 microburst",
+    eindopmerking: "Rønnestad-microbursts — hoog vermogen, korte pauzes.",
+  },
+  {
+    id: "vo2_30_15_sets",
+    structuurtype: "microburst",
+    effectTags: ["vo2"],
+    zone: 5,
+    duurRange: [62, 85],
+    warmup: { durMin: 15, pctLo: 55, pctHi: 80 },
+    core: [
+      {
+        kind: "int",
+        label: "30/15 set 1",
+        reps: 13,
+        onSec: 30,
+        onPctLo: 118,
+        onPctHi: 125,
+        offSec: 15,
+        offPct: 55,
+      },
+      {
+        kind: "steady",
+        label: "Herstel",
+        durMin: 3,
+        pct: 55,
+        note: "Tussen de sets",
+      },
+      {
+        kind: "int",
+        label: "30/15 set 2",
+        reps: 13,
+        onSec: 30,
+        onPctLo: 118,
+        onPctHi: 125,
+        offSec: 15,
+        offPct: 55,
+      },
+      {
+        kind: "steady",
+        label: "Herstel",
+        durMin: 3,
+        pct: 55,
+        note: "Tussen de sets",
+      },
+      {
+        kind: "int",
+        label: "30/15 set 3",
+        reps: 13,
+        onSec: 30,
+        onPctLo: 118,
+        onPctHi: 125,
+        offSec: 15,
+        offPct: 55,
+      },
+    ],
+    cooldown: { durMin: 10, pctLo: 45, pctHi: 55 },
+    fill: { zone: 2, pct: 65 },
+    naam: "VO2max 30/15",
+    focus: "vo2 microburst sets",
+    eindopmerking: "Drie sets 30/15 — klassieke VO2-stapeling.",
+  },
+  {
+    id: "vo2_sandwich",
+    structuurtype: "sandwich",
+    effectTags: ["vo2"],
+    zone: 5,
+    duurRange: [61, 95],
+    warmup: { durMin: 15, pctLo: 55, pctHi: 80 },
+    core: [
+      {
+        kind: "steady",
+        label: "Tempo",
+        durMin: 10,
+        pct: 90,
+        note: "Aanloop op tempo",
+      },
+      {
+        kind: "int",
+        label: "VO2 surges",
+        reps: 4,
+        onMin: 2,
+        onPctLo: 110,
+        onPctHi: 114,
+        offMin: 2,
+        offPct: 60,
+      },
+      {
+        kind: "steady",
+        label: "Tempo",
+        durMin: 10,
+        pct: 90,
+        note: "Uitlopen op tempo",
+      },
+    ],
+    cooldown: { durMin: 10, pctLo: 45, pctHi: 55 },
+    fill: { zone: 2, pct: 65 },
+    naam: "VO2 sandwich",
+    focus: "climb surge",
+    eindopmerking:
+      "Tempo, vier VO2-surges, tempo — als een klim met versnellingen.",
+  },
+
+  // ── DREMPEL (zone 4) ──
+  {
+    id: "threshold_2x20",
+    structuurtype: "intervals",
+    effectTags: ["drempel"],
+    zone: 4,
+    duurRange: [75, 110],
+    warmup: { durMin: 15, pctLo: 55, pctHi: 75 },
+    core: [
+      {
+        kind: "int",
+        label: "Drempel",
+        reps: 2,
+        onMin: 20,
+        onPctLo: 95,
+        onPctHi: 100,
+        offMin: 5,
+        offPct: 55,
+      },
+    ],
+    cooldown: { durMin: 10, pctLo: 45, pctHi: 55 },
+    fill: { zone: 2, pct: 65 },
+    naam: "Drempel 2×20",
+    focus: "threshold",
+    eindopmerking: "Twee lange drempelblokken — de basis.",
+  },
+  {
+    id: "threshold_2x8",
+    structuurtype: "intervals",
+    effectTags: ["drempel"],
+    zone: 4,
+    restrictTo: ["onderhoud"],
+    duurRange: [33, 45],
+    warmup: { durMin: 7, pctLo: 55, pctHi: 78 },
+    core: [
+      {
+        kind: "int",
+        label: "Drempel",
+        reps: 2,
+        onMin: 8,
+        onPctLo: 98,
+        onPctHi: 105,
+        offMin: 3,
+        offPct: 55,
+      },
+    ],
+    cooldown: { durMin: 4, pctLo: 45, pctHi: 55 },
+    fill: { zone: 2, pct: 65 },
+    naam: "Drempel 2×8 kort",
+    focus: "threshold",
+    eindopmerking:
+      "Korte drempel-onderhoudsdosis — twee blokken binnen 30-45 min.",
+  },
+  {
+    id: "threshold_4x10",
+    structuurtype: "intervals",
+    effectTags: ["drempel"],
+    zone: 4,
+    duurRange: [77, 110],
+    warmup: { durMin: 15, pctLo: 55, pctHi: 75 },
+    core: [
+      {
+        kind: "int",
+        label: "Drempel",
+        reps: 4,
+        onMin: 10,
+        onPctLo: 96,
+        onPctHi: 102,
+        offMin: 3,
+        offPct: 55,
+      },
+    ],
+    cooldown: { durMin: 10, pctLo: 45, pctHi: 55 },
+    fill: { zone: 2, pct: 65 },
+    naam: "Drempel 4×10",
+    focus: "threshold",
+    eindopmerking: "Kortere drempelreps, meer totaal aan de grens.",
+  },
+  {
+    id: "threshold_overunder_long",
+    structuurtype: "intervals",
+    effectTags: ["drempel"],
+    zone: 4,
+    duurRange: [69, 105],
+    warmup: { durMin: 15, pctLo: 55, pctHi: 75 },
+    core: [
+      { kind: "steady", label: "Over", durMin: 2, pct: 103, note: "Boven FTP" },
+      { kind: "steady", label: "Under", durMin: 2, pct: 93, note: "Onder FTP" },
+      { kind: "steady", label: "Over", durMin: 2, pct: 103, note: "Boven FTP" },
+      { kind: "steady", label: "Under", durMin: 2, pct: 93, note: "Onder FTP" },
+      {
+        kind: "steady",
+        label: "Herstel",
+        durMin: 4,
+        pct: 55,
+        note: "Easy tussen de sets",
+      },
+      { kind: "steady", label: "Over", durMin: 2, pct: 103, note: "Boven FTP" },
+      { kind: "steady", label: "Under", durMin: 2, pct: 93, note: "Onder FTP" },
+      { kind: "steady", label: "Over", durMin: 2, pct: 103, note: "Boven FTP" },
+      { kind: "steady", label: "Under", durMin: 2, pct: 93, note: "Onder FTP" },
+      {
+        kind: "steady",
+        label: "Herstel",
+        durMin: 4,
+        pct: 55,
+        note: "Easy tussen de sets",
+      },
+      { kind: "steady", label: "Over", durMin: 2, pct: 103, note: "Boven FTP" },
+      { kind: "steady", label: "Under", durMin: 2, pct: 93, note: "Onder FTP" },
+      { kind: "steady", label: "Over", durMin: 2, pct: 103, note: "Boven FTP" },
+      { kind: "steady", label: "Under", durMin: 2, pct: 93, note: "Onder FTP" },
+      {
+        kind: "steady",
+        label: "Herstel",
+        durMin: 4,
+        pct: 55,
+        note: "Easy tussen de sets",
+      },
+      { kind: "steady", label: "Over", durMin: 2, pct: 103, note: "Boven FTP" },
+      { kind: "steady", label: "Under", durMin: 2, pct: 93, note: "Onder FTP" },
+      { kind: "steady", label: "Over", durMin: 2, pct: 103, note: "Boven FTP" },
+      {
+        kind: "steady",
+        label: "Under",
+        durMin: 2,
+        pct: 93,
+        note: "Onder, afsluiten",
+      },
+    ],
+    cooldown: { durMin: 10, pctLo: 45, pctHi: 55 },
+    fill: { zone: 2, pct: 65 },
+    naam: "Drempel over-under lang",
+    focus: "over-under",
+    eindopmerking: "Lange over-unders — surge-en-settle rond je drempel.",
+  },
+  {
+    id: "threshold_pyramid",
+    structuurtype: "pyramid",
+    effectTags: ["drempel"],
+    zone: 4,
+    duurRange: [75, 110],
+    warmup: { durMin: 15, pctLo: 55, pctHi: 75 },
+    core: [
+      {
+        kind: "steady",
+        label: "Drempel 5",
+        durMin: 5,
+        pct: 96,
+        note: "Opbouwen",
+      },
+      {
+        kind: "steady",
+        label: "Herstel",
+        durMin: 3,
+        pct: 55,
+        note: "Kort lossen",
+      },
+      { kind: "steady", label: "Drempel 8", durMin: 8, pct: 98, note: "Door" },
+      {
+        kind: "steady",
+        label: "Herstel",
+        durMin: 3,
+        pct: 55,
+        note: "Kort lossen",
+      },
+      {
+        kind: "steady",
+        label: "Drempel 12",
+        durMin: 12,
+        pct: 100,
+        note: "Piekblok",
+      },
+      {
+        kind: "steady",
+        label: "Herstel",
+        durMin: 3,
+        pct: 55,
+        note: "Kort lossen",
+      },
+      {
+        kind: "steady",
+        label: "Drempel 8",
+        durMin: 8,
+        pct: 98,
+        note: "Afbouwen",
+      },
+      {
+        kind: "steady",
+        label: "Herstel",
+        durMin: 3,
+        pct: 55,
+        note: "Kort lossen",
+      },
+      {
+        kind: "steady",
+        label: "Drempel 5",
+        durMin: 5,
+        pct: 96,
+        note: "Afsluiten",
+      },
+    ],
+    cooldown: { durMin: 10, pctLo: 45, pctHi: 55 },
+    fill: { zone: 2, pct: 65 },
+    naam: "Drempel piramide",
+    focus: "threshold pyramid",
+    eindopmerking: "Oplopend dan aflopend — drempel met ritme.",
+  },
+
+  // ── SWEET SPOT (zone 4) ──
+  {
+    id: "sweetspot_3x15",
+    structuurtype: "intervals",
+    effectTags: ["sweetspot"],
+    zone: 4,
+    duurRange: [82, 115],
+    warmup: { durMin: 15, pctLo: 55, pctHi: 70 },
+    core: [
+      {
+        kind: "int",
+        label: "Sweet Spot",
+        reps: 3,
+        onMin: 15,
+        onPctLo: 88,
+        onPctHi: 93,
+        offMin: 4,
+        offPct: 55,
+      },
+    ],
+    cooldown: { durMin: 10, pctLo: 45, pctHi: 55 },
+    fill: { zone: 2, pct: 65 },
+    naam: "Sweet spot 3×15",
+    focus: "sweetspot",
+    eindopmerking: "Drie sweet-spot-blokken — degelijk volume.",
+  },
+  {
+    id: "sweetspot_4x12",
+    structuurtype: "intervals",
+    effectTags: ["sweetspot"],
+    zone: 4,
+    duurRange: [85, 120],
+    warmup: { durMin: 15, pctLo: 55, pctHi: 70 },
+    core: [
+      {
+        kind: "int",
+        label: "Sweet Spot",
+        reps: 4,
+        onMin: 12,
+        onPctLo: 89,
+        onPctHi: 92,
+        offMin: 3,
+        offPct: 55,
+      },
+    ],
+    cooldown: { durMin: 10, pctLo: 45, pctHi: 55 },
+    fill: { zone: 2, pct: 65 },
+    naam: "Sweet spot 4×12",
+    focus: "sweetspot",
+    eindopmerking: "Vier blokken — meer totaal in sweet spot.",
+  },
+  {
+    id: "sweetspot_overunder",
+    structuurtype: "intervals",
+    effectTags: ["sweetspot"],
+    zone: 4,
+    duurRange: [69, 105],
+    warmup: { durMin: 15, pctLo: 55, pctHi: 70 },
+    core: [
+      {
+        kind: "steady",
+        label: "Over",
+        durMin: 3,
+        pct: 94,
+        note: "Net boven sweet spot",
+      },
+      { kind: "steady", label: "Under", durMin: 3, pct: 86, note: "Net onder" },
+      {
+        kind: "steady",
+        label: "Over",
+        durMin: 3,
+        pct: 94,
+        note: "Net boven sweet spot",
+      },
+      { kind: "steady", label: "Under", durMin: 3, pct: 86, note: "Net onder" },
+      {
+        kind: "steady",
+        label: "Herstel",
+        durMin: 4,
+        pct: 55,
+        note: "Easy tussen de sets",
+      },
+      {
+        kind: "steady",
+        label: "Over",
+        durMin: 3,
+        pct: 94,
+        note: "Net boven sweet spot",
+      },
+      { kind: "steady", label: "Under", durMin: 3, pct: 86, note: "Net onder" },
+      {
+        kind: "steady",
+        label: "Over",
+        durMin: 3,
+        pct: 94,
+        note: "Net boven sweet spot",
+      },
+      { kind: "steady", label: "Under", durMin: 3, pct: 86, note: "Net onder" },
+      {
+        kind: "steady",
+        label: "Herstel",
+        durMin: 4,
+        pct: 55,
+        note: "Easy tussen de sets",
+      },
+      {
+        kind: "steady",
+        label: "Over",
+        durMin: 3,
+        pct: 94,
+        note: "Net boven sweet spot",
+      },
+      { kind: "steady", label: "Under", durMin: 3, pct: 86, note: "Net onder" },
+      {
+        kind: "steady",
+        label: "Over",
+        durMin: 3,
+        pct: 94,
+        note: "Net boven sweet spot",
+      },
+      {
+        kind: "steady",
+        label: "Under",
+        durMin: 3,
+        pct: 86,
+        note: "Onder, afsluiten",
+      },
+    ],
+    cooldown: { durMin: 10, pctLo: 45, pctHi: 55 },
+    fill: { zone: 2, pct: 65 },
+    naam: "Sweet spot over-under",
+    focus: "over-under",
+    eindopmerking: "Sweet-spot met golfbeweging — net over en onder.",
+  },
+  {
+    id: "sweetspot_long_climb",
+    structuurtype: "intervals",
+    effectTags: ["sweetspot"],
+    zone: 4,
+    duurRange: [85, 125],
+    warmup: { durMin: 15, pctLo: 55, pctHi: 70 },
+    core: [
+      {
+        kind: "int",
+        label: "Sweet Spot klim",
+        reps: 2,
+        onMin: 25,
+        onPctLo: 89,
+        onPctHi: 93,
+        offMin: 5,
+        offPct: 55,
+      },
+    ],
+    cooldown: { durMin: 10, pctLo: 45, pctHi: 55 },
+    fill: { zone: 2, pct: 65 },
+    naam: "Sweet spot klim",
+    focus: "long climb",
+    eindopmerking: "Twee lange blokken — als een aanhoudende klim.",
+  },
+];
+
+export const GOAL_INTENT_WEIGHTS_KLIM_: any = {
+  drempel: 0.4,
+  vo2: 0.35,
+  sweetspot: 0.25,
+};
+export const GOAL_INTENT_WEIGHTS_FTP_: any = {
+  drempel: 0.45,
+  sweetspot: 0.35,
+  vo2: 0.2,
+};
+export const GOAL_FASE_MOD_: any = {
+  Base: { sweetspot: 0.1, drempel: 0.05, vo2: -0.1 },
+  Build: {},
+  Peak: { vo2: 0.15, drempel: -0.05, sweetspot: -0.1 },
+};
+export const GOAL_KWALITEIT_INTENTS_ = ["drempel", "sweetspot", "vo2"];
+export const INTENT_PRIMARY_BUCKET_: any = {
+  drempel: "high",
+  sweetspot: "high",
+  vo2: "anaerobic",
+};
+export const COVERAGE_BOOST_ = 0.1;
+export const BASE_POLAR_VOL_U0 = 9;
+
+export const PROFILES: any = {
+  klim: {
+    id: "klim",
+    soort: "event",
+    intentGewichten: GOAL_INTENT_WEIGHTS_KLIM_,
+    faseModulatie: GOAL_FASE_MOD_,
+    archetypeVoorkeuren: { vo2_hill_repeats: 0.2, threshold_long: 0.1 },
+    projectieKey: "girona",
+    kwaliteitPerWeek: { Base: 2, Build: 3, Peak: 2 },
+    spreiding: { midweekMinGap: 1, weekendBlok: true, effortsInLangeRit: true },
+    langeRitPerWeek: 1,
+    volumeResponse: { vo2Slope: 0.03, vo2Cap: 0.15 },
+  },
+  ftp: {
+    id: "ftp",
+    soort: "capaciteit",
+    intentGewichten: GOAL_INTENT_WEIGHTS_FTP_,
+    faseModulatie: GOAL_FASE_MOD_,
+    kwaliteitPerWeek: { Base: 2, Build: 3, Peak: 2 },
+    spreiding: {
+      midweekMinGap: 1,
+      weekendBlok: false,
+      effortsInLangeRit: false,
+    },
+    langeRitPerWeek: 1,
+    volumeResponse: { vo2Slope: 0.04, vo2Cap: 0.38 },
+  },
+  vo2max: {
+    id: "vo2max",
+    soort: "capaciteit",
+    intentGewichten: { drempel: 0.35, sweetspot: 0.25, vo2: 0.4 },
+    faseModulatie: GOAL_FASE_MOD_,
+    kwaliteitPerWeek: { Base: 2, Build: 3, Peak: 2 },
+    spreiding: {
+      midweekMinGap: 1,
+      weekendBlok: false,
+      effortsInLangeRit: false,
+    },
+    langeRitPerWeek: 1,
+    volumeResponse: { vo2Slope: 0.02, vo2Cap: 0.08 },
+  },
+  conditie: {
+    id: "conditie",
+    soort: "capaciteit",
+    intentGewichten: { sweetspot: 0.45, drempel: 0.35, vo2: 0.2 },
+    faseModulatie: GOAL_FASE_MOD_,
+    kwaliteitPerWeek: { Base: 2, Build: 3, Peak: 2 },
+    spreiding: {
+      midweekMinGap: 1,
+      weekendBlok: false,
+      effortsInLangeRit: false,
+    },
+    langeRitPerWeek: 1,
+    volumeResponse: { vo2Slope: 0.04, vo2Cap: 0.38 },
+  },
+  onderhoud: {
+    id: "onderhoud",
+    soort: "capaciteit",
+    intentGewichten: { drempel: 0.4, sweetspot: 0.4, vo2: 0.2 },
+    faseModulatie: GOAL_FASE_MOD_,
+    kwaliteitPerWeek: { Base: 2, Build: 2, Peak: 2 },
+    spreiding: {
+      midweekMinGap: 2,
+      weekendBlok: false,
+      effortsInLangeRit: false,
+    },
+    langeRitPerWeek: 0,
+    volumeResponse: { vo2Slope: 0, vo2Cap: 0 },
+    maxDuurMin: 45,
+    debtEnabled: false,
+  },
+};
+
+export function profileForDoel_(doel: string): any {
+  if (doel === "FTP") return PROFILES.ftp;
+  if (doel === "Beklimmingen") return PROFILES.klim;
+  if (doel === "VO2max") return PROFILES.vo2max;
+  if (doel === "Conditie") return PROFILES.conditie;
+  if (doel === "Onderhoud") return PROFILES.onderhoud;
+  return PROFILES.klim; // onbekend → klim-fallback
+}
+
+export function goalEffWeights_(profiel: any, fase: string, V?: any): any {
+  const base = profiel.intentGewichten || {};
+  const mod =
+    profiel.faseModulatie && profiel.faseModulatie[fase]
+      ? profiel.faseModulatie[fase]
+      : {};
+  const vol = volumeModulatie(V, fase, profiel);
+  const w: any = {};
+  GOAL_KWALITEIT_INTENTS_.forEach((k) => {
+    w[k] = (base[k] || 0) + (mod[k] || 0) + (vol[k] || 0);
+  });
+  return w;
+}
+
+export function volumeModulatie(V: any, fase: string, profiel: any): any {
+  const z: any = { drempel: 0, sweetspot: 0, vo2: 0 };
+  if (fase !== "Base") return z;
+  const v = Number(V);
+  if (!isFinite(v)) return z;
+  const vr = (profiel && profiel.volumeResponse) || null;
+  if (!vr) return z;
+  z.vo2 = Math.min(vr.vo2Slope * Math.max(0, v - BASE_POLAR_VOL_U0), vr.vo2Cap);
+  return z;
+}
+
+export function archetypeAllowedForProfile_(a: any, profielId: any): boolean {
+  return !a.restrictTo || a.restrictTo.indexOf(profielId) !== -1;
+}
+
+export function intentHaalbaar_(
+  intent: string,
+  beschikbareTijd: number,
+  profielId?: any,
+): boolean {
+  return ARCHETYPES.some(
+    (a: any) =>
+      a.effectTags.indexOf(intent) >= 0 &&
+      beschikbareTijd >= a.duurRange[0] &&
+      beschikbareTijd <= a.duurRange[1] &&
+      archetypeAllowedForProfile_(a, profielId),
+  );
+}
+
+export function goalPickIntent_(
+  profiel: any,
+  fase: string,
+  vermijdIntent: any,
+  beschikbareTijd?: any,
+  dekking?: any,
+  V?: any,
+): any {
+  const w = goalEffWeights_(profiel, fase, V);
+  let intents = GOAL_KWALITEIT_INTENTS_.filter(
+    (i) =>
+      beschikbareTijd == null ||
+      intentHaalbaar_(i, beschikbareTijd, profiel && profiel.id),
+  );
+  if (!intents.length) intents = GOAL_KWALITEIT_INTENTS_.slice();
+  const vo2GateBase =
+    fase === "Base" && isFinite(Number(V)) && Number(V) <= BASE_POLAR_VOL_U0;
+  function score(i: string): number {
+    let s = w[i] || 0;
+    if (
+      dekking &&
+      INTENT_PRIMARY_BUCKET_[i] &&
+      !dekking[INTENT_PRIMARY_BUCKET_[i]] &&
+      !(i === "vo2" && vo2GateBase)
+    )
+      s += COVERAGE_BOOST_;
+    return s;
+  }
+  intents.sort((a, b) => {
+    const d = score(b) - score(a);
+    if (d !== 0) return d;
+    return (
+      GOAL_KWALITEIT_INTENTS_.indexOf(a) - GOAL_KWALITEIT_INTENTS_.indexOf(b)
+    );
+  });
+  for (let k = 0; k < intents.length; k++) {
+    if (intents[k] !== vermijdIntent) return intents[k];
+  }
+  return intents[0];
+}
+
+export function goalWorkout_(
+  profiel: any,
+  fase: string,
+  beschikbareTijd: number,
+  recency?: any,
+  dekking?: any,
+  V?: any,
+): any {
+  if (!profiel) return null;
+  recency = recency || [];
+  const last = recency.length ? recency[recency.length - 1] : null;
+  const lastIntent = last ? last.intent : null;
+
+  const intent = goalPickIntent_(
+    profiel,
+    fase,
+    lastIntent,
+    beschikbareTijd,
+    dekking,
+    V,
+  );
+  if (!intent) return null;
+
+  let kandidaten = ARCHETYPES.filter(
+    (a: any) =>
+      a.effectTags.indexOf(intent) >= 0 &&
+      beschikbareTijd >= a.duurRange[0] &&
+      beschikbareTijd <= a.duurRange[1] &&
+      archetypeAllowedForProfile_(a, profiel.id),
+  );
+  if (!kandidaten.length) return null;
+
+  const voork = profiel.archetypeVoorkeuren || {};
+  const intentRec = recency.filter((r: any) => r.intent === intent);
+  function staleness(id: any): number {
+    for (let i = intentRec.length - 1, d = 0; i >= 0; i--, d++) {
+      if (intentRec[i].archetypeId === id) return d;
+    }
+    return intentRec.length + 1;
+  }
+  const gebruikt: any = {};
+  intentRec.forEach((r: any) => {
+    gebruikt[r.archetypeId] = true;
+  });
+  let pool = kandidaten.filter((a: any) => !gebruikt[a.id]);
+  if (pool.length === 0) pool = kandidaten.slice();
+  pool.sort((a: any, b: any) => {
+    const va = voork[a.id] || 0,
+      vb = voork[b.id] || 0;
+    if (vb !== va) return vb - va;
+    const sa = staleness(a.id),
+      sb = staleness(b.id);
+    if (sb !== sa) return sb - sa;
+    if (a.duurRange[0] !== b.duurRange[0])
+      return a.duurRange[0] - b.duurRange[0];
+    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+  });
+  kandidaten = pool;
+
+  return {
+    type: COACH_INTENT_ENGINE_TYPE_[intent],
+    archetypeId: kandidaten[0].id,
+  };
+}
+
+export function recencyFromWeekplan_(weekplan: any, refISO?: any): any {
+  if (!weekplan || !weekplan.length) return [];
+  const rows = weekplan
+    .filter(
+      (e: any) =>
+        e && e.datum && e.workoutType && (!refISO || e.datum < refISO),
+    )
+    .slice()
+    .sort((a: any, b: any) =>
+      a.datum < b.datum ? -1 : a.datum > b.datum ? 1 : 0,
+    );
+  const out: any[] = [];
+  rows.forEach((e: any) => {
+    const intent = intentFromType_(e.workoutType);
+    if (GOAL_KWALITEIT_INTENTS_.indexOf(intent) >= 0) {
+      out.push({ intent: intent, archetypeId: e.archetypeId || null });
+    }
+  });
+  return out;
+}

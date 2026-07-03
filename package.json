@@ -11,11 +11,12 @@
     "lint": "biome check .",
     "format": "biome check --write .",
     "typecheck": "pnpm -r --if-present typecheck",
-    "test": "vitest run",
+    "test": "cross-env TZ=Europe/Amsterdam vitest run",
     "build": "pnpm -r --if-present build"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.0.0",
+    "cross-env": "^7.0.3",
     "typescript": "^5.6.0",
     "vitest": "^3.0.0"
   }
