@@ -80,7 +80,11 @@
       }
     },
     {
-      "includes": ["workers/api/src/db/repo.ts", "workers/api/test/**"],
+      "includes": [
+        "workers/api/src/db/repo.ts",
+        "workers/api/src/integrations/**",
+        "workers/api/test/**"
+      ],
       "linter": {
         "rules": {
           "suspicious": {

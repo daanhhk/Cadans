@@ -11,10 +11,9 @@
     {
       "binding": "DB",
       "database_name": "cadans",
-      // Remote database_id volgt later: Daan draait `wrangler d1 create cadans` en
-      // vult de UUID hier in. Deze placeholder blokkeert de lokale --local
-      // (miniflare) migratie-flow NIET.
-      "database_id": "local-placeholder",
+      // Remote D1 (Daan heeft `wrangler d1 create cadans` gedraaid). De --local /
+      // miniflare-flow gebruikt de binding-naam + lokale state, niet dit id.
+      "database_id": "aa302c17-915b-44cb-8823-89c416974f50",
       // drizzle-kit schrijft migraties naar ./drizzle (drizzle.config out); wrangler
       // d1 migrations apply leest ze daar i.p.v. de default ./migrations.
       "migrations_dir": "drizzle"

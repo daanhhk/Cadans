@@ -11,6 +11,33 @@ live tot cutover.
 
 ## Stand
 
+**Fase 3b — INTERVALS.ICU ACTIVITEITEN-SYNC GEPORT (lokaal).**
+`workers/api/src/integrations/intervals.ts`: `fetchActivities` +
+`syncActivities(env, userId, opts)` — HTTP Basic auth
+`base64("API_KEY:"+key)`, `GET /athlete/{id}/activities?oldest&newest`, sorteert
+oudste-eerst, normaliseert via de engine's `activityToRow_` (ONGEWIJZIGD), en
+`upsertActivity` (idempotent op UNIQUE(user_id, activity_id_ext)). Alle datums
+via `dates.ts`. Key UITSLUITEND uit `env.INTERVALS_API_KEY` (niets gehardcode).
+CI-tests zijn GEMOCKT (fetch-mock → D1, geen echte key); een lokale-only smoke
+(`scripts/intervals-smoke.mjs`, NIET in de gate) doet één echte call. Remote D1
+`database_id` = `aa302c17-915b-44cb-8823-89c416974f50` ingevuld in
+`wrangler.jsonc`. Test-count: **64 passed** (6 files) — engine 886/0 ongewijzigd.
+
+**WORKERD-TZ-PROBE (deploy-blocker-diagnose):** de LOKALE/CI miniflare-workerd
+HONOREERT `Europe/Amsterdam` (erft de `TZ`-env van de cross-env-pin: janOffset
+−60, julOffset −120) → de integratietests draaien TZ-correct. **MAAR** een
+GEDEPLOYDE Cloudflare Worker draait **UTC-only** (geen TZ-env-controle) →
+datum-gevoelige engine-entrypoints (weekgeneratie) diveregeren daar. **Conclusie:
+de TZ-expliciete engine-refactor (debt (d)) is een BEVESTIGDE deploy-blocker** —
+niet nu opgelost.
+
+**Fase 3c-scope** (engine heeft beide nodig): **wellness-sync** (`GET
+/athlete/{id}/wellness?oldest&newest` → CTL/ATL/Vorm/HRV/slaap, voedt
+`getReadinessScore_` + `dashVormReeks_`) en **power-curve-sync** (voedt
+`pcNormalize_`/`riderTypeFromCurve_`; regels: RAW cachen + op READ normaliseren
+— nooit genormaliseerd cachen; `curves=<id>` voor window-control, start/end
+genegeerd). Voor de smoke: voeg `INTERVALS_ATHLETE_ID=i<id>` toe aan `.dev.vars`.
+
 **Fase 3a — DATA-ACCESS-LAAG (D1 ↔ pure engine) COMPLEET (lokaal).** In
 `workers/api/src/db`: een repo-laag (`repo.ts`) die Drizzle-queries EXACT naar/uit
 de engine-input-shapes mapt, met een centrale TZ-conversielaag (`dates.ts`:
@@ -109,7 +136,8 @@ lokaal draaien Node 24._
 | 1 | engine-transplant + 886 SelfTest → vitest | ✓ |
 | 2 | D1-schema / Drizzle | ✓ |
 | 3a | data-access-laag (D1 ↔ engine) + TZ-conversie + Worker-integratietests | ✓ |
-| 3b | intervals.icu-port (sync) + remote D1 | |
+| 3b | intervals.icu activiteiten-sync + remote D1 (`database_id`) | ✓ |
+| 3c | wellness- + power-curve-sync (engine heeft beide nodig) | |
 | 4 | Worker-API | |
 | 5 | React-PWA (tabs + tokens 1-op-1 port) | |
 | 6 | telegram-webhook | |
@@ -148,9 +176,14 @@ Open schulden die bewust naar een latere fase zijn geschoven:
   read binnensluipt (bv. grep/lint-regel op `SpreadsheetApp`/`PropertiesService`/
   `fetch`/`process.env` in de engine). Borgt de puurheid die de vitest-gate nu
   impliciet aanneemt.
-- **(d) Datum-functies TZ-expliciet.** De engine leunt nu op ambient TZ (pin
-  `TZ=Europe/Amsterdam` in de test-env). Latere fase: datum-logica een expliciete
-  TZ-parameter geven i.p.v. ambient.
+- **(d) Datum-functies TZ-expliciet — BEVESTIGDE DEPLOY-BLOCKER (Fase 3b-probe).**
+  De engine leunt op ambient TZ. De workerd-TZ-probe
+  (`test/workerd-tz-probe.test.ts`) toont: LOKAAL/CI honoreert workerd de
+  `Europe/Amsterdam`-pin (erft de TZ-env), MAAR een gedeployde Cloudflare Worker
+  draait UTC-only. Vóór het deployen van datum-gevoelige entrypoints
+  (weekgeneratie): geef de engine-datum-logica een expliciete TZ-parameter i.p.v.
+  ambient. Datumvrije paden (readiness) + string-round-trips zijn TZ-veilig en
+  kunnen eerder deployen.
 - **(e) D1-TEXT-datum → Date-mapping — GEDEELTELIJK OPGELOST (Fase 3a).** De
   conversielaag `workers/api/src/db/dates.ts` (`fromD1`/`toD1Date`/`toD1DateTime`)
   is geïmplementeerd + getest (incl. DST-grenzen) en wordt door de repo-laag
@@ -160,7 +193,7 @@ Open schulden die bewust naar een latere fase zijn geschoven:
   want de engine's EIGEN datum-logica leunt nog op ambient TZ. De Fase-3a-oracle
   vermijdt dit bewust via de datumvrije readiness-seam + TZ-invariante
   string-round-trips.
-- **(f) Remote D1 + `database_id`.** `workers/api/wrangler.jsonc` heeft een
-  `database_id`-placeholder ("local-placeholder") — remote-provisioning
-  (`wrangler d1 create cadans`) + de echte UUID zijn een aparte, mens-
-  geverifieerde stap; blokkeert de lokale flow niet.
+- **(f) Remote D1 — OPGELOST (Fase 3b).** `database_id`
+  `aa302c17-915b-44cb-8823-89c416974f50` staat in `workers/api/wrangler.jsonc`.
+  Nog niet gemigreerd/geseed op remote (dat is een deploy-stap, Fase 4+); de
+  lokale --local/miniflare-flow gebruikt de binding-naam, niet dit id.
