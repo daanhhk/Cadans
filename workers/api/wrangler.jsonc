@@ -6,6 +6,19 @@
   "compatibility_flags": ["nodejs_compat"],
   "observability": {
     "enabled": true
-  }
-  // Fase 2/5: d1_databases-binding (D1 "cadans") + assets-binding (apps/web dist) volgen hier.
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "cadans",
+      // Remote database_id volgt later: Daan draait `wrangler d1 create cadans` en
+      // vult de UUID hier in. Deze placeholder blokkeert de lokale --local
+      // (miniflare) migratie-flow NIET.
+      "database_id": "local-placeholder",
+      // drizzle-kit schrijft migraties naar ./drizzle (drizzle.config out); wrangler
+      // d1 migrations apply leest ze daar i.p.v. de default ./migrations.
+      "migrations_dir": "drizzle"
+    }
+  ]
+  // Fase 5: assets-binding (apps/web dist) volgt hier.
 }

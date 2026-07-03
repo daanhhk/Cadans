@@ -14,7 +14,8 @@
       "!**/node_modules",
       "!**/.wrangler",
       "!**/*.tsbuildinfo",
-      "!**/public"
+      "!**/public",
+      "!**/drizzle"
     ]
   },
   "formatter": {

@@ -11,6 +11,20 @@ live tot cutover.
 
 ## Stand
 
+**Fase 2 — D1-SCHEMA + EERSTE MIGRATIE COMPLEET (lokaal).** Drizzle
+sqlite-core-schema (`workers/api/src/db/schema.ts`) met de **11 tabellen** uit
+`docs/SCHEMA-PROPOSAL.md`: `users`, `settings`, `activities`, `wellness`,
+`planner_days`, `events`, `weekplans`, `rpe`, `checkins`, `day_state`,
+`sync_state`. `user_id` op elk (FK→users; v1 hardcoded op één user); `weekplans`
+= JSON-blob per week; `proposal_*` NIET gepersisteerd (volatile); zone-/
+sweet-spot-grenzen bewust weggelaten (engine leidt ze af uit ftp/lthr —
+Fase-2b-recon). Migratie `drizzle/0000_redundant_maginty.sql` LOKAAL geapplied
+(miniflare D1, `pnpm --filter @cadans/api db:migrate:local`) — alle 11 tabellen
+bevestigd via `db:verify:local`, geen proposal-tabel. **Remote D1 nog NIET
+aangemaakt:** Daan draait `wrangler d1 create cadans` en vult `database_id` in
+`workers/api/wrangler.jsonc` in (apart moment; de placeholder blokkeert de
+lokale flow niet). Baseline vitest ongewijzigd **886/0**.
+
 **Fase 1 — PURE ENGINE GEPORT + SelfTest → vitest COMPLEET.** De pure
 trainings-engine is uit `daanhhk/training` (Apps Script) gekamd naar
 `packages/engine` als TypeScript met ES-exports, en `SelfTest.gs` is 1-op-1
@@ -66,7 +80,7 @@ lokaal draaien Node 24._
 |---|---|---|
 | 0 | monorepo-scaffold | ✓ |
 | 1 | engine-transplant + 886 SelfTest → vitest | ✓ |
-| 2 | D1-schema / Drizzle | |
+| 2 | D1-schema / Drizzle | ✓ |
 | 3 | data-access + intervals.icu-port | |
 | 4 | Worker-API | |
 | 5 | React-PWA (tabs + tokens 1-op-1 port) | |
@@ -107,3 +121,14 @@ Open schulden die bewust naar een latere fase zijn geschoven:
 - **(d) Datum-functies TZ-expliciet.** De engine leunt nu op ambient TZ (pin
   `TZ=Europe/Amsterdam` in de test-env). Latere fase: datum-logica een expliciete
   TZ-parameter geven i.p.v. ambient.
+- **(e) D1-TEXT-datum → Date-mapping (Fase 3, Worker).** D1 slaat datums als
+  TEXT (ISO) op; de engine verwacht `Date`-objecten op lokale-middernacht. De
+  data-access-laag moet elke `datum`-TEXT deterministisch naar
+  `Date`-op-Amsterdam-middernacht mappen (spiegelt `stripTime_` + de
+  `TZ=Europe/Amsterdam`-pin), zodat de dag-keying identiek blijft aan de
+  GAS/V8-oorsprong. Geldt voor activities/wellness/planner_days/events + de
+  `weekplans`-entry-datums.
+- **(f) Remote D1 + `database_id`.** `workers/api/wrangler.jsonc` heeft een
+  `database_id`-placeholder ("local-placeholder") — remote-provisioning
+  (`wrangler d1 create cadans`) + de echte UUID zijn een aparte, mens-
+  geverifieerde stap; blokkeert de lokale flow niet.
