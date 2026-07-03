@@ -1,0 +1,9 @@
+# Normalize all text files to LF on every platform so the Biome gate
+# (formatter lineEnding = lf) is consistent on Windows and Linux/CI.
+* text=auto eol=lf
+
+# Binary assets — never touch line endings.
+*.png binary
+*.ico binary
+*.woff binary
+*.woff2 binary

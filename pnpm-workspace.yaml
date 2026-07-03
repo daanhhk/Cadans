@@ -1,0 +1,12 @@
+packages:
+  - "packages/*"
+  - "apps/*"
+  - "workers/*"
+
+# esbuild needs its postinstall (links the platform binary) for `vite build`.
+# sharp/workerd are pulled in transitively but unused by the local/CI gate,
+# so we skip their heavy native builds.
+allowBuilds:
+  esbuild: true
+  sharp: false
+  workerd: false
