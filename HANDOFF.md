@@ -84,3 +84,26 @@ lokaal draaien Node 24._
 
 Sheet → D1 + cutover = aparte, mens-geverifieerde stap. Blokkeert de bouw
 NIET.
+
+## Deferred debts
+
+Open schulden die bewust naar een latere fase zijn geschoven:
+
+- **(a) Engine type-hardening.** De engine is een getrouwe 1-op-1 port (`var`/
+  `any` behouden); Biome relaxeert de port-regels (noExplicitAny, noVar-achtige,
+  isFinite, ongebruikte params) enkel voor `packages/engine/**`. Een aparte pass
+  scherpt de typing aan (echte interfaces i.p.v. `any`) en her-enabled de regels.
+- **(b) Engine-input-seams die de Worker (Fase 3) moet vullen.** De pure engine
+  krijgt zijn IO via injecteerbare seams: **check-in** (`getReadinessScore_(…,
+  checkin)`), **weekplan-reader** (`gatherWeekplanEntries_(…, readWeekplan)`),
+  **gewicht** (`setGewichtProvider`), en **loadCarry/mesoFactor** (nu
+  geneutraliseerd op ×1). De data-access-laag (D1) moet deze vullen —
+  zie `docs/SCHEMA-PROPOSAL.md` §1.2.
+- **(c) Puurheid-boundary-check in CI.** Nog toe te voegen: een mechanische
+  check die faalt zodra `packages/engine` een GAS/IO-global of externe-state-
+  read binnensluipt (bv. grep/lint-regel op `SpreadsheetApp`/`PropertiesService`/
+  `fetch`/`process.env` in de engine). Borgt de puurheid die de vitest-gate nu
+  impliciet aanneemt.
+- **(d) Datum-functies TZ-expliciet.** De engine leunt nu op ambient TZ (pin
+  `TZ=Europe/Amsterdam` in de test-env). Latere fase: datum-logica een expliciete
+  TZ-parameter geven i.p.v. ambient.
