@@ -45,7 +45,8 @@
       "Bash(pnpm run db:migrate:local:*)",
       "Bash(wrangler types:*)",
       "Bash(wrangler dev:*)",
-      "Bash(wrangler d1 migrations apply cadans --local:*)"
+      "Bash(wrangler d1 migrations apply cadans --local:*)",
+      "Bash(wrangler d1 execute cadans --local:*)"
     ],
     "deny": [
       "Edit(C:\\Users\\daan\\Projects\\training\\**)",

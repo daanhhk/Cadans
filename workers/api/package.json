@@ -11,10 +11,12 @@
     "db:verify:local": "wrangler d1 execute cadans --local --command \"SELECT name FROM sqlite_master WHERE type='table' ORDER BY name\""
   },
   "dependencies": {
-    "hono": "^4.6.0",
-    "drizzle-orm": "^0.38.0"
+    "@cadans/engine": "workspace:*",
+    "drizzle-orm": "^0.38.0",
+    "hono": "^4.6.0"
   },
   "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.8.71",
     "@cloudflare/workers-types": "^4.20241127.0",
     "drizzle-kit": "^0.30.0",
     "typescript": "^5.6.0",

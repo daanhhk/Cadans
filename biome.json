@@ -78,6 +78,16 @@
           }
         }
       }
+    },
+    {
+      "includes": ["workers/api/src/db/repo.ts", "workers/api/test/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off"
+          }
+        }
+      }
     }
   ]
 }

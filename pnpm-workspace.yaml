@@ -4,9 +4,9 @@ packages:
   - "workers/*"
 
 # esbuild needs its postinstall (links the platform binary) for `vite build`.
-# sharp/workerd are pulled in transitively but unused by the local/CI gate,
-# so we skip their heavy native builds.
+# workerd needs its postinstall (downloads the runtime binary) for the Worker
+# integration tests (@cloudflare/vitest-pool-workers). sharp stays off (unused).
 allowBuilds:
   esbuild: true
   sharp: false
-  workerd: false
+  workerd: true

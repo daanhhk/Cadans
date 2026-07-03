@@ -11,6 +11,33 @@ live tot cutover.
 
 ## Stand
 
+**Fase 3a — DATA-ACCESS-LAAG (D1 ↔ pure engine) COMPLEET (lokaal).** In
+`workers/api/src/db`: een repo-laag (`repo.ts`) die Drizzle-queries EXACT naar/uit
+de engine-input-shapes mapt, met een centrale TZ-conversielaag (`dates.ts`:
+`fromD1`/`toD1Date`/`toD1DateTime`, spiegelt de engine's `new Date(y,m,d)` +
+`formatDate` onder de Amsterdam-pin). User-scoped via `CURRENT_USER_ID = 1`
+(vervalt in de auth-fase). Geïmplementeerde seams: `readSettings`/`writeSettings`,
+`readCheckin`/`writeCheckin` (readiness-seam), `readWeekplan`/`writeWeekplan`,
+`readRecentWeekplans` (8-weken-venster via de engine's `gatherWeekplanEntries_` +
+een PRE-FETCHED sync map-reader — lost de sync/async-mismatch op),
+`upsertActivity` (idempotent op UNIQUE(user_id, activity_id_ext) = mergeById_-
+equivalent), `readActivities` (→ 17-koloms actValues). De engine (packages/engine)
+is ONAANGEROERD — de repo-laag verandert de shapes niet.
+
+**Test-infra:** `@cloudflare/vitest-pool-workers@0.8.71` (vitest-3.2-compatibel;
+0.16+/0.18 vereist vitest 4) draait Worker-integratietests tegen een echte lokale
+D1 (miniflare); de drizzle-migratie wordt per test-worker toegepast
+(`applyD1Migrations`). Root `pnpm test` draait nu 3 vitest-projecten: **engine**
+(node, 886/0 ongewijzigd), **api-unit** (node, TZ-conversie-DST-tests), en
+**api-integration** (workers-pool, D1). Nieuwe test-count: **61 passed** = engine
+886/0 (51 blokken) + 3 TZ-unit + 6 repo-integratie + 1 D1-smoke.
+**Engine-als-oracle bewezen:** de D1-round-trip (check-in → `getReadinessScore_`;
+`readRecentWeekplans` → `gatherWeekplanEntries_`/`recencyFromWeekplan_`) geeft
+identieke engine-output als de directe fixture. Lokale gate groen.
+
+Nog open voor **Fase 3b:** intervals.icu-port (activiteiten/wellness-sync) +
+remote D1 aanmaken (Daan: `wrangler d1 create cadans` + `database_id`).
+
 **Fase 2 — D1-SCHEMA + EERSTE MIGRATIE COMPLEET (lokaal).** Drizzle
 sqlite-core-schema (`workers/api/src/db/schema.ts`) met de **11 tabellen** uit
 `docs/SCHEMA-PROPOSAL.md`: `users`, `settings`, `activities`, `wellness`,
@@ -81,7 +108,8 @@ lokaal draaien Node 24._
 | 0 | monorepo-scaffold | ✓ |
 | 1 | engine-transplant + 886 SelfTest → vitest | ✓ |
 | 2 | D1-schema / Drizzle | ✓ |
-| 3 | data-access + intervals.icu-port | |
+| 3a | data-access-laag (D1 ↔ engine) + TZ-conversie + Worker-integratietests | ✓ |
+| 3b | intervals.icu-port (sync) + remote D1 | |
 | 4 | Worker-API | |
 | 5 | React-PWA (tabs + tokens 1-op-1 port) | |
 | 6 | telegram-webhook | |
@@ -111,8 +139,10 @@ Open schulden die bewust naar een latere fase zijn geschoven:
   krijgt zijn IO via injecteerbare seams: **check-in** (`getReadinessScore_(…,
   checkin)`), **weekplan-reader** (`gatherWeekplanEntries_(…, readWeekplan)`),
   **gewicht** (`setGewichtProvider`), en **loadCarry/mesoFactor** (nu
-  geneutraliseerd op ×1). De data-access-laag (D1) moet deze vullen —
-  zie `docs/SCHEMA-PROPOSAL.md` §1.2.
+  geneutraliseerd op ×1). Fase 3a WIRET de **check-in**- en **weekplan**-seams
+  via de repo-laag (D1). RESTEREND: **gewicht** (Worker moet `setGewichtProvider`
+  aanroepen met de D1-waarde) en **loadCarry** (nog ×1) — te vullen in Fase 3b/4.
+  Zie `docs/SCHEMA-PROPOSAL.md` §1.2.
 - **(c) Puurheid-boundary-check in CI.** Nog toe te voegen: een mechanische
   check die faalt zodra `packages/engine` een GAS/IO-global of externe-state-
   read binnensluipt (bv. grep/lint-regel op `SpreadsheetApp`/`PropertiesService`/
@@ -121,13 +151,15 @@ Open schulden die bewust naar een latere fase zijn geschoven:
 - **(d) Datum-functies TZ-expliciet.** De engine leunt nu op ambient TZ (pin
   `TZ=Europe/Amsterdam` in de test-env). Latere fase: datum-logica een expliciete
   TZ-parameter geven i.p.v. ambient.
-- **(e) D1-TEXT-datum → Date-mapping (Fase 3, Worker).** D1 slaat datums als
-  TEXT (ISO) op; de engine verwacht `Date`-objecten op lokale-middernacht. De
-  data-access-laag moet elke `datum`-TEXT deterministisch naar
-  `Date`-op-Amsterdam-middernacht mappen (spiegelt `stripTime_` + de
-  `TZ=Europe/Amsterdam`-pin), zodat de dag-keying identiek blijft aan de
-  GAS/V8-oorsprong. Geldt voor activities/wellness/planner_days/events + de
-  `weekplans`-entry-datums.
+- **(e) D1-TEXT-datum → Date-mapping — GEDEELTELIJK OPGELOST (Fase 3a).** De
+  conversielaag `workers/api/src/db/dates.ts` (`fromD1`/`toD1Date`/`toD1DateTime`)
+  is geïmplementeerd + getest (incl. DST-grenzen) en wordt door de repo-laag
+  gebruikt. RESTEREND: wanneer de **Worker** in Fase 4 een DATUM-gevoelig
+  engine-entrypoint (weekgeneratie) in workerd aanroept, moet de workerd-runtime
+  onder `Europe/Amsterdam` draaien (of de engine TZ-expliciet worden — debt (d)),
+  want de engine's EIGEN datum-logica leunt nog op ambient TZ. De Fase-3a-oracle
+  vermijdt dit bewust via de datumvrije readiness-seam + TZ-invariante
+  string-round-trips.
 - **(f) Remote D1 + `database_id`.** `workers/api/wrangler.jsonc` heeft een
   `database_id`-placeholder ("local-placeholder") — remote-provisioning
   (`wrangler d1 create cadans`) + de echte UUID zijn een aparte, mens-
