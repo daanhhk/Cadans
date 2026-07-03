@@ -13,7 +13,7 @@ import { gatherWeekplanEntries_ } from "@cadans/engine";
 import { and, asc, eq, gte, lte } from "drizzle-orm";
 import type { Db } from "./client";
 import { fromD1, toD1Date, toD1DateTime } from "./dates";
-import { activities, checkins, settings, weekplans } from "./schema";
+import { activities, checkins, settings, weekplans, wellness } from "./schema";
 
 // ── settings ─────────────────────────────────────────────────────────
 // Engine-shape: { ftp, lthr, gewicht, doel, doelStart(Date|null), hrMax, hrRest,
@@ -280,4 +280,104 @@ export async function readActivities(
     .where(and(...conds))
     .orderBy(asc(activities.datum));
   return rows.map(rowFromAct);
+}
+
+// ── wellness (WELL_HEADERS 12-kol) ─────────────────────────────────────
+// datum = kale yyyy-MM-dd (één wellness-record/dag). vorm = ctl−atl (bij sync).
+export type WellnessInput = {
+  datum: string;
+  rhr: number | null;
+  hrv: number | null;
+  slaapU: number | null;
+  slaapScore: number | null;
+  readiness: number | null;
+  mood: string | null;
+  weightKg: number | null;
+  ctl: number | null;
+  atl: number | null;
+  vorm: number | null;
+  ramp: number | null;
+};
+
+export type WellnessRecord = Omit<WellnessInput, "datum"> & { datum: Date };
+
+export async function upsertWellness(
+  db: Db,
+  userId: number,
+  row: WellnessInput,
+): Promise<void> {
+  const vals = {
+    userId,
+    datum: toD1Date(fromD1(row.datum)), // via dates.ts (normaliseert kale datum)
+    rhr: row.rhr,
+    hrv: row.hrv,
+    slaapU: row.slaapU,
+    slaapScore: row.slaapScore,
+    readiness: row.readiness,
+    mood: row.mood,
+    weightKg: row.weightKg,
+    ctl: row.ctl,
+    atl: row.atl,
+    vorm: row.vorm,
+    ramp: row.ramp,
+  };
+  await db
+    .insert(wellness)
+    .values(vals)
+    .onConflictDoUpdate({
+      target: [wellness.userId, wellness.datum],
+      set: vals, // laatste-wint; target-kolommen naar dezelfde waarde = no-op
+    });
+}
+
+/** Wellness-rijen oudste-eerst; datum via dates.ts → echte Date. */
+export async function readWellness(
+  db: Db,
+  userId: number,
+): Promise<WellnessRecord[]> {
+  const rows = await db
+    .select()
+    .from(wellness)
+    .where(eq(wellness.userId, userId))
+    .orderBy(asc(wellness.datum));
+  return rows.map((r) => ({
+    datum: fromD1(r.datum),
+    rhr: r.rhr,
+    hrv: r.hrv,
+    slaapU: r.slaapU,
+    slaapScore: r.slaapScore,
+    readiness: r.readiness,
+    mood: r.mood,
+    weightKg: r.weightKg,
+    ctl: r.ctl,
+    atl: r.atl,
+    vorm: r.vorm,
+    ramp: r.ramp,
+  }));
+}
+
+/**
+ * Glue (Worker-laag, NIET de engine): WellnessRecord[] → de 12-koloms
+ * WELL_HEADERS-array-vorm die `dashVormReeks_` verwacht. idx0 = Date; lege
+ * waarden → "" (Sheet-conventie: dashVormReeks_ test op `=== ""`), zodat een
+ * latere consumptie-port dit 1-op-1 hergebruikt.
+ * idx: 0 Datum · 1 RHR · 2 HRV · 3 Slaap(u) · 4 Slaap-score · 5 Readiness ·
+ *      6 Mood · 7 Weight(kg) · 8 CTL · 9 ATL · 10 Vorm · 11 Ramp.
+ */
+export function wellnessRowsToWellValues_(rows: WellnessRecord[]): any[][] {
+  const b = (x: any) => (x == null ? "" : x);
+  return rows.map((r) => [
+    r.datum,
+    b(r.rhr),
+    b(r.hrv),
+    b(r.slaapU),
+    b(r.slaapScore),
+    b(r.readiness),
+    b(r.mood),
+    b(r.weightKg),
+    b(r.ctl),
+    b(r.atl),
+    b(r.vorm),
+    b(r.ramp),
+  ]);
 }
