@@ -11,6 +11,44 @@ live tot cutover.
 
 ## Stand
 
+**Fase 4 — WORKER-ROUTES (Hono) — KLAAR.** Getypeerde Hono-app
+(`new Hono<{ Bindings: IntervalsEnv }>()`) met `app.onError` + `app.notFound`
+(consistente JSON-errors), alle routes onder `/api`, `userId = CURRENT_USER_ID`
+(=1). Vitest **70 → 94**; engine-selftest ONVERANDERD **886/0**. Drie sub-fases,
+CI groen op elk:
+
+- **Reads** (D1, TZ-veilig; Date-output via `toD1Date`/`toD1DateTime`) — commit
+  `56e64cc`, `test/routes.reads.test.ts` (8): `GET /api/health` → `{ok,service}`;
+  `GET /api/settings`; `GET /api/wellness`; `GET /api/activities` (opt
+  `?from=&to=` yyyy-MM-dd); `GET /api/weekplans/recent` (`?monday=` verplicht,
+  `?weeks=` default 8); `GET /api/weekplan/:monday`; `GET /api/checkin/:date`.
+- **Syncs** (POST; intervals in CI gemockt via `fetchMock` uit `cloudflare:test`;
+  leunen op ambient-now → debt (d)) — commit `9ac6c36`,
+  `test/routes.sync.test.ts` (6): `POST /api/sync/activities` (`?days=` default
+  28); `POST /api/sync/wellness` (`?days=` default 60); `POST /api/sync/power-curve`
+  (`?window=90d|1y` default 1y); `GET /api/power-curve` (`?window=`;
+  normalize-on-read; cache-hit binnen dezelfde now-dagbucket = geen refetch).
+- **Writes** (PUT, D1; body = gevalideerde client-input) — commit `21d5bb9`,
+  `test/routes.writes.test.ts` (10): `PUT /api/settings`; `PUT /api/checkin/:date`;
+  `PUT /api/weekplan/:monday`.
+
+**⚠️ KOP-OP voor Fase 5 (client-contract):**
+- `PUT /api/settings` is **FULL-REPLACE**, geen partial-merge: weggelaten velden
+  → `null`. De PWA MOET altijd het VOLLEDIGE `EngineSettings`-object sturen (alle
+  12 velden), nooit een delta. Een veld clearen = het weglaten; een expliciete
+  `null` in de body geeft 400.
+- `PUT /api/checkin/:date` verwacht `{slaap,benen,stress}` — alle drie verplicht
+  (string).
+- `PUT /api/weekplan/:monday` verwacht `{ entries: [...] }`, as-is als JSON-blob
+  opgeslagen (geen shape-eisen op de entries).
+
+**Volgende (Fase 5) — de PWA (`apps/web`):** Vite + React + `vite-plugin-pwa`,
+faithful 1-op-1 port van de bestaande tabs/CSS-tokens tegen deze routes.
+Design-materiaal (`tokens.css` + `export.md`) = de visuele autoriteit. Auth
+blijft uit (v1 lean). Openstaand vóór/bij deploy: assets-binding in
+`wrangler.jsonc` (Fase 5-TODO), de CORS/mount-beslissing (PWA + Worker samen), en
+de pre-deploy-blockers debt (d) + remote-migratie-drift (g).
+
 **Fase 3c — WELLNESS- + POWER-CURVE-SYNC COMPLEET (lokaal).** Beide auth-paden
 hergebruiken `intervalsBasicAuth` + FetchImpl-injectie uit `intervals.ts`;
 gemockt in CI, smokes lokaal-only apart (niet in de gate). Vitest **64 → 70**;
@@ -44,11 +82,6 @@ read; genormaliseerde output wordt NOOIT gecachet. Endpoint
 `c.weight`. `repo.ts`: `upsertPowerCurveCache`, `readPowerCurveCache`. Tests
 `workers/api/test/powercurve.test.ts` (cache-round-trip/dag-bucket-TTL/
 `pcNormalize_`-oracle); smoke `scripts/powercurve-smoke.mjs`.
-
-**Volgende (Fase 4):** de sync-functies (`syncActivities`/`syncWellness`/
-`syncPowerCurve`) + repo-reads (`readWellness`/`readNormalizedPowerCurve`/…) via
-Hono HTTP-routes exposen; daarna richting deploy, met debt (d) +
-remote-migratie-drift (g) als pre-deploy-blockers.
 
 **Fase 3b — INTERVALS.ICU ACTIVITEITEN-SYNC GEPORT (lokaal).**
 `workers/api/src/integrations/intervals.ts`: `fetchActivities` +
@@ -170,7 +203,7 @@ lokaal draaien Node 24._
 | 3a | data-access-laag (D1 ↔ engine) + TZ-conversie + Worker-integratietests | ✓ |
 | 3b | intervals.icu activiteiten-sync + remote D1 (`database_id`) | ✓ |
 | 3c | wellness- + power-curve-sync (engine heeft beide nodig) | ✓ |
-| 4 | Worker-API | |
+| 4 | Worker-API (Hono routes: reads/syncs/writes) | ✓ |
 | 5 | React-PWA (tabs + tokens 1-op-1 port) | |
 | 6 | telegram-webhook | |
 
@@ -218,7 +251,14 @@ Open schulden die bewust naar een latere fase zijn geschoven:
   kunnen eerder deployen. **BLIJFT open (Fase 3c):** de power-curve-**dag-bucket**
   is nu TZ-expliciet via `dates.ts` (goed), maar de datum-gevoelige
   **weekgeneratie** leunt nog op ambient `Europe/Amsterdam` → moet TZ-expliciet
-  vóór deploy.
+  vóór deploy. **VERFIJND (Fase 4):** de sync-routes + `GET /api/power-curve`
+  leunen op ambient-now; de routes geven BEWUST geen `now`/`fetchImpl` door
+  (productie = global fetch) → onder een gedeployde UTC-Worker schuiven de
+  dag-buckets/vensters. De pure-D1-**reads én writes** zijn TZ-veilig
+  (caller-supplied datums via `dates.ts`). De **weekgeneratie**
+  (`assignWorkouts`/`generateProposal`) is nog NIET geport → de zwaarste
+  ambient-afhankelijkheid, latere fase. Vóór prod-deploy: runtime-TZ pinnen of
+  `now` expliciet doorgeven.
 - **(e) D1-TEXT-datum → Date-mapping — GEDEELTELIJK OPGELOST (Fase 3a).** De
   conversielaag `workers/api/src/db/dates.ts` (`fromD1`/`toD1Date`/`toD1DateTime`)
   is geïmplementeerd + getest (incl. DST-grenzen) en wordt door de repo-laag
@@ -247,3 +287,7 @@ Open schulden die bewust naar een latere fase zijn geschoven:
   `wellnessRowsToWellValues_` dekt de ""-conventie correct voor idx0/8/9/10 (wat
   `dashVormReeks_` leest). Bij de readiness-port bevestigen dat NULL→"" óók klopt
   voor idx5/6 (readiness, mood), die vaker leeg zijn.
+- **(j) Assets-binding + CORS/mount — NIEUW (Fase 5-TODO).** `wrangler.jsonc`
+  heeft nog GEEN assets-binding (de `apps/web`-dist). De CORS/mount-beslissing —
+  PWA + Worker samen serveren (assets-binding, same-origin) of split-origin met
+  CORS — is nog te maken → Fase 5, vóór deploy.
