@@ -10,6 +10,11 @@
  * geven de engine een sync map-reader (readRecentWeekplans).
  */
 import { gatherWeekplanEntries_ } from "@cadans/engine";
+import type {
+  CheckinInput,
+  SettingsInput,
+  WellnessInput,
+} from "@cadans/shared";
 import { and, asc, eq, gte, lte } from "drizzle-orm";
 import type { Db } from "./client";
 import { fromD1, toD1Date, toD1DateTime } from "./dates";
@@ -22,22 +27,15 @@ import {
   wellness,
 } from "./schema";
 
+// Re-export de WIRE-DTO's zodat bestaande consumenten ze uit de repo-laag blijven
+// betrekken (routes: CheckinInput; integrations/wellness: WellnessInput).
+export type { CheckinInput, WellnessInput };
+
 // ── settings ─────────────────────────────────────────────────────────
-// Engine-shape: { ftp, lthr, gewicht, doel, doelStart(Date|null), hrMax, hrRest,
-//   doelDuur, fase, profielPreset, pendelDuurMin, pendelAantal }.
-export type EngineSettings = {
-  ftp: number | null;
-  lthr: number | null;
-  gewicht: number | null;
-  doel: string | null;
+// Repo-interne vorm = de WIRE-DTO SettingsInput (@cadans/shared) met doelStart
+// als Date i.p.v. ISO-string; de 11 andere velden komen 1-op-1 uit shared.
+export type EngineSettings = Omit<SettingsInput, "doelStart"> & {
   doelStart: Date | null;
-  hrMax: number | null;
-  hrRest: number | null;
-  doelDuur: number | null;
-  fase: string | null;
-  profielPreset: string | null;
-  pendelDuurMin: number | null;
-  pendelAantal: number | null;
 };
 
 export async function writeSettings(
@@ -92,14 +90,12 @@ export async function readSettings(
   };
 }
 
-// ── check-in (readiness-seam) ──────────────────────────────────────────
-export type Checkin = { slaap: string; benen: string; stress: string };
-
+// ── check-in (readiness-seam) — DTO = CheckinInput (@cadans/shared) ─────
 export async function writeCheckin(
   db: Db,
   userId: number,
   date: string,
-  c: Checkin,
+  c: CheckinInput,
 ): Promise<void> {
   const vals = {
     userId,
@@ -122,7 +118,7 @@ export async function readCheckin(
   db: Db,
   userId: number,
   date: string,
-): Promise<Checkin | null> {
+): Promise<CheckinInput | null> {
   const rows = await db
     .select()
     .from(checkins)
@@ -289,23 +285,9 @@ export async function readActivities(
   return rows.map(rowFromAct);
 }
 
-// ── wellness (WELL_HEADERS 12-kol) ─────────────────────────────────────
-// datum = kale yyyy-MM-dd (één wellness-record/dag). vorm = ctl−atl (bij sync).
-export type WellnessInput = {
-  datum: string;
-  rhr: number | null;
-  hrv: number | null;
-  slaapU: number | null;
-  slaapScore: number | null;
-  readiness: number | null;
-  mood: string | null;
-  weightKg: number | null;
-  ctl: number | null;
-  atl: number | null;
-  vorm: number | null;
-  ramp: number | null;
-};
-
+// ── wellness (WELL_HEADERS 12-kol) — DTO = WellnessInput (@cadans/shared) ─
+// WellnessInput = de WIRE-vorm (datum als ISO-string); de repo-vorm heeft datum
+// als Date. vorm = ctl−atl (bij sync).
 export type WellnessRecord = Omit<WellnessInput, "datum"> & { datum: Date };
 
 export async function upsertWellness(

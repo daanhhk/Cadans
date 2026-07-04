@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@cadans/engine": "workspace:*",
+    "@cadans/shared": "workspace:*",
     "drizzle-orm": "^0.38.0",
     "hono": "^4.6.0"
   },

@@ -12,7 +12,7 @@ import { HTTPException } from "hono/http-exception";
 import { CURRENT_USER_ID, makeDb } from "../db/client";
 import { fromD1, toD1Date, toD1DateTime } from "../db/dates";
 import {
-  type Checkin,
+  type CheckinInput,
   type EngineSettings,
   readActivities,
   readCheckin,
@@ -323,7 +323,7 @@ api.put("/checkin/:date", async (c) => {
   ) {
     throw new HTTPException(400, { message: "invalid checkin payload" });
   }
-  const checkin: Checkin = {
+  const checkin: CheckinInput = {
     slaap: body.slaap,
     benen: body.benen,
     stress: body.stress,

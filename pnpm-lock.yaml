@@ -61,11 +61,20 @@ importers:
         specifier: ^5.6.0
         version: 5.9.3
 
+  packages/shared:
+    devDependencies:
+      typescript:
+        specifier: ^5.6.0
+        version: 5.9.3
+
   workers/api:
     dependencies:
       '@cadans/engine':
         specifier: workspace:*
         version: link:../../packages/engine
+      '@cadans/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       drizzle-orm:
         specifier: ^0.38.0
         version: 0.38.4(@cloudflare/workers-types@4.20260702.1)(@types/react@19.2.17)(react@19.2.7)
