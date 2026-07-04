@@ -6,7 +6,11 @@ import { VitePWA } from "vite-plugin-pwa";
 export default defineConfig({
   // Dev-mount: /api/* → de lokale wrangler-dev-Worker (poort 8787). In prod
   // draaien beide op één origin via de assets-binding (workers/api/wrangler.jsonc).
+  // host:true stelt de dev-server BEWUST open op het lokale netwerk (0.0.0.0) zodat
+  // Daan vanaf de telefoon op hetzelfde wifi kan kijken; de proxy blijft naar
+  // 127.0.0.1:8787 wijzen want wrangler dev draait op dezelfde laptop.
   server: {
+    host: true,
     proxy: {
       "/api": { target: "http://127.0.0.1:8787", changeOrigin: true },
     },
