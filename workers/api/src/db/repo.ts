@@ -13,7 +13,14 @@ import { gatherWeekplanEntries_ } from "@cadans/engine";
 import { and, asc, eq, gte, lte } from "drizzle-orm";
 import type { Db } from "./client";
 import { fromD1, toD1Date, toD1DateTime } from "./dates";
-import { activities, checkins, settings, weekplans, wellness } from "./schema";
+import {
+  activities,
+  checkins,
+  powerCurveCache,
+  settings,
+  weekplans,
+  wellness,
+} from "./schema";
 
 // ── settings ─────────────────────────────────────────────────────────
 // Engine-shape: { ftp, lthr, gewicht, doel, doelStart(Date|null), hrMax, hrRest,
@@ -380,4 +387,47 @@ export function wellnessRowsToWellValues_(rows: WellnessRecord[]): any[][] {
     b(r.vorm),
     b(r.ramp),
   ]);
+}
+
+// ── power_curve_cache (RAW respons per window; pcNormalize_ op read) ────
+export async function upsertPowerCurveCache(
+  db: Db,
+  userId: number,
+  window: string,
+  fetchedOn: string,
+  rawJson: string,
+): Promise<void> {
+  const vals = { userId, window, fetchedOn, rawJson };
+  await db
+    .insert(powerCurveCache)
+    .values(vals)
+    .onConflictDoUpdate({
+      target: [powerCurveCache.userId, powerCurveCache.window],
+      set: { fetchedOn, rawJson },
+    });
+}
+
+export async function readPowerCurveCache(
+  db: Db,
+  userId: number,
+  window: string,
+): Promise<{ fetchedOn: string; raw: any } | null> {
+  const rows = await db
+    .select()
+    .from(powerCurveCache)
+    .where(
+      and(
+        eq(powerCurveCache.userId, userId),
+        eq(powerCurveCache.window, window),
+      ),
+    );
+  const r = rows[0];
+  if (!r) return null;
+  let raw: any = null;
+  try {
+    raw = JSON.parse(r.rawJson);
+  } catch {
+    raw = null;
+  }
+  return { fetchedOn: r.fetchedOn, raw };
 }

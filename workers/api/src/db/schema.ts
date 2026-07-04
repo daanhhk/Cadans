@@ -226,6 +226,25 @@ export const syncState = sqliteTable("sync_state", {
   weightLastSync: text("weight_last_sync"),
 });
 
+// ── power_curve_cache — RAW {list,activities}-respons per window. pcNormalize_
+// draait op elke READ (nooit genormaliseerd cachen); fetched_on-dag-bucket =
+// impliciete 24h-TTL (spiegelt de GAS powercurve_raw_<window>_<yyyyMMdd>-cache).
+export const powerCurveCache = sqliteTable(
+  "power_curve_cache",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id),
+    window: text("window").notNull(), // '90d' | '1y'
+    fetchedOn: text("fetched_on").notNull(), // yyyy-MM-dd dag-bucket
+    rawJson: text("raw_json").notNull(), // JSON.stringify({ list, activities })
+  },
+  (t) => [
+    uniqueIndex("power_curve_cache_user_window_unq").on(t.userId, t.window),
+  ],
+);
+
 // ── Inferred types (voor de Worker in Fase 3+) ───────────────────────
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -247,5 +266,7 @@ export type Checkin = typeof checkins.$inferSelect;
 export type NewCheckin = typeof checkins.$inferInsert;
 export type DayState = typeof dayState.$inferSelect;
 export type NewDayState = typeof dayState.$inferInsert;
+export type PowerCurveCache = typeof powerCurveCache.$inferSelect;
+export type NewPowerCurveCache = typeof powerCurveCache.$inferInsert;
 export type SyncState = typeof syncState.$inferSelect;
 export type NewSyncState = typeof syncState.$inferInsert;
