@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Cadans — merk</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg" />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="tokens.css" />
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg-app); font-family: var(--font-sans); color: var(--text-primary); padding: 56px 40px 80px; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 13px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 30px; }
+  .row { display: flex; gap: 28px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 44px; }
+  .cell { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
+  .cap { font-family: var(--font-num); font-size: 11px; color: var(--text-muted); letter-spacing: 0.02em; }
+  /* icon tile via SVG mark */
+  .tile { display: inline-flex; align-items: center; justify-content: center; }
+  .tile svg { display: block; }
+  .home { display: flex; gap: 26px; align-items: flex-start; background: linear-gradient(160deg,#1a1d24,#0c0e12); border:1px solid var(--border-subtle); border-radius: 22px; padding: 30px 34px; margin-bottom: 44px; }
+  .home .label { font-size: 12px; color: var(--text-secondary); margin-top: 8px; text-align:center; }
+  .lockup { display: flex; align-items: center; gap: 13px; }
+  .wordmark { font-family: var(--font-sans); font-weight: 700; letter-spacing: 0.02em; color: var(--text-primary); }
+  .sub { font-size: 13px; color: var(--text-secondary); line-height: 1.6; max-width: 560px; }
+  .swatches { display:flex; gap:10px; margin-top: 6px; }
+  .sw { width: 60px; height: 60px; border-radius: 12px; border:1px solid var(--border-subtle); display:flex; align-items:flex-end; padding:6px; }
+  .sw span { font-family: var(--font-num); font-size: 9px; color: rgba(255,255,255,0.85); }
+  .divider { height:1px; background: var(--border-subtle); margin: 40px 0; }
+  .alt { display:flex; gap: 18px; flex-wrap: wrap; }
+  .altcard { background: var(--bg-surface); border:1px solid var(--border-subtle); border-radius: 14px; padding: 18px 20px; width: 210px; }
+  .altname { font-weight: 700; font-size: 18px; }
+  .altnote { font-size: 12px; color: var(--text-muted); margin-top: 6px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Cadans — merkidentiteit</h1>
+
+  <!-- home-screen mock -->
+  <div class="home">
+    <div>
+      <div class="tile" id="tile-home"></div>
+      <div class="label">Cadans</div>
+    </div>
+    <div style="padding-top:6px">
+      <div class="lockup">
+        <div class="tile" id="tile-mark-sm"></div>
+        <span class="wordmark" style="font-size:26px">Cadans</span>
+      </div>
+      <p class="sub" style="margin-top:16px">
+        <strong>Cadans</strong> — je ritme vinden en vasthouden, rit na rit. De naam is wielertaal
+        (cadans = trapfrequentie) én een coachingsbelofte. Het merkteken evolueert de bestaande
+        schuine-balk-DNA tot <em>drie stijgende balken</em>: ritme dat klimt — precies jouw Girona-doel.
+      </p>
+    </div>
+  </div>
+
+  <!-- size ladder -->
+  <div class="row" id="sizes"></div>
+
+  <!-- in-app header lockup (coach-naam) -->
+  <div class="cell" style="margin-bottom:44px">
+    <div class="cap">In-app header — merkteken + jouw coach-naam</div>
+    <div style="display:flex; align-items:center; gap:10px; background:var(--bg-app); border:1px solid var(--border-subtle); border-radius:12px; padding:14px 18px;">
+      <div class="tile" id="tile-hdr"></div>
+      <span class="wordmark" style="font-size:16px; letter-spacing:0.04em">DAAN</span>
+    </div>
+    <div class="cap" style="color:var(--text-secondary)">De header toont de naam die je je coach geeft (Instellingen → Jouw coach). Het merkteken blijft Cadans.</div>
+  </div>
+
+  <!-- palette -->
+  <div class="cell">
+    <div class="cap">Kleur — bestaand accent</div>
+    <div class="swatches">
+      <div class="sw" style="background:linear-gradient(135deg,#FF6A2A,#FF2E22)"><span>gradient</span></div>
+      <div class="sw" style="background:#FF5A1F"><span>#FF5A1F</span></div>
+      <div class="sw" style="background:#0E1116"><span>#0E1116</span></div>
+      <div class="sw" style="background:#12161D"><span>#12161D</span></div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+  <div class="cap" style="margin-bottom:14px">Alternatieven (zeg het, dan wissel ik merk + favicon om)</div>
+  <div class="alt">
+    <div class="altcard"><div class="altname">Cadans</div><div class="altnote">Aanbevolen. Trapfrequentie + ritme. Warm, Nederlands, ownable.</div></div>
+    <div class="altcard"><div class="altname">Col</div><div class="altnote">De bergpas die je beklimt. Kort, scherp, klim-thematisch — past bij Girona. Iets nichér.</div></div>
+    <div class="altcard"><div class="altname">Souplesse</div><div class="altnote">Soepel, moeiteloos rondtrappen. Elegant, wieler-insider. Lastiger te spellen.</div></div>
+  </div>
+</div>
+
+<script>
+  function mark(size) {
+    // returns an SVG string of the Cadans tile at the given px size
+    const r = Math.round(size * 0.226);
+    return `<svg width="${size}" height="${size}" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+      <defs><linearGradient id="g${size}" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#FF6A2A"/><stop offset="1" stop-color="#FF2E22"/></linearGradient></defs>
+      <rect width="512" height="512" rx="116" fill="url(#g${size})"/>
+      <g transform="translate(86,0) skewX(-12)" fill="#FFFFFF">
+        <rect x="150" y="300" width="56" height="118" rx="14"/>
+        <rect x="230" y="232" width="56" height="186" rx="14"/>
+        <rect x="310" y="150" width="56" height="268" rx="14"/>
+      </g></svg>`;
+  }
+  document.getElementById('tile-home').innerHTML = `<div style="border-radius:${Math.round(96*0.226)}px;overflow:hidden;box-shadow:0 12px 30px rgba(0,0,0,.45)">${mark(96)}</div>`;
+  document.getElementById('tile-mark-sm').innerHTML = mark(40);
+  document.getElementById('tile-hdr').innerHTML = mark(26);
+  const sizes = [16, 32, 64, 128, 180];
+  document.getElementById('sizes').innerHTML = sizes.map(s =>
+    `<div class="cell"><div class="tile">${mark(s)}</div><div class="cap">${s}px</div></div>`
+  ).join('');
+</script>
+</body>
+</html>

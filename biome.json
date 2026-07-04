@@ -15,7 +15,8 @@
       "!**/.wrangler",
       "!**/*.tsbuildinfo",
       "!**/public",
-      "!**/drizzle"
+      "!**/drizzle",
+      "!**/design"
     ]
   },
   "formatter": {

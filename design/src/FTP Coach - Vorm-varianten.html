@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=820, initial-scale=1" />
+<title>Cadans — Vorm-varianten A &amp; B</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="icon" type="image/svg+xml" href="favicon.svg" />
+<link rel="apple-touch-icon" href="icons/cadans-icon-180.png" />
+<link rel="stylesheet" href="tokens.css" />
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--bg-app); }
+  body { width: 820px; background: var(--bg-app); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; padding: 22px 20px 30px; }
+  ::-webkit-scrollbar { width: 0; height: 0; }
+  .cols { display: flex; gap: 20px; align-items: flex-start; }
+  .col { width: 390px; }
+  .vlabel { display: flex; align-items: baseline; gap: 8px; margin-bottom: 12px; padding: 0 2px; }
+  .vlabel b { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+  .vlabel span { font-size: 12px; color: var(--text-muted); }
+  .vbody { display: flex; flex-direction: column; gap: 16px; }
+  .deckmini { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--r-lg); padding: 13px 15px; box-shadow: var(--shadow-card); }
+  .ghost { opacity: .5; }
+  .card { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--r-lg); box-shadow: var(--shadow-card); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="chart.jsx"></script>
+<script type="text/babel" src="conditie.jsx"></script>
+<script type="text/babel" src="niveau.jsx"></script>
+<script type="text/babel">
+  const Over = ({ children, c='var(--text-muted)' }) => <div style={{ fontFamily:'var(--font-sans)', fontSize:10, fontWeight:600, letterSpacing:'0.14em', textTransform:'uppercase', color:c }}>{children}</div>;
+  const Num = ({ children, s=24, w=600, c='var(--text-primary)' }) => <span style={{ fontFamily:'var(--font-num)', fontVariantNumeric:'tabular-nums', fontSize:s, fontWeight:w, color:c, lineHeight:1, letterSpacing:'-0.01em' }}>{children}</span>;
+
+  // gedeelde deck-stand-in (Readiness + Level) — staat boven beide varianten, ongewijzigd
+  function DeckMini() {
+    return (
+      <div className="deckmini ghost">
+        <Over>Status-deck · ongewijzigd</Over>
+        <div style={{ display:'flex', alignItems:'center', gap:12, marginTop:8 }}>
+          <div style={{ width:54, height:54, borderRadius:999, border:'5px solid var(--good)', borderRightColor:'var(--bg-sunken)', display:'flex', alignItems:'center', justifyContent:'center' }}><Num s={18}>82</Num></div>
+          <div style={{ fontFamily:'var(--font-sans)', fontSize:13, color:'var(--text-secondary)' }}>Readiness-kaart · Niveau-kaart (swipe)</div>
+        </div>
+      </div>
+    );
+  }
+  function ConditieCard() {
+    return (
+      <div className="card" style={{ padding:'14px 14px 16px' }}>
+        <Over>Conditie-balans</Over>
+        <div style={{ fontFamily:'var(--font-sans)', fontSize:11.5, color:'var(--text-muted)', marginTop:4 }}>vorm = fitheid − vermoeidheid</div>
+        <ConditieBalans />
+      </div>
+    );
+  }
+  function MetricRowMini() {
+    const items=[['275','W','FTP'],['72','kg','Gewicht'],['480','TSS','Week']];
+    return (
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', background:'var(--bg-surface)', border:'1px solid var(--border-subtle)', borderRadius:'var(--r-lg)', overflow:'hidden' }}>
+        {items.map((m,i)=>(
+          <div key={m[2]} style={{ padding:'14px 12px', textAlign:'center', borderLeft: i?'1px solid var(--border-subtle)':'none' }}>
+            <div style={{ display:'flex', alignItems:'baseline', justifyContent:'center', gap:3 }}><Num s={22}>{m[0]}</Num><span style={{ fontFamily:'var(--font-sans)', fontSize:11, color:'var(--text-muted)' }}>{m[1]}</span></div>
+            <Over>{m[2]}</Over>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  function VariantB() {
+    return (
+      <div className="vbody">
+        <DeckMini />
+        <div className="card" style={{ padding:'16px 14px 10px' }}>
+          <div style={{ padding:'0 2px' }}>
+            <Over>W/kg over tijd</Over>
+            <div style={{ display:'flex', alignItems:'baseline', gap:7, marginTop:5 }}><Num s={26}>3,8</Num><span style={{ fontFamily:'var(--font-sans)', fontSize:12, color:'var(--text-muted)' }}>W/kg</span><Num s={12} c="var(--good)">+0,9 ↑</Num></div>
+          </div>
+          <div style={{ display:'flex', gap:4, background:'var(--bg-sunken)', borderRadius:'var(--r-pill)', padding:3, marginTop:12 }}>
+            {['1M','6M','12M','Alles'].map((l,i)=>(<div key={l} style={{ flex:1, textAlign:'center', borderRadius:'var(--r-pill)', padding:'6px 0', fontFamily:'var(--font-sans)', fontSize:12, fontWeight:600, background: i===3?'var(--bg-elevated)':'transparent', color: i===3?'var(--text-primary)':'var(--text-muted)' }}>{l}</div>))}
+          </div>
+          <div style={{ marginTop:12 }}><NiveauChart range="all" /></div>
+        </div>
+        <MetricRowMini />
+        <ConditieCard />
+      </div>
+    );
+  }
+  function VariantA() {
+    return (
+      <div className="vbody">
+        <DeckMini />
+        <VormLevelSummary onOpenNiveau={()=>{}} />
+        <ConditieCard />
+      </div>
+    );
+  }
+  function Host() {
+    return (
+      <div className="cols">
+        <div className="col">
+          <div className="vlabel"><b>Variant A</b><span>· diepe progressie → Niveau · Vorm houdt samenvatting + “Progressie →”</span></div>
+          <VariantA />
+        </div>
+        <div className="col">
+          <div className="vlabel"><b>Variant B</b><span>· Vorm ongewijzigd · Niveau draagt de diepe view zelfstandig</span></div>
+          <VariantB />
+        </div>
+      </div>
+    );
+  }
+  ReactDOM.createRoot(document.getElementById('root')).render(<Host />);
+</script>
+</body>
+</html>

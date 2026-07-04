@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=390, initial-scale=1" />
+<title>Cadans — Niveau</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="icon" type="image/svg+xml" href="favicon.svg" />
+<link rel="apple-touch-icon" href="icons/cadans-icon-180.png" />
+<link rel="stylesheet" href="tokens.css" />
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--bg-app); }
+  body { width: 390px; background: var(--bg-app); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+  ::-webkit-scrollbar { width: 0; height: 0; }
+  #root { width: 390px; }
+  .nv-app { min-height: 844px; padding-bottom: 30px; }
+  header.nv-h { display: flex; align-items: center; justify-content: space-between; padding: 52px 18px 14px; }
+  @media (prefers-reduced-motion: no-preference) {
+    .nv-skel::after { content:''; position:absolute; inset:0; transform: translateX(-100%);
+      background: linear-gradient(90deg, transparent, var(--skeleton-sheen), transparent); animation: nvSheen 1.3s ease-in-out infinite; }
+  }
+  @keyframes nvSheen { 100% { transform: translateX(100%); } }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>window.__NV_STATE = new URLSearchParams(location.search).get('s') || 'normaal';</script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="niveau.jsx"></script>
+<script type="text/babel">
+  function NvHost() {
+    return (
+      <div className="nv-app">
+        <header className="nv-h">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+            <svg width="22" height="22" viewBox="0 0 512 512" aria-hidden="true" style={{ display: 'block' }}>
+              <defs><linearGradient id="cadans-mark-nv" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="var(--accent)" /><stop offset="1" stopColor="var(--accent-strong)" /></linearGradient></defs>
+              <g transform="translate(86,0) skewX(-12)" fill="url(#cadans-mark-nv)"><rect x="150" y="300" width="56" height="118" rx="14" /><rect x="230" y="232" width="56" height="186" rx="14" /><rect x="310" y="150" width="56" height="268" rx="14" /></g>
+            </svg>
+            <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: 16, letterSpacing: '0.05em', color: 'var(--text-primary)', textTransform: 'uppercase' }}>Coach</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontFamily: 'var(--font-num)', fontSize: 12, color: 'var(--text-muted)' }}>Week 23</span>
+            <span style={{ width: 32, height: 32, borderRadius: 999, background: 'var(--bg-elevated)', border: '1.5px solid var(--accent)', boxShadow: '0 0 0 3px var(--accent-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>DK</span>
+          </div>
+        </header>
+        <div style={{ padding: '0 16px' }}>
+          <NiveauTab dataState={window.__NV_STATE} />
+        </div>
+      </div>
+    );
+  }
+  ReactDOM.createRoot(document.getElementById('root')).render(<NvHost />);
+</script>
+</body>
+</html>

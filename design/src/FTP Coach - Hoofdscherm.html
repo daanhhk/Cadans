@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cadans — Hoofdscherm</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="icon" type="image/svg+xml" href="favicon.svg" />
+<link rel="apple-touch-icon" href="icons/cadans-icon-180.png" />
+<link rel="stylesheet" href="tokens.css" />
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background:
+      radial-gradient(1200px 600px at 50% -10%, #1b1f27 0%, #0e1116 55%, #0a0c10 100%);
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; padding: 28px 16px;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  #root { display: flex; justify-content: center; }
+
+  /* swipe-deck */
+  .deck {
+    display: flex; gap: 12px; overflow-x: auto; overflow-y: hidden;
+    scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
+    padding: 0 16px; scroll-padding-left: 16px;
+    align-items: flex-start;
+  }
+  .deck::-webkit-scrollbar { display: none; }
+  .deck { scrollbar-width: none; }
+  .daystrip::-webkit-scrollbar { display: none; }
+  .daystrip { scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+
+  /* Garmin-sync spinner */
+  .gm-spin { width: 15px; height: 15px; border: 2px solid var(--text-muted); border-top-color: transparent; border-radius: 50%; animation: gmspin .7s linear infinite; }
+  @keyframes gmspin { to { transform: rotate(360deg); } }
+  .deck-card {
+    flex: 0 0 100%; scroll-snap-align: start;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    padding: 15px 16px;
+    min-height: 158px;
+    box-shadow: var(--shadow-card);
+  }
+
+  /* progress-bar groei-animatie */
+  @keyframes growBar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+  @media (prefers-reduced-motion: no-preference) {
+    .grow-bar { transform-origin: left; animation: growBar 1.1s cubic-bezier(.22,.61,.36,1) both; animation-delay: .25s; }
+  }
+
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* check-in bottom sheet */
+  @media (prefers-reduced-motion: no-preference) {
+    .sheet-backdrop { animation: sheetFade .22s ease both; }
+    .sheet-panel { animation: sheetUp .3s cubic-bezier(.22,.61,.36,1) both; }
+  }
+  @keyframes sheetFade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+  /* screen-slide (home ↔ instellingen) */
+  .screen {
+    position: absolute; inset: 0;
+    overflow-x: hidden; overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    transition: transform .34s cubic-bezier(.4,0,.2,1), filter .34s ease;
+    will-change: transform;
+  }
+  .screen::-webkit-scrollbar { display: none; }
+  .screen { scrollbar-width: none; }
+
+  /* form-velden */
+  .field { transition: border-color .15s, background .15s; }
+  .field:focus { border-color: var(--accent) !important; background: var(--field-bg-focus) !important; }
+  .field::-webkit-outer-spin-button, .field::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .field::placeholder { color: var(--field-placeholder); }
+  input[type="date"].field::-webkit-calendar-picker-indicator { filter: invert(0.7); cursor: pointer; }
+</style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="ios-frame.jsx"></script>
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+  <script type="text/babel" src="chart.jsx"></script>
+  <script type="text/babel" src="workout.jsx"></script>
+  <script type="text/babel" src="conditie.jsx"></script>
+  <script type="text/babel" src="niveau.jsx"></script>
+  <script type="text/babel" src="settings.jsx"></script>
+  <script type="text/babel" src="schema.jsx"></script>
+  <script type="text/babel" src="trainingen.jsx"></script>
+  <script type="text/babel" src="app.jsx"></script>
+</body>
+</html>

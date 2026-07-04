@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cadans — render targets</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="icon" type="image/svg+xml" href="favicon.svg" />
+<link rel="apple-touch-icon" href="icons/cadans-icon-180.png" />
+<link rel="stylesheet" href="tokens.css" />
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: #0b0d11;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    padding: 30px;
+  }
+  #board {
+    display: flex;
+    gap: 30px;
+    align-items: flex-start;
+    width: max-content;
+  }
+  .col { display: flex; flex-direction: column; gap: 12px; }
+  .cap {
+    font-family: var(--font-num);
+    font-size: 13px;
+    font-weight: 600;
+    color: #8b97a4;
+    letter-spacing: 0.01em;
+    padding-left: 2px;
+  }
+  .frame {
+    width: 390px;
+    height: 844px;
+    background: var(--bg-app);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #20262e;
+    border-radius: 16px;
+  }
+  /* iOS-achtige statusbar */
+  .statusbar {
+    height: 44px; display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px 0 28px;
+  }
+  .statusbar .time { font-family: var(--font-sans); font-size: 15px; font-weight: 600; color: var(--text-primary); letter-spacing: 0.01em; }
+  .statusbar .sysicons { display: flex; align-items: center; gap: 6px; }
+  /* app-header */
+  .apphdr { display: flex; align-items: center; justify-content: space-between; padding: 8px 18px 14px; }
+  .logo { display: flex; align-items: center; gap: 9px; }
+  .logo .bar { width: 9px; height: 18px; border-radius: 2px; background: var(--accent-grad); display: inline-block; transform: skewX(-12deg); }
+  .logo .name { font-family: var(--font-sans); font-weight: 700; font-size: 16px; letter-spacing: 0.02em; color: var(--text-primary); }
+  .hdr-right { display: flex; align-items: center; gap: 10px; }
+  .wk { font-family: var(--font-num); font-size: 12px; color: var(--text-muted); }
+  .avatar {
+    width: 32px; height: 32px; border-radius: 999px; background: var(--bg-elevated);
+    border: 1.5px solid var(--accent); box-shadow: 0 0 0 3px var(--accent-soft);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-sans); font-size: 12px; font-weight: 700; color: var(--text-primary);
+  }
+  .body { padding: 8px 16px 0; }
+
+  .overline {
+    font-family: var(--font-sans); font-size: var(--fs-caption); font-weight: 600;
+    letter-spacing: var(--tracking-overline); text-transform: uppercase; color: var(--text-muted);
+  }
+  .num { font-family: var(--font-num); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; line-height: 1; }
+  .card {
+    background: var(--card-bg); border: 1px solid var(--card-border);
+    border-radius: var(--card-radius); box-shadow: var(--card-shadow); padding: var(--card-pad);
+  }
+</style>
+</head>
+<body>
+<div id="board"></div>
+
+<template id="__bundler_thumbnail">
+  <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="100" fill="#0b0d11"/>
+    <rect x="30" y="18" width="40" height="64" rx="7" fill="#12161d" stroke="#FF5A1F" stroke-width="2"/>
+    <circle cx="50" cy="40" r="9" fill="none" stroke="#34D17F" stroke-width="3"/>
+    <rect x="38" y="58" width="24" height="3" rx="1.5" fill="#FF5A1F"/>
+  </svg>
+</template>
+
+<script>
+const chevron = (up) => `<svg width="13" height="13" viewBox="0 0 14 14" fill="none" style="transform:${up ? 'rotate(180deg)' : 'none'}"><path d="M3 5l4 4 4-4" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const star = (c) => `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><path d="M8 1.5l1.8 3.9 4.2.5-3.1 2.9.8 4.2L8 11.4 4.3 13l.8-4.2L2 5.9l4.2-.5L8 1.5z" stroke="${c}" stroke-width="1.2" stroke-linejoin="round"/></svg>`;
+const plus = (c) => `<svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M7 2.5v9M2.5 7h9" stroke="${c}" stroke-width="1.8" stroke-linecap="round"/></svg>`;
+
+function statusbar() {
+  return `<div class="statusbar">
+    <span class="time">9:41</span>
+    <span class="sysicons">
+      <svg width="18" height="12" viewBox="0 0 18 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="1" fill="var(--text-primary)"/><rect x="4.5" y="5" width="3" height="7" rx="1" fill="var(--text-primary)"/><rect x="9" y="2.5" width="3" height="9.5" rx="1" fill="var(--text-primary)"/><rect x="13.5" y="0" width="3" height="12" rx="1" fill="var(--text-muted)"/></svg>
+      <svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 2.2c2 0 3.8.8 5.1 2.1M8 5c1.2 0 2.3.5 3.1 1.3M8 7.8c.5 0 .9.2 1.2.5" stroke="var(--text-primary)" stroke-width="1.3" stroke-linecap="round"/><circle cx="8" cy="10" r="0.9" fill="var(--text-primary)"/></svg>
+      <svg width="26" height="12" viewBox="0 0 26 12" fill="none"><rect x="0.5" y="1.5" width="21" height="9" rx="2.5" stroke="var(--text-primary)" stroke-opacity="0.5"/><rect x="2.5" y="3.5" width="16" height="5" rx="1" fill="var(--text-primary)"/><rect x="23" y="4" width="2" height="4" rx="1" fill="var(--text-primary)" fill-opacity="0.5"/></svg>
+    </span>
+  </div>`;
+}
+function header() {
+  return `<div class="apphdr">
+    <div class="logo"><span class="bar"></span><span class="name">FTP&nbsp;COACH</span></div>
+    <div class="hdr-right"><span class="wk">Week 23</span><span class="avatar">DK</span></div>
+  </div>`;
+}
+function chip({ text, color, bg, dot, border }) {
+  return `<span style="display:inline-flex;align-items:center;gap:5px;background:${bg};color:${color};border:1px solid ${border || 'var(--border-subtle)'};border-radius:var(--r-pill);padding:4px 9px;font-family:var(--font-sans);font-size:11.5px;font-weight:600;white-space:nowrap">
+    ${dot ? `<span style="width:6px;height:6px;border-radius:999px;background:${dot};flex-shrink:0"></span>` : ''}${text}</span>`;
+}
+function ring(val, color) {
+  const size = 104, sw = 9, r = (size - sw) / 2, c = 2 * Math.PI * r, off = c * (1 - val / 100);
+  return `<div style="position:relative;width:${size}px;height:${size}px;flex-shrink:0">
+    <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--readiness-ring-track)" stroke-width="${sw}"/>
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${color}" stroke-width="${sw}" stroke-linecap="round" stroke-dasharray="${c.toFixed(2)}" stroke-dashoffset="${off.toFixed(2)}" transform="rotate(-90 ${size/2} ${size/2})"/>
+    </svg>
+    <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+      <span class="num" style="font-size:30px;font-weight:600;color:var(--text-primary)">${val}</span>
+      <span style="font-family:var(--font-sans);font-size:8.5px;font-weight:600;letter-spacing:var(--tracking-overline);text-transform:uppercase;color:var(--text-muted);margin-top:2px">Gereed</span>
+    </div>
+  </div>`;
+}
+
+/* ── Component B: ReadinessCard ── */
+function readinessCard({ val, ringColor, verdict, chips, open, factors, checkin }) {
+  const chipsHtml = chips.map(chip).join('');
+  const factorBox = open ? `
+    <div style="margin-top:12px;display:flex;flex-direction:column;gap:9px;background:var(--bg-sunken);border-radius:var(--r-md);padding:12px">
+      ${factors.map(f => `
+        <div style="display:flex;align-items:center;gap:9px">
+          <span style="flex:1;min-width:0;font-family:var(--font-sans);font-size:12px;color:var(--text-secondary)">${f.l}</span>
+          <span style="width:7px;height:7px;border-radius:999px;background:${f.dot};flex-shrink:0"></span>
+          <span style="font-family:var(--font-sans);font-size:12px;color:var(--text-primary)">${f.v}</span>
+          <span class="num" style="width:34px;text-align:right;font-size:12px;font-weight:600;color:var(--text-muted)">${f.w}</span>
+        </div>`).join('')}
+      <div style="display:flex;align-items:center;gap:9px;border-top:1px solid var(--border-subtle);padding-top:9px;margin-top:1px">
+        <span style="flex:1;font-family:var(--font-sans);font-size:12px;font-weight:600;color:var(--text-secondary)">Som</span>
+        <span class="num" style="width:34px;text-align:right;font-size:12px;font-weight:600;color:var(--text-primary)">1,00</span>
+      </div>
+    </div>` : '';
+
+  const checkinHtml = !checkin ? `
+    <div style="width:100%;display:flex;align-items:center;justify-content:center;gap:7px;height:38px;border-radius:var(--r-md);background:var(--bg-sunken);border:1px dashed var(--border-strong);font-family:var(--font-sans);font-size:12.5px;font-weight:600;color:var(--text-secondary)">
+      ${plus('var(--text-secondary)')} Ochtend-check-in invullen
+    </div>` : `
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-family:var(--font-sans);font-size:12.5px;color:var(--text-secondary)"><span style="color:var(--text-muted)">Check-in:</span> ${checkin.summary}</span>
+        <span style="flex-shrink:0;width:26px;height:26px;border-radius:999px;background:var(--accent-soft);border:1px solid color-mix(in srgb, var(--accent) 35%, transparent);display:flex;align-items:center;justify-content:center;margin-left:8px">${plus('var(--accent)')}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:10px;background:var(--accent-soft);border:1px solid color-mix(in srgb, var(--accent) 30%, transparent);border-radius:var(--r-md);padding:9px 12px">
+        ${star('var(--accent)')}<span style="font-family:var(--font-sans);font-size:12.5px;color:var(--text-secondary);line-height:1.4">${checkin.effect}</span>
+      </div>
+    </div>`;
+
+  return `<div class="card">
+    <div class="overline">Status · vandaag</div>
+    <div style="display:flex;align-items:center;gap:16px;margin-top:12px">
+      ${ring(val, ringColor)}
+      <div style="flex:1;min-width:0">
+        <div style="font-family:var(--font-sans);font-size:17.5px;font-weight:600;line-height:1.2;color:var(--text-primary);letter-spacing:-0.01em">${verdict}</div>
+        <div style="display:flex;gap:6px;margin-top:9px;flex-wrap:wrap">${chipsHtml}</div>
+        <div style="display:flex;align-items:center;gap:5px;margin-top:9px;font-family:var(--font-sans);font-size:11.5px;font-weight:600;color:var(--text-muted)">Waarom dit cijfer?${chevron(open)}</div>
+      </div>
+    </div>
+    ${factorBox}
+    <div style="margin-top:12px;border-top:1px solid var(--border-subtle);padding-top:12px">${checkinHtml}</div>
+  </div>`;
+}
+
+/* ── Component A: PeriodTimeline ── */
+function modeChip() {
+  return `<span style="display:inline-flex;align-items:center;gap:5px;background:var(--mode-chip-bg);color:var(--mode-chip-text);border:1px solid var(--mode-chip-border);border-radius:999px;padding:3px 9px;font-family:var(--font-sans);font-size:11px;font-weight:600"><span style="width:6px;height:6px;border-radius:999px;background:var(--accent)"></span>Doel-gericht</span>`;
+}
+function planCard({ open }) {
+  const phases = [{ k: 'Basis', wk: 5 }, { k: 'Build', wk: 9 }, { k: 'Peak', wk: 4, cur: true }, { k: 'Taper', wk: 1 }];
+  const curIdx = 2;
+  const total = phases.reduce((a, p) => a + p.wk, 0);
+  const elapsed = phases.slice(0, curIdx).reduce((a, p) => a + p.wk, 0) + 1.5;
+  const markerPct = (elapsed / total) * 100;
+  const events = [{ pct: 73, tag: 'B', label: 'Tune-up' }, { pct: 100, tag: 'A', label: 'Girona' }];
+  const segBg = (i) => (i < curIdx ? 'var(--phase-past)' : i === curIdx ? 'var(--phase-current)' : 'var(--phase-future)');
+
+  const header = `<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+    <div style="text-align:left;min-width:0">
+      <div class="overline">Plan · periodisering</div>
+      <div style="margin-top:5px;font-family:var(--font-sans);font-size:13.5px;font-weight:600;color:var(--text-primary)">Peak · nog 2 wkn tot Girona</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">${open ? '' : modeChip()}${chevron(open)}</div>
+  </div>`;
+
+  if (!open) return `<div class="card" style="padding:var(--card-pad)">${header}</div>`;
+
+  const eventsHtml = events.map(e => {
+    const atEnd = e.pct >= 100;
+    const badgeBg = e.tag === 'A' ? 'var(--event-a-bg)' : 'var(--event-b-bg)';
+    const badgeCol = e.tag === 'A' ? 'var(--event-a-text)' : 'var(--event-b-text)';
+    const badgeBd = e.tag === 'A' ? 'color-mix(in srgb, var(--accent) 40%, transparent)' : 'var(--border-strong)';
+    const tick = e.tag === 'A' ? 'var(--accent)' : 'var(--border-strong)';
+    return `<div style="position:absolute;top:0;${atEnd ? 'right:0' : `left:${e.pct}%;transform:translateX(-50%)`};display:flex;flex-direction:column;align-items:${atEnd ? 'flex-end' : 'center'}">
+      <span style="font-family:var(--font-sans);font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;background:${badgeBg};color:${badgeCol};border:1px solid ${badgeBd};white-space:nowrap">${e.label} · ${e.tag}</span>
+      <span style="width:1px;height:6px;background:${tick}"></span>
+    </div>`;
+  }).join('');
+
+  const bars = phases.map((p, i) => `<div style="flex:${p.wk};height:12px;border-radius:3px;background:${segBg(i)};${i > curIdx ? 'border:1px solid var(--border-subtle)' : ''}"></div>`).join('');
+  const labels = phases.map((p, i) => `<div style="flex:${p.wk};text-align:center;font-family:var(--font-sans);font-size:9.5px;font-weight:600;color:${i === curIdx ? 'var(--phase-label-current)' : 'var(--phase-label)'};white-space:nowrap">${p.k}</div>`).join('');
+
+  const stat = (label, val, accent, first) => `<div style="flex:1;border-left:${first ? 'none' : '1px solid var(--border-subtle)'};padding-left:${first ? 0 : 12}px">
+    <div class="overline" style="font-size:9.5px">${label}</div>
+    <div style="font-family:${accent === 'mono' ? 'var(--font-num)' : 'var(--font-sans)'};font-size:14px;font-weight:600;color:${accent === true ? 'var(--accent)' : 'var(--text-primary)'};margin-top:4px">${val}</div>
+  </div>`;
+
+  return `<div class="card" style="padding:var(--card-pad)">
+    ${header}
+    <div style="margin-top:16px">
+      <div style="position:relative">
+        ${eventsHtml}
+        <div style="display:flex;gap:3px;margin-top:26px">${bars}</div>
+        <div style="position:absolute;top:23px;left:${markerPct}%;transform:translateX(-50%);width:12px;height:12px;border-radius:999px;background:var(--phase-marker);border:2px solid var(--accent);box-shadow:0 0 0 3px var(--accent-ring)"></div>
+        <div style="display:flex;gap:3px;margin-top:8px">${labels}</div>
+      </div>
+      <div style="display:flex;margin-top:18px">
+        ${stat('Fase', 'Peak', true, true)}
+        ${stat('Tot Girona', '2 wkn', 'mono', false)}
+        ${stat('Volume', '8u/wk', 'mono', false)}
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:16px;flex-wrap:wrap">
+        ${modeChip()}
+        <span style="font-family:var(--font-sans);font-size:11.5px;color:var(--text-muted)">→ Evenement-gericht ~3 wkn vóór Girona</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ── frame-definities ── */
+const READY_CHIPS = [
+  { text: 'Vorm +7', color: 'var(--fresh)', bg: 'var(--fresh-soft)', dot: 'var(--fresh)', border: 'color-mix(in srgb, var(--fresh) 30%, transparent)' },
+  { text: 'HRV 48', color: 'var(--text-muted)', bg: 'var(--bg-elevated)', dot: 'var(--text-muted)' },
+];
+const READY_FACTORS = [
+  { l: 'Vorm-trend', v: 'stijgend', dot: 'var(--good)', w: '0,30' },
+  { l: 'Belasting', v: 'in balans', dot: 'var(--good)', w: '0,30' },
+  { l: 'HRV', v: 'onder baseline', dot: 'var(--warn)', w: '0,25' },
+  { l: 'Slaap', v: '7u20', dot: 'var(--good)', w: '0,15' },
+];
+const CHECKIN = { summary: 'Slaap goed · Benen oké · Stress laag', effect: 'Check-in: +2 op je score' };
+
+const FRAMES = [
+  { file: '07-plan-card-dicht.png', card: () => planCard({ open: false }) },
+  { file: '07-plan-card-open.png', card: () => planCard({ open: true }) },
+  { file: '05-status-card-ready.png', card: () => readinessCard({ val: 68, ringColor: 'var(--readiness-ready)', verdict: 'Klaar voor een harde dag', chips: READY_CHIPS, open: false, factors: READY_FACTORS, checkin: null }) },
+  { file: '05-status-card-ready-open.png', card: () => readinessCard({ val: 68, ringColor: 'var(--readiness-ready)', verdict: 'Klaar voor een harde dag', chips: READY_CHIPS, open: true, factors: READY_FACTORS, checkin: null }) },
+  { file: '05-status-card-caution.png', card: () => readinessCard({ val: 54, ringColor: 'var(--readiness-caution)', verdict: 'Houd het rustig — kies behoud', chips: [{ text: 'Vorm -3', color: 'var(--text-muted)', bg: 'var(--bg-elevated)', dot: 'var(--text-muted)' }, { text: 'HRV 41', color: 'var(--warn)', bg: 'var(--warn-soft)', dot: 'var(--warn)', border: 'color-mix(in srgb, var(--warn) 35%, transparent)' }], open: false, factors: READY_FACTORS, checkin: CHECKIN }) },
+  { file: '05-status-card-rest.png', card: () => readinessCard({ val: 41, ringColor: 'var(--readiness-rest)', verdict: 'Vandaag rust aangeraden', chips: [{ text: 'Vorm -12', color: 'var(--bad)', bg: 'var(--bad-soft)', dot: 'var(--bad)', border: 'color-mix(in srgb, var(--bad) 35%, transparent)' }, { text: 'HRV 33', color: 'var(--bad)', bg: 'var(--bad-soft)', dot: 'var(--bad)', border: 'color-mix(in srgb, var(--bad) 35%, transparent)' }], open: false, factors: READY_FACTORS, checkin: CHECKIN }) },
+];
+
+const board = document.getElementById('board');
+board.innerHTML = FRAMES.map((f, i) => `
+  <div class="col">
+    <div class="cap">${f.file}</div>
+    <div class="frame" id="frame${i + 1}">
+      ${statusbar()}
+      ${header()}
+      <div class="body">${f.card()}</div>
+    </div>
+  </div>`).join('');
+
+/* isoleer één frame voor pixel-export (390×844, geen marge) */
+function isolate(n) {
+  document.body.style.padding = '0';
+  document.body.style.background = 'var(--bg-app)';
+  document.querySelectorAll('.cap').forEach(c => c.style.display = 'none');
+  document.querySelectorAll('.frame').forEach(fr => fr.style.display = 'none');
+  document.getElementById('board').style.cssText = 'display:block;width:390px;';
+  const f = document.getElementById('frame' + n);
+  f.style.display = 'block';
+  f.style.border = 'none';
+  f.style.borderRadius = '0';
+  f.parentElement.style.cssText = 'display:block;';
+  window.scrollTo(0, 0);
+}
+window.isolate = isolate;
+</script>
+</body>
+</html>
