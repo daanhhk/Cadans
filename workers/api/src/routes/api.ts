@@ -7,11 +7,12 @@
  * pre-deploy). athleteId komt uit c.env.INTERVALS_ATHLETE_ID (niet geëxposed).
  * User = CURRENT_USER_ID (vervalt in de auth-fase).
  */
-import { Hono } from "hono";
+import { type Context, Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { CURRENT_USER_ID, makeDb } from "../db/client";
 import { fromD1, toD1Date, toD1DateTime } from "../db/dates";
 import {
+  type Checkin,
   type EngineSettings,
   readActivities,
   readCheckin,
@@ -20,6 +21,9 @@ import {
   readWeekplan,
   readWellness,
   type WellnessRecord,
+  writeCheckin,
+  writeSettings,
+  writeWeekplan,
 } from "../db/repo";
 import { type IntervalsEnv, syncActivities } from "../integrations/intervals";
 import {
@@ -65,6 +69,35 @@ const parseWindow = (raw: string | undefined): string | undefined => {
     throw new HTTPException(400, { message: "query 'window' invalid" });
   }
   return raw;
+};
+
+// ── write-body-helpers (PUT-routes) ──────────────────────────────────
+// JSON-body → plat object (geen array/null/scalar). Kapotte JSON = 400.
+const readJsonObject = async (c: Context): Promise<Record<string, unknown>> => {
+  let body: unknown;
+  try {
+    body = await c.req.json();
+  } catch {
+    throw new HTTPException(400, { message: "invalid JSON body" });
+  }
+  if (typeof body !== "object" || body === null || Array.isArray(body)) {
+    throw new HTTPException(400, { message: "body must be a JSON object" });
+  }
+  return body as Record<string, unknown>;
+};
+
+// Per-veld typeof-guards (expliciet, geen dynamische index-access/any-cast).
+const numField = (v: unknown, name: string): number => {
+  if (typeof v !== "number") {
+    throw new HTTPException(400, { message: `field '${name}' has wrong type` });
+  }
+  return v;
+};
+const strField = (v: unknown, name: string): string => {
+  if (typeof v !== "string") {
+    throw new HTTPException(400, { message: `field '${name}' has wrong type` });
+  }
+  return v;
 };
 
 // Gerichte serializers (STAP-0): settings.doelStart = Date; wellness.datum = Date;
@@ -235,4 +268,83 @@ api.get("/power-curve", async (c) => {
     console.error("power-curve read failed", e);
     throw new HTTPException(502, { message: "intervals request failed" });
   }
+});
+
+// ── Fase 4c — D1-WRITE-routes (PUT) ──────────────────────────────────
+// Onbekende body-velden worden GENEGEERD (whitelist-passthrough, tolerant t.o.v.
+// PWA-versie-drift). NB: writeSettings VERVANGT de rij volledig (weggelaten velden
+// → null; PUT-semantiek), geen partial-merge. Maandag-weekdag wordt NIET
+// gevalideerd (consistent met de 4a-GET; de PWA levert maandagen — aanname).
+
+api.put("/settings", async (c) => {
+  const db = makeDb(c.env.DB);
+  const body = await readJsonObject(c);
+  const patch: Partial<EngineSettings> = {};
+  if ("ftp" in body) patch.ftp = numField(body.ftp, "ftp");
+  if ("lthr" in body) patch.lthr = numField(body.lthr, "lthr");
+  if ("gewicht" in body) patch.gewicht = numField(body.gewicht, "gewicht");
+  if ("hrMax" in body) patch.hrMax = numField(body.hrMax, "hrMax");
+  if ("hrRest" in body) patch.hrRest = numField(body.hrRest, "hrRest");
+  if ("doelDuur" in body) patch.doelDuur = numField(body.doelDuur, "doelDuur");
+  if ("pendelDuurMin" in body) {
+    patch.pendelDuurMin = numField(body.pendelDuurMin, "pendelDuurMin");
+  }
+  if ("pendelAantal" in body) {
+    patch.pendelAantal = numField(body.pendelAantal, "pendelAantal");
+  }
+  if ("doel" in body) patch.doel = strField(body.doel, "doel");
+  if ("fase" in body) patch.fase = strField(body.fase, "fase");
+  if ("profielPreset" in body) {
+    patch.profielPreset = strField(body.profielPreset, "profielPreset");
+  }
+  if ("doelStart" in body) {
+    if (typeof body.doelStart !== "string" || !isIsoDate(body.doelStart)) {
+      throw new HTTPException(400, { message: "doelStart must be yyyy-MM-dd" });
+    }
+    patch.doelStart = fromD1(body.doelStart);
+  }
+  await writeSettings(db, CURRENT_USER_ID, patch);
+  return c.json({ ok: true });
+});
+
+api.put("/checkin/:date", async (c) => {
+  const db = makeDb(c.env.DB);
+  const date = c.req.param("date");
+  if (!isIsoDate(date)) {
+    throw new HTTPException(400, {
+      message: "invalid date, expected yyyy-MM-dd",
+    });
+  }
+  const body = await readJsonObject(c);
+  if (
+    typeof body.slaap !== "string" ||
+    typeof body.benen !== "string" ||
+    typeof body.stress !== "string"
+  ) {
+    throw new HTTPException(400, { message: "invalid checkin payload" });
+  }
+  const checkin: Checkin = {
+    slaap: body.slaap,
+    benen: body.benen,
+    stress: body.stress,
+  };
+  await writeCheckin(db, CURRENT_USER_ID, date, checkin);
+  return c.json({ ok: true });
+});
+
+api.put("/weekplan/:monday", async (c) => {
+  const db = makeDb(c.env.DB);
+  const monday = c.req.param("monday");
+  if (!isIsoDate(monday)) {
+    throw new HTTPException(400, {
+      message: "invalid monday, expected yyyy-MM-dd",
+    });
+  }
+  const body = await readJsonObject(c);
+  const entries = body.entries;
+  if (!Array.isArray(entries)) {
+    throw new HTTPException(400, { message: "body.entries must be an array" });
+  }
+  await writeWeekplan(db, CURRENT_USER_ID, monday, entries);
+  return c.json({ ok: true });
 });
