@@ -11,6 +11,56 @@ live tot cutover.
 
 ## Stand
 
+**Fase 5 — DE PWA (`apps/web`) — IN UITVOERING (shell + Vorm-lite KLAAR).**
+Faithful 1-op-1 port van de bestaande tabs tegen de bestaande `/api`-routes;
+`react-router-dom` **7.18.1** (`BrowserRouter`), bottom-nav **Schema · Vorm ·
+Trainingen · Niveau**. Schema/Trainingen/Niveau = "binnenkort"-placeholder; **Vorm
+= gevuld**. Vitest ongewijzigd **94** (apps/web heeft nog geen tests → typecheck +
+build dekken de PWA); engine **886/0**. CI groen op elke sub-fase.
+
+- **5.0 design-import** (commit `5359198`): het cadans-handoff-pakket staat nu in
+  **`cadans/design/`** (geïmporteerd uit training's untracked
+  `design_handoff_cadans/` — de visuele autoriteit: `src/tokens.css`,
+  JSX-prototypes, `docs/`, screenshots, merk-assets). Biome sluit `design/` uit
+  (`biome.json` `files.includes` → `"!**/design"`); buiten elke tsconfig + vite-build.
+- **5.1.0 @cadans/shared** (commit `40e7fc3`): nieuw **types-only** workspace-package
+  (source-resolved via `exports`, geen build/runtime-output, GEEN Drizzle, geen
+  deps) = bron van waarheid voor de HTTP-wire-DTO's: `SettingsInput`,
+  `WellnessInput`, `CheckinInput`, `ActivityCell`/`ActivityRow`/`ActivitiesResponse`,
+  `WeekplanEntries`/`WeekplanPutBody`, `ApiError`/`ApiOk`. Datumvelden = ISO
+  `"yyyy-MM-dd"`. `workers/api` consumeert ze; `EngineSettings`/`WellnessRecord`
+  houden intern **Date** (afgeleid via `Omit<…> & {…: Date}`). NB:
+  `ActivitiesResponse`/weekplan-types zijn gedefinieerd maar nog NIET
+  server-afgedwongen (de activities-route retourneert nog `any[][]`).
+- **5.1a app-shell** (commit `64d5f0f`, CI-fix `773a036`): getypeerde app + mobiel-only
+  full-viewport frame (dark, geen device-bezel) + bottom-nav; de Vite-template-CSS
+  eruit, `tokens.css` in **`apps/web/src/styles/tokens.css`**, globaal geïmporteerd.
+  **Same-origin mount (Model A)** in `workers/api/wrangler.jsonc`: `assets` =
+  `{ directory: "../../apps/web/dist", binding: "ASSETS", not_found_handling:
+  "single-page-application", run_worker_first: ["/api/*"] }` → Cloudflare doet de
+  SPA-fallback, `/api/*` gaat naar de Hono-Worker; `app.onError`/`notFound`
+  ONAANGEROERD (JSON-404 voor `/api`-mismatch). `ASSETS?: Fetcher` (optioneel) op
+  `IntervalsEnv`. **Dev:** `apps/web` vite (`host:true`, poort **5173**,
+  `server.proxy` `/api` → `127.0.0.1:8787`) + `workers/api` `"dev": "wrangler dev
+  --port 8787"`. **Gate-nuance:** root `"test"` draait `scripts/ensure-web-dist.mjs`
+  (stub `apps/web/dist/index.html`, door `pnpm build` overschreven) omdat
+  vitest-pool-workers `assets.directory` eager valideert en de gate-order test→build is.
+- **5.1b Vorm-lite** (commit `597fce2`): de Vorm-tab gevuld — `ReadinessCard` ·
+  `LevelCard` · `MetricRow` · `ConditiePmc` + ochtend-check-in-sheet. **LIVE 1:1 uit
+  `/api`:** Vorm/HRV-chips, W/kg (`ftp/gewicht`), FTP, Gewicht, TSB/CTL/ATL + 12-wk
+  PMC-lijn (handmatige SVG), check-in (GET+PUT `/api/checkin/:date`). Client-datum via
+  **`apps/web/src/lib/dates.ts` `todayIso()`** (lokale datum, GEEN UTC). TSB-zones
+  **−10/+5** (Oververmoeid/Productief/Fris) uit `design/src/conditie.jsx` (de engine
+  heeft geen TSB-zonefunctie). **Placeholder/deferred:** ReadinessCard-score +
+  waarom-factoren (debt (h)), tier-chip + "sinds"-delta, Week-TSS, W/kg-over-tijd-grafiek.
+
+**Volgende (Fase 5.2) — de volgende tab.** Advieskader: **Vorm/Niveau vóór Schema**
+— Schema leunt op de nog-niet-geporte **weekgeneratie** (debt (a)/(d):
+`assignWorkouts`/`generateProposal`) + **readiness** (debt (h)); **Trainingen** vergt
+eerst duidelijkheid of er een workouts-route/-bron is. **Niveau** is grotendeels
+buildbaar (snapshot/progressie uit settings + wellness/activities); charting-lib-keuze
++ engine-client-side (bv. `niveauTier_`) = te beslissen bij Niveau.
+
 **Fase 4 — WORKER-ROUTES (Hono) — KLAAR.** Getypeerde Hono-app
 (`new Hono<{ Bindings: IntervalsEnv }>()`) met `app.onError` + `app.notFound`
 (consistente JSON-errors), alle routes onder `/api`, `userId = CURRENT_USER_ID`
@@ -41,13 +91,6 @@ CI groen op elk:
   (string).
 - `PUT /api/weekplan/:monday` verwacht `{ entries: [...] }`, as-is als JSON-blob
   opgeslagen (geen shape-eisen op de entries).
-
-**Volgende (Fase 5) — de PWA (`apps/web`):** Vite + React + `vite-plugin-pwa`,
-faithful 1-op-1 port van de bestaande tabs/CSS-tokens tegen deze routes.
-Design-materiaal (`tokens.css` + `export.md`) = de visuele autoriteit. Auth
-blijft uit (v1 lean). Openstaand vóór/bij deploy: assets-binding in
-`wrangler.jsonc` (Fase 5-TODO), de CORS/mount-beslissing (PWA + Worker samen), en
-de pre-deploy-blockers debt (d) + remote-migratie-drift (g).
 
 **Fase 3c — WELLNESS- + POWER-CURVE-SYNC COMPLEET (lokaal).** Beide auth-paden
 hergebruiken `intervalsBasicAuth` + FetchImpl-injectie uit `intervals.ts`;
@@ -184,8 +227,11 @@ lokaal draaien Node 24._
 - pnpm workspaces, TypeScript strict, vitest, Biome (lint+format),
   GitHub Actions CI. Node >= 22 (CI + lokaal = Node 24; pnpm 11.9 vloer).
 - **packages/engine** — pure TS (geen DB/env/fetch).
-- **apps/web** — Vite + React + TS + vite-plugin-pwa.
-- **workers/api** — Hono + Drizzle-skelet (nog geen schema).
+- **packages/shared** — types-only HTTP-wire-DTO's (geen runtime, geen Drizzle).
+- **apps/web** — Vite + React + `react-router-dom` + vite-plugin-pwa
+  (PWA-shell + Vorm-lite).
+- **workers/api** — Hono + Drizzle op D1 (schema + repo-laag + `/api`-routes +
+  same-origin assets-binding).
 
 ## Léán scope (v1)
 
@@ -204,7 +250,7 @@ lokaal draaien Node 24._
 | 3b | intervals.icu activiteiten-sync + remote D1 (`database_id`) | ✓ |
 | 3c | wellness- + power-curve-sync (engine heeft beide nodig) | ✓ |
 | 4 | Worker-API (Hono routes: reads/syncs/writes) | ✓ |
-| 5 | React-PWA (tabs + tokens 1-op-1 port) | |
+| 5 | React-PWA — shell + Vorm-lite ✓; Schema/Trainingen/Niveau volgen | ◐ |
 | 6 | telegram-webhook | |
 
 ## Discipline
@@ -282,12 +328,23 @@ Open schulden die bewust naar een latere fase zijn geschoven:
   (HRV-deficit vs baseline, slaap-gemiddelden, form-state) zit nog in de coupled
   orchestratie in `training` en is niet geport. De D1-`wellness`-tabel is de bron;
   de afleiding is een aparte port (richting Fase 4+). De check-in
-  (`{slaap,benen,stress}`) is de LOSSE 4e param en staat los van wellness.
+  (`{slaap,benen,stress}`) is de LOSSE 4e param en staat los van wellness. **In de
+  PWA (Fase 5.1b)** zijn de ReadinessCard-**score** + waarom-factoren daarom
+  placeholder; de Vorm/HRV-chips + de conditie-balans tonen wél live wellness-data.
 - **(i) NULL→""-conventie bij de readiness-port — NIEUW (notitie).**
   `wellnessRowsToWellValues_` dekt de ""-conventie correct voor idx0/8/9/10 (wat
   `dashVormReeks_` leest). Bij de readiness-port bevestigen dat NULL→"" óók klopt
   voor idx5/6 (readiness, mood), die vaker leeg zijn.
-- **(j) Assets-binding + CORS/mount — NIEUW (Fase 5-TODO).** `wrangler.jsonc`
-  heeft nog GEEN assets-binding (de `apps/web`-dist). De CORS/mount-beslissing —
-  PWA + Worker samen serveren (assets-binding, same-origin) of split-origin met
-  CORS — is nog te maken → Fase 5, vóór deploy.
+- **(j) Assets-binding + mount — OPGELOST IN CONFIG (Fase 5.1a).** De
+  same-origin-keuze is gemaakt: `workers/api/wrangler.jsonc` heeft nu een
+  `assets`-binding (Model A: `directory ../../apps/web/dist`, `binding ASSETS`,
+  `not_found_handling "single-page-application"`, `run_worker_first ["/api/*"]`) →
+  PWA + Worker op één origin, geen CORS nodig. RESTEREND: de echte **prod-deploy**
+  is nog niet gedaan (blijft gegated door debt (d)/(g)).
+- **(k) Vorm-lite deferred-onderdelen + apps/web-teststrategie — NIEUW (Fase 5.1b).**
+  In de PWA-Vorm-tab zijn nog deferred: de ReadinessCard-**score** + waarom-factoren
+  (debt (h)), de `LevelCard`-**tier-chip** + "sinds"-delta, de `MetricRow`-**Week-TSS**
+  (de activities-route is nog niet getypeerd — `any[][]`), en de **W/kg-over-tijd**-
+  grafiek. Verder heeft **`apps/web` nog GEEN tests** (typecheck + build dekken de
+  PWA; vitest-totaal blijft **94**) — de teststrategie voor de PWA (component/e2e) is
+  een open beslispunt.
