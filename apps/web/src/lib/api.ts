@@ -5,6 +5,7 @@
  * Wire-types komen UITSLUITEND uit @cadans/shared (geen eigen duplicaten).
  */
 import type {
+  ActivitiesResponse,
   ApiError,
   CheckinInput,
   SettingsInput,
@@ -39,6 +40,11 @@ export function getSettings(): Promise<SettingsInput | null> {
 /** GET /api/wellness — oudste-eerst. */
 export function getWellness(): Promise<WellnessInput[]> {
   return apiGet<WellnessInput[]>("/api/wellness");
+}
+
+/** GET /api/activities — 17-koloms matrix, oudste-eerst; idx0 = ISO-datetime-string. */
+export function getActivities(): Promise<ActivitiesResponse> {
+  return apiGet<ActivitiesResponse>("/api/activities");
 }
 
 /** GET /api/checkin/:date — 404 → null (nog niet ingevuld, GEEN fout). */

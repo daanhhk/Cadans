@@ -4,6 +4,10 @@ const dec1 = new Intl.NumberFormat("nl-NL", {
   minimumFractionDigits: 1,
   maximumFractionDigits: 1,
 });
+const dec2 = new Intl.NumberFormat("nl-NL", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
 const upTo1 = new Intl.NumberFormat("nl-NL", { maximumFractionDigits: 1 });
 const signed1 = new Intl.NumberFormat("nl-NL", {
   signDisplay: "always",
@@ -14,6 +18,8 @@ const signed1 = new Intl.NumberFormat("nl-NL", {
 export const nlInt = (n: number): string => int.format(n);
 /** Exact 1 decimaal, NL (bv. 3,8). */
 export const nlDec1 = (n: number): string => dec1.format(n);
+/** Exact 2 decimalen, NL (bv. 3,82). */
+export const nlDec2 = (n: number): string => dec2.format(n);
 /** Tot 1 decimaal, NL (bv. 72 of 72,5). */
 export const nlUpTo1 = (n: number): string => upTo1.format(n);
 /** Met vast teken, tot 1 decimaal, NL (bv. +7 / -3,2) — voor TSB. */
