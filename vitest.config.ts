@@ -6,6 +6,8 @@ import { defineConfig } from "vitest/config";
  *  - api-unit   : pure workers/api-units (o.a. de TZ-conversielaag) — node-pool.
  *  - api-integration : Worker-integratietests tegen lokale D1 (miniflare) via
  *    @cloudflare/vitest-pool-workers — zie workers/api/vitest.config.ts.
+ *  - web        : apps/web pure helpers (parseActivityRows) — node-pool; zie
+ *    apps/web/vitest.config.ts.
  *
  * De node-pools erven de TZ=Europe/Amsterdam-pin (root `pnpm test` = cross-env).
  * De workers-pool-tests zijn TZ-veilig (readiness-oracle = datumvrij;
@@ -29,6 +31,7 @@ export default defineConfig({
         },
       },
       "./workers/api/vitest.config.ts",
+      "./apps/web/vitest.config.ts",
     ],
   },
 });
