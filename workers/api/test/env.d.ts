@@ -5,5 +5,7 @@ declare module "cloudflare:test" {
   interface ProvidedEnv {
     DB: D1Database;
     TEST_MIGRATIONS: D1Migration[];
+    INTERVALS_API_KEY: string;
+    INTERVALS_ATHLETE_ID: string;
   }
 }

@@ -26,7 +26,13 @@ export default defineWorkersConfig(async () => {
             compatibilityDate: "2026-07-03",
             compatibilityFlags: ["nodejs_compat"],
             // De migratie-array beschikbaar in de test-worker als env.TEST_MIGRATIONS.
-            bindings: { TEST_MIGRATIONS: migrations },
+            // Dummy intervals-secrets (de outbound fetch is gemockt via fetchMock →
+            // ze verlaten de test nooit; NIET de echte key/.dev.vars).
+            bindings: {
+              TEST_MIGRATIONS: migrations,
+              INTERVALS_API_KEY: "test-key",
+              INTERVALS_ATHLETE_ID: "i12345",
+            },
           },
           wrangler: { configPath: join(here, "wrangler.jsonc") },
         },
