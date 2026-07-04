@@ -25,6 +25,10 @@ export type IntervalsEnv = {
   DB: D1Database;
   INTERVALS_API_KEY: string;
   INTERVALS_ATHLETE_ID?: string;
+  // Same-origin assets-binding (Fase 5.1a, wrangler.jsonc). Optioneel: Model A
+  // laat Cloudflare de SPA-fallback doen, dus de Worker-code raakt env.ASSETS niet
+  // (en de test-env-literals hoeven het niet te leveren).
+  ASSETS?: Fetcher;
 };
 
 export type SyncOpts = {

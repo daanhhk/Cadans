@@ -4,6 +4,13 @@ import { VitePWA } from "vite-plugin-pwa";
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Dev-mount: /api/* → de lokale wrangler-dev-Worker (poort 8787). In prod
+  // draaien beide op één origin via de assets-binding (workers/api/wrangler.jsonc).
+  server: {
+    proxy: {
+      "/api": { target: "http://127.0.0.1:8787", changeOrigin: true },
+    },
+  },
   plugins: [
     react(),
     VitePWA({
@@ -12,8 +19,8 @@ export default defineConfig({
         name: "Cadans",
         short_name: "Cadans",
         description: "Cadans — training coach",
-        theme_color: "#0b0f14",
-        background_color: "#0b0f14",
+        theme_color: "#0A0D12",
+        background_color: "#0A0D12",
         display: "standalone",
         start_url: "/",
         icons: [

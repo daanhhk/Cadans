@@ -18,6 +18,16 @@
       // d1 migrations apply leest ze daar i.p.v. de default ./migrations.
       "migrations_dir": "drizzle"
     }
-  ]
-  // Fase 5: assets-binding (apps/web dist) volgt hier.
+  ],
+  // Same-origin mount (Fase 5.1a, Model A): serveer de apps/web-build als statische
+  // assets; /api/* gaat via run_worker_first NAAR de Hono-Worker; onbekende
+  // niet-/api-paden → index.html (SPA-deep-link-fallback, door Cloudflare zelf
+  // afgehandeld — app.notFound blijft dus JSON-404 voor /api-mismatch). De
+  // directory bestaat pas na `pnpm --filter @cadans/web build`.
+  "assets": {
+    "directory": "../../apps/web/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  }
 }
