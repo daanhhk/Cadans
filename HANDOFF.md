@@ -11,6 +11,45 @@ live tot cutover.
 
 ## Stand
 
+**Fase 3c — WELLNESS- + POWER-CURVE-SYNC COMPLEET (lokaal).** Beide auth-paden
+hergebruiken `intervalsBasicAuth` + FetchImpl-injectie uit `intervals.ts`;
+gemockt in CI, smokes lokaal-only apart (niet in de gate). Vitest **64 → 70**;
+engine-selftest ONVERANDERD **886/0**. D1-schema nu **12 tabellen** (was 11 —
+`power_curve_cache` erbij).
+
+_3c-1 wellness-sync_ (commit `17d378fc`): `GET
+/athlete/{id}/wellness?oldest&newest` → D1-tabel `wellness`. Nieuw:
+`workers/api/src/integrations/wellness.ts` (`fetchWellness`, `mapWellness`,
+`syncWellness`). `repo.ts` uitgebreid: `upsertWellness` (ON CONFLICT
+user_id,datum), `readWellness` (oudste-eerst, datum via `fromD1`),
+`wellnessRowsToWellValues_` (12-koloms glue-array voor `dashVormReeks_`;
+idx0=Date, idx8/9/10=CTL/ATL/Vorm). Mapping: slaap sec→u =
+`round(sleepSecs/360)/10`, vorm = ctl−atl, afronding conform training's
+`syncWellness` (ctl/atl/vorm 1 dec, ramp 2 dec). Idempotent op
+UNIQUE(user_id, datum); oracle-test bewijst de round-trip via `dashVormReeks_`.
+Tests `workers/api/test/wellness.test.ts` (mapping/idempotentie/oracle); smoke
+`scripts/wellness-smoke.mjs`.
+
+_3c-2 power-curve RAW-cache_ (commit `094e574`): nieuwe D1-tabel
+`power_curve_cache` (`user_id`, `window`, `fetched_on`, `raw_json`,
+UNIQUE(user_id, window)); `fetched_on` = dag-bucket via `dates.ts` (= impliciete
+24h-TTL). Migratie `0001_magical_lady_mastermind.sql` LOKAAL geapplied; **remote
+D1 NIET geapplied**. Nieuw: `workers/api/src/integrations/powercurve.ts`
+(`fetchPowerCurve`, `syncPowerCurve`, `readNormalizedPowerCurve`). ARCHITECTUUR:
+de Worker cachet de RAUWE `{list, activities}`; `pcNormalize_` draait op ELKE
+read; genormaliseerde output wordt NOOIT gecachet. Endpoint
+`/athlete/{id}/power-curves?type=Ride&curves=<window>`, window `90d|1y` (default
+`1y`), start/end genegeerd. c-input = `raw.list[0]` direct; ftp uit
+`readSettings().ftp` (settings HEEFT ftp → gewired, geen risico meer), weight uit
+`c.weight`. `repo.ts`: `upsertPowerCurveCache`, `readPowerCurveCache`. Tests
+`workers/api/test/powercurve.test.ts` (cache-round-trip/dag-bucket-TTL/
+`pcNormalize_`-oracle); smoke `scripts/powercurve-smoke.mjs`.
+
+**Volgende (Fase 4):** de sync-functies (`syncActivities`/`syncWellness`/
+`syncPowerCurve`) + repo-reads (`readWellness`/`readNormalizedPowerCurve`/…) via
+Hono HTTP-routes exposen; daarna richting deploy, met debt (d) +
+remote-migratie-drift (g) als pre-deploy-blockers.
+
 **Fase 3b — INTERVALS.ICU ACTIVITEITEN-SYNC GEPORT (lokaal).**
 `workers/api/src/integrations/intervals.ts`: `fetchActivities` +
 `syncActivities(env, userId, opts)` — HTTP Basic auth
@@ -30,13 +69,6 @@ GEDEPLOYDE Cloudflare Worker draait **UTC-only** (geen TZ-env-controle) →
 datum-gevoelige engine-entrypoints (weekgeneratie) diveregeren daar. **Conclusie:
 de TZ-expliciete engine-refactor (debt (d)) is een BEVESTIGDE deploy-blocker** —
 niet nu opgelost.
-
-**Fase 3c-scope** (engine heeft beide nodig): **wellness-sync** (`GET
-/athlete/{id}/wellness?oldest&newest` → CTL/ATL/Vorm/HRV/slaap, voedt
-`getReadinessScore_` + `dashVormReeks_`) en **power-curve-sync** (voedt
-`pcNormalize_`/`riderTypeFromCurve_`; regels: RAW cachen + op READ normaliseren
-— nooit genormaliseerd cachen; `curves=<id>` voor window-control, start/end
-genegeerd). Voor de smoke: voeg `INTERVALS_ATHLETE_ID=i<id>` toe aan `.dev.vars`.
 
 **Fase 3a — DATA-ACCESS-LAAG (D1 ↔ pure engine) COMPLEET (lokaal).** In
 `workers/api/src/db`: een repo-laag (`repo.ts`) die Drizzle-queries EXACT naar/uit
@@ -137,7 +169,7 @@ lokaal draaien Node 24._
 | 2 | D1-schema / Drizzle | ✓ |
 | 3a | data-access-laag (D1 ↔ engine) + TZ-conversie + Worker-integratietests | ✓ |
 | 3b | intervals.icu activiteiten-sync + remote D1 (`database_id`) | ✓ |
-| 3c | wellness- + power-curve-sync (engine heeft beide nodig) | |
+| 3c | wellness- + power-curve-sync (engine heeft beide nodig) | ✓ |
 | 4 | Worker-API | |
 | 5 | React-PWA (tabs + tokens 1-op-1 port) | |
 | 6 | telegram-webhook | |
@@ -183,7 +215,10 @@ Open schulden die bewust naar een latere fase zijn geschoven:
   draait UTC-only. Vóór het deployen van datum-gevoelige entrypoints
   (weekgeneratie): geef de engine-datum-logica een expliciete TZ-parameter i.p.v.
   ambient. Datumvrije paden (readiness) + string-round-trips zijn TZ-veilig en
-  kunnen eerder deployen.
+  kunnen eerder deployen. **BLIJFT open (Fase 3c):** de power-curve-**dag-bucket**
+  is nu TZ-expliciet via `dates.ts` (goed), maar de datum-gevoelige
+  **weekgeneratie** leunt nog op ambient `Europe/Amsterdam` → moet TZ-expliciet
+  vóór deploy.
 - **(e) D1-TEXT-datum → Date-mapping — GEDEELTELIJK OPGELOST (Fase 3a).** De
   conversielaag `workers/api/src/db/dates.ts` (`fromD1`/`toD1Date`/`toD1DateTime`)
   is geïmplementeerd + getest (incl. DST-grenzen) en wordt door de repo-laag
@@ -197,3 +232,18 @@ Open schulden die bewust naar een latere fase zijn geschoven:
   `aa302c17-915b-44cb-8823-89c416974f50` staat in `workers/api/wrangler.jsonc`.
   Nog niet gemigreerd/geseed op remote (dat is een deploy-stap, Fase 4+); de
   lokale --local/miniflare-flow gebruikt de binding-naam, niet dit id.
+- **(g) Remote-D1-migratie-drift — NIEUW (Fase 3c).** `power_curve_cache`
+  (migratie `0001_magical_lady_mastermind.sql`) is LOKAAL geapplied, remote NIET.
+  Pre-deploy vereist een expliciete remote migratie-apply
+  (`wrangler d1 migrations apply --remote`). Bewuste drift, geen fout.
+- **(h) Wellness→readiness-afleiding — NIEUW (deferred).** `getReadinessScore_`
+  (engine, `readiness.ts`) verwacht AFGELEIDE input: `fs.{form,ctl,atl,ramp}` +
+  `wellness.{hrvDeficit,hrvRecent,sleepAvg3,sleepLastNight}`. Die afleiding
+  (HRV-deficit vs baseline, slaap-gemiddelden, form-state) zit nog in de coupled
+  orchestratie in `training` en is niet geport. De D1-`wellness`-tabel is de bron;
+  de afleiding is een aparte port (richting Fase 4+). De check-in
+  (`{slaap,benen,stress}`) is de LOSSE 4e param en staat los van wellness.
+- **(i) NULL→""-conventie bij de readiness-port — NIEUW (notitie).**
+  `wellnessRowsToWellValues_` dekt de ""-conventie correct voor idx0/8/9/10 (wat
+  `dashVormReeks_` leest). Bij de readiness-port bevestigen dat NULL→"" óók klopt
+  voor idx5/6 (readiness, mood), die vaker leeg zijn.
