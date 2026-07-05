@@ -77,19 +77,31 @@ Niveau = gevuld**. Vitest **94 → 98** (apps/web heeft nu tests, zie 5.2); engi
   contract is vergrendeld met TZ-robuuste asserts (lokale kalendervelden +
   kolom-integriteit, geen epoch-aanname).
 
+**Lokale D1 GEVULD (operationeel — GEEN remote/deploy; code-stand ongewijzigd op
+`a1e67d3`).** Op de lokale miniflare-D1 (`.wrangler/state`, GEEN remote): `settings`
+via `PUT /api/settings` (full-replace) = **ftp 280, gewicht 75** (rest `null`; W/kg =
+280/75 ≈ **3,73**); **244** activities + **366** wellness via
+`POST /api/sync/{activities,wellness}` uit intervals.icu. De sync-route capt op
+**`days=365`** (`parseDays` 1..365) → ~1 jaar historie: ruim genoeg voor de 12-maands
+Niveau-reeks + 12-weeks Vorm-PMC; meerjarige historie (evt. Niveau-Fase-2) vergt een
+cap-verhoging (geparkeerd). Power-curve NIET gesynct (voedt alleen de Fase-2-stub).
+Niveau + Vorm tonen nu **live data lokaal**. NB: de `users`-tabel was leeg → PUT/sync
+schenden de FK tot een `users(1)`-rij bestaat; lokaal handmatig geseed (zie debt (m)).
+
 **Twee geparkeerde fundament-keuzes — BESLOTEN (v1):** (1) **GEEN charting-lib** —
 hand-rolled SVG (zoals de Vorm-PMC); de Fase-2-grafieken (log-x power-curve,
 CTL-ramp) mogen deze keuze heropenen. (2) **Pure engine CLIENT-SIDE** — TZ-veilig
 want de browser = Amsterdam → omzeilt debt (d) (die alleen de UTC-worker treft); een
 server-route zou (d) juist ráken.
 
-**⏳ OPEN — visuele verificatie Niveau v1 (Daan, FOCUS volgende chat).** Nog TE DOEN,
-samen met de al-openstaande Vorm-telefoon-check (twee dev-servers + wifi/firewall op
-poort **5173**; `http://<ip>:5173/niveau` + `/vorm`). Specifiek: (1) **touch-scrub**
-op de hand-rolled trajectory-SVG (`touchmove`, niet enkel muis), (2) **CTL-divergentie**
-Niveau vs Vorm (wrinkle 1) voor overlappende periodes, (3) **getallen tegen realiteit**
-(FTP-hero, W/kg, tier, eFTP). Bevindingen worden de focus van de volgende chat. Geen
-prod-deploy / remote-D1-mutatie gedaan.
+**⏳ OPEN — visuele verificatie Niveau v1 (Daan, FOCUS volgende chat) — nu UITVOERBAAR
+MET DATA.** De lokale D1 is gevuld, dus thuis op `http://<laptop-ip>:5173/niveau` +
+`/vorm` te checken (twee dev-servers + wifi/firewall op poort **5173**): (1) **getallen
+vs realiteit** — W/kg ≈ **3,73** + tier-chip (design-W/kg-`TIERS`), FTP-hero **280**,
+eFTP; (2) **touch-scrub** op de hand-rolled trajectory-SVG (`touchmove`, niet enkel
+muis); (3) **CTL-divergentie** Niveau (`ctlReeksMaandelijks_`/maandbuckets) vs Vorm
+(wellness-route) = wrinkle (l). Vandaag NIET gelukt (Daan op ander wifi dan het
+laptop-LAN) → blijft de eerste focus. Geen prod-deploy / remote-D1-mutatie gedaan.
 
 **Volgende (Fase 5.x) — resterende tabs.** **Schema** leunt op de nog-niet-geporte
 **weekgeneratie** (debt (a)/(d): `assignWorkouts`/`generateProposal`) + **readiness**
@@ -391,3 +403,10 @@ Open schulden die bewust naar een latere fase zijn geschoven:
   → `apps/web` cast de resultaten (`as NiveauPoint[]` / `number|null` / `{wkg}`); een
   engine-shape-drift wordt daardoor NIET door TS in apps/web gevangen. Echte fix = de
   engine-returns typeren (staat al onder debt (a) "future typing"; raakt meerdere consumers).
+- **(m) PUT /api/settings + sync vereisen een bestaande `users`-rij — NIEUW (data-load).**
+  `settings.user_id` / `activities.user_id` / `wellness.user_id` → FK naar `users.id`,
+  maar GEEN route seedt `users` (alleen de vitest-`beforeEach`). Lokaal nu handmatig
+  geseed (`users(1,'daan@example.com')` via `wrangler d1 execute cadans --local`) →
+  zónder die rij geeft de eerste PUT/sync een **500** (FK-schending). Een echte
+  remote-deploy heeft **user-bootstrap** nodig (migratie-seed of een ensure-user in de
+  settings-handler). Blokkeert v1 NIET (`CURRENT_USER_ID = 1` hardcoded), wél de eerste deploy.
