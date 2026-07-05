@@ -11,12 +11,12 @@ live tot cutover.
 
 ## Stand
 
-**Fase 5 — DE PWA (`apps/web`) — IN UITVOERING (shell + Vorm-lite KLAAR).**
+**Fase 5 — DE PWA (`apps/web`) — IN UITVOERING (shell + Vorm-lite + Niveau-v1 KLAAR).**
 Faithful 1-op-1 port van de bestaande tabs tegen de bestaande `/api`-routes;
 `react-router-dom` **7.18.1** (`BrowserRouter`), bottom-nav **Schema · Vorm ·
-Trainingen · Niveau**. Schema/Trainingen/Niveau = "binnenkort"-placeholder; **Vorm
-= gevuld**. Vitest ongewijzigd **94** (apps/web heeft nog geen tests → typecheck +
-build dekken de PWA); engine **886/0**. CI groen op elke sub-fase.
+Trainingen · Niveau**. Schema/Trainingen = "binnenkort"-placeholder; **Vorm én
+Niveau = gevuld**. Vitest **94 → 98** (apps/web heeft nu tests, zie 5.2); engine
+**886/0**. CI groen op elke sub-fase.
 
 - **5.0 design-import** (commit `5359198`): het cadans-handoff-pakket staat nu in
   **`cadans/design/`** (geïmporteerd uit training's untracked
@@ -53,13 +53,47 @@ build dekken de PWA); engine **886/0**. CI groen op elke sub-fase.
   **−10/+5** (Oververmoeid/Productief/Fris) uit `design/src/conditie.jsx` (de engine
   heeft geen TSB-zonefunctie). **Placeholder/deferred:** ReadinessCard-score +
   waarom-factoren (debt (h)), tier-chip + "sinds"-delta, Week-TSS, W/kg-over-tijd-grafiek.
+- **5.2 Niveau-tab v1** (commit `1fe47be`): `VermogenSnapshot` + `ProgressieCard`
+  **LIVE** uit `/api/settings` + `/api/activities`; de engine draait **CLIENT-SIDE**
+  (`@cadans/engine` named imports). `Rijdersprofiel` + `DoelProjectie` = soon-tag-
+  **stubs** (Fase 2; vergen de power-curve-route + goal-fns, bestaan nog niet).
+  Kernpunten: `parseActivityRows` (`apps/web/src/lib/activities.ts`) zet idx0
+  ISO-string → **lokale Date** en FILTERT Invalid Date (anders skippen
+  `ctlReeksMaandelijks_`/`dashNiveauReeks_` stil rijen via hun `instanceof Date`-
+  check); `setGewichtProvider(() => settings.gewicht)` synchroon in de `useMemo`-
+  pipeline vlak vóór de derivaties; de tier komt uit de **design-W/kg-`TIERS`**
+  (`niveau.jsx`), NIET engine `niveauTier_` (design = autoriteit). NB: Niveau leest
+  `/api/settings` + `/api/activities`, **NIET** `/api/wellness` — de CTL hier is
+  `ctlReeksMaandelijks_(activities)` (maandbuckets, idx8=TSS), een andere bron/
+  granulariteit dan Vorm's wellness-CTL (zie wrinkle 1). Bundle **270,82 kB**
+  (gzip 84,48) vs 239,41 (gzip 76,62) in 5.1b — engine-import bleef smal
+  (tree-shaking: alleen de gebruikte niveau-subgraaf, niet de hele engine).
+- **5.2 apps/web test-infra** (commit `a1e67d3`): de **eerste apps/web-tests**. De
+  root-`vitest.config.ts` `projects`-array kreeg één entry
+  `./apps/web/vitest.config.ts` (`environment "node"`, `include src/**/*.test.ts`;
+  geen jsdom/pool-workers). `vitest ^3.0.0` (→ 3.2.6) + `cross-env ^7.0.3` aan
+  apps/web-devDeps. Vitest **94 → 98** (+4, `src/lib/activities.test.ts`, project
+  "web"); engine-selftest **886/0** ongewijzigd. Het `parseActivityRows`-parse-
+  contract is vergrendeld met TZ-robuuste asserts (lokale kalendervelden +
+  kolom-integriteit, geen epoch-aanname).
 
-**Volgende (Fase 5.2) — de volgende tab.** Advieskader: **Vorm/Niveau vóór Schema**
-— Schema leunt op de nog-niet-geporte **weekgeneratie** (debt (a)/(d):
-`assignWorkouts`/`generateProposal`) + **readiness** (debt (h)); **Trainingen** vergt
-eerst duidelijkheid of er een workouts-route/-bron is. **Niveau** is grotendeels
-buildbaar (snapshot/progressie uit settings + wellness/activities); charting-lib-keuze
-+ engine-client-side (bv. `niveauTier_`) = te beslissen bij Niveau.
+**Twee geparkeerde fundament-keuzes — BESLOTEN (v1):** (1) **GEEN charting-lib** —
+hand-rolled SVG (zoals de Vorm-PMC); de Fase-2-grafieken (log-x power-curve,
+CTL-ramp) mogen deze keuze heropenen. (2) **Pure engine CLIENT-SIDE** — TZ-veilig
+want de browser = Amsterdam → omzeilt debt (d) (die alleen de UTC-worker treft); een
+server-route zou (d) juist ráken.
+
+**⏳ OPEN — visuele verificatie Niveau v1 (Daan, FOCUS volgende chat).** Nog TE DOEN,
+samen met de al-openstaande Vorm-telefoon-check (twee dev-servers + wifi/firewall op
+poort **5173**; `http://<ip>:5173/niveau` + `/vorm`). Specifiek: (1) **touch-scrub**
+op de hand-rolled trajectory-SVG (`touchmove`, niet enkel muis), (2) **CTL-divergentie**
+Niveau vs Vorm (wrinkle 1) voor overlappende periodes, (3) **getallen tegen realiteit**
+(FTP-hero, W/kg, tier, eFTP). Bevindingen worden de focus van de volgende chat. Geen
+prod-deploy / remote-D1-mutatie gedaan.
+
+**Volgende (Fase 5.x) — resterende tabs.** **Schema** leunt op de nog-niet-geporte
+**weekgeneratie** (debt (a)/(d): `assignWorkouts`/`generateProposal`) + **readiness**
+(debt (h)); **Trainingen** vergt eerst duidelijkheid of er een workouts-route/-bron is.
 
 **Fase 4 — WORKER-ROUTES (Hono) — KLAAR.** Getypeerde Hono-app
 (`new Hono<{ Bindings: IntervalsEnv }>()`) met `app.onError` + `app.notFound`
@@ -250,7 +284,7 @@ lokaal draaien Node 24._
 | 3b | intervals.icu activiteiten-sync + remote D1 (`database_id`) | ✓ |
 | 3c | wellness- + power-curve-sync (engine heeft beide nodig) | ✓ |
 | 4 | Worker-API (Hono routes: reads/syncs/writes) | ✓ |
-| 5 | React-PWA — shell + Vorm-lite ✓; Schema/Trainingen/Niveau volgen | ◐ |
+| 5 | React-PWA — shell + Vorm-lite + Niveau-v1 ✓; Schema/Trainingen volgen | ◐ |
 | 6 | telegram-webhook | |
 
 ## Discipline
@@ -341,10 +375,19 @@ Open schulden die bewust naar een latere fase zijn geschoven:
   `not_found_handling "single-page-application"`, `run_worker_first ["/api/*"]`) →
   PWA + Worker op één origin, geen CORS nodig. RESTEREND: de echte **prod-deploy**
   is nog niet gedaan (blijft gegated door debt (d)/(g)).
-- **(k) Vorm-lite deferred-onderdelen + apps/web-teststrategie — NIEUW (Fase 5.1b).**
-  In de PWA-Vorm-tab zijn nog deferred: de ReadinessCard-**score** + waarom-factoren
-  (debt (h)), de `LevelCard`-**tier-chip** + "sinds"-delta, de `MetricRow`-**Week-TSS**
-  (de activities-route is nog niet getypeerd — `any[][]`), en de **W/kg-over-tijd**-
-  grafiek. Verder heeft **`apps/web` nog GEEN tests** (typecheck + build dekken de
-  PWA; vitest-totaal blijft **94**) — de teststrategie voor de PWA (component/e2e) is
-  een open beslispunt.
+- **(k) Vorm-lite deferred-onderdelen + apps/web-teststrategie — DEELS INGELOST (Fase 5.2).**
+  Nog deferred in de PWA: de ReadinessCard-**score** + waarom-factoren (debt (h)), de
+  `LevelCard`-**tier-chip** + "sinds"-delta, de `MetricRow`-**Week-TSS**, en de
+  **W/kg-over-tijd**-grafiek. **INGELOST (5.2):** `apps/web` heeft nu test-infra (vitest
+  node-project) + het `parseActivityRows`-parse-contract is vergrendeld (vitest
+  **94 → 98**). RESTEREND: de bredere PWA-teststrategie (component/e2e) is nog een open
+  beslispunt, en de `/api/activities`-route blijft server-side **`unknown[][]`** (nog
+  niet getypeerd naar `ActivitiesResponse` — de client parset idx0 zelf).
+- **(l) Twee Niveau-wrinkles — NIEUW (Fase 5.2; engine-niveau, GEEN fix nu).**
+  (1) De Niveau-CTL uit `ctlReeksMaandelijks_(activities)` (maandbuckets, idx8=TSS) kan
+  voor overlappende periodes AFWIJKEN van Vorm's wellness-CTL (andere bron/granulariteit,
+  geërfd uit de GAS-engine) — de visuele check moet uitwijzen of dit echt UX-werk is;
+  blind unificeren = engine-wijziging = aparte fase. (2) De engine-fns retourneren `any`
+  → `apps/web` cast de resultaten (`as NiveauPoint[]` / `number|null` / `{wkg}`); een
+  engine-shape-drift wordt daardoor NIET door TS in apps/web gevangen. Echte fix = de
+  engine-returns typeren (staat al onder debt (a) "future typing"; raakt meerdere consumers).
