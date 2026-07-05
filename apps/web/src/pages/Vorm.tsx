@@ -3,7 +3,7 @@ import type {
   SettingsInput,
   WellnessInput,
 } from "@cadans/shared";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CheckinSheet } from "../components/vorm/CheckinSheet";
 import { ConditiePmc } from "../components/vorm/ConditiePmc";
 import { LevelCard } from "../components/vorm/LevelCard";
@@ -11,6 +11,7 @@ import { MetricRow } from "../components/vorm/MetricRow";
 import { ReadinessCard } from "../components/vorm/ReadinessCard";
 import { getCheckin, getSettings, getWellness } from "../lib/api";
 import { todayIso } from "../lib/dates";
+import { deriveReadiness } from "../lib/readiness";
 
 // Vorm-tab (Vorm-lite, Fase 5.1b) — vervangt de 5.1a-health-steiger. Data uit drie
 // schone routes: GET /api/settings, GET /api/wellness, GET+PUT /api/checkin/:date.
@@ -47,6 +48,13 @@ export function Vorm() {
       alive = false;
     };
   }, [date, nonce]);
+
+  // Readiness client-side afgeleid uit de al-gefetchte reeks + check-in (hook vóór de
+  // early returns; lege reeks → score null, geen crash).
+  const readiness = useMemo(
+    () => deriveReadiness(wellness, checkin),
+    [wellness, checkin],
+  );
 
   if (loading) {
     return (
@@ -107,8 +115,6 @@ export function Vorm() {
     );
   }
 
-  const latest = wellness.at(-1) ?? null;
-
   return (
     <div
       style={{
@@ -119,8 +125,7 @@ export function Vorm() {
       }}
     >
       <ReadinessCard
-        latest={latest}
-        checkin={checkin}
+        readiness={readiness}
         onOpenCheckin={() => setSheetOpen(true)}
       />
       <LevelCard settings={settings} />

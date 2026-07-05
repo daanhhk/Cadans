@@ -1,8 +1,12 @@
-import type { CheckinInput, WellnessInput } from "@cadans/shared";
 import type { ReactNode } from "react";
-import { nlInt, nlSigned1 } from "../../lib/format";
-import { tsbZone } from "../../lib/tsb";
-import { Card, Overline } from "../ui";
+import { useState } from "react";
+import type {
+  ReadinessBand,
+  ReadinessDot,
+  ReadinessResult,
+} from "../../lib/readiness";
+import { Card, Num, Overline } from "../ui";
+import { ProgressRing } from "./ProgressRing";
 
 function Chip({
   children,
@@ -48,21 +52,75 @@ function Chip({
   );
 }
 
-// Statuskaart van Vorm. De readiness-SCORE + "waarom dit cijfer"-factoren zijn
-// nog niet geport (readiness-afleiding = deferred debt) → PLACEHOLDER, GEEN
-// verzonnen getal. Vorm/HRV-chips + de check-in-regel zijn 1:1 live-data.
+// band → ringkleur (band drijft de kleur, NIET de score-drempels opnieuw afgeleid).
+function bandColor(band: ReadinessBand | null): string {
+  return band === "ready"
+    ? "var(--good)"
+    : band === "caution"
+      ? "var(--warn)"
+      : band === "rest"
+        ? "var(--bad)"
+        : "var(--text-muted)";
+}
+
+// Verdict = presentatie-mapping op de SCORE (fijner dan de 3-weg band: >=78 apart).
+function verdictText(score: number | null): string {
+  if (score == null) return "Nog onvoldoende gegevens voor een score";
+  if (score >= 78) return "Klaar om te trainen";
+  if (score >= 62) return "Goed — normaal trainen";
+  if (score >= 48) return "Let op — tandje terug";
+  return "Herstel aanbevolen";
+}
+
+function dotColor(dot: ReadinessDot): string {
+  return dot === "good"
+    ? "var(--good)"
+    : dot === "warn"
+      ? "var(--warn)"
+      : "var(--text-muted)";
+}
+
+function chipStyle(tone: string): { color: string; bg: string; dot: string } {
+  if (tone === "fresh") {
+    return {
+      color: "var(--fresh)",
+      bg: "var(--fresh-soft)",
+      dot: "var(--fresh)",
+    };
+  }
+  return {
+    color: "var(--text-secondary)",
+    bg: "var(--bg-elevated)",
+    dot: "var(--text-muted)",
+  };
+}
+
+// Effect van de check-in op de score, uit de ENGINE-delta (checkinDelta_, ±2/veld,
+// clamp ±6) — NIET de demo-adj uit het design-prototype.
+function effectText(delta: number): string {
+  if (delta > 0) return `Check-in: +${delta} op je score`;
+  if (delta < 0) return `Check-in: ${delta} op je score`;
+  return "Check-in: geen effect op je score";
+}
+
+// Statuskaart van Vorm. De gereedheids-SCORE + "waarom dit cijfer"-factoren komen nu
+// LIVE uit de geporte engine-readiness-afleiding (client-side, `deriveReadiness`).
 export function ReadinessCard({
-  latest,
-  checkin,
+  readiness,
   onOpenCheckin,
 }: {
-  latest: WellnessInput | null;
-  checkin: CheckinInput | null;
+  readiness: ReadinessResult | null;
   onOpenCheckin: () => void;
 }) {
-  const vorm = latest?.vorm ?? null;
-  const hrv = latest?.hrv ?? null;
-  const z = vorm != null ? tsbZone(vorm) : null;
+  const [whyOpen, setWhyOpen] = useState(false);
+
+  const score = readiness?.score ?? null;
+  const band = readiness?.band ?? null;
+  const factors = readiness?.factors ?? [];
+  const chips = readiness?.chips ?? [];
+  const checkinDone = readiness?.checkinDone ?? false;
+  const checkinSummary = readiness?.checkinSummary ?? "";
+  const checkinDelta = readiness?.checkinDelta ?? 0;
 
   return (
     <Card>
@@ -76,68 +134,159 @@ export function ReadinessCard({
           marginTop: 12,
         }}
       >
-        <div
-          style={{
-            width: 104,
-            height: 104,
-            borderRadius: 999,
-            border: "9px solid var(--readiness-ring-track)",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-          }}
+        <ProgressRing
+          value={score}
+          size={104}
+          stroke={9}
+          color={bandColor(band)}
         >
-          <Overline style={{ fontSize: 8.5 }}>Gereed</Overline>
-          <div
-            style={{
-              fontFamily: "var(--font-sans)",
-              fontSize: 12,
-              fontWeight: 600,
-              color: "var(--text-muted)",
-              marginTop: 3,
-            }}
-          >
-            Binnenkort
+          {score != null ? (
+            <Num size="30px" weight={600}>
+              {score}
+            </Num>
+          ) : (
+            <Num size="26px" weight={600} color="var(--text-muted)">
+              —
+            </Num>
+          )}
+          <div style={{ marginTop: 2 }}>
+            <Overline color="var(--text-muted)" style={{ fontSize: 8.5 }}>
+              Gereed
+            </Overline>
           </div>
-        </div>
+        </ProgressRing>
+
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
             style={{
               fontFamily: "var(--font-sans)",
-              fontSize: 13.5,
-              color: "var(--text-secondary)",
-              lineHeight: 1.35,
+              fontSize: 17.5,
+              fontWeight: 600,
+              lineHeight: 1.2,
+              color: "var(--text-primary)",
+              letterSpacing: "-0.01em",
             }}
           >
-            De gereedheids-score volgt zodra de readiness-afleiding is geport.
+            {verdictText(score)}
           </div>
-          <div
-            style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}
-          >
-            {vorm != null && z && (
-              <Chip color={z.color} bg={z.soft} dot={z.color}>
-                Vorm {nlSigned1(vorm)}
-              </Chip>
-            )}
-            {hrv != null && (
-              <Chip dot="var(--text-muted)">HRV {nlInt(hrv)}</Chip>
-            )}
-            {vorm == null && hrv == null && (
-              <span
+
+          {chips.length > 0 && (
+            <div
+              style={{
+                display: "flex",
+                gap: 6,
+                marginTop: 9,
+                flexWrap: "wrap",
+              }}
+            >
+              {chips.map((c) => {
+                const cs = chipStyle(c.tone);
+                return (
+                  <Chip key={c.label} color={cs.color} bg={cs.bg} dot={cs.dot}>
+                    {c.label}
+                  </Chip>
+                );
+              })}
+            </div>
+          )}
+
+          {score != null && (
+            <button
+              type="button"
+              onClick={() => setWhyOpen((v) => !v)}
+              aria-expanded={whyOpen}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+                marginTop: 9,
+                padding: 0,
+                border: "none",
+                background: "transparent",
+                cursor: "pointer",
+                fontFamily: "var(--font-sans)",
+                fontSize: 11.5,
+                fontWeight: 600,
+                color: "var(--text-muted)",
+              }}
+            >
+              Waarom dit cijfer?
+              <svg
+                width="11"
+                height="11"
+                viewBox="0 0 14 14"
+                fill="none"
+                aria-hidden="true"
                 style={{
-                  fontFamily: "var(--font-sans)",
-                  fontSize: 12,
-                  color: "var(--text-muted)",
+                  transform: whyOpen ? "rotate(180deg)" : "none",
+                  transition: "transform .2s",
                 }}
               >
-                Nog geen wellness-data.
-              </span>
-            )}
-          </div>
+                <path
+                  d="M3 5l4 4 4-4"
+                  stroke="var(--text-muted)"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
+
+      {whyOpen && score != null && (
+        <div
+          style={{
+            marginTop: 12,
+            display: "flex",
+            flexDirection: "column",
+            gap: 9,
+            background: "var(--bg-sunken)",
+            borderRadius: "var(--r-md)",
+            padding: 12,
+          }}
+        >
+          {factors.map((f) => (
+            <div
+              key={f.key}
+              style={{ display: "flex", alignItems: "center", gap: 9 }}
+            >
+              <span
+                style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: 999,
+                  background: dotColor(f.dot),
+                  flexShrink: 0,
+                }}
+              />
+              <span
+                style={{
+                  width: 116,
+                  flexShrink: 0,
+                  fontFamily: "var(--font-sans)",
+                  fontSize: 12,
+                  color: "var(--text-secondary)",
+                }}
+              >
+                {f.label}
+              </span>
+              <span
+                style={{
+                  flex: 1,
+                  fontFamily: "var(--font-sans)",
+                  fontSize: 12,
+                  color: "var(--text-primary)",
+                  textAlign: "right",
+                }}
+              >
+                {f.valueText}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div
         style={{
@@ -146,7 +295,7 @@ export function ReadinessCard({
           paddingTop: 12,
         }}
       >
-        {checkin ? (
+        {checkinDone ? (
           <div
             style={{
               display: "flex",
@@ -157,14 +306,18 @@ export function ReadinessCard({
           >
             <span
               style={{
+                minWidth: 0,
                 fontFamily: "var(--font-sans)",
                 fontSize: 12.5,
                 color: "var(--text-secondary)",
               }}
             >
-              <span style={{ color: "var(--text-muted)" }}>Check-in:</span>{" "}
-              Slaap {checkin.slaap} · benen {checkin.benen} · stress{" "}
-              {checkin.stress}
+              <span style={{ color: "var(--text-muted)" }}>
+                {checkinSummary}
+              </span>
+              <span style={{ display: "block", marginTop: 2 }}>
+                {effectText(checkinDelta)}
+              </span>
             </span>
             <button
               type="button"
@@ -188,6 +341,28 @@ export function ReadinessCard({
               Aanpassen
             </button>
           </div>
+        ) : score != null ? (
+          <button
+            type="button"
+            onClick={onOpenCheckin}
+            style={{
+              width: "100%",
+              textAlign: "left",
+              cursor: "pointer",
+              background: "transparent",
+              border: "none",
+              padding: 0,
+              fontFamily: "var(--font-sans)",
+              fontSize: 12.5,
+              fontWeight: 600,
+              color: "var(--text-secondary)",
+            }}
+          >
+            Nog geen check-in vandaag —{" "}
+            <span style={{ color: "var(--accent)" }}>
+              vul 'm in voor een preciezere score
+            </span>
+          </button>
         ) : (
           <button
             type="button"
