@@ -11,12 +11,26 @@ live tot cutover.
 
 ## Stand
 
+**Fase 1a — readiness-DERIVATIE → `@cadans/engine` — KLAAR (commit `530885a`, CI groen).**
+Twee pure fns bijgeport in `packages/engine/src/readiness.ts` (extend-only; `getReadinessScore_`
+ONGEWIJZIGD): **`wellnessSignal_(wellRows)`** (HRV/slaap-signaal + de velden die
+`getReadinessScore_` consumeert) en **`formStateFromWellness_(wellRows)`** (`{ctl,atl,form,ramp}`
+uit de max-datum-rij die ZOWEL CTL als ATL draagt — niet blind de laatste). Input = de
+12-koloms WELL_HEADERS-rij (idx2 HRV · idx3 Slaap · idx8 CTL · idx9 ATL · idx11 Ramp),
+**OUDSTE-EERST** (`/api/wellness`/`dashVormReeks_`-conventie) → recent = `slice(-3)`, baseline =
+`slice(-28)`, sleepLastNight = laatste rij (de GAS-bron `Algorithm.gs:1251`/`:1337` was
+nieuwste-eerst met `slice(0,N)`; port-plan §3.2 klopte 1-op-1). Expliciete `!= null`-guards per
+cascade-tak (geen coercion), hrvBaseline null/0 → deficit null, lege reeks → signal "normal".
+Engine-selftest **886 → 922** (+36 asserts, hard afgedwongen op 922), vitest **98 → 104** (+6
+cases). GEEN route/D1/UI deze fase. **VOLGENDE = Fase 1b:** ReadinessCard-score + waarom-factoren
+in `apps/web` wiren (debt (h)/(k)) — `getReadinessScore_` client-side voeden met deze twee fns.
+
 **Fase 5 — DE PWA (`apps/web`) — IN UITVOERING (shell + Vorm-lite + Niveau-v1 KLAAR).**
 Faithful 1-op-1 port van de bestaande tabs tegen de bestaande `/api`-routes;
 `react-router-dom` **7.18.1** (`BrowserRouter`), bottom-nav **Schema · Vorm ·
 Trainingen · Niveau**. Schema/Trainingen = "binnenkort"-placeholder; **Vorm én
 Niveau = gevuld**. Vitest **94 → 98** (apps/web heeft nu tests, zie 5.2); engine
-**886/0**. CI groen op elke sub-fase.
+**886/0** (→ **922/0** na Fase 1a). CI groen op elke sub-fase.
 
 - **5.0 design-import** (commit `5359198`): het cadans-handoff-pakket staat nu in
   **`cadans/design/`** (geïmporteerd uit training's untracked
@@ -94,14 +108,11 @@ CTL-ramp) mogen deze keuze heropenen. (2) **Pure engine CLIENT-SIDE** — TZ-vei
 want de browser = Amsterdam → omzeilt debt (d) (die alleen de UTC-worker treft); een
 server-route zou (d) juist ráken.
 
-**⏳ OPEN — visuele verificatie Niveau v1 (Daan, FOCUS volgende chat) — nu UITVOERBAAR
-MET DATA.** De lokale D1 is gevuld, dus thuis op `http://<laptop-ip>:5173/niveau` +
-`/vorm` te checken (twee dev-servers + wifi/firewall op poort **5173**): (1) **getallen
-vs realiteit** — W/kg ≈ **3,73** + tier-chip (design-W/kg-`TIERS`), FTP-hero **280**,
-eFTP; (2) **touch-scrub** op de hand-rolled trajectory-SVG (`touchmove`, niet enkel
-muis); (3) **CTL-divergentie** Niveau (`ctlReeksMaandelijks_`/maandbuckets) vs Vorm
-(wellness-route) = wrinkle (l). Vandaag NIET gelukt (Daan op ander wifi dan het
-laptop-LAN) → blijft de eerste focus. Geen prod-deploy / remote-D1-mutatie gedaan.
+**✅ KLAAR — visuele verificatie Niveau v1 + Vorm (Daan, op de telefoon).** Beide tabs
+visueel goedgekeurd met live data. Uitkomst van de **CTL-divergentie**-check (tak 1 van
+wrinkle (l)): **Niveau 49 vs Vorm 50 = granulariteits-artefact** (maandbuckets vs
+wellness-CTL), GEEN engine-unificatie nodig → afgevinkt. De andere tak van (l) (engine-fns
+retourneren `any` → `apps/web` cast) blijft open. Geen prod-deploy / remote-D1-mutatie gedaan.
 
 **Volgende (Fase 5.x) — resterende tabs.** **Schema** leunt op de nog-niet-geporte
 **weekgeneratie** (debt (a)/(d): `assignWorkouts`/`generateProposal`) + **readiness**
@@ -395,11 +406,11 @@ Open schulden die bewust naar een latere fase zijn geschoven:
   **94 → 98**). RESTEREND: de bredere PWA-teststrategie (component/e2e) is nog een open
   beslispunt, en de `/api/activities`-route blijft server-side **`unknown[][]`** (nog
   niet getypeerd naar `ActivitiesResponse` — de client parset idx0 zelf).
-- **(l) Twee Niveau-wrinkles — NIEUW (Fase 5.2; engine-niveau, GEEN fix nu).**
-  (1) De Niveau-CTL uit `ctlReeksMaandelijks_(activities)` (maandbuckets, idx8=TSS) kan
-  voor overlappende periodes AFWIJKEN van Vorm's wellness-CTL (andere bron/granulariteit,
-  geërfd uit de GAS-engine) — de visuele check moet uitwijzen of dit echt UX-werk is;
-  blind unificeren = engine-wijziging = aparte fase. (2) De engine-fns retourneren `any`
+- **(l) Twee Niveau-wrinkles — tak (1) AFGEVINKT (visuele check), tak (2) OPEN.**
+  (1) ~~De Niveau-CTL uit `ctlReeksMaandelijks_(activities)` (maandbuckets, idx8=TSS) kan
+  AFWIJKEN van Vorm's wellness-CTL~~ → **opgelost door de visuele check: Niveau 49 vs Vorm 50
+  = granulariteits-artefact (maandbuckets vs wellness-CTL), GEEN engine-unificatie nodig.**
+  (2) De engine-fns retourneren `any`
   → `apps/web` cast de resultaten (`as NiveauPoint[]` / `number|null` / `{wkg}`); een
   engine-shape-drift wordt daardoor NIET door TS in apps/web gevangen. Echte fix = de
   engine-returns typeren (staat al onder debt (a) "future typing"; raakt meerdere consumers).
