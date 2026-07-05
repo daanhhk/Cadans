@@ -50,6 +50,7 @@ import {
   eventFase_,
   expandArchetype_,
   formatDate,
+  formStateFromWellness_,
   ftpBandFromProjection_,
   GOAL_KWALITEIT_INTENTS_,
   GOAL_PROFILES_,
@@ -94,6 +95,7 @@ import {
   watts,
   weeklyHoursRecent_,
   weekPlanSummary_,
+  wellnessSignal_,
   workoutZones,
   zoneActsByDateFromTab_,
   zoneTimesFromCell_,
@@ -163,6 +165,19 @@ function _mkAct_(id: any, iso: any, extra?: any): any {
       a[k] = extra[k];
     });
   return a;
+}
+
+// 12-koloms WELL_HEADERS-rij (idx0 Datum · idx2 HRV · idx3 Slaap · idx8 CTL ·
+// idx9 ATL · idx11 Ramp) — de input voor wellnessSignal_/formStateFromWellness_.
+function _wrow_(o: any): any {
+  const r: any = new Array(12).fill("");
+  if (o.date !== undefined) r[0] = o.date;
+  if (o.hrv !== undefined) r[2] = o.hrv;
+  if (o.slaap !== undefined) r[3] = o.slaap;
+  if (o.ctl !== undefined) r[8] = o.ctl;
+  if (o.atl !== undefined) r[9] = o.atl;
+  if (o.ramp !== undefined) r[11] = o.ramp;
+  return r;
 }
 
 describe("engine selftest", () => {
@@ -3181,7 +3196,164 @@ describe("engine selftest", () => {
     );
   });
 
-  it("exactly 886 assertions", () => {
-    expect(assertCount).toBe(886);
+  // ── wellnessSignal_ — HRV/slaap-derivatie (Fase 1a, port Algorithm.gs:1251) ──
+  // Cadans-conventie = OUDSTE-EERST; recent/baseline slicen vanaf het EIND.
+  it("testWellnessSignalOrdering", () => {
+    // hrv oudste→nieuwste: [60,60,45,45,45]. slice(-3) = de LAATSTE 3 (45) —
+    // NIET de eerste 3. Wie vanaf de kop sliced, krijgt recent≈55 → deze test valt.
+    const rows = [
+      _wrow_({ hrv: 60, slaap: 8 }),
+      _wrow_({ hrv: 60, slaap: 8 }),
+      _wrow_({ hrv: 45, slaap: 8 }),
+      _wrow_({ hrv: 45, slaap: 8 }),
+      _wrow_({ hrv: 45, slaap: 8 }),
+    ];
+    const s = wellnessSignal_(rows);
+    assert_("wsig recent = laatste 3 (oudste-eerst)", 45, s.hrvRecent);
+    assert_("wsig baseline = gemiddelde alle", 51, s.hrvBaseline);
+    assert_("wsig deficit round((45-51)/51*100)", -12, s.hrvDeficit);
+    assert_("wsig sleepLastNight = laatste rij", 8, s.sleepLastNight);
+    assert_("wsig signal demote (hrv <-10)", "demote", s.signal);
+  });
+
+  it("testWellnessSignalSleep", () => {
+    // Geen HRV (idx2=0 → null) → hrvDeficit null; slaap stuurt de cascade alleen.
+    const sig = (slaap: any) =>
+      wellnessSignal_([
+        _wrow_({ hrv: 0, slaap: slaap }),
+        _wrow_({ hrv: 0, slaap: slaap }),
+        _wrow_({ hrv: 0, slaap: slaap }),
+      ]);
+    assert_("wsig slaap 4.9 → recovery", "recovery", sig(4.9).signal);
+    assert_(
+      "wsig slaap 5.0 grens → demote (niet recovery)",
+      "demote",
+      sig(5.0).signal,
+    );
+    assert_("wsig slaap 5.5 → demote", "demote", sig(5.5).signal);
+    assert_("wsig slaap 6.5 → warning", "warning", sig(6.5).signal);
+    assert_("wsig slaap 7.5 → normal", "normal", sig(7.5).signal);
+    assert_("wsig geen hrv → deficit null", null, sig(7.5).hrvDeficit);
+  });
+
+  it("testWellnessSignalHrv", () => {
+    // Slaap 8 (geen slaap-tak) → HRV-deficit stuurt de cascade.
+    const flat = (n: number, hrv: number, slaap: number) =>
+      Array.from({ length: n }, () => _wrow_({ hrv: hrv, slaap: slaap }));
+    const demote = wellnessSignal_([...flat(17, 60, 8), ...flat(3, 40, 8)]);
+    assert_("wsig hrv-deficit -30 → demote", "demote", demote.signal);
+    assert_("wsig hrv-deficit waarde -30", -30, demote.hrvDeficit);
+    const warn = wellnessSignal_([...flat(17, 60, 8), ...flat(3, 54, 8)]);
+    assert_("wsig hrv-deficit -9 → warning", "warning", warn.signal);
+    const normal = wellnessSignal_(flat(6, 60, 8));
+    assert_("wsig hrv gelijk → deficit 0", 0, normal.hrvDeficit);
+    assert_("wsig hrv gelijk → normal", "normal", normal.signal);
+    // combo-tak: deficit <-10 EN sleepAvg3 <6 → recovery.
+    const combo = wellnessSignal_([...flat(17, 60, 8), ...flat(3, 40, 5.5)]);
+    assert_(
+      "wsig hrv+slaap onder baseline → recovery",
+      "recovery",
+      combo.signal,
+    );
+  });
+
+  it("testWellnessSignalNulls", () => {
+    // Null-slaap mag GEEN tak triggeren (coercion-val: null<5 zou true zijn).
+    const noSleep = wellnessSignal_([
+      _wrow_({ hrv: 50 }),
+      _wrow_({ hrv: 50 }),
+      _wrow_({ hrv: 50 }),
+    ]);
+    assert_(
+      "wsig null-slaap → normal (geen coercion-tak)",
+      "normal",
+      noSleep.signal,
+    );
+    assert_(
+      "wsig null-slaap → sleepLastNight null",
+      null,
+      noSleep.sleepLastNight,
+    );
+    assert_("wsig null-slaap → sleepAvg3 null", null, noSleep.sleepAvg3);
+    // Lege reeks → fallback normal + alles null.
+    assert_("wsig lege reeks → normal", "normal", wellnessSignal_([]).signal);
+    assert_(
+      "wsig lege reeks → deficit null",
+      null,
+      wellnessSignal_([]).hrvDeficit,
+    );
+    assert_(
+      "wsig lege reeks → baseline null",
+      null,
+      wellnessSignal_([]).hrvBaseline,
+    );
+  });
+
+  // ── formStateFromWellness_ — fs-input (Fase 1a, port getFormScore_ :1337) ──
+  it("testFormState", () => {
+    const d = (n: number) => new Date(2026, 0, n);
+    const rows = [
+      _wrow_({ date: d(1), ctl: 58, atl: 49, ramp: 2.5 }),
+      _wrow_({ date: d(2), ctl: 59, atl: 49, ramp: 2.8 }),
+      _wrow_({ date: d(3), ctl: 60, atl: 50, ramp: 3 }),
+    ];
+    const fs = formStateFromWellness_(rows);
+    assert_("formState ctl = laatste rij", 60, fs?.ctl);
+    assert_("formState atl = laatste rij", 50, fs?.atl);
+    assert_("formState form = ctl-atl", 10, fs?.form);
+    assert_("formState ramp = idx11", 3, fs?.ramp);
+    // Laatste rij mist atl → wordt overgeslagen; pak de vorige complete rij.
+    const gap = formStateFromWellness_([
+      _wrow_({ date: d(1), ctl: 55, atl: 48, ramp: 2 }),
+      _wrow_({ date: d(2), ctl: 62, ramp: 4 }),
+    ]);
+    assert_("formState slaat incomplete laatste rij over", 55, gap?.ctl);
+    assert_("formState vorige-rij form", 7, gap?.form);
+    // Geen enkele rij met ctl+atl → null; lege reeks → null; string-datum → null.
+    assert_(
+      "formState geen ctl/atl → null",
+      null,
+      formStateFromWellness_([_wrow_({ date: d(1), hrv: 50 })]),
+    );
+    assert_("formState lege reeks → null", null, formStateFromWellness_([]));
+    assert_(
+      "formState idx0 geen Date → null",
+      null,
+      formStateFromWellness_([
+        _wrow_({ date: "2026-01-01", ctl: 60, atl: 50 }),
+      ]),
+    );
+  });
+
+  it("testReadinessAssembly", () => {
+    // End-to-end: wellnessSignal_ + formStateFromWellness_ → getReadinessScore_.
+    const d = (n: number) => new Date(2026, 0, n);
+    const rows = [
+      _wrow_({ date: d(1), hrv: 50, slaap: 8, ctl: 58, atl: 49, ramp: 2.5 }),
+      _wrow_({ date: d(2), hrv: 50, slaap: 8, ctl: 59, atl: 49, ramp: 2.8 }),
+      _wrow_({ date: d(3), hrv: 50, slaap: 8, ctl: 60, atl: 50, ramp: 3 }),
+    ];
+    const res = getReadinessScore_(
+      formStateFromWellness_(rows),
+      wellnessSignal_(rows),
+      [],
+      null,
+    );
+    assert_("readiness assembly score", 89, res.score);
+    assert_("readiness assembly band", "ready", res.band);
+    assert_(
+      "readiness belasting-sub (fs.ctl/atl/ramp doorgerijgd)",
+      85,
+      res.factors.find((f: any) => f.key === "belasting").sub,
+    );
+    assert_(
+      "readiness hrv-sub (wellness.hrvDeficit doorgerijgd)",
+      75,
+      res.factors.find((f: any) => f.key === "hrv").sub,
+    );
+  });
+
+  it("exactly 922 assertions", () => {
+    expect(assertCount).toBe(922);
   });
 });

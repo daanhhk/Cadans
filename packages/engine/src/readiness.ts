@@ -229,3 +229,177 @@ export function getReadinessScore_(
     checkin: checkin || null,
   };
 }
+
+// ════════════════════════════════════════════════════════════════════
+// Readiness-INPUT-derivatie (Fase 1a) — voedt getReadinessScore_.
+// Port van Algorithm.gs getWellnessSignal (:1251) + getFormScore_ (:1337).
+// INPUT = de 12-koloms WELL_HEADERS-rijen (zoals dashVormReeks_ leest):
+//   idx0 Datum(Date) · idx2 HRV · idx3 Slaap(u) · idx8 CTL · idx9 ATL · idx11 Ramp.
+// ⚠ Cadans-conventie = OUDSTE-EERST (readWellness/​/api/wellness/dashVormReeks_).
+// De GAS-bron was NIEUWSTE-EERST met slice(0,N); op oudste-eerst wordt dat slice(-N).
+// Beide functies PUUR; geen IO. Wijzig getReadinessScore_ hierboven NIET.
+// ════════════════════════════════════════════════════════════════════
+
+export type WellnessSignalState = "recovery" | "demote" | "warning" | "normal";
+export interface WellnessSignalResult {
+  hrvBaseline: number | null;
+  hrvRecent: number | null;
+  hrvDeficit: number | null;
+  sleepLastNight: number | null;
+  sleepAvg3: number | null;
+  signal: WellnessSignalState;
+  reason: string;
+}
+
+function rdyWellnessFallback_(reason: string): WellnessSignalResult {
+  return {
+    hrvBaseline: null,
+    hrvRecent: null,
+    hrvDeficit: null,
+    sleepLastNight: null,
+    sleepAvg3: null,
+    signal: "normal",
+    reason: reason,
+  };
+}
+
+/** Number-of-null: 0/NaN/"" → null (GAS: `isNaN(v) || v===0 ? null : v`). */
+function rdyNumOrNull_(v: any): number | null {
+  const n = Number(v);
+  return Number.isNaN(n) || n === 0 ? null : n;
+}
+function rdyAvgNonNull_(arr: (number | null)[]): number | null {
+  let sum = 0,
+    n = 0;
+  arr.forEach((v) => {
+    if (v != null) {
+      sum += v;
+      n++;
+    }
+  });
+  return n > 0 ? sum / n : null;
+}
+
+/**
+ * wellnessSignal_ — HRV/slaap-signaal + de afgeleide velden die getReadinessScore_
+ * consumeert. OUDSTE-EERST-reeks; recent = de LAATSTE rijen (slice(-3)), baseline =
+ * de laatste 28 (slice(-28)), sleepLastNight = de LAATSTE rij. Logica/drempels
+ * exact als Algorithm.gs:1251. HARDE null-guards: ontbrekende slaap/HRV triggeren
+ * GEEN tak (elke tak checkt `!= null`); hrvBaseline null/0 → hrvDeficit null (geen
+ * deling door 0). Geen bruikbare data → signal "normal".
+ */
+export function wellnessSignal_(wellRows: any): WellnessSignalResult {
+  if (!wellRows || !wellRows.length) {
+    return rdyWellnessFallback_("geen wellness-data");
+  }
+  const hrvSeries: (number | null)[] = wellRows.map((r: any) =>
+    rdyNumOrNull_(r[2]),
+  );
+  const sleepSeries: (number | null)[] = wellRows.map((r: any) =>
+    rdyNumOrNull_(r[3]),
+  );
+
+  const hrvBaseline = rdyAvgNonNull_(hrvSeries.slice(-28));
+  const hrvRecent = rdyAvgNonNull_(hrvSeries.slice(-3));
+  const sleepLastNight: number | null = sleepSeries.length
+    ? (sleepSeries[sleepSeries.length - 1] ?? null)
+    : null;
+  const sleepAvg3 = rdyAvgNonNull_(sleepSeries.slice(-3));
+
+  const hrvDeficit =
+    hrvBaseline != null && hrvBaseline !== 0 && hrvRecent != null
+      ? Math.round(((hrvRecent - hrvBaseline) / hrvBaseline) * 100)
+      : null;
+
+  let signal: WellnessSignalState;
+  let reason: string;
+  if (
+    (sleepLastNight != null && sleepLastNight < 5) ||
+    (sleepAvg3 != null && sleepAvg3 < 5)
+  ) {
+    signal = "recovery";
+    reason = `slaap kritiek laag (${sleepLastNight != null ? sleepLastNight : sleepAvg3}u)`;
+  } else if (
+    hrvDeficit != null &&
+    hrvDeficit < -10 &&
+    sleepAvg3 != null &&
+    sleepAvg3 < 6
+  ) {
+    signal = "recovery";
+    reason = `HRV én slaap onder baseline (HRV ${hrvDeficit}%, slaap ${sleepAvg3}u)`;
+  } else if (
+    (hrvDeficit != null && hrvDeficit < -10) ||
+    (sleepLastNight != null && sleepLastNight < 6)
+  ) {
+    signal = "demote";
+    reason =
+      hrvDeficit != null && hrvDeficit < -10
+        ? `HRV ${hrvDeficit}% onder baseline`
+        : `slaap ${sleepLastNight}u onder ondergrens`;
+  } else if (
+    (hrvDeficit != null && hrvDeficit < -5) ||
+    (sleepLastNight != null && sleepLastNight < 7)
+  ) {
+    signal = "warning";
+    reason = "lichte afwijking";
+  } else {
+    signal = "normal";
+    reason = "binnen baseline";
+  }
+
+  return {
+    hrvBaseline: hrvBaseline != null ? Math.round(hrvBaseline * 10) / 10 : null,
+    hrvRecent: hrvRecent != null ? Math.round(hrvRecent * 10) / 10 : null,
+    hrvDeficit: hrvDeficit,
+    sleepLastNight: sleepLastNight,
+    sleepAvg3: sleepAvg3 != null ? Math.round(sleepAvg3 * 10) / 10 : null,
+    signal: signal,
+    reason: reason,
+  };
+}
+
+export interface FormState {
+  ctl: number;
+  atl: number;
+  form: number;
+  ramp: number | null;
+}
+
+/**
+ * formStateFromWellness_ — de `fs`-input voor getReadinessScore_. Port van
+ * getFormScore_ (sheet-pad): pak de rij met de MAX datum (idx0 Date) die ZOWEL CTL
+ * (idx8) als ATL (idx9) heeft — NIET blind de laatste array-rij. form = ctl − atl,
+ * ramp = idx11. Geen geldige rij / lege reeks → null. PUUR.
+ */
+export function formStateFromWellness_(wellRows: any): FormState | null {
+  if (!wellRows || !wellRows.length) return null;
+  let best: {
+    t: number;
+    ctl: number;
+    atl: number;
+    ramp: number | null;
+  } | null = null;
+  for (let j = 0; j < wellRows.length; j++) {
+    const w = wellRows[j];
+    if (!(w[0] instanceof Date)) continue;
+    const wc = w[8] !== "" && w[8] != null ? Number(w[8]) : null;
+    const wa = w[9] !== "" && w[9] != null ? Number(w[9]) : null;
+    if (wc == null || wa == null) continue;
+    const wt = w[0].getTime();
+    if (!best || wt > best.t) {
+      best = {
+        t: wt,
+        ctl: wc,
+        atl: wa,
+        ramp: w[11] !== "" && w[11] != null ? Number(w[11]) : null,
+      };
+    }
+  }
+  if (!best) return null;
+  return {
+    ctl: best.ctl,
+    atl: best.atl,
+    form: best.ctl - best.atl,
+    ramp: best.ramp,
+  };
+}
