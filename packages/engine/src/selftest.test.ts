@@ -85,7 +85,9 @@ import {
   rdyClamp_,
   readinessAdjust_,
   recencyFromWeekplan_,
+  recentHardDate_,
   riderTypeFromCurve_,
+  rollingZoneCoverage_,
   snapshotDayAction_,
   sortActivityRowsNewestFirst_,
   stripTime_,
@@ -98,6 +100,7 @@ import {
   wellnessSignal_,
   workoutZones,
   zoneActsByDateFromTab_,
+  zoneDebt_,
   zoneTimesFromCell_,
 } from "./index";
 
@@ -177,6 +180,17 @@ function _wrow_(o: any): any {
   if (o.ctl !== undefined) r[8] = o.ctl;
   if (o.atl !== undefined) r[9] = o.atl;
   if (o.ramp !== undefined) r[11] = o.ramp;
+  return r;
+}
+
+// 17-koloms actValues-rij voor de weekprep-fns: idx0 Datum(Date) · idx1 Type ·
+// idx7 IF · idx15 Zone-tijden (JSON-string).
+function _wpRow_(date: Date, o: any): any {
+  const r: any = new Array(17).fill("");
+  r[0] = date;
+  r[1] = o.type !== undefined ? o.type : "Ride";
+  if (o.iff !== undefined) r[7] = o.iff;
+  if (o.zoneJson !== undefined) r[15] = o.zoneJson;
   return r;
 }
 
@@ -3353,7 +3367,126 @@ describe("engine selftest", () => {
     );
   });
 
-  it("exactly 922 assertions", () => {
-    expect(assertCount).toBe(922);
+  // ── weekprep.ts (Fase 5.3a): plan-gekoppelde weekgen-prep ────────────
+  it("testRollingZoneCoverage", () => {
+    const today = "2026-03-15"; // cutoff = 2026-03-08 → venster [03-08..03-15] (8 dagen)
+    const intent: any = { "2026-03-14": { low: 60, high: 20, anaerobic: 0 } };
+    const rows = [
+      _wpRow_(new Date(2026, 2, 14), { type: "Ride" }), // intent → low+high (multi-bucket)
+      _wpRow_(new Date(2026, 2, 13), { type: "Ride", iff: 0.9 }), // IF → high
+      _wpRow_(new Date(2026, 2, 12), { type: "Ride", iff: 0.7 }), // IF → low
+      _wpRow_(new Date(2026, 2, 12), { type: "Run", iff: 0.99 }), // niet-fiets → weg
+      _wpRow_(new Date(2026, 2, 8), { type: "Ride", iff: 0.96 }), // rand-in (today-7) → anaerobic
+      _wpRow_(new Date(2026, 2, 7), { type: "Ride", iff: 0.99 }), // rand-uit (today-8) → weg
+    ];
+    const cov = rollingZoneCoverage_(rows, intent, today, 7);
+    assert_("rolling cov.low", 2, cov.low);
+    assert_("rolling cov.high", 2, cov.high);
+    assert_(
+      "rolling cov.anaerobic (rand-in telt, niet-fiets weg)",
+      1,
+      cov.anaerobic,
+    );
+    assert_(
+      "rolling lege reeks → 0",
+      0,
+      rollingZoneCoverage_([], {}, today).low,
+    );
+    assert_(
+      "rolling today-7 telt mee",
+      1,
+      rollingZoneCoverage_(
+        [_wpRow_(new Date(2026, 2, 8), { iff: 0.96 })],
+        {},
+        today,
+      ).anaerobic,
+    );
+    assert_(
+      "rolling today-8 valt buiten",
+      0,
+      rollingZoneCoverage_(
+        [_wpRow_(new Date(2026, 2, 7), { iff: 0.96 })],
+        {},
+        today,
+      ).anaerobic,
+    );
+  });
+
+  it("testZoneDebt", () => {
+    const week = "2026-03-09"; // venster [03-09 .. 03-16)
+    const intent: any = {
+      "2026-03-10": { low: 60, high: 30, anaerobic: 0 },
+      "2026-03-11": { low: 40, high: 0, anaerobic: 15 }, // geen zone-data → actual 0 → debt = intent
+      "2026-03-12": { low: 100, high: 0, anaerobic: 0 }, // train maar NIET gedaan → genegeerd
+      "2026-03-20": { low: 100, high: 0, anaerobic: 0 }, // buiten week → genegeerd
+    };
+    const days = [
+      { datum: "2026-03-10", train: true, gedaan: true },
+      { datum: "2026-03-11", train: true, gedaan: true },
+      { datum: "2026-03-12", train: true, gedaan: false },
+      { datum: "2026-03-20", train: true, gedaan: true },
+    ];
+    const acts = [
+      _wpRow_(new Date(2026, 2, 10), {
+        type: "Ride",
+        zoneJson: JSON.stringify([
+          { id: "Z1", secs: 1800 }, // 30 min low
+          { id: "Z3", secs: 600 }, // 10 min high
+        ]),
+      }),
+    ];
+    const debt = zoneDebt_(intent, days, acts, week);
+    assert_("debt.low (60-30 + 40)", 70, debt.low);
+    assert_("debt.high (30-10 + 0)", 20, debt.high);
+    assert_("debt.anaerobic (0 + 15)", 15, debt.anaerobic);
+    const neg = zoneDebt_(
+      { "2026-03-13": { low: 20, high: 0, anaerobic: 0 } },
+      [{ datum: "2026-03-13", train: true, gedaan: true }],
+      [
+        _wpRow_(new Date(2026, 2, 13), {
+          type: "Ride",
+          zoneJson: JSON.stringify([{ id: "Z1", secs: 3600 }]),
+        }),
+      ],
+      week,
+    );
+    assert_("debt negatief geen clamp (20-60)", -40, neg.low);
+    assert_("debt lege plannerDays → 0", 0, zoneDebt_({}, [], [], week).low);
+  });
+
+  it("testRecentHardDate", () => {
+    const intent: any = { "2026-03-14": { low: 0, high: 20, anaerobic: 0 } };
+    const rows = [
+      _wpRow_(new Date(2026, 2, 10), { type: "Ride", iff: 0.7 }), // zacht
+      _wpRow_(new Date(2026, 2, 12), { type: "Ride", iff: 0.9 }), // hard via IF
+      _wpRow_(new Date(2026, 2, 14), { type: "Ride", iff: 0.5 }), // hard via intent (high)
+      _wpRow_(new Date(2026, 2, 16), { type: "Run", iff: 0.99 }), // hard via IF, GEEN fiets-filter
+    ];
+    const hard = recentHardDate_(rows, intent);
+    assert_("recentHard is Date", true, hard instanceof Date);
+    assert_(
+      "recentHard = max harde datum (Run telt, geen fiets-filter)",
+      new Date(2026, 2, 16).getTime(),
+      hard ? hard.getTime() : null,
+    );
+    const viaIntent = recentHardDate_(
+      [_wpRow_(new Date(2026, 2, 13), { type: "Ride", iff: 0.55 })],
+      { "2026-03-13": { low: 0, high: 0, anaerobic: 10 } },
+    );
+    assert_(
+      "recentHard via intent-anaerobic",
+      new Date(2026, 2, 13).getTime(),
+      viaIntent ? viaIntent.getTime() : null,
+    );
+    assert_(
+      "recentHard alles zacht → null",
+      null,
+      recentHardDate_([_wpRow_(new Date(2026, 2, 11), { iff: 0.6 })], {}),
+    );
+    assert_("recentHard lege reeks → null", null, recentHardDate_([], {}));
+  });
+
+  it("exactly 938 assertions", () => {
+    expect(assertCount).toBe(938);
   });
 });

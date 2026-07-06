@@ -11,6 +11,7 @@ export * from "./planner";
 export * from "./readiness";
 export * from "./sync";
 export * from "./utils";
+export * from "./weekprep";
 export * from "./workouts/beklimmingen";
 export * from "./workouts/conditie";
 export * from "./workouts/ftp";
