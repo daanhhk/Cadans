@@ -30,6 +30,7 @@ import {
   coachAlignment_,
   coachFeedback_,
   coachIntentFromZones_,
+  combineSignals_,
   computeMacroPhase,
   computeNiveau_,
   ctlApproachWeeks_,
@@ -49,6 +50,7 @@ import {
   eftpFromActivities_,
   eventFase_,
   expandArchetype_,
+  expectedRpe_,
   formatDate,
   formStateFromWellness_,
   ftpBandFromProjection_,
@@ -88,6 +90,7 @@ import {
   recentHardDate_,
   riderTypeFromCurve_,
   rollingZoneCoverage_,
+  rpeSignal_,
   snapshotDayAction_,
   sortActivityRowsNewestFirst_,
   stripTime_,
@@ -3486,7 +3489,182 @@ describe("engine selftest", () => {
     assert_("recentHard lege reeks → null", null, recentHardDate_([], {}));
   });
 
-  it("exactly 938 assertions", () => {
-    expect(assertCount).toBe(938);
+  // ── RPE-signaal (Fase 5.3d-ii): rpeSignal_ + combineSignals_ ──────────
+  it("testRpeSignal", () => {
+    // sweet_spot → expected high(7); diff = rpe − 7. Venster = [maandag..todayISO].
+    const T3: any = {
+      "2026-03-09": "sweet_spot",
+      "2026-03-10": "sweet_spot",
+      "2026-03-11": "sweet_spot",
+    };
+    // a) 2 gegradeerd, diff 2 → avg 2 → demote.
+    assert_(
+      "rpe avg 2 → demote",
+      "demote",
+      rpeSignal_(
+        [
+          { datum: "2026-03-10", rpe: 9 },
+          { datum: "2026-03-11", rpe: 9 },
+        ],
+        T3,
+        "2026-03-11",
+      ).signal,
+    );
+    // b) <2 gegradeerd → normal.
+    assert_(
+      "rpe <2 sessies → normal",
+      "normal",
+      rpeSignal_([{ datum: "2026-03-11", rpe: 9 }], T3, "2026-03-11").signal,
+    );
+    // c) avg<2 → normal.
+    assert_(
+      "rpe avg<2 → normal",
+      "normal",
+      rpeSignal_(
+        [
+          { datum: "2026-03-10", rpe: 8 },
+          { datum: "2026-03-11", rpe: 8 },
+        ],
+        T3,
+        "2026-03-11",
+      ).signal,
+    );
+    // d) hoge avg → nog steeds demote (cap, nooit recovery/warning).
+    assert_(
+      "rpe hoge avg → demote-cap",
+      "demote",
+      rpeSignal_(
+        [
+          { datum: "2026-03-10", rpe: 12 },
+          { datum: "2026-03-11", rpe: 12 },
+        ],
+        T3,
+        "2026-03-11",
+      ).signal,
+    );
+    // e) null-rpe overgeslagen → n=2.
+    assert_(
+      "rpe null-rij overgeslagen",
+      true,
+      rpeSignal_(
+        [
+          { datum: "2026-03-09", rpe: 9 },
+          { datum: "2026-03-10", rpe: null },
+          { datum: "2026-03-11", rpe: 9 },
+        ],
+        T3,
+        "2026-03-11",
+      ).reason.includes("laatste 2 sessies"),
+    );
+    // f) onbekend type gefilterd → n=2.
+    assert_(
+      "rpe onbekend type gefilterd",
+      true,
+      rpeSignal_(
+        [
+          { datum: "2026-03-09", rpe: 9 },
+          { datum: "2026-03-10", rpe: 9 },
+          { datum: "2026-03-11", rpe: 9 },
+        ],
+        {
+          "2026-03-09": "sweet_spot",
+          "2026-03-10": "onbekend_type",
+          "2026-03-11": "sweet_spot",
+        },
+        "2026-03-11",
+      ).reason.includes("laatste 2 sessies"),
+    );
+    // g) recentste ≤3 (niet oudste-3): diffs [4,4,0,0,0] → recent [0,0,0] → normal.
+    assert_(
+      "rpe recentste-3 (niet oudste-3)",
+      "normal",
+      rpeSignal_(
+        [
+          { datum: "2026-03-09", rpe: 11 },
+          { datum: "2026-03-10", rpe: 11 },
+          { datum: "2026-03-11", rpe: 7 },
+          { datum: "2026-03-12", rpe: 7 },
+          { datum: "2026-03-13", rpe: 7 },
+        ],
+        {
+          "2026-03-09": "sweet_spot",
+          "2026-03-10": "sweet_spot",
+          "2026-03-11": "sweet_spot",
+          "2026-03-12": "sweet_spot",
+          "2026-03-13": "sweet_spot",
+        },
+        "2026-03-13",
+      ).signal,
+    );
+    // h) vorige-week-sessie buiten venster → alleen 1 in-week → normal.
+    assert_(
+      "rpe vorige-week buiten venster",
+      "normal",
+      rpeSignal_(
+        [
+          { datum: "2026-03-06", rpe: 12 },
+          { datum: "2026-03-11", rpe: 9 },
+        ],
+        { "2026-03-06": "sweet_spot", "2026-03-11": "sweet_spot" },
+        "2026-03-11",
+      ).signal,
+    );
+  });
+
+  it("testCombineSignals", () => {
+    const wl = (signal: any, reason: string): any => ({
+      hrvBaseline: null,
+      hrvRecent: null,
+      hrvDeficit: null,
+      sleepLastNight: null,
+      sleepAvg3: null,
+      signal,
+      reason,
+    });
+    const rp = (signal: any, reason: string): any => ({ signal, reason });
+    // a) rpe demote + wellness normal → demote (rpe wint, reason vervangt).
+    const a = combineSignals_(
+      wl("normal", "binnen baseline"),
+      rp("demote", "RPE hoog"),
+    );
+    assert_("combine demote wint van normal", "demote", a.signal);
+    assert_("combine rpe-reason vervangt", "RPE hoog", a.reason);
+    // b) rpe normal → geen override (recovery blijft).
+    assert_(
+      "combine rpe normal → recovery blijft",
+      "recovery",
+      combineSignals_(wl("recovery", "x"), rp("normal", "")).signal,
+    );
+    // c) rpe normal + wellness demote → demote blijft.
+    assert_(
+      "combine rpe normal → demote blijft",
+      "demote",
+      combineSignals_(wl("demote", "y"), rp("normal", "")).signal,
+    );
+    // d) gelijke rang (demote+demote) → wellness behouden + reason concat.
+    const d = combineSignals_(
+      wl("demote", "HRV laag"),
+      rp("demote", "RPE hoog"),
+    );
+    assert_("combine gelijke rang → wellness signal", "demote", d.signal);
+    assert_("combine reason concat", "HRV laag + RPE hoog", d.reason);
+    // e) lagere rpe-rang (demote < recovery) → recovery behouden + reason concat.
+    const e = combineSignals_(
+      wl("recovery", "slaap laag"),
+      rp("demote", "RPE hoog"),
+    );
+    assert_("combine recovery wint van demote-rpe", "recovery", e.signal);
+    assert_("combine concat bij lagere rpe", "slaap laag + RPE hoog", e.reason);
+    // f) non-mutatie: beide inputs onveranderd na de call.
+    const wIn = wl("normal", "orig-w");
+    const rIn = rp("demote", "orig-r");
+    combineSignals_(wIn, rIn);
+    assert_("combine muteert wellness niet (signal)", "normal", wIn.signal);
+    assert_("combine muteert wellness niet (reason)", "orig-w", wIn.reason);
+    assert_("combine muteert rpe niet", "demote", rIn.signal);
+  });
+
+  it("exactly 957 assertions", () => {
+    expect(assertCount).toBe(957);
   });
 });

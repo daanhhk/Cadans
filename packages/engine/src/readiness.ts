@@ -9,6 +9,8 @@
  * and no check-in, so behaviour is identical to the GAS original.
  */
 
+import { weekStartDate } from "./utils";
+
 export const READINESS_PRESETS: any = {
   objectief: { vormTrend: 0.3, belasting: 0.3, hrv: 0.25, slaap: 0.15 }, // som 1,00
   gebalanceerd: null,
@@ -402,4 +404,171 @@ export function formStateFromWellness_(wellRows: any): FormState | null {
     form: best.ctl - best.atl,
     ramp: best.ramp,
   };
+}
+
+// ════════════════════════════════════════════════════════════════════
+// RPE-signaal (Fase 5.3d-ii) — port van Algorithm.gs rpeSignal_ (:1990) +
+// combineSignals_ (:1229) + de pure RPE-maps (:1907-1920). PUUR: alle tijd/plan-
+// input via params (rpeRows + plannedTypeByDate + todayISO); geen DocProps/ambient.
+// ════════════════════════════════════════════════════════════════════
+
+// VERBATIM uit Algorithm.gs:1907-1910.
+const RPE_LOW_TYPES_ = [
+  "long_z2",
+  "recovery",
+  "pendel_z2",
+  "fatox",
+  "taper_z2_kort",
+  "tour_taper_z2",
+];
+const RPE_HIGH_TYPES_ = [
+  "sweet_spot",
+  "threshold",
+  "tempo",
+  "klim",
+  "conditie",
+  "ss_lang",
+  "low_cad",
+  "big_gear",
+  "bergsim",
+  "threshold_long",
+  "sweet_spot_long",
+];
+const RPE_ANA_TYPES_ = [
+  "vo2max",
+  "vo2_short",
+  "vo2_medium",
+  "vo2_long",
+  "vo2_3015",
+  "microbursts",
+  "taper_openers",
+  "vo2_hill_repeats",
+  "anaerobic_capacity",
+];
+const RPE_EXPECTED_: Record<string, number> = {
+  low: 3.5,
+  high: 7,
+  anaerobic: 9,
+};
+
+/** Rang per signal — combineSignals_ neemt de hoogste (Algorithm.gs:1220). */
+const SIGNAL_RANK_: Record<string, number> = {
+  normal: 0,
+  warning: 1,
+  demote: 2,
+  recovery: 3,
+};
+
+/** workout-type → load-bucket (Algorithm.gs:1912). Onbekend → null. */
+export function rpeBucket_(type: any): string | null {
+  if (!type) return null;
+  const t = String(type);
+  if (RPE_ANA_TYPES_.indexOf(t) >= 0) return "anaerobic";
+  if (RPE_HIGH_TYPES_.indexOf(t) >= 0) return "high";
+  if (RPE_LOW_TYPES_.indexOf(t) >= 0) return "low";
+  // combos / variants niet in de lijsten: classificeer op het zwaarste component.
+  if (
+    t.indexOf("vo2") >= 0 ||
+    t === "combo_z2_vo2" ||
+    t === "combo_ss_sprints" ||
+    t === "combo_all_three"
+  )
+    return "anaerobic";
+  if (
+    t === "combo_long_with_efforts" ||
+    t === "combo_z2_tempo" ||
+    t.indexOf("tempo") >= 0 ||
+    t.indexOf("sweet") >= 0 ||
+    t.indexOf("threshold") >= 0
+  )
+    return "high";
+  if (t.indexOf("pendel") >= 0) return "high";
+  if (
+    t.indexOf("z2") >= 0 ||
+    t.indexOf("recovery") >= 0 ||
+    t.indexOf("taper") >= 0
+  )
+    return "low";
+  return null;
+}
+
+/** Verwachte RPE voor een geplande workout-type; onbekend type → null (GAS:1926). */
+export function expectedRpe_(plannedType: any): number | null {
+  const b = rpeBucket_(plannedType);
+  return b ? (RPE_EXPECTED_[b] ?? null) : null;
+}
+
+export interface RpeSignalResult {
+  signal: "normal" | "demote";
+  reason: string;
+}
+
+/** 'yyyy-MM-dd' → Date op LOKALE middernacht (geen UTC). */
+function rpeIsoToLocal_(iso: string): Date {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  if (!m) return new Date(Number.NaN);
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+}
+
+/**
+ * rpeSignal_ — RPE-gedreven bijstuur-signaal (port van Algorithm.gs:1990). ÉÉNRICHTING:
+ * alleen 'demote' (zwaarder dan gepland), gecapt — nooit recovery/warning. Venster =
+ * DEZE week [maandag(todayISO)..todayISO] lokaal; gegradeerd = rpe != null ÉN
+ * expectedRpe_(plannedType) != null. mismatch = gem(rpe − expected) over de RECENTSTE
+ * ≤3 gegradeerde sessies (rpeRows oudste-eerst → slice(-3)). <2 gegradeerd OF avg<2 →
+ * 'normal'; avg≥2 → 'demote'. PUUR (geen DocProps/ambient).
+ */
+export function rpeSignal_(
+  rpeRows: any,
+  plannedTypeByDate: any,
+  todayISO: string,
+): RpeSignalResult {
+  const today = rpeIsoToLocal_(todayISO).getTime();
+  const monday = weekStartDate(rpeIsoToLocal_(todayISO)).getTime();
+  const diffs: number[] = [];
+  for (const r of rpeRows || []) {
+    if (r == null || r.rpe == null) continue;
+    const dISO = r.datum;
+    if (typeof dISO !== "string") continue;
+    const dT = rpeIsoToLocal_(dISO).getTime();
+    if (Number.isNaN(dT) || dT < monday || dT > today) continue;
+    const expected = expectedRpe_(
+      plannedTypeByDate ? plannedTypeByDate[dISO] : null,
+    );
+    if (expected == null) continue;
+    diffs.push(r.rpe - expected);
+  }
+  if (diffs.length < 2) return { signal: "normal", reason: "" };
+  const recent = diffs.slice(-3);
+  let sum = 0;
+  for (const d of recent) sum += d;
+  const avg = sum / recent.length;
+  if (avg < 2) return { signal: "normal", reason: "" };
+  return {
+    signal: "demote",
+    reason: `RPE +${avg.toFixed(1).replace(".", ",")} deze week (laatste ${recent.length} sessies zwaarder dan gepland)`,
+  };
+}
+
+/**
+ * combineSignals_ — merge het HRV/slaap-signaal met het RPE-signaal (port van
+ * Algorithm.gs:1229). Winnaar = hoogste SIGNAL_RANK_; rpeSig wint ALLEEN bij strikt
+ * hogere rang (reason vervangt), anders behoudt wellnessSig zijn signal + concat de
+ * reasons (' + ') wanneer beide bijdragen. NIET-muterend: geeft een NIEUW
+ * WellnessSignalResult terug; muteert geen van beide inputs.
+ */
+export function combineSignals_(
+  wellnessSig: WellnessSignalResult,
+  rpeSig: RpeSignalResult | null,
+): WellnessSignalResult {
+  const w = wellnessSig ?? rdyWellnessFallback_("");
+  if (!rpeSig || rpeSig.signal === "normal") return { ...w };
+  const wRank = SIGNAL_RANK_[w.signal] || 0;
+  const rRank = SIGNAL_RANK_[rpeSig.signal] || 0;
+  if (rRank > wRank) {
+    return { ...w, signal: rpeSig.signal, reason: rpeSig.reason };
+  }
+  const reason =
+    w.reason && rpeSig.reason ? `${w.reason} + ${rpeSig.reason}` : w.reason;
+  return { ...w, reason: reason };
 }
