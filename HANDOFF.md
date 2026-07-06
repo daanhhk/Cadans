@@ -11,6 +11,35 @@ live tot cutover.
 
 ## Stand
 
+**Fase 5.3 — WEEKGENERATIE-ORKESTRATIE GEPORT (kern + pendel + RPE) — KLAAR (t/m `471dfe6`, CI groen).**
+De coupled `generateProposal`-orkestratie (debt weekgeneratie) is geport: pure prep-fns in de
+engine + een client-side `buildWeekProposal`. Engine-selftest harde vloer nu **957/0**; vitest **126**.
+- **5.3a** (`8cdbf91`): pure weekgen-prep in **`packages/engine/src/weekprep.ts`** —
+  `rollingZoneCoverage_` / `zoneDebt_` / `recentHardDate_` (plan-gekoppeld: `intentByDate` +
+  `plannerDays` + `actValues`; getrouw aan GAS `Algorithm.gs:300`/`:492`/`:336`). Selftest 922→938.
+- **5.3b** (`ca26a53`): D1-read-laag — repo `readPlannerDays`/`readEvents`; routes
+  `GET /api/planner/:monday` + `GET /api/events`; shared DTO's `PlannerDay`/`EventItem` (rauwe
+  `yyyy-mm-dd`-datum, client parset).
+- **5.3c-i** (`2bcd5f6`): client-orkestratie **`apps/web/src/lib/proposal.ts`** —
+  `buildWeekProposal(input): ProposalWeek`. Client-side (ambient Amsterdam → omzeilt UTC-debt (d)).
+- **5.3c-i.b** (`7c4878c`): pendel-multisession — `ProposalDay.workout` → `sessions:
+  ProposalWorkout[]` (rustdag `[]`, normaal 1, pendel N; asymmetrisch: vroege ritten `pendel_z2`
+  steady, de laatste rit draagt de dag-intent).
+- **5.3d-i** (`2bcf05f`): RPE-D1-read — repo `readRpe`; route `GET /api/rpe`; shared `RpeEntry`
+  (`{datum, rpe: number|null}`; composite PK, geen `id`, `rpe` NULLABLE).
+- **5.3d-ii** (`bac5947`): pure RPE-signaal in de engine (`readiness.ts`) — `rpeSignal_` /
+  `combineSignals_` + pure maps (`RPE_EXPECTED_ {low:3.5,high:7,anaerobic:9}`, `rpeBucket_`/
+  `RPE_*_TYPES_`, `SIGNAL_RANK_`). RPE éénrichting (alleen demote-cap); `combineSignals_`
+  niet-muterend. Selftest 938→957.
+- **5.3d-iii** (`471dfe6`): RPE-combine wiring in `buildWeekProposal` — de assignWorkouts-input =
+  `combineSignals_(wellnessSignal_(w), rpeSignal_(rpe, plannedTypeByDate, todayISO)).signal`;
+  `plannedTypeByDate` uit `PlannerDay.voorgesteldType`.
+
+**Weekgeneratie-orkestratie = GEPORT** (kern + pendel + RPE). Wat rest onder Schema = de UI
+(5.3c-ii) + een `planner_days`-seed, GÉÉN reken-logica meer. Open port-residuen + bewuste
+parity-divergenties → debt (n). NB: HANDOFF-debt **(a)** = *engine type-hardening* (nog open),
+NIET de weekgeneratie — die stond onder debt (d) + de "Volgende"-sectie.
+
 **Fase 1b — ReadinessCard-wiring (`apps/web`) — KLAAR (commit `04adc7e`, CI groen).**
 De Status-vandaag-RING is nu LIVE: de "Binnenkort"-stub is weg, vervangen door een echte
 client-side gereedheids-score (zoals Niveau/Vorm de engine client-side draaien, TZ-veilig).
@@ -47,7 +76,7 @@ Faithful 1-op-1 port van de bestaande tabs tegen de bestaande `/api`-routes;
 `react-router-dom` **7.18.1** (`BrowserRouter`), bottom-nav **Schema · Vorm ·
 Trainingen · Niveau**. Schema/Trainingen = "binnenkort"-placeholder; **Vorm én
 Niveau = gevuld**. Vitest **94 → 98** (apps/web heeft nu tests, zie 5.2); engine
-**886/0** (→ **922/0** na Fase 1a). CI groen op elke sub-fase.
+**886/0** (→ **957/0** na Fase 5.3d-ii). CI groen op elke sub-fase.
 
 - **5.0 design-import** (commit `5359198`): het cadans-handoff-pakket staat nu in
   **`cadans/design/`** (geïmporteerd uit training's untracked
@@ -131,9 +160,21 @@ wrinkle (l)): **Niveau 49 vs Vorm 50 = granulariteits-artefact** (maandbuckets v
 wellness-CTL), GEEN engine-unificatie nodig → afgevinkt. De andere tak van (l) (engine-fns
 retourneren `any` → `apps/web` cast) blijft open. Geen prod-deploy / remote-D1-mutatie gedaan.
 
-**Volgende (Fase 5.x) — resterende tabs.** **Schema** leunt op de nog-niet-geporte
-**weekgeneratie** (debt (a)/(d): `assignWorkouts`/`generateProposal`) + **readiness**
-(debt (h)); **Trainingen** vergt eerst duidelijkheid of er een workouts-route/-bron is.
+**Volgende — Fase 5.3c-ii: Schema-UI** (`design/src/schema.jsx`) op de `sessions[]`-shape.
+De weekgeneratie is geport (5.3) → Schema heeft GEEN reken-logica meer nodig, alleen wiring + UI.
+- DayStrip-selector + geselecteerde-dag-detail (sessies + readiness-banner op `today` via
+  `deriveReadiness`) + WeekLoad-paneel (gepland-TSS uit het voorstel vs gedaan-TSS uit actuals) +
+  regenereer-knop (`onRegen`); `App.tsx <ComingSoon tab="Schema"/>` → de echte pagina.
+- Wiring: `getPlanner`/`getEvents`/`getRpe` bestaan; nog nodig een **weekplans-fetcher** (route
+  `GET /api/weekplans/recent` bestaat al sinds Fase 3a). `buildWeekProposal`-input client-side
+  assembleren.
+- **VOORWAARDE telefoon-check:** `planner_days` moet gevuld zijn voor de doelweek (sync of
+  mini-seed) — anders lege week. Mogelijk seed-stap. Visuele telefoon-check (thuisnetwerk) = de gate.
+- Daarna screen-free: `eventCtx` (debt (n)). Met-UI: day-overrides/freeze (debt (n)).
+- **EIND-AUDIT:** read-only kritische review van alle geporte functies (engine + client-pipeline)
+  → findings-doc dat Daan reviewt vóór cutover. De parallel-run "produceert Cadans dezelfde week
+  als GAS?" is de leidende validatie — daarom is elke bewuste divergentie (debt (n)) gelogd.
+**Trainingen** vergt eerst duidelijkheid of er een workouts-route/-bron is.
 
 **Fase 4 — WORKER-ROUTES (Hono) — KLAAR.** Getypeerde Hono-app
 (`new Hono<{ Bindings: IntervalsEnv }>()`) met `app.onError` + `app.notFound`
@@ -324,7 +365,7 @@ lokaal draaien Node 24._
 | 3b | intervals.icu activiteiten-sync + remote D1 (`database_id`) | ✓ |
 | 3c | wellness- + power-curve-sync (engine heeft beide nodig) | ✓ |
 | 4 | Worker-API (Hono routes: reads/syncs/writes) | ✓ |
-| 5 | React-PWA — shell + Vorm-lite + Niveau-v1 ✓; Schema/Trainingen volgen | ◐ |
+| 5 | React-PWA — shell + Vorm-lite + Niveau-v1 ✓; weekgen-orkestratie geport (5.3) ✓; Schema-UI (5.3c-ii) + Trainingen volgen | ◐ |
 | 6 | telegram-webhook | |
 
 ## Discipline
@@ -375,10 +416,10 @@ Open schulden die bewust naar een latere fase zijn geschoven:
   leunen op ambient-now; de routes geven BEWUST geen `now`/`fetchImpl` door
   (productie = global fetch) → onder een gedeployde UTC-Worker schuiven de
   dag-buckets/vensters. De pure-D1-**reads én writes** zijn TZ-veilig
-  (caller-supplied datums via `dates.ts`). De **weekgeneratie**
-  (`assignWorkouts`/`generateProposal`) is nog NIET geport → de zwaarste
-  ambient-afhankelijkheid, latere fase. Vóór prod-deploy: runtime-TZ pinnen of
-  `now` expliciet doorgeven. **Client-side (Fase 1b):** `parseLocalDate`
+  (caller-supplied datums via `dates.ts`). De **weekgeneratie** is nu **CLIENT-SIDE geport**
+  (Fase 5.3, `buildWeekProposal`) → TZ-veilig in de browser (Amsterdam); `mesoWeek`/`macroFase`
+  lezen echter nog ambient `new Date()` (i.p.v. de geïnjecteerde `todayISO` — debt (n)). Vóór een
+  SERVER-side weekgen-deploy: runtime-TZ pinnen of `now` expliciet doorgeven. **Client-side (Fase 1b):** `parseLocalDate`
   (`apps/web/src/lib/dates.ts`) is nu de ENE bron voor ISO→lokale-Date, gedeeld door
   `parseActivityRows` + de readiness-converter (nooit UTC) → een stukje client-UTC-risico
   gedicht; de server-side sync-routes blijven de openstaande UTC-blocker.
@@ -441,3 +482,19 @@ Open schulden die bewust naar een latere fase zijn geschoven:
   zónder die rij geeft de eerste PUT/sync een **500** (FK-schending). Een echte
   remote-deploy heeft **user-bootstrap** nodig (migratie-seed of een ensure-user in de
   settings-handler). Blokkeert v1 NIET (`CURRENT_USER_ID = 1` hardcoded), wél de eerste deploy.
+- **(n) Weekgen-port: open residuen + bewuste parity-divergenties — NIEUW (Fase 5.3).**
+  NIEUW open: (1) `eventCtx=undefined` in `buildWeekProposal` (`eventContextFrom_` niet geport)
+  → workouts niet event-getailord; screen-free porteerbaar. (2) day-overrides/freeze niet geport
+  (handmatige plan-locks; edit/write-pad → hoort bij de UI-fase). (3) `mesoWeek` + `macroFase`
+  lezen ambient `new Date()` (niet de geïnjecteerde `todayISO`) — correct voor "genereer deze
+  week", latente inconsistentie als `todayISO != vandaag`; verzwakt de deterministische test (die
+  zette `doelStart=null`). (4) de weekplans-intent wordt geparsed uit een `unknown[]`-blob in de
+  client-pipeline (verwant aan (k)/(l)). (5) debt (l) breidt uit: ook `buildWeekProposal` cast
+  engine-returns naar lokale apps/web-types (TS vangt engine-shape-drift daar niet).
+  **BEWUSTE parity-divergenties** (impactloos, gelogd voor de parallel-run-validatie):
+  `combineSignals_` niet-muterend (GAS muteert de wellness-arg — output-equivalent, caller
+  gebruikt `.signal`); `plannedTypeByDate` uit `PlannerDay.voorgesteldType` i.p.v. GAS
+  `weekplan_<monday>.workoutType` (Cadans persisteert de huidige week niet mid-week; day-mirror =
+  dezelfde waarde); `rollingZoneCoverage_`-venster = 8 dagen `[today-7..today]` uit "days=7"
+  (GAS-misnomer, behouden); `rollingZoneCoverage_`/`zoneDebt_` missing-zone-data → `actual=0` (GAS
+  sloeg over + live-refetch, niet porteerbaar); `zoneDebt_` zonder clamp (mag negatief, GAS-getrouw).
