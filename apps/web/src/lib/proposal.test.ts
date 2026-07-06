@@ -342,4 +342,24 @@ describe("buildWeekProposal", () => {
     });
     expect(noEvents.days).toHaveLength(7);
   });
+
+  it("lege events (object-fallback) → geen '[object Object]' in naam of reden", () => {
+    // Regressie: computeMacroPhase returnt { week, fase, isTestWeek }; de fallback
+    // moet .fase (STRING) pakken. Vóór de fix bakte het rauwe object "[object Object]"
+    // in de workout-naam (planner.ts renderVariant_) + de context-regel (reden). De
+    // andere tests gebruiken EV_FAR (events≠leeg → macroFase-string) en misten dit pad.
+    const r = buildWeekProposal({
+      settings: settings(),
+      plannerDays: WEEK,
+      events: [],
+      wellness: WELL_OK,
+      ...base,
+    });
+    for (const d of r.days) {
+      expect(d.reden ?? "").not.toContain("[object Object]");
+      for (const s of d.sessions) {
+        expect(s.naam).not.toContain("[object Object]");
+      }
+    }
+  });
 });

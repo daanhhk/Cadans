@@ -141,8 +141,11 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
     datum: parseLocalDate(e.datum),
   }));
   const macro = eventFase_(eventsD, today);
+  // computeMacroPhase returnt een OBJECT { week, fase, isTestWeek }; we willen de
+  // fase-STRING (net als macro?.macroFase). Rauw het object gebruiken bakte
+  // "[object Object]" in de workout-naam + context-regel bij lege events.
   const macroFaseBase =
-    macro?.macroFase ?? computeMacroPhase(settingsE.doelStart, today);
+    macro?.macroFase ?? computeMacroPhase(settingsE.doelStart, today).fase;
   const macroFase = effectiveMacroFase_(macroFaseBase, settingsE);
   const klimType: string | null = macro?.hoofdEvent?.klimType ?? null;
   const isTripEvent = macro?.hoofdEvent?.type === "trip";
