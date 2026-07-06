@@ -1,5 +1,23 @@
-import { parseLocalDate } from "./dates";
-import type { ProposalWeek, ProposalWorkout } from "./proposal";
+import { formatDate, stripTime_ } from "@cadans/engine";
+import type { SettingsInput } from "@cadans/shared";
+import { parseActivityRows } from "./activities";
+import {
+  getActivities,
+  getCheckin,
+  getEvents,
+  getPlanner,
+  getRpe,
+  getSettings,
+  getWeekplans,
+  getWellness,
+} from "./api";
+import { parseLocalDate, todayIso, weekMondayIso } from "./dates";
+import {
+  buildWeekProposal,
+  type ProposalWeek,
+  type ProposalWorkout,
+} from "./proposal";
+import { deriveReadiness, type ReadinessResult } from "./readiness";
 
 // View-model voor de Schema-tab. ALLE derivatie hier (componenten = puur). De engine-
 // ProposalWorkout is los `any`-getypeerd; we casten 'm hier 1-op-1 naar SchemaSession
@@ -48,6 +66,12 @@ export interface LoadStat {
   gedaan: number;
 }
 
+/** Gedane belasting per datum (uit de activities: TSS idx8 + duur idx3-minuten). */
+export interface DoneEntry {
+  tss: number;
+  minuten: number;
+}
+
 export interface SchemaView {
   weekMonday: string;
   todayISO: string;
@@ -77,10 +101,10 @@ function toSession(w: ProposalWorkout): SchemaSession {
   };
 }
 
-/** ProposalWeek + gedane-TSS-per-datum → het Schema-view-model (puur). */
+/** ProposalWeek + gedane-belasting-per-datum → het Schema-view-model (puur). */
 export function deriveSchemaView(
   proposalWeek: ProposalWeek,
-  doneTssByDate: Record<string, number>,
+  doneByDate: Record<string, DoneEntry>,
   todayISO: string,
 ): SchemaView {
   const tss: LoadStat = { gepland: 0, gedaan: 0 };
@@ -89,7 +113,8 @@ export function deriveSchemaView(
 
   const days: SchemaDay[] = proposalWeek.days.map((d) => {
     const sessions = d.sessions.map(toSession);
-    const doneTss = doneTssByDate[d.datum] ?? 0;
+    const done = doneByDate[d.datum];
+    const doneTss = done?.tss ?? 0;
     const dt = parseLocalDate(d.datum);
     const hasSessions = sessions.length > 0;
     const isToday = d.datum === todayISO;
@@ -108,6 +133,7 @@ export function deriveSchemaView(
     }
     if (hasSessions) dagen.gepland += 1;
     tss.gedaan += doneTss;
+    minuten.gedaan += done?.minuten ?? 0;
     if (isDone) dagen.gedaan += 1;
 
     return {
@@ -123,8 +149,6 @@ export function deriveSchemaView(
     };
   });
 
-  // NB: gedaan-minuten is NIET af te leiden uit doneTssByDate (alleen TSS) → 0 tot een
-  // done-minuten-bron bestaat (stap 3). Voor de verse week is alles 0.
   return {
     weekMonday: proposalWeek.weekMonday,
     todayISO,
@@ -133,4 +157,83 @@ export function deriveSchemaView(
     minuten,
     dagen,
   };
+}
+
+const EMPTY_SETTINGS: SettingsInput = {
+  ftp: null,
+  lthr: null,
+  gewicht: null,
+  doel: null,
+  doelStart: null,
+  hrMax: null,
+  hrRest: null,
+  doelDuur: null,
+  fase: null,
+  profielPreset: null,
+  pendelDuurMin: null,
+  pendelAantal: null,
+};
+
+/**
+ * loadSchemaWeek — haalt de doelweek-data PARALLEL op, assembleert de
+ * BuildProposalInput en draait buildWeekProposal + deriveReadiness client-side.
+ * done-belasting = per-datum-sommen (TSS idx8 + duur idx3-minuten) uit de activities,
+ * gefilterd op de 7 doelweek-datums. getWellness wordt ÉÉN keer gehaald (voedt zowel
+ * de proposal-input als deriveReadiness). Verse user (settings null) → EMPTY_SETTINGS.
+ */
+export async function loadSchemaWeek(): Promise<{
+  proposalWeek: ProposalWeek;
+  doneByDate: Record<string, DoneEntry>;
+  readiness: ReadinessResult;
+  todayISO: string;
+}> {
+  const monday = weekMondayIso();
+  const todayISO = todayIso();
+  const [
+    settings,
+    plannerDays,
+    events,
+    activitiesRes,
+    weekplans,
+    wellness,
+    rpe,
+    checkin,
+  ] = await Promise.all([
+    getSettings(),
+    getPlanner(monday),
+    getEvents(),
+    getActivities(),
+    getWeekplans(monday),
+    getWellness(),
+    getRpe(),
+    getCheckin(todayISO),
+  ]);
+
+  const activities = parseActivityRows(activitiesRes);
+  const proposalWeek = buildWeekProposal({
+    settings: settings ?? EMPTY_SETTINGS,
+    plannerDays,
+    events,
+    activities,
+    weekplans,
+    wellness,
+    rpe,
+    todayISO,
+  });
+
+  const weekDates = new Set(proposalWeek.days.map((d) => d.datum));
+  const doneByDate: Record<string, DoneEntry> = {};
+  for (const row of activities) {
+    const d = row[0];
+    if (!(d instanceof Date)) continue;
+    const key = formatDate(stripTime_(d), "yyyy-MM-dd");
+    if (!weekDates.has(key)) continue;
+    const e = doneByDate[key] ?? { tss: 0, minuten: 0 };
+    e.tss += Number(row[8]) || 0; // idx8 = TSS
+    e.minuten += Number(row[3]) || 0; // idx3 = Duur (min)
+    doneByDate[key] = e;
+  }
+
+  const readiness = deriveReadiness(wellness, checkin);
+  return { proposalWeek, doneByDate, readiness, todayISO };
 }

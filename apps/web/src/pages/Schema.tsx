@@ -1,146 +1,119 @@
-import { useMemo, useState } from "react";
-import { CoachReadinessBanner } from "../components/schema/CoachReadinessBanner";
-import { DayStrip } from "../components/schema/DayStrip";
-import { WeekLoad } from "../components/schema/WeekLoad";
-import { WorkoutDetail } from "../components/schema/WorkoutDetail";
-import { Card, Overline } from "../components/ui";
+import { useEffect, useState } from "react";
+import { SchemaView } from "../components/schema/SchemaView";
 import type { ProposalWeek } from "../lib/proposal";
 import type { ReadinessResult } from "../lib/readiness";
-import { type DayState, deriveSchemaView } from "../lib/schema";
+import { type DoneEntry, loadSchemaWeek } from "../lib/schema";
 
-const STATE_LABEL: Record<DayState, string> = {
-  today: "Vandaag",
-  done: "Voltooid",
-  planned: "Voorstel",
-  rest: "Rustdag",
-};
-
-// Schema-tab — PURE presentation op het ProposalWeek-view-model. Interne state =
-// geselecteerde datum (default today). In stap 3 wordt dit door een live-container
-// gevoed (getPlanner/getEvents/getRpe/getWeekplans → buildWeekProposal + deriveReadiness).
-export function Schema({
-  proposalWeek,
-  readiness,
-  doneTssByDate,
-  todayISO,
-}: {
+interface SchemaData {
   proposalWeek: ProposalWeek;
+  doneByDate: Record<string, DoneEntry>;
   readiness: ReadinessResult;
-  doneTssByDate: Record<string, number>;
   todayISO: string;
-}) {
-  const view = useMemo(
-    () => deriveSchemaView(proposalWeek, doneTssByDate, todayISO),
-    [proposalWeek, doneTssByDate, todayISO],
-  );
-  const [selected, setSelected] = useState(todayISO);
-  const day = view.days.find((d) => d.datum === selected) ?? view.days[0];
+}
+
+// Live container voor de Schema-tab: laadt de doelweek (loadSchemaWeek → getPlanner/
+// getEvents/getRpe/getWeekplans/getActivities/getWellness + buildWeekProposal +
+// deriveReadiness) en rendert de pure SchemaView. Spiegelt Vorm's laad-/loading-/error-/
+// nonce-patroon. De regenereer-knop draait loadSchemaWeek opnieuw (deterministisch → ververst).
+export function Schema() {
+  const [data, setData] = useState<SchemaData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [regenerating, setRegenerating] = useState(false);
+  const [nonce, setNonce] = useState(0);
+
+  useEffect(() => {
+    let alive = true;
+    if (nonce === 0) setLoading(true);
+    else setRegenerating(true);
+    setError(null);
+    loadSchemaWeek()
+      .then((d) => {
+        if (!alive) return;
+        setData(d);
+        setLoading(false);
+        setRegenerating(false);
+      })
+      .catch((e: unknown) => {
+        if (!alive) return;
+        setError(e instanceof Error ? e.message : "Laden mislukt");
+        setLoading(false);
+        setRegenerating(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [nonce]);
+
+  if (loading) {
+    return (
+      <div
+        style={{
+          padding: "40px 8px",
+          textAlign: "center",
+          fontFamily: "var(--font-sans)",
+          fontSize: "var(--fs-label)",
+          color: "var(--text-muted)",
+        }}
+      >
+        Laden…
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 12,
+          padding: "40px 8px",
+          textAlign: "center",
+        }}
+      >
+        <div
+          style={{
+            fontFamily: "var(--font-sans)",
+            fontSize: "var(--fs-label)",
+            color: "var(--danger)",
+          }}
+        >
+          {error}
+        </div>
+        <button
+          type="button"
+          onClick={() => setNonce((n) => n + 1)}
+          style={{
+            height: 38,
+            padding: "0 16px",
+            borderRadius: "var(--r-md)",
+            border: "1px solid var(--border-strong)",
+            background: "var(--bg-elevated)",
+            color: "var(--text-primary)",
+            fontFamily: "var(--font-sans)",
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: "pointer",
+          }}
+        >
+          Opnieuw
+        </button>
+      </div>
+    );
+  }
+
+  if (!data) return null;
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: 16,
-        paddingTop: 8,
-      }}
-    >
-      <DayStrip
-        days={view.days}
-        selected={day?.datum ?? ""}
-        onSelect={setSelected}
-      />
-
-      {day && (
-        <Card>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "baseline",
-            }}
-          >
-            <Overline>
-              {day.weekday} {day.dayNum} · {STATE_LABEL[day.state]}
-            </Overline>
-          </div>
-
-          {day.state === "today" && (
-            <div style={{ marginTop: 12 }}>
-              <CoachReadinessBanner readiness={readiness} />
-            </div>
-          )}
-
-          {day.reden && (
-            <div
-              style={{
-                fontFamily: "var(--font-sans)",
-                fontSize: 12.5,
-                color: "var(--text-secondary)",
-                marginTop: 12,
-              }}
-            >
-              {day.reden}
-            </div>
-          )}
-
-          {day.sessions.length === 0 ? (
-            <div
-              style={{
-                fontFamily: "var(--font-sans)",
-                fontSize: 13,
-                color: "var(--text-muted)",
-                textAlign: "center",
-                padding: "20px 8px 8px",
-                lineHeight: 1.5,
-              }}
-            >
-              Rustdag — van herstel word je beter.
-            </div>
-          ) : (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 16,
-                marginTop: 14,
-              }}
-            >
-              {day.sessions.map((s, i) => (
-                <div
-                  key={`${s.naam}-${s.tss}`}
-                  style={
-                    i > 0
-                      ? {
-                          borderTop: "1px solid var(--border-subtle)",
-                          paddingTop: 16,
-                        }
-                      : undefined
-                  }
-                >
-                  <WorkoutDetail
-                    session={s}
-                    overline={
-                      day.sessions.length > 1
-                        ? `Sessie ${i + 1}/${day.sessions.length}`
-                        : undefined
-                    }
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
-      )}
-
-      <WeekLoad
-        tss={view.tss}
-        minuten={view.minuten}
-        dagen={view.dagen}
-        onRegen={() => {
-          /* stap 3: regenereer de week */
-        }}
-      />
-    </div>
+    <SchemaView
+      proposalWeek={data.proposalWeek}
+      readiness={data.readiness}
+      doneByDate={data.doneByDate}
+      todayISO={data.todayISO}
+      onRegen={() => setNonce((n) => n + 1)}
+      regenerating={regenerating}
+    />
   );
 }

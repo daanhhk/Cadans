@@ -60,11 +60,13 @@ export function WeekLoad({
   minuten,
   dagen,
   onRegen,
+  regenerating = false,
 }: {
   tss: LoadStat;
   minuten: LoadStat;
   dagen: LoadStat;
   onRegen: () => void;
+  regenerating?: boolean;
 }) {
   const pct =
     tss.gepland > 0 ? Math.round((tss.gedaan / tss.gepland) * 100) : 0;
@@ -81,6 +83,7 @@ export function WeekLoad({
         <button
           type="button"
           onClick={onRegen}
+          disabled={regenerating}
           aria-label="Werk week bij"
           title="Werk week bij"
           style={{
@@ -93,7 +96,8 @@ export function WeekLoad({
             borderRadius: 999,
             border: "1px solid var(--border-strong)",
             background: "var(--bg-elevated)",
-            cursor: "pointer",
+            cursor: regenerating ? "default" : "pointer",
+            opacity: regenerating ? 0.5 : 1,
             color: "var(--accent)",
           }}
         >
