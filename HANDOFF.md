@@ -11,6 +11,19 @@ live tot cutover.
 
 ## Stand
 
+**Fase 5.3c-ii — SCHEMA-TAB LIVE + macro-fase-fix — KLAAR (Schema live `d8492b7`, fix `34d10fe`, CI groen).**
+De Schema-tab draait nu op live `/api`-data (`loadSchemaWeek` → `buildWeekProposal` + `deriveReadiness`,
+client-side, TZ-veilig). **Telefoon-check #2 geslaagd:** de Schema-readiness-banner is identiek aan de
+Vorm-tab (cross-check `deriveReadiness` OK); DayStrip/rustdag/WeekLoad correct; gedaan=0 (actuals liggen in
+verleden-weken). **Fix:** `computeMacroPhase` (engine, `phase.ts`) returnt een OBJECT `{week,fase,isTestWeek}`;
+de fallback in `proposal.ts` pakte dat object RAUW i.p.v. de fase-STRING → bij lege events bakte de engine
+"[object Object]" in de workout-naam (`renderVariant_`) + de context-regel (`reden`). Nu `.fase`;
+regressie-getest (`events:[]` → geen "[object Object]" in naam/reden — het pad dat de bestaande EV_FAR-tests
+misten). **Correctie:** dit was GEEN engine-residu (de stap-3-commit `d8492b7` vlagde 't als "debt n /
+naamlek") — het was een apps/web-pipeline-bug, nu gefixt + testgedekt. Resterende live-cosmetica = LOKALE-
+seed-gaten (geen code-bug): "· null" (`doel`=NULL) + "0-0 bpm" (`lthr`=NULL), plus de rauwe focus-bucket
+(engine-emit) → **debt (o)**. Engine ONAANGEROERD (**957/0**); vitest **126 → 127**.
+
 **Fase 5.3 — WEEKGENERATIE-ORKESTRATIE GEPORT (kern + pendel + RPE) — KLAAR (t/m `471dfe6`, CI groen).**
 De coupled `generateProposal`-orkestratie (debt weekgeneratie) is geport: pure prep-fns in de
 engine + een client-side `buildWeekProposal`. Engine-selftest harde vloer nu **957/0**; vitest **126**.
@@ -160,21 +173,16 @@ wrinkle (l)): **Niveau 49 vs Vorm 50 = granulariteits-artefact** (maandbuckets v
 wellness-CTL), GEEN engine-unificatie nodig → afgevinkt. De andere tak van (l) (engine-fns
 retourneren `any` → `apps/web` cast) blijft open. Geen prod-deploy / remote-D1-mutatie gedaan.
 
-**Volgende — Fase 5.3c-ii: Schema-UI** (`design/src/schema.jsx`) op de `sessions[]`-shape.
-De weekgeneratie is geport (5.3) → Schema heeft GEEN reken-logica meer nodig, alleen wiring + UI.
-- DayStrip-selector + geselecteerde-dag-detail (sessies + readiness-banner op `today` via
-  `deriveReadiness`) + WeekLoad-paneel (gepland-TSS uit het voorstel vs gedaan-TSS uit actuals) +
-  regenereer-knop (`onRegen`); `App.tsx <ComingSoon tab="Schema"/>` → de echte pagina.
-- Wiring: `getPlanner`/`getEvents`/`getRpe` bestaan; nog nodig een **weekplans-fetcher** (route
-  `GET /api/weekplans/recent` bestaat al sinds Fase 3a). `buildWeekProposal`-input client-side
-  assembleren.
-- **VOORWAARDE telefoon-check:** `planner_days` moet gevuld zijn voor de doelweek (sync of
-  mini-seed) — anders lege week. Mogelijk seed-stap. Visuele telefoon-check (thuisnetwerk) = de gate.
-- Daarna screen-free: `eventCtx` (debt (n)). Met-UI: day-overrides/freeze (debt (n)).
+**Volgende — schone lokale demo + verificatie, dan de volgende fase.**
+5.3c-ii is KLAAR (Schema live + macro-fase-fix). Direct daarop:
+- **Lokale seed aanvullen** voor een schone demo: `settings.doel` + `settings.lthr` (+ `weekplans` voor de
+  doelweek) → dan op /dev verifiëren dat de context-regel ("· null" weg) + de blok-bpm ("0-0" weg) nu
+  correct zijn (**debt (o)**). Optioneel: focus-prettify (bucket→NL via `ZONE_META`).
+- **Trainingen** vergt eerst duidelijkheid of er een workouts-route/-bron is.
+- Screen-free: `eventCtx` (debt (n)). Met-UI: day-overrides/freeze (debt (n)).
 - **EIND-AUDIT:** read-only kritische review van alle geporte functies (engine + client-pipeline)
   → findings-doc dat Daan reviewt vóór cutover. De parallel-run "produceert Cadans dezelfde week
   als GAS?" is de leidende validatie — daarom is elke bewuste divergentie (debt (n)) gelogd.
-**Trainingen** vergt eerst duidelijkheid of er een workouts-route/-bron is.
 
 **Fase 4 — WORKER-ROUTES (Hono) — KLAAR.** Getypeerde Hono-app
 (`new Hono<{ Bindings: IntervalsEnv }>()`) met `app.onError` + `app.notFound`
@@ -359,13 +367,13 @@ lokaal draaien Node 24._
 | Fase | Inhoud | Status |
 |---|---|---|
 | 0 | monorepo-scaffold | ✓ |
-| 1 | engine-transplant + 886 SelfTest → vitest | ✓ |
+| 1 | engine-transplant + SelfTest → vitest (assert-vloer in Stand, groeit mee) | ✓ |
 | 2 | D1-schema / Drizzle | ✓ |
 | 3a | data-access-laag (D1 ↔ engine) + TZ-conversie + Worker-integratietests | ✓ |
 | 3b | intervals.icu activiteiten-sync + remote D1 (`database_id`) | ✓ |
 | 3c | wellness- + power-curve-sync (engine heeft beide nodig) | ✓ |
 | 4 | Worker-API (Hono routes: reads/syncs/writes) | ✓ |
-| 5 | React-PWA — shell + Vorm-lite + Niveau-v1 ✓; weekgen-orkestratie geport (5.3) ✓; Schema-UI (5.3c-ii) + Trainingen volgen | ◐ |
+| 5 | React-PWA — shell + Vorm-lite + Niveau-v1 ✓; weekgen-orkestratie geport (5.3) ✓; Schema-UI (5.3c-ii) ✓; Trainingen volgt | ◐ |
 | 6 | telegram-webhook | |
 
 ## Discipline
@@ -498,3 +506,14 @@ Open schulden die bewust naar een latere fase zijn geschoven:
   dezelfde waarde); `rollingZoneCoverage_`-venster = 8 dagen `[today-7..today]` uit "days=7"
   (GAS-misnomer, behouden); `rollingZoneCoverage_`/`zoneDebt_` missing-zone-data → `actual=0` (GAS
   sloeg over + live-refetch, niet porteerbaar); `zoneDebt_` zonder clamp (mag negatief, GAS-getrouw).
+  **Gecorrigeerd (5.3c-ii):** de in `d8492b7` als "debt n / naamlek" gevlagde "[object Object]" was
+  GÉÉN engine-residu — het was de apps/web `computeMacroPhase`-object-fallback in `proposal.ts` (moest
+  `.fase`), gefixt in `34d10fe` + regressie-getest. Geen engine-debt.
+- **(o) 5.3c-ii live-Schema-cosmetica — lokale-seed-gaten + focus-prettify (NIEUW, geen code-bug).**
+  Op de live /dev-Schema met de kale lokale seed: (1) de context-regel toont "· null" want
+  `settings.doel`=NULL; (2) de blok-subtitel toont "0-0 bpm" want `settings.lthr`=NULL (de watts kloppen,
+  FTP 280); (3) de rauwe focus-bucket "low"/"high" verschijnt als workout-ondertitel — engine-emit
+  (`planner.ts` `renderVariant_` `focus: variant.zone`), optionele UI-prettify via `ZONE_META` (bucket→NL).
+  (1)+(2) lossen op door de lokale seed aan te vullen (`doel` + `lthr` + `weekplans`) — GEEN code-fix. De
+  `EMPTY_SETTINGS`-fallback in `loadSchemaWeek` verzacht een verse user maar raakt de users-bootstrap-debt
+  (kruisverwijzing **(m)**).
