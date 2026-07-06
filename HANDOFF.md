@@ -11,6 +11,24 @@ live tot cutover.
 
 ## Stand
 
+**Fase 1b — ReadinessCard-wiring (`apps/web`) — KLAAR (commit `04adc7e`, CI groen).**
+De Status-vandaag-RING is nu LIVE: de "Binnenkort"-stub is weg, vervangen door een echte
+client-side gereedheids-score (zoals Niveau/Vorm de engine client-side draaien, TZ-veilig).
+**Visueel goedgekeurd op de telefoon** (score 84 → verdict "Klaar om te trainen"; verdict/
+factors/HRV-chip kloppen; check-in-delta zichtbaar; getallen consistent met Niveau/Vorm). Keten:
+`deriveReadiness(wellness, checkin)` (`apps/web/src/lib/readiness.ts`) → converteert
+`WellnessInput[]` naar de 12-koloms rijen (LOKALE datum via `parseLocalDate`) →
+`formStateFromWellness_` + `wellnessSignal_` → `getReadinessScore_(fs, wsig, reeks=rauwe
+wellness, checkin)`. Artefacten (apps/web ONLY; engine ONGEWIJZIGD **922/0**):
+`lib/readiness.ts` (converter + `deriveReadiness` + lokaal type `ReadinessResult`/factors/chips,
+engine-`any` gecast, keys 1-op-1 uit `readiness.ts`); `components/vorm/ProgressRing.tsx` (geport
+uit `design/src/chart.jsx`; band → kleur, `value null` → muted track); `ReadinessCard.tsx` (stub
+weg; ring + 4-bands-verdict `≥78/≥62/≥48/else` + "Waarom dit cijfer?"-factorpaneel + check-in-regel
+met engine-`checkinDelta` ±2); `pages/Vorm.tsx` (`useMemo(deriveReadiness)` → card);
+`lib/readiness.test.ts` (+4 cases); `lib/dates.ts` (`parseLocalDate`, verhuisd uit `activities.ts`
+inline `parseIso` — `activities.test.ts` blijft groen). Vitest **104 → 108**; CI success run
+28753414142.
+
 **Fase 1a — readiness-DERIVATIE → `@cadans/engine` — KLAAR (commit `530885a`, CI groen).**
 Twee pure fns bijgeport in `packages/engine/src/readiness.ts` (extend-only; `getReadinessScore_`
 ONGEWIJZIGD): **`wellnessSignal_(wellRows)`** (HRV/slaap-signaal + de velden die
@@ -22,8 +40,7 @@ uit de max-datum-rij die ZOWEL CTL als ATL draagt — niet blind de laatste). In
 nieuwste-eerst met `slice(0,N)`; port-plan §3.2 klopte 1-op-1). Expliciete `!= null`-guards per
 cascade-tak (geen coercion), hrvBaseline null/0 → deficit null, lege reeks → signal "normal".
 Engine-selftest **886 → 922** (+36 asserts, hard afgedwongen op 922), vitest **98 → 104** (+6
-cases). GEEN route/D1/UI deze fase. **VOLGENDE = Fase 1b:** ReadinessCard-score + waarom-factoren
-in `apps/web` wiren (debt (h)/(k)) — `getReadinessScore_` client-side voeden met deze twee fns.
+cases). GEEN route/D1/UI deze fase — die wiring is geleverd in **Fase 1b** (zie boven).
 
 **Fase 5 — DE PWA (`apps/web`) — IN UITVOERING (shell + Vorm-lite + Niveau-v1 KLAAR).**
 Faithful 1-op-1 port van de bestaande tabs tegen de bestaande `/api`-routes;
@@ -361,7 +378,10 @@ Open schulden die bewust naar een latere fase zijn geschoven:
   (caller-supplied datums via `dates.ts`). De **weekgeneratie**
   (`assignWorkouts`/`generateProposal`) is nog NIET geport → de zwaarste
   ambient-afhankelijkheid, latere fase. Vóór prod-deploy: runtime-TZ pinnen of
-  `now` expliciet doorgeven.
+  `now` expliciet doorgeven. **Client-side (Fase 1b):** `parseLocalDate`
+  (`apps/web/src/lib/dates.ts`) is nu de ENE bron voor ISO→lokale-Date, gedeeld door
+  `parseActivityRows` + de readiness-converter (nooit UTC) → een stukje client-UTC-risico
+  gedicht; de server-side sync-routes blijven de openstaande UTC-blocker.
 - **(e) D1-TEXT-datum → Date-mapping — GEDEELTELIJK OPGELOST (Fase 3a).** De
   conversielaag `workers/api/src/db/dates.ts` (`fromD1`/`toD1Date`/`toD1DateTime`)
   is geïmplementeerd + getest (incl. DST-grenzen) en wordt door de repo-laag
@@ -379,15 +399,14 @@ Open schulden die bewust naar een latere fase zijn geschoven:
   (migratie `0001_magical_lady_mastermind.sql`) is LOKAAL geapplied, remote NIET.
   Pre-deploy vereist een expliciete remote migratie-apply
   (`wrangler d1 migrations apply --remote`). Bewuste drift, geen fout.
-- **(h) Wellness→readiness-afleiding — NIEUW (deferred).** `getReadinessScore_`
-  (engine, `readiness.ts`) verwacht AFGELEIDE input: `fs.{form,ctl,atl,ramp}` +
-  `wellness.{hrvDeficit,hrvRecent,sleepAvg3,sleepLastNight}`. Die afleiding
-  (HRV-deficit vs baseline, slaap-gemiddelden, form-state) zit nog in de coupled
-  orchestratie in `training` en is niet geport. De D1-`wellness`-tabel is de bron;
-  de afleiding is een aparte port (richting Fase 4+). De check-in
-  (`{slaap,benen,stress}`) is de LOSSE 4e param en staat los van wellness. **In de
-  PWA (Fase 5.1b)** zijn de ReadinessCard-**score** + waarom-factoren daarom
-  placeholder; de Vorm/HRV-chips + de conditie-balans tonen wél live wellness-data.
+- **(h) Wellness→readiness-afleiding — AFGEROND (Fase 1a port + Fase 1b wiring).**
+  `getReadinessScore_` (engine, `readiness.ts`) verwacht AFGELEIDE input:
+  `fs.{form,ctl,atl,ramp}` + `wellness.{hrvDeficit,hrvRecent,sleepAvg3,sleepLastNight}`.
+  Die afleiding (HRV-deficit vs baseline, slaap-gemiddelden, form-state) is nu geport —
+  `wellnessSignal_` + `formStateFromWellness_` (Fase 1a) — en client-side gewired via
+  `deriveReadiness` → `getReadinessScore_` (Fase 1b). De ReadinessCard-**score** +
+  waarom-factoren zijn LIVE. De check-in (`{slaap,benen,stress}`) blijft de LOSSE 4e
+  param (engine-`checkinDelta` ±2, niet de design-demo-adj).
 - **(i) NULL→""-conventie bij de readiness-port — NIEUW (notitie).**
   `wellnessRowsToWellValues_` dekt de ""-conventie correct voor idx0/8/9/10 (wat
   `dashVormReeks_` leest). Bij de readiness-port bevestigen dat NULL→"" óók klopt
@@ -399,9 +418,9 @@ Open schulden die bewust naar een latere fase zijn geschoven:
   PWA + Worker op één origin, geen CORS nodig. RESTEREND: de echte **prod-deploy**
   is nog niet gedaan (blijft gegated door debt (d)/(g)).
 - **(k) Vorm-lite deferred-onderdelen + apps/web-teststrategie — DEELS INGELOST (Fase 5.2).**
-  Nog deferred in de PWA: de ReadinessCard-**score** + waarom-factoren (debt (h)), de
-  `LevelCard`-**tier-chip** + "sinds"-delta, de `MetricRow`-**Week-TSS**, en de
-  **W/kg-over-tijd**-grafiek. **INGELOST (5.2):** `apps/web` heeft nu test-infra (vitest
+  Nog deferred in de PWA: de `LevelCard`-**tier-chip** + "sinds"-delta, de
+  `MetricRow`-**Week-TSS**, en de **W/kg-over-tijd**-grafiek. (De ReadinessCard-**score**
+  + waarom-factoren zijn INGELOST in **Fase 1b** — zie debt (h).) **INGELOST (5.2):** `apps/web` heeft nu test-infra (vitest
   node-project) + het `parseActivityRows`-parse-contract is vergrendeld (vitest
   **94 → 98**). RESTEREND: de bredere PWA-teststrategie (component/e2e) is nog een open
   beslispunt, en de `/api/activities`-route blijft server-side **`unknown[][]`** (nog
@@ -411,9 +430,10 @@ Open schulden die bewust naar een latere fase zijn geschoven:
   AFWIJKEN van Vorm's wellness-CTL~~ → **opgelost door de visuele check: Niveau 49 vs Vorm 50
   = granulariteits-artefact (maandbuckets vs wellness-CTL), GEEN engine-unificatie nodig.**
   (2) De engine-fns retourneren `any`
-  → `apps/web` cast de resultaten (`as NiveauPoint[]` / `number|null` / `{wkg}`); een
-  engine-shape-drift wordt daardoor NIET door TS in apps/web gevangen. Echte fix = de
-  engine-returns typeren (staat al onder debt (a) "future typing"; raakt meerdere consumers).
+  → `apps/web` cast de resultaten (`as NiveauPoint[]` / `number|null` / `{wkg}`; en sinds
+  Fase 1b `deriveReadiness` → lokaal `ReadinessResult`); een engine-shape-drift wordt
+  daardoor NIET door TS in apps/web gevangen. Echte fix = de engine-returns typeren (staat
+  al onder debt (a) "future typing"; raakt meerdere consumers). BLIJFT OPEN.
 - **(m) PUT /api/settings + sync vereisen een bestaande `users`-rij — NIEUW (data-load).**
   `settings.user_id` / `activities.user_id` / `wellness.user_id` → FK naar `users.id`,
   maar GEEN route seedt `users` (alleen de vitest-`beforeEach`). Lokaal nu handmatig
