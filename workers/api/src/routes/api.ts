@@ -16,6 +16,8 @@ import {
   type EngineSettings,
   readActivities,
   readCheckin,
+  readEvents,
+  readPlannerDays,
   readRecentWeekplans,
   readSettings,
   readWeekplan,
@@ -201,6 +203,26 @@ api.get("/checkin/:date", async (c) => {
   const res = await readCheckin(db, CURRENT_USER_ID, date);
   if (res == null) throw new HTTPException(404, { message: "not found" });
   return c.json(res); // {slaap,benen,stress} strings → as-is
+});
+
+// ── Fase 5.3b — weekgen D1-reads (planner_days + events) ──────────────
+api.get("/planner/:monday", async (c) => {
+  const db = makeDb(c.env.DB);
+  const monday = c.req.param("monday");
+  if (!isIsoDate(monday)) {
+    throw new HTTPException(400, {
+      message: "invalid monday, expected yyyy-MM-dd",
+    });
+  }
+  // Rauwe datum-tekst (geen fromD1); lege week → [] + 200 (GEEN 404).
+  const rows = await readPlannerDays(db, CURRENT_USER_ID, monday);
+  return c.json(rows);
+});
+
+api.get("/events", async (c) => {
+  const db = makeDb(c.env.DB);
+  const rows = await readEvents(db, CURRENT_USER_ID);
+  return c.json(rows);
 });
 
 // ── Fase 4b — intervals-SYNC (POST) + power-curve-READ (GET) ──────────

@@ -12,6 +12,8 @@
 import { gatherWeekplanEntries_ } from "@cadans/engine";
 import type {
   CheckinInput,
+  EventItem,
+  PlannerDay,
   SettingsInput,
   WellnessInput,
 } from "@cadans/shared";
@@ -21,6 +23,8 @@ import { fromD1, toD1Date, toD1DateTime } from "./dates";
 import {
   activities,
   checkins,
+  events,
+  plannerDays,
   powerCurveCache,
   settings,
   weekplans,
@@ -283,6 +287,64 @@ export async function readActivities(
     .where(and(...conds))
     .orderBy(asc(activities.datum));
   return rows.map(rowFromAct);
+}
+
+// ── planner_days + events (weekgen-read-laag, Fase 5.3b) ─────────────────
+// Datum kruist RAUW (text as-is; GEEN fromD1 — de client parset in 5.3c, spiegelt
+// readActivities). train/gedaan: 1 → true, 0/null → false. Overige velden 1-op-1
+// (Drizzle levert al camelCase: voorgesteldType/afstandKm/klimType).
+
+/** Planner-dagen van de doelweek [maandag..zondag] (incl.), oudste-eerst. */
+export async function readPlannerDays(
+  db: Db,
+  userId: number,
+  mondayISO: string,
+): Promise<PlannerDay[]> {
+  const mon = fromD1(mondayISO);
+  // Zondag = maandag + 6 dagen (DST-veilig via de kalender-constructor).
+  const sundayISO = toD1Date(
+    new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6),
+  );
+  const rows = await db
+    .select()
+    .from(plannerDays)
+    .where(
+      and(
+        eq(plannerDays.userId, userId),
+        gte(plannerDays.datum, mondayISO),
+        lte(plannerDays.datum, sundayISO),
+      ),
+    )
+    .orderBy(asc(plannerDays.datum));
+  return rows.map((r) => ({
+    datum: r.datum,
+    train: r.train === 1,
+    dag: r.dag,
+    minuten: r.minuten,
+    dagtype: r.dagtype,
+    toelichting: r.toelichting,
+    voorgesteldType: r.voorgesteldType,
+    gedaan: r.gedaan === 1,
+  }));
+}
+
+/** Alle events van de user, oudste-eerst (eventFase_ selecteert later, 5.3c). */
+export async function readEvents(db: Db, userId: number): Promise<EventItem[]> {
+  const rows = await db
+    .select()
+    .from(events)
+    .where(eq(events.userId, userId))
+    .orderBy(asc(events.datum));
+  return rows.map((r) => ({
+    datum: r.datum,
+    naam: r.naam,
+    type: r.type,
+    prioriteit: r.prioriteit,
+    afstandKm: r.afstandKm,
+    hoogtemeters: r.hoogtemeters,
+    klimType: r.klimType,
+    notitie: r.notitie,
+  }));
 }
 
 // ── wellness (WELL_HEADERS 12-kol) — DTO = WellnessInput (@cadans/shared) ─
