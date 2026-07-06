@@ -8,6 +8,8 @@ import type {
   ActivitiesResponse,
   ApiError,
   CheckinInput,
+  EventItem,
+  PlannerDay,
   SettingsInput,
   WellnessInput,
 } from "@cadans/shared";
@@ -45,6 +47,16 @@ export function getWellness(): Promise<WellnessInput[]> {
 /** GET /api/activities — 17-koloms matrix, oudste-eerst; idx0 = ISO-datetime-string. */
 export function getActivities(): Promise<ActivitiesResponse> {
   return apiGet<ActivitiesResponse>("/api/activities");
+}
+
+/** GET /api/planner/:monday — planner-dagen van de doelweek, oudste-eerst. */
+export function getPlanner(mondayISO: string): Promise<PlannerDay[]> {
+  return apiGet<PlannerDay[]>(`/api/planner/${mondayISO}`);
+}
+
+/** GET /api/events — alle events, oudste-eerst. */
+export function getEvents(): Promise<EventItem[]> {
+  return apiGet<EventItem[]>("/api/events");
 }
 
 /** GET /api/checkin/:date — 404 → null (nog niet ingevuld, GEEN fout). */

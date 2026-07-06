@@ -73,3 +73,13 @@ export function deriveReadiness(
   const wsig = wellnessSignal_(rows);
   return getReadinessScore_(fs, wsig, wellness, checkin) as ReadinessResult;
 }
+
+/**
+ * deriveWellnessSignal — het HRV/slaap-SIGNAAL ('recovery'|'demote'|'warning'|'normal')
+ * voor de weekgen-pipeline (assignWorkouts leest `wellness.signal`). Hergebruikt dezelfde
+ * WellnessInput→12-koloms-rij-conversie als deriveReadiness (oudste-eerst); deriveReadiness
+ * zelf geeft dit signal NIET terug.
+ */
+export function deriveWellnessSignal(wellness: WellnessInput[]): string {
+  return wellnessSignal_(wellness.map(toWellRow)).signal;
+}

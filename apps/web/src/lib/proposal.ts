@@ -1,0 +1,272 @@
+import type { IntentByDate, ZoneBuckets } from "@cadans/engine";
+import {
+  actualZoneMinutes_,
+  assignWorkouts,
+  buildWorkout,
+  computeMacroPhase,
+  effectiveMacroFase_,
+  eventFase_,
+  formatDate,
+  recentHardDate_,
+  rollingZoneCoverage_,
+  stripTime_,
+  weekIndexFromStart_,
+  weekStartDate,
+  workoutZones,
+  zoneActsByDateFromTab_,
+  zoneDebt_,
+} from "@cadans/engine";
+import type {
+  EventItem,
+  PlannerDay,
+  SettingsInput,
+  WellnessInput,
+} from "@cadans/shared";
+import type { ActValuesRow } from "./activities";
+import { parseLocalDate } from "./dates";
+import { deriveWellnessSignal } from "./readiness";
+
+// ≥15 werkelijke minuten in een bucket (deze week, voltooide dag) = gedekt.
+// Spiegelt Algorithm.gs DEKKING_MIN_MIN (de dekking-assembly :108-126).
+const DEKKING_MIN_MIN = 15;
+
+export interface ProposalWorkout {
+  naam: string;
+  zones: string[];
+  totaalMin: number;
+  tss: number;
+  [k: string]: unknown;
+}
+
+export interface ProposalDay {
+  datum: string; // yyyy-MM-dd
+  dagIdx: number;
+  voorgesteldType: string | null;
+  reden: string | null;
+  archetypeId: string | null;
+  workout: ProposalWorkout | null;
+}
+
+export interface ProposalWeek {
+  weekMonday: string;
+  days: ProposalDay[];
+}
+
+export interface BuildProposalInput {
+  settings: SettingsInput;
+  plannerDays: PlannerDay[];
+  events: EventItem[];
+  activities: ActValuesRow[];
+  weekplans: unknown[];
+  wellness: WellnessInput[];
+  todayISO?: string;
+}
+
+// Intern mutabel dag-element — de vorm die assignWorkouts leest (d.type = dagtype,
+// d.datum = Date) én schrijft (voorgesteldType/reden/archetypeId).
+interface GridDay {
+  dagIdx: number;
+  dag: string | null;
+  datum: Date;
+  train: boolean;
+  gedaan: boolean;
+  minuten: number | null;
+  type: string | null;
+  voorgesteldType: string | null;
+  reden: string | null;
+  archetypeId: string | null;
+}
+
+/** weekplans-blob (opaque unknown[]) → per-datum beoogde minuten (aggIntent). */
+function intentByDateFrom(weekplans: unknown[]): IntentByDate {
+  const out: IntentByDate = {};
+  for (const raw of weekplans || []) {
+    const e = raw as { datum?: unknown; intent?: unknown };
+    if (typeof e?.datum !== "string") continue;
+    const it = e.intent as Partial<ZoneBuckets> | undefined;
+    if (!it) continue;
+    out[e.datum] = {
+      low: Number(it.low) || 0,
+      high: Number(it.high) || 0,
+      anaerobic: Number(it.anaerobic) || 0,
+    };
+  }
+  return out;
+}
+
+/**
+ * buildWeekProposal — client-side weekgeneratie-orkestratie (getrouw aan de GAS
+ * generateProposal, plan-gekoppeld). PUUR: rekent op reeds-gehaalde /api-data, doet
+ * zelf GEEN fetch en persisteert NIETS. Ambient Amsterdam-TZ (browser) = correct.
+ *
+ * Bewuste vereenvoudigingen t.o.v. de GAS (5.3c-i scope; gemeld): geen day-overrides/
+ * freeze, geen pendel-multisession (1 workout/dag), geen RPE-combine/loadCarry, en
+ * eventCtx = undefined (eventContextFrom_ niet geport → long_z2 zonder event-scaling).
+ */
+export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
+  const { settings, plannerDays, events, activities, weekplans, wellness } =
+    input;
+
+  // 1. Datums (lokale middernacht; nooit UTC).
+  const today = stripTime_(
+    input.todayISO ? parseLocalDate(input.todayISO) : new Date(),
+  );
+  const todayLocalISO = formatDate(today, "yyyy-MM-dd");
+  const weekMondayDate = weekStartDate(today);
+  const weekMonday = formatDate(weekMondayDate, "yyyy-MM-dd");
+
+  // Settings met doelStart als Date (de engine verwacht een Date, niet de ISO-string).
+  const settingsE = {
+    ...settings,
+    doelStart: settings.doelStart ? parseLocalDate(settings.doelStart) : null,
+  };
+
+  // 2. macro/taper/klim/trip uit events (datum → Date; ref = vandaag, huidige week).
+  const eventsD = (events || []).map((e) => ({
+    ...e,
+    datum: parseLocalDate(e.datum),
+  }));
+  const macro = eventFase_(eventsD, today);
+  const macroFaseBase =
+    macro?.macroFase ?? computeMacroPhase(settingsE.doelStart, today);
+  const macroFase = effectiveMacroFase_(macroFaseBase, settingsE);
+  const klimType: string | null = macro?.hoofdEvent?.klimType ?? null;
+  const isTripEvent = macro?.hoofdEvent?.type === "trip";
+  const taperCtx = macro?.taperEvent
+    ? {
+        datum: macro.taperEvent.datum,
+        venster: macro.taperVenster,
+        isTrip: macro.taperEvent.type === "trip",
+      }
+    : null;
+
+  // 3. mesoWeek uit settings.doelStart (vaste keuze; geen DocProp).
+  const mesoWeek = weekIndexFromStart_(settingsE);
+
+  // 4. intentByDate uit de weekplans-blob (aggIntent-minuten per datum).
+  const intentByDate = intentByDateFrom(weekplans);
+
+  // Grid: mutabel dag-array (assignWorkouts leest d.type = dagtype + d.datum = Date).
+  const grid: GridDay[] = (plannerDays || []).map((pd, i) => ({
+    dagIdx: i,
+    dag: pd.dag,
+    datum: parseLocalDate(pd.datum),
+    train: pd.train,
+    gedaan: pd.gedaan,
+    minuten: pd.minuten,
+    type: pd.dagtype,
+    voorgesteldType: pd.voorgesteldType,
+    reden: null,
+    archetypeId: null,
+  }));
+
+  // 5. dekking-BOOLEANS (composiet, Algorithm.gs :108-126): rolling-count>0, dán per
+  //    voltooide deze-week-dag ≥DEKKING_MIN_MIN actual-minuten, anders workoutZones-
+  //    intent-fallback.
+  const rolling = rollingZoneCoverage_(
+    activities,
+    intentByDate,
+    todayLocalISO,
+    7,
+  );
+  const dekking = {
+    low: rolling.low > 0,
+    high: rolling.high > 0,
+    anaerobic: rolling.anaerobic > 0,
+  };
+  const actsByDate = zoneActsByDateFromTab_(activities);
+  for (const d of grid) {
+    if (!d.train || !d.gedaan) continue;
+    const key = formatDate(stripTime_(d.datum), "yyyy-MM-dd");
+    const dayActs = actsByDate[key] || [];
+    let actual: ZoneBuckets | null = null;
+    for (const a of dayActs) {
+      const az = actualZoneMinutes_(a, null);
+      if (az) {
+        if (!actual) actual = { low: 0, high: 0, anaerobic: 0 };
+        actual.low += az.low;
+        actual.high += az.high;
+        actual.anaerobic += az.anaerobic;
+      }
+    }
+    if (actual) {
+      if (actual.low >= DEKKING_MIN_MIN) dekking.low = true;
+      if (actual.high >= DEKKING_MIN_MIN) dekking.high = true;
+      if (actual.anaerobic >= DEKKING_MIN_MIN) dekking.anaerobic = true;
+    } else if (d.voorgesteldType) {
+      for (const z of workoutZones(d.voorgesteldType, settings.doel ?? "")) {
+        if (z === "low" || z === "high" || z === "anaerobic") {
+          dekking[z] = true;
+        }
+      }
+    }
+  }
+
+  // debt + recentHard uit de 5.3a-fns.
+  const debt = zoneDebt_(
+    intentByDate,
+    (plannerDays || []).map((pd) => ({
+      datum: pd.datum,
+      train: pd.train,
+      gedaan: pd.gedaan,
+    })),
+    activities,
+    weekMonday,
+  );
+  const recentHard = recentHardDate_(activities, intentByDate);
+
+  // 6. wellness-signaal (oudste-eerst; NIET deriveReadiness — dat geeft geen signal).
+  const signal = deriveWellnessSignal(wellness || []);
+
+  // 7. tePlannen = train, niet-gedaan, vandaag/toekomst → assignWorkouts muteert ze.
+  const todayT = today.getTime();
+  const tePlannen = grid.filter(
+    (d) =>
+      d.train &&
+      !d.gedaan &&
+      (!d.datum || stripTime_(d.datum).getTime() >= todayT),
+  );
+  assignWorkouts(
+    tePlannen,
+    settingsE,
+    mesoWeek,
+    macroFase,
+    dekking,
+    { signal },
+    klimType,
+    recentHard,
+    debt,
+    isTripEvent,
+    taperCtx,
+    grid,
+  );
+  const tePlannenSet = new Set(tePlannen.map((d) => d.dagIdx));
+
+  // 8-9. per dag: buildWorkout voor tePlannen; voltooid/rust → workout null.
+  const days: ProposalDay[] = grid.map((d) => {
+    let workout: ProposalWorkout | null = null;
+    if (tePlannenSet.has(d.dagIdx) && d.voorgesteldType) {
+      workout =
+        (buildWorkout(
+          d.voorgesteldType,
+          d.minuten,
+          settingsE,
+          mesoWeek,
+          macroFase,
+          undefined,
+          d.dagIdx,
+          d.archetypeId,
+        ) as ProposalWorkout | null) || null;
+    }
+    return {
+      datum: formatDate(stripTime_(d.datum), "yyyy-MM-dd"),
+      dagIdx: d.dagIdx,
+      voorgesteldType: d.voorgesteldType,
+      reden: d.reden,
+      archetypeId: d.archetypeId,
+      workout,
+    };
+  });
+
+  return { weekMonday, days };
+}
