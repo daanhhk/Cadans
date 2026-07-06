@@ -173,23 +173,23 @@ describe("buildWeekProposal", () => {
       "2026-03-14",
       "2026-03-15",
     ]);
-    // Voltooide dagen (datum<today, gedaan): workout null + behouden type (signal normal).
-    expect(r.days[0].workout).toBeNull();
+    // Voltooide dagen (datum<today, gedaan): geen sessies + behouden type (signal normal).
+    expect(r.days[0].sessions).toHaveLength(0);
     expect(r.days[0].voorgesteldType).toBe("sweet_spot");
-    expect(r.days[1].workout).toBeNull();
+    expect(r.days[1].sessions).toHaveLength(0);
     expect(r.days[1].voorgesteldType).toBe("pendel_z2");
-    // tePlannen (03-11..03-14): niet-lege type + workout met de verwachte keys.
+    // tePlannen (03-11..03-14, niet-pendel): 1 sessie met de verwachte keys.
     for (const i of [2, 3, 4, 5]) {
       expect(r.days[i].voorgesteldType).toBeTruthy();
-      const w = r.days[i].workout;
-      expect(w).not.toBeNull();
+      expect(r.days[i].sessions).toHaveLength(1);
+      const w = r.days[i].sessions[0];
       expect(typeof w?.naam).toBe("string");
       expect(Array.isArray(w?.zones)).toBe(true);
       expect(w?.totaalMin).toBeGreaterThan(0);
       expect(w?.tss).toBeGreaterThan(0);
     }
-    // Rustdag (03-15, !train): geen workout.
-    expect(r.days[6].workout).toBeNull();
+    // Rustdag (03-15, !train): geen sessies.
+    expect(r.days[6].sessions).toHaveLength(0);
   });
 
   it("wellness recovery → tePlannen-dag gedemoot naar recovery", () => {
@@ -223,9 +223,47 @@ describe("buildWeekProposal", () => {
     expect(taper.days[2].voorgesteldType).toBe("taper_openers");
     expect(taper.days[4].voorgesteldType).toBe("taper_z2_kort");
     // Getaperd < controle op dezelfde vrijdag (03-13).
-    const tapered = taper.days[4].workout?.tss ?? 0;
-    const normal = control.days[4].workout?.tss ?? 0;
+    const tapered = taper.days[4].sessions[0]?.tss ?? 0;
+    const normal = control.days[4].sessions[0]?.tss ?? 0;
     expect(tapered).toBeLessThan(normal);
+  });
+
+  it("pendel-dag → pendelAantal sessies (steady pendel_z2 + intent-dragende laatste)", () => {
+    // Rustdag vóór de pendel-dag (geen consecutive-hard-downgrade); geen activities
+    // (recentHard null) → de pendel-dag houdt zijn intervals-intent.
+    const pendelWeek: PlannerDay[] = [
+      pday("2026-03-11", {
+        dag: "wo",
+        train: false,
+        dagtype: "recovery",
+        minuten: null,
+      }),
+      pday("2026-03-12", { dag: "do", dagtype: "pendel", minuten: 80 }),
+      pday("2026-03-13", { dag: "vr", dagtype: "vrij" }),
+    ];
+    const r = buildWeekProposal({
+      settings: settings({ pendelDuurMin: 45, pendelAantal: 2 }),
+      plannerDays: pendelWeek,
+      events: EV_FAR,
+      activities: [],
+      weekplans: [],
+      wellness: WELL_OK,
+      todayISO: TODAY,
+    });
+    // Pendel-dag (dagIdx 1) → 2 sessies (pendelAantal).
+    const pendel = r.days[1];
+    expect(pendel.sessions).toHaveLength(2);
+    const heen = pendel.sessions[0];
+    const terug = pendel.sessions[1];
+    expect(heen?.totaalMin).toBeGreaterThan(0);
+    expect(terug?.totaalMin).toBeGreaterThan(0);
+    // Asymmetrie: vroege sessie = steady (geen high/anaerobic); laatste draagt de intent (FTP → high).
+    expect(heen?.zones.includes("high")).toBe(false);
+    expect(heen?.zones.includes("anaerobic")).toBe(false);
+    expect(terug?.zones.includes("high")).toBe(true);
+    // Normale dag → 1 sessie; rustdag → 0.
+    expect(r.days[2].sessions).toHaveLength(1);
+    expect(r.days[0].sessions).toHaveLength(0);
   });
 
   it("randen: lege plannerDays → geen dagen; geen events → geen crash", () => {

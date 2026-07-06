@@ -44,7 +44,10 @@ export interface ProposalDay {
   voorgesteldType: string | null;
   reden: string | null;
   archetypeId: string | null;
-  workout: ProposalWorkout | null;
+  // Realisatie: rustdag → []; normale dag → 1 sessie; pendel-dag → pendelAantal
+  // sessies (vroege = steady pendel_z2, laatste = de dag-intent). Dag-niveau
+  // voorgesteldType/reden/archetypeId beschrijven de intent, sessions de realisatie.
+  sessions: ProposalWorkout[];
 }
 
 export interface ProposalWeek {
@@ -99,9 +102,9 @@ function intentByDateFrom(weekplans: unknown[]): IntentByDate {
  * generateProposal, plan-gekoppeld). PUUR: rekent op reeds-gehaalde /api-data, doet
  * zelf GEEN fetch en persisteert NIETS. Ambient Amsterdam-TZ (browser) = correct.
  *
- * Bewuste vereenvoudigingen t.o.v. de GAS (5.3c-i scope; gemeld): geen day-overrides/
- * freeze, geen pendel-multisession (1 workout/dag), geen RPE-combine/loadCarry, en
- * eventCtx = undefined (eventContextFrom_ niet geport → long_z2 zonder event-scaling).
+ * Bewuste vereenvoudigingen t.o.v. de GAS (gemeld): geen day-overrides/freeze, geen
+ * RPE-combine/loadCarry, en eventCtx = undefined (eventContextFrom_ niet geport →
+ * long_z2 zonder event-scaling). Pendel-multisession WEL ondersteund (5.3c-i.b).
  */
 export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
   const { settings, plannerDays, events, activities, weekplans, wellness } =
@@ -242,21 +245,36 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
   );
   const tePlannenSet = new Set(tePlannen.map((d) => d.dagIdx));
 
-  // 8-9. per dag: buildWorkout voor tePlannen; voltooid/rust → workout null.
+  // 8-9. per dag → sessions (getrouw aan de GAS-loop Algorithm.gs:189-204). Pendel-dag
+  //   (d.type === 'pendel') = pendelAantal sessies van pendelDuurMin: de vroege sessie(s)
+  //   geforceerd 'pendel_z2' (steady, geen archetype), de LAATSTE draagt de dag-intent
+  //   (d.voorgesteldType + d.archetypeId). Niet-pendel = 1 sessie. voltooid/rust → [].
   const days: ProposalDay[] = grid.map((d) => {
-    let workout: ProposalWorkout | null = null;
+    const sessions: ProposalWorkout[] = [];
     if (tePlannenSet.has(d.dagIdx) && d.voorgesteldType) {
-      workout =
-        (buildWorkout(
-          d.voorgesteldType,
-          d.minuten,
+      const isPendel = d.type === "pendel";
+      const sessieCount = isPendel
+        ? Math.max(1, Math.round(settings.pendelAantal ?? 0) || 1)
+        : 1;
+      const sessieMin = isPendel
+        ? settings.pendelDuurMin || d.minuten
+        : d.minuten;
+      for (let si = 0; si < sessieCount; si++) {
+        const last = si === sessieCount - 1;
+        const sessieType = isPendel && !last ? "pendel_z2" : d.voorgesteldType;
+        const sessieArch = isPendel && !last ? null : d.archetypeId;
+        const wo = buildWorkout(
+          sessieType,
+          sessieMin,
           settingsE,
           mesoWeek,
           macroFase,
           undefined,
           d.dagIdx,
-          d.archetypeId,
-        ) as ProposalWorkout | null) || null;
+          sessieArch,
+        ) as ProposalWorkout | null;
+        if (wo) sessions.push(wo);
+      }
     }
     return {
       datum: formatDate(stripTime_(d.datum), "yyyy-MM-dd"),
@@ -264,7 +282,7 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
       voorgesteldType: d.voorgesteldType,
       reden: d.reden,
       archetypeId: d.archetypeId,
-      workout,
+      sessions,
     };
   });
 
