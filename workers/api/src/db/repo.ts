@@ -14,6 +14,7 @@ import type {
   CheckinInput,
   EventItem,
   PlannerDay,
+  RpeEntry,
   SettingsInput,
   WellnessInput,
 } from "@cadans/shared";
@@ -26,6 +27,7 @@ import {
   events,
   plannerDays,
   powerCurveCache,
+  rpe,
   settings,
   weekplans,
   wellness,
@@ -345,6 +347,16 @@ export async function readEvents(db: Db, userId: number): Promise<EventItem[]> {
     klimType: r.klimType,
     notitie: r.notitie,
   }));
+}
+
+/** RPE-registraties van de user, oudste-eerst (datum RAUW; spiegelt readWellness). */
+export async function readRpe(db: Db, userId: number): Promise<RpeEntry[]> {
+  const rows = await db
+    .select()
+    .from(rpe)
+    .where(eq(rpe.userId, userId))
+    .orderBy(asc(rpe.datum));
+  return rows.map((r) => ({ datum: r.datum, rpe: r.rpe }));
 }
 
 // ── wellness (WELL_HEADERS 12-kol) — DTO = WellnessInput (@cadans/shared) ─

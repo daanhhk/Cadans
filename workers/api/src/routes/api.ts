@@ -19,6 +19,7 @@ import {
   readEvents,
   readPlannerDays,
   readRecentWeekplans,
+  readRpe,
   readSettings,
   readWeekplan,
   readWellness,
@@ -222,6 +223,12 @@ api.get("/planner/:monday", async (c) => {
 api.get("/events", async (c) => {
   const db = makeDb(c.env.DB);
   const rows = await readEvents(db, CURRENT_USER_ID);
+  return c.json(rows);
+});
+
+api.get("/rpe", async (c) => {
+  const db = makeDb(c.env.DB);
+  const rows = await readRpe(db, CURRENT_USER_ID);
   return c.json(rows);
 });
 
