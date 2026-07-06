@@ -6,7 +6,7 @@ import type {
 } from "@cadans/shared";
 import { describe, expect, it } from "vitest";
 import type { ActValuesRow } from "./activities";
-import { buildWeekProposal } from "./proposal";
+import { buildWeekProposal, type ProposalWeek } from "./proposal";
 
 // TODAY vast (woensdag); week-maandag = 2026-03-09. NB: weekIndexFromStart_ +
 // computeMacroPhase lezen ambient new Date() (engine, niet todayISO-geparametreerd),
@@ -151,7 +151,12 @@ const EV_TAPER: EventItem[] = [
   },
 ];
 
-const base = { activities: ACTS, weekplans: WEEKPLANS, todayISO: TODAY };
+const base = {
+  activities: ACTS,
+  weekplans: WEEKPLANS,
+  rpe: [],
+  todayISO: TODAY,
+};
 
 describe("buildWeekProposal", () => {
   it("structuur: weekMonday, 7 dagen chronologisch, voltooid→null, tePlannen→workout", () => {
@@ -247,6 +252,7 @@ describe("buildWeekProposal", () => {
       events: EV_FAR,
       activities: [],
       weekplans: [],
+      rpe: [],
       wellness: WELL_OK,
       todayISO: TODAY,
     });
@@ -264,6 +270,56 @@ describe("buildWeekProposal", () => {
     // Normale dag → 1 sessie; rustdag → 0.
     expect(r.days[2].sessions).toHaveLength(1);
     expect(r.days[0].sessions).toHaveLength(0);
+  });
+
+  it("rpe-combine: zware RPE deze week → week gedemoot vs geen-rpe controle", () => {
+    // Voltooide dagen 03-09 (sweet_spot exp 7) + 03-10 (pendel_z2 exp 3.5); RPE zwaarder
+    // → mismatch avg ≥2 → rpeSignal_ demote. Wellness = normal → combine kiest demote.
+    const withRpe = buildWeekProposal({
+      settings: settings(),
+      plannerDays: WEEK,
+      events: EV_FAR,
+      wellness: WELL_OK,
+      activities: ACTS,
+      weekplans: WEEKPLANS,
+      rpe: [
+        { datum: "2026-03-09", rpe: 9 },
+        { datum: "2026-03-10", rpe: 6 },
+      ],
+      todayISO: TODAY,
+    });
+    const noRpe = buildWeekProposal({
+      settings: settings(),
+      plannerDays: WEEK,
+      events: EV_FAR,
+      wellness: WELL_OK,
+      ...base,
+    });
+    const demoted = (r: ProposalWeek) =>
+      r.days.some((d) => d.reden === "Lichter gehouden — wellness laag");
+    expect(demoted(withRpe)).toBe(true);
+    expect(demoted(noRpe)).toBe(false);
+  });
+
+  it("rpe null/onvoldoende → genegeerd, geen down-regulatie", () => {
+    // 03-09 null overgeslagen → 1 gegradeerd → <2 → normal → geen demote, geen crash.
+    const r = buildWeekProposal({
+      settings: settings(),
+      plannerDays: WEEK,
+      events: EV_FAR,
+      wellness: WELL_OK,
+      activities: ACTS,
+      weekplans: WEEKPLANS,
+      rpe: [
+        { datum: "2026-03-09", rpe: null },
+        { datum: "2026-03-10", rpe: 9 },
+      ],
+      todayISO: TODAY,
+    });
+    expect(r.days).toHaveLength(7);
+    expect(
+      r.days.some((d) => d.reden === "Lichter gehouden — wellness laag"),
+    ).toBe(false);
   });
 
   it("randen: lege plannerDays → geen dagen; geen events → geen crash", () => {

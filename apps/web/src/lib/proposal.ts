@@ -3,12 +3,14 @@ import {
   actualZoneMinutes_,
   assignWorkouts,
   buildWorkout,
+  combineSignals_,
   computeMacroPhase,
   effectiveMacroFase_,
   eventFase_,
   formatDate,
   recentHardDate_,
   rollingZoneCoverage_,
+  rpeSignal_,
   stripTime_,
   weekIndexFromStart_,
   weekStartDate,
@@ -19,12 +21,13 @@ import {
 import type {
   EventItem,
   PlannerDay,
+  RpeEntry,
   SettingsInput,
   WellnessInput,
 } from "@cadans/shared";
 import type { ActValuesRow } from "./activities";
 import { parseLocalDate } from "./dates";
-import { deriveWellnessSignal } from "./readiness";
+import { deriveWellnessSignalResult } from "./readiness";
 
 // ≥15 werkelijke minuten in een bucket (deze week, voltooide dag) = gedekt.
 // Spiegelt Algorithm.gs DEKKING_MIN_MIN (de dekking-assembly :108-126).
@@ -62,6 +65,7 @@ export interface BuildProposalInput {
   activities: ActValuesRow[];
   weekplans: unknown[];
   wellness: WellnessInput[];
+  rpe: RpeEntry[];
   todayISO?: string;
 }
 
@@ -103,12 +107,19 @@ function intentByDateFrom(weekplans: unknown[]): IntentByDate {
  * zelf GEEN fetch en persisteert NIETS. Ambient Amsterdam-TZ (browser) = correct.
  *
  * Bewuste vereenvoudigingen t.o.v. de GAS (gemeld): geen day-overrides/freeze, geen
- * RPE-combine/loadCarry, en eventCtx = undefined (eventContextFrom_ niet geport →
- * long_z2 zonder event-scaling). Pendel-multisession WEL ondersteund (5.3c-i.b).
+ * loadCarry, en eventCtx = undefined (eventContextFrom_ niet geport → long_z2 zonder
+ * event-scaling). Pendel-multisession (5.3c-i.b) + RPE-combine (5.3d-iii) WEL ondersteund.
  */
 export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
-  const { settings, plannerDays, events, activities, weekplans, wellness } =
-    input;
+  const {
+    settings,
+    plannerDays,
+    events,
+    activities,
+    weekplans,
+    wellness,
+    rpe,
+  } = input;
 
   // 1. Datums (lokale middernacht; nooit UTC).
   const today = stripTime_(
@@ -218,8 +229,17 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
   );
   const recentHard = recentHardDate_(activities, intentByDate);
 
-  // 6. wellness-signaal (oudste-eerst; NIET deriveReadiness — dat geeft geen signal).
-  const signal = deriveWellnessSignal(wellness || []);
+  // 6. signaal = wellness-signaal (oudste-eerst) GECOMBINEERD met het RPE-signaal van
+  //    de voltooide deze-week-dagen (combineSignals_ neemt de zwaarste). plannedTypeByDate
+  //    uit PlannerDay.voorgesteldType (dag-mirror van de weekplan-workoutType); datums
+  //    zonder type vallen weg (rpeSignal_ filtert ze via expectedRpe_ == null).
+  const plannedTypeByDate: Record<string, string> = {};
+  for (const pd of plannerDays || []) {
+    if (pd.voorgesteldType) plannedTypeByDate[pd.datum] = pd.voorgesteldType;
+  }
+  const wSig = deriveWellnessSignalResult(wellness || []);
+  const rSig = rpeSignal_(rpe || [], plannedTypeByDate, todayLocalISO);
+  const signal = combineSignals_(wSig, rSig).signal;
 
   // 7. tePlannen = train, niet-gedaan, vandaag/toekomst → assignWorkouts muteert ze.
   const todayT = today.getTime();

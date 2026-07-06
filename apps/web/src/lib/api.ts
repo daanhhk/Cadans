@@ -10,6 +10,7 @@ import type {
   CheckinInput,
   EventItem,
   PlannerDay,
+  RpeEntry,
   SettingsInput,
   WellnessInput,
 } from "@cadans/shared";
@@ -57,6 +58,11 @@ export function getPlanner(mondayISO: string): Promise<PlannerDay[]> {
 /** GET /api/events — alle events, oudste-eerst. */
 export function getEvents(): Promise<EventItem[]> {
   return apiGet<EventItem[]>("/api/events");
+}
+
+/** GET /api/rpe — RPE-registraties, oudste-eerst. */
+export function getRpe(): Promise<RpeEntry[]> {
+  return apiGet<RpeEntry[]>("/api/rpe");
 }
 
 /** GET /api/checkin/:date — 404 → null (nog niet ingevuld, GEEN fout). */

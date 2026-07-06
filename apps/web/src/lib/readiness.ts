@@ -1,6 +1,7 @@
 import {
   formStateFromWellness_,
   getReadinessScore_,
+  type WellnessSignalResult,
   wellnessSignal_,
 } from "@cadans/engine";
 import type { CheckinInput, WellnessInput } from "@cadans/shared";
@@ -80,6 +81,12 @@ export function deriveReadiness(
  * WellnessInput→12-koloms-rij-conversie als deriveReadiness (oudste-eerst); deriveReadiness
  * zelf geeft dit signal NIET terug.
  */
+export function deriveWellnessSignalResult(
+  wellness: WellnessInput[],
+): WellnessSignalResult {
+  return wellnessSignal_(wellness.map(toWellRow));
+}
+
 export function deriveWellnessSignal(wellness: WellnessInput[]): string {
-  return wellnessSignal_(wellness.map(toWellRow)).signal;
+  return deriveWellnessSignalResult(wellness).signal;
 }
