@@ -20,14 +20,15 @@
     }
   ],
   // Same-origin mount (Fase 5.1a, Model A): serveer de apps/web-build als statische
-  // assets; /api/* gaat via run_worker_first NAAR de Hono-Worker; onbekende
-  // niet-/api-paden → index.html (SPA-deep-link-fallback, door Cloudflare zelf
-  // afgehandeld — app.notFound blijft dus JSON-404 voor /api-mismatch). De
+  // assets. run_worker_first:true → de Worker ziet ALLE requests (nodig voor de
+  // whole-origin basic-auth-gate in index.ts); /api/* handelt de Hono-app af,
+  // niet-/api valt in index.ts terug op env.ASSETS.fetch (SPA-fallback via
+  // not_found_handling). Unmatched /api/* blijft JSON-404 (app.notFound). De
   // directory bestaat pas na `pnpm --filter @cadans/web build`.
   "assets": {
     "directory": "../../apps/web/dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*"]
+    "run_worker_first": true
   }
 }
