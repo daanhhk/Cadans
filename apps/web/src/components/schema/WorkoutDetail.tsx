@@ -1,12 +1,16 @@
+import { useId, useState } from "react";
 import type { SchemaSession } from "../../lib/schema";
 import { Num, Overline } from "../ui";
 import { BlockList } from "./BlockList";
 import { ZoneBar } from "./ZoneBar";
 import { ZoneLegend } from "./ZoneLegend";
 
-// Eén sessie: naam/focus + duur/TSS + zone-pills + blok-lijst + eindopmerking.
-// session.focus is in het view-model al NL-gemapt + gededupliceerd t.o.v. de zone-pill
-// (lib/schema.ts toSession) → hier rauw renderen, geen dubbel zone-woord.
+// Eén sessie: naam/focus + duur/TSS + zone-bar/legend + (inklapbare) blok-lijst +
+// eindopmerking. session.focus is in het view-model al NL-gemapt + gededupliceerd t.o.v.
+// de zone-legend (lib/schema.ts toSession) → hier rauw renderen. De tekstuele stappen
+// (BlockList) staan DEFAULT ingeklapt; klik op de bar+legend+samenvatting klapt ze uit
+// (conform schema.jsx ProposalDetail). De toggle is een echte <button> met aria-expanded/
+// aria-controls (a11y-bron; de ZoneBar blijft decoratief aria-hidden).
 export function WorkoutDetail({
   session,
   overline,
@@ -14,6 +18,10 @@ export function WorkoutDetail({
   session: SchemaSession;
   overline?: string;
 }) {
+  const [openBlocks, setOpenBlocks] = useState(false);
+  const blocksId = useId();
+  const hasBlocks = session.structuur.length > 0;
+
   return (
     <div
       style={{ display: "flex", flexDirection: "column", gap: "var(--s-3)" }}
@@ -68,9 +76,97 @@ export function WorkoutDetail({
           </span>
         </div>
       </div>
-      <ZoneBar blokken={session.blokken} />
-      <ZoneLegend zones={session.zones} />
-      <BlockList structuur={session.structuur} />
+
+      {hasBlocks ? (
+        <>
+          <button
+            type="button"
+            onClick={() => setOpenBlocks((v) => !v)}
+            aria-expanded={openBlocks}
+            aria-controls={blocksId}
+            aria-label={
+              openBlocks
+                ? "Trainingsstappen verbergen"
+                : "Trainingsstappen tonen"
+            }
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "var(--s-3)",
+              width: "100%",
+              padding: 0,
+              border: "none",
+              background: "none",
+              textAlign: "left",
+              cursor: "pointer",
+              color: "inherit",
+            }}
+          >
+            <ZoneBar blokken={session.blokken} />
+            <ZoneLegend zones={session.zones} />
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                borderTop: "1px solid var(--border-subtle)",
+                paddingTop: "var(--s-2)",
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: "var(--font-sans)",
+                  fontSize: "var(--fs-label)",
+                  fontWeight: 600,
+                  color: "var(--text-secondary)",
+                }}
+              >
+                Blokstructuur
+              </span>
+              <span
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "var(--s-1)",
+                  fontFamily: "var(--font-sans)",
+                  fontSize: "var(--fs-caption)",
+                  color: "var(--text-muted)",
+                }}
+              >
+                {session.structuur.length} blokken
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 14 14"
+                  fill="none"
+                  aria-hidden="true"
+                  style={{
+                    transform: openBlocks ? "rotate(180deg)" : "none",
+                    transition: "transform .2s",
+                  }}
+                >
+                  <path
+                    d="M3 5l4 4 4-4"
+                    stroke="var(--text-muted)"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </span>
+            </div>
+          </button>
+          <div id={blocksId} hidden={!openBlocks}>
+            <BlockList structuur={session.structuur} />
+          </div>
+        </>
+      ) : (
+        <>
+          <ZoneBar blokken={session.blokken} />
+          <ZoneLegend zones={session.zones} />
+        </>
+      )}
+
       {session.eindopmerking && (
         <div
           style={{
