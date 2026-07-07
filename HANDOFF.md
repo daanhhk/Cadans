@@ -11,14 +11,19 @@ live tot cutover.
 
 ## Stand
 
-**SCHEMA + NIVEAU-TAB AFGEROND (GAS-niveau) — laatste code-commit `a077f04`, CI groen.**
-Fase 0-4 klaar. Fase 5 (de PWA, `apps/web`) loopt; de **Schema- én Niveau-tab zijn nu op
-GAS-niveau afgewerkt** (telefoon-geverifieerd). Alles apps/web — `packages/engine` ONGEWIJZIGD.
-Code-commits deze slag: `b598dc1` (DoelProjectie) · `ffe9ac5` (hours-unit fix) · `7634759`
-(Rijdersprofiel + `PowerCurveResponse`-DTO) · `a077f04` (dode `NiveauSoonCard` verwijderd).
+**SCHEMA + NIVEAU + VORM-TAB AFGEROND (GAS-niveau) — laatste code-commit `f2d2fa3`, CI groen.**
+Fase 0-4 klaar. Fase 5 (de PWA, `apps/web`) loopt; **Schema, Niveau én Vorm zijn nu op GAS-
+conformiteit afgewerkt** (telefoon-geverifieerd). **Alle hoofd-tabs (Schema/Niveau/Vorm +
+Status/Today) staan op niveau.** Alles apps/web — `packages/engine` ONGEWIJZIGD.
+Code-commits deze slag (Vorm): `1a8d354` (feat: LevelCard tier-chip + tier-voortgangsbalk +
+"sinds"-delta; MetricRow 3e kolom Week-TSS; nieuwe gedeelde `lib/niveau.ts` — `deriveNiveauSerie`/
+`tierProgress`/`wkgSince`/`weekTss` + 10 vitest-units; Vorm.tsx fetcht activities) · `ab8ac1a`
+(style: tokenize ReadinessCard/CheckinSheet/ConditiePmc) · `f2d2fa3` (fix: conditie-as "12 wk" —
+verdwaalde tilde weg; ab8ac1a's perl-replace nam 10-spatie-inspringing aan terwijl de regel er 8
+heeft → vervanging sloeg stil over).
 
 **Gate-vloeren (nooit onder; bron van waarheid — NOOIT hardcoden in een prompt):**
-engine-selftest `toBe(957)` · vitest-totaal **140**.
+engine-selftest `toBe(957)` · vitest-totaal **150**.
 
 **Fundament:** IBM Plex Sans (400/500/600) + Mono (500/600), self-hosted via `@fontsource`,
 offline-precached (`main.tsx`). Het UI-kader ligt vast in **`apps/web/docs/UI-KADER.md`**:
@@ -52,6 +57,16 @@ consumeren UITSLUITEND `--s-*/--fs-*/--lh-*/--r-*` (kleur was al gedisciplineerd
   (CTL-ramp via `ctlPlateauFromVolume_`/`ctlApproachWeeks_`/`ctlAtWeek_`, SVG) + speculatieve FTP-band
   (`ftpBandFromProjection_`, gestreept, aannames uitklapbaar). Alle compute uit de engine (`niveau.ts`); UI-only.
 
+**Vorm-tab — conformiteit-niveau, telefoon-geverifieerd (conditie-as toont "12 wk").**
+- **ReadinessCard** (score + factorpaneel + check-in-regel, engine-`deriveReadiness`) · **LevelCard** (W/kg + FTP
+  + **tier-chip** + **tier-voortgangsbalk** + **"+X ↑ sinds <mnd>"-delta**) · **MetricRow** (3 kolommen FTP ·
+  Gewicht · **Week-TSS**) · **ConditiePmc** (PMC-variant C: 12-wk CTL/ATL + TSB-headline [variant-B-graft] +
+  legenda) · CheckinSheet. StatusDeck-swipe blijft BEWUST gecut (PMC-only, geen switcher).
+- LevelCard-tier/-delta + de serie komen uit de **gedeelde Niveau-bron** `lib/niveau.ts` (`deriveNiveauSerie` =
+  dezelfde engine-fn-keten die Niveau.tsx gebruikt → identieke waarden).
+- **Week-TSS** = kalenderweek `[maandag, maandag+7)` via `weekMondayIso` — **GAS-parity** met `actualTssByDate_`
+  (Algorithm.gs:662, Monday-based; NIET trailing-7). Lege week → "—".
+
 ### Geparkeerde debts (bewust, niet nu)
 - **PeriodTimeline**: proportionele fase-breedtes + you-are-here-marker ontbreken (per-fase-weekduur
   zit niet in de engine-output); event-tags B/A; Volume-stat (geen CTL-/volume-target in de keten).
@@ -72,14 +87,25 @@ consumeren UITSLUITEND `--s-*/--fs-*/--lh-*/--r-*` (kleur was al gedisciplineerd
   `{pos,label}` → parity-copy-debt, eind-audit.
 - **Geen geautomatiseerde interactie-tests** (Schema-collapse, DoelProjectie uren-slider, Rijdersprofiel
   90d|1y-toggle): vereist jsdom + `@testing-library/react` (nieuwe deps + config) = aparte test-harness-klus.
+- **Debt (k) Vorm-lite INGELOST** (`1a8d354`): LevelCard tier-chip/tier-bar/"sinds"-delta + MetricRow Week-TSS
+  gebouwd. Resteert onder (k): `/api/activities` server-side typing.
+- **Orchestratie-duplicatie (NIEUW):** `lib/niveau.ts` wrapt dezelfde engine-fn-keten die `Niveau.tsx` inline
+  draait; waarden IDENTIEK (geen bug), maar één bron is netter → `Niveau.tsx` later op de helper laten leunen.
+- **Token-schaal-gaten (NIEUW, cross-cutting — niet Vorm-specifiek):** er is geen `--fs-num-*`-schaal voor
+  20/30/52px, en off-scale font-sizes (17.5/19/14.5/8.5), tight gaps (5/6/10) en chip/knop-padding zijn bewust
+  off-scale gelaten (geen tokens verzinnen). Vraagt een aparte schaal-uitbreidings-pass die de hele app raakt.
 - **Bredere debts** (detail: §Deferred debts): remote-D1-drift (g), users-bootstrap voor remote deploy
   (m), engine-`any`-cast in apps/web (a)/(l), `/api/activities` server-side typing (k).
 
 ### Volgende fase (grootste gap eerst)
-- **VORM-tab** (verse chat, eigen recon): structureel (GAS heeft een carrousel; Cadans' conditie-historie is
-  al rijker) → vormgeving-reconciliatie zoals Schema/Niveau.
-- **Sluitstuk vóór cutover**: read-only **eind-audit** van de geporte engine-functies (adresseert de
-  engine/parity-debts hierboven) + een findings-doc.
+- **EERSTE DEPLOY — recon-first.** Read-only recon eerst; niets muteren. Scope: **remote-D1-drift** migreren
+  (forward-only, drizzle-kit; debt (g)), **users-bootstrap-route** toevoegen (`PUT /api/settings` vereist een
+  bestaande `users`-rij, geen route seedt `users`; debt (m)), **Worker-secret** zetten (`wrangler secret put`,
+  bv. `INTERVALS_API_KEY`), en de **no-auth-exposure** afdekken. Ruimt de twee geparkeerde deploy-debts op
+  (remote-D1-drift + users-bootstrap).
+- **Op de horizon:** Garmin-workout-push (externe device-integratie, apart traject); beschikbaarheid/
+  weekplanning-bewerken (Schema/instellingen); en de read-only **eind-audit** van alle geporte engine-fns
+  (sluitstuk vóór cutover — adresseert de engine/parity-debts hierboven).
 
 ### Lokaal (miniflare `--local`, GEEN remote/deploy)
 `settings` via `PUT /api/settings` = ftp 280 / gewicht 75; **244** activities + **366** wellness via
