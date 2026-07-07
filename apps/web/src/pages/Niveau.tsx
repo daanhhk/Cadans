@@ -1,13 +1,23 @@
 import {
+  activeGoalProfile_,
   computeNiveau_,
   ctlReeksMaandelijks_,
   dashNiveauReeks_,
+  doelTestWeken_,
   eftpFromActivities_,
+  goalGap_,
+  maxRecentRideH_,
   niveauProgressie_,
   setGewichtProvider,
+  tssPerHourRecent_,
 } from "@cadans/engine";
 import type { ActivitiesResponse, SettingsInput } from "@cadans/shared";
 import { useEffect, useMemo, useState } from "react";
+import {
+  DoelProjectie,
+  type DoelProjectieProps,
+  type GapDim,
+} from "../components/niveau/DoelProjectie";
 import { NiveauSoonCard } from "../components/niveau/NiveauSoonCard";
 import {
   type NiveauPoint,
@@ -16,6 +26,7 @@ import {
 import { VermogenSnapshot } from "../components/niveau/VermogenSnapshot";
 import { parseActivityRows } from "../lib/activities";
 import { getActivities, getSettings } from "../lib/api";
+import { todayIso } from "../lib/dates";
 
 // Niveau-tab v1 — VermogenSnapshot + ProgressieCard (live), Rijdersprofiel +
 // DoelProjectie (Fase-2-stubs). De niveau-derivaties draaien CLIENT-SIDE via de
@@ -65,7 +76,53 @@ export function Niveau() {
     ) as {
       wkg: number | null;
     };
-    return { serie, eftp, wkg: snap.wkg };
+
+    // DoelProjectie-inputs (UI-only samenstelling met engine-primitieven; `buildGoalProfile_`
+    // is een GAS-assembler die NIET in de engine zit → hier gecomponeerd uit
+    // activeGoalProfile_ + goalGap_). currentCtl = laatste maand-CTL. Vensters uit GAS:
+    // longRideH 90d, tssPerHour 42d.
+    const ctlMap = (ctlByMonth ?? {}) as Record<string, number>;
+    const months = Object.keys(ctlMap).sort();
+    const lastMonth = months.at(-1);
+    const currentCtl = lastMonth ? (ctlMap[lastMonth] ?? null) : null;
+    const prof = activeGoalProfile_(settings) as {
+      label: string;
+      sub: string | null;
+      projectieMode: string;
+      dims: Omit<GapDim, "current" | "gap" | "onTrack" | "pct">[];
+    };
+    const goalInputs: Record<string, number | null> = {
+      ftpWkg: snap.wkg,
+      ctl: currentCtl,
+      longRideH: maxRecentRideH_(rows, 90) as number | null,
+    };
+    const dims: GapDim[] = prof.dims.map((d) => {
+      const cur = goalInputs[d.metric] ?? null;
+      const g = goalGap_(cur, d.target, d.dir) as {
+        gap: number | null;
+        onTrack: boolean;
+        pct: number | null;
+      };
+      return { ...d, current: cur, gap: g.gap, onTrack: g.onTrack, pct: g.pct };
+    });
+    const projectie: DoelProjectieProps = {
+      label: prof.label,
+      sub: prof.sub,
+      projectieMode: prof.projectieMode,
+      dims,
+      currentCtl,
+      targetCtl: prof.dims.find((d) => d.metric === "ctl")?.target ?? null,
+      tssPerHour: tssPerHourRecent_(rows, 42) as number | null,
+      currentFtp: eftp ?? settings?.ftp ?? null,
+      gewicht: settings?.gewicht ?? null,
+      testWeken: doelTestWeken_(
+        settings?.doelStart ?? null,
+        settings?.doelDuur ?? null,
+        todayIso(),
+      ) as number | null,
+    };
+
+    return { serie, eftp, wkg: snap.wkg, projectie };
   }, [settings, activities]);
 
   if (loading) {
@@ -148,12 +205,7 @@ export function Niveau() {
         tag="Fase 2"
         body="De power-duration-curve + rijderstype (sprinter ↔ diesel) verschijnen zodra de power-curve-bron is aangesloten."
       />
-      <NiveauSoonCard
-        title="Doel-gereedheid · Girona"
-        subtitle="~90 km · 1200 hm/dag · lange klimmen"
-        tag="Visie"
-        body="Doel-gap + de projectie (uren → potentieel, eerlijke fitheid-ramp + FTP-band) volgen in een latere fase."
-      />
+      <DoelProjectie {...derived.projectie} />
     </div>
   );
 }
