@@ -31,7 +31,7 @@ function Chip({
         borderRadius: "var(--r-pill)",
         padding: "4px 9px",
         fontFamily: "var(--font-sans)",
-        fontSize: 11.5,
+        fontSize: "var(--fs-caption)",
         fontWeight: 600,
         whiteSpace: "nowrap",
       }}
@@ -41,7 +41,7 @@ function Chip({
           style={{
             width: 6,
             height: 6,
-            borderRadius: 999,
+            borderRadius: "var(--r-pill)",
             background: dot,
             flexShrink: 0,
           }}
@@ -130,8 +130,8 @@ export function ReadinessCard({
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 16,
-          marginTop: 12,
+          gap: "var(--s-4)",
+          marginTop: "var(--s-3)",
         }}
       >
         <ProgressRing
@@ -145,7 +145,7 @@ export function ReadinessCard({
               {score}
             </Num>
           ) : (
-            <Num size="26px" weight={600} color="var(--text-muted)">
+            <Num size="var(--fs-num-md)" weight={600} color="var(--text-muted)">
               —
             </Num>
           )}
@@ -162,7 +162,7 @@ export function ReadinessCard({
               fontFamily: "var(--font-sans)",
               fontSize: 17.5,
               fontWeight: 600,
-              lineHeight: 1.2,
+              lineHeight: "var(--lh-h1)",
               color: "var(--text-primary)",
               letterSpacing: "-0.01em",
             }}
@@ -175,7 +175,7 @@ export function ReadinessCard({
               style={{
                 display: "flex",
                 gap: 6,
-                marginTop: 9,
+                marginTop: "var(--s-2)",
                 flexWrap: "wrap",
               }}
             >
@@ -199,13 +199,13 @@ export function ReadinessCard({
                 display: "flex",
                 alignItems: "center",
                 gap: 5,
-                marginTop: 9,
+                marginTop: "var(--s-2)",
                 padding: 0,
                 border: "none",
                 background: "transparent",
                 cursor: "pointer",
                 fontFamily: "var(--font-sans)",
-                fontSize: 11.5,
+                fontSize: "var(--fs-caption)",
                 fontWeight: 600,
                 color: "var(--text-muted)",
               }}
@@ -238,25 +238,29 @@ export function ReadinessCard({
       {whyOpen && score != null && (
         <div
           style={{
-            marginTop: 12,
+            marginTop: "var(--s-3)",
             display: "flex",
             flexDirection: "column",
-            gap: 9,
+            gap: "var(--s-2)",
             background: "var(--bg-sunken)",
             borderRadius: "var(--r-md)",
-            padding: 12,
+            padding: "var(--s-3)",
           }}
         >
           {factors.map((f) => (
             <div
               key={f.key}
-              style={{ display: "flex", alignItems: "center", gap: 9 }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "var(--s-2)",
+              }}
             >
               <span
                 style={{
                   width: 7,
                   height: 7,
-                  borderRadius: 999,
+                  borderRadius: "var(--r-pill)",
                   background: dotColor(f.dot),
                   flexShrink: 0,
                 }}
@@ -266,7 +270,7 @@ export function ReadinessCard({
                   width: 116,
                   flexShrink: 0,
                   fontFamily: "var(--font-sans)",
-                  fontSize: 12,
+                  fontSize: "var(--fs-label)",
                   color: "var(--text-secondary)",
                 }}
               >
@@ -276,7 +280,7 @@ export function ReadinessCard({
                 style={{
                   flex: 1,
                   fontFamily: "var(--font-sans)",
-                  fontSize: 12,
+                  fontSize: "var(--fs-label)",
                   color: "var(--text-primary)",
                   textAlign: "right",
                 }}
@@ -290,9 +294,9 @@ export function ReadinessCard({
 
       <div
         style={{
-          marginTop: 12,
+          marginTop: "var(--s-3)",
           borderTop: "1px solid var(--border-subtle)",
-          paddingTop: 12,
+          paddingTop: "var(--s-3)",
         }}
       >
         {checkinDone ? (
@@ -301,14 +305,14 @@ export function ReadinessCard({
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              gap: 8,
+              gap: "var(--s-2)",
             }}
           >
             <span
               style={{
                 minWidth: 0,
                 fontFamily: "var(--font-sans)",
-                fontSize: 12.5,
+                fontSize: "var(--fs-label)",
                 color: "var(--text-secondary)",
               }}
             >
@@ -334,7 +338,7 @@ export function ReadinessCard({
                   "1px solid color-mix(in srgb, var(--accent) 35%, transparent)",
                 color: "var(--accent)",
                 fontFamily: "var(--font-sans)",
-                fontSize: 11.5,
+                fontSize: "var(--fs-caption)",
                 fontWeight: 600,
               }}
             >
@@ -353,7 +357,7 @@ export function ReadinessCard({
               border: "none",
               padding: 0,
               fontFamily: "var(--font-sans)",
-              fontSize: 12.5,
+              fontSize: "var(--fs-label)",
               fontWeight: 600,
               color: "var(--text-secondary)",
             }}
@@ -375,7 +379,7 @@ export function ReadinessCard({
               background: "var(--bg-sunken)",
               border: "1px dashed var(--border-strong)",
               fontFamily: "var(--font-sans)",
-              fontSize: 12.5,
+              fontSize: "var(--fs-label)",
               fontWeight: 600,
               color: "var(--text-secondary)",
             }}

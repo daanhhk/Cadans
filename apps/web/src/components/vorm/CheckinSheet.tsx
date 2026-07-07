@@ -26,7 +26,7 @@ function Seg({
           width: 50,
           flexShrink: 0,
           fontFamily: "var(--font-sans)",
-          fontSize: 12,
+          fontSize: "var(--fs-label)",
           color: "var(--text-secondary)",
         }}
       >
@@ -36,7 +36,7 @@ function Seg({
         style={{
           flex: 1,
           display: "flex",
-          gap: 4,
+          gap: "var(--s-1)",
           background: "var(--bg-sunken)",
           borderRadius: "var(--r-pill)",
           padding: 3,
@@ -54,7 +54,7 @@ function Seg({
               borderRadius: "var(--r-pill)",
               padding: "6px 0",
               fontFamily: "var(--font-sans)",
-              fontSize: 11.5,
+              fontSize: "var(--fs-caption)",
               fontWeight: 600,
               textTransform: "capitalize",
               background: value === o ? "var(--bg-elevated)" : "transparent",
@@ -168,7 +168,7 @@ export function CheckinSheet({
           style={{
             width: 38,
             height: 4,
-            borderRadius: 999,
+            borderRadius: "var(--r-pill)",
             background: "var(--sheet-handle)",
             margin: "0 auto 16px",
           }}
@@ -187,9 +187,9 @@ export function CheckinSheet({
         <div
           style={{
             fontFamily: "var(--font-sans)",
-            fontSize: 12.5,
+            fontSize: "var(--fs-label)",
             color: "var(--text-muted)",
-            marginTop: 4,
+            marginTop: "var(--s-1)",
           }}
         >
           Eén keer per dag — dit stemt je gereedheid bij.
@@ -230,9 +230,9 @@ export function CheckinSheet({
               background: "var(--danger-soft)",
               color: "var(--danger)",
               borderRadius: "var(--r-md)",
-              padding: "8px 12px",
+              padding: "var(--s-2) var(--s-3)",
               fontFamily: "var(--font-sans)",
-              fontSize: 12.5,
+              fontSize: "var(--fs-label)",
               fontWeight: 600,
             }}
           >
@@ -245,7 +245,7 @@ export function CheckinSheet({
           disabled={!ready || saving}
           onClick={submit}
           style={{
-            marginTop: 20,
+            marginTop: "var(--s-5)",
             width: "100%",
             height: 46,
             borderRadius: "var(--r-md)",
@@ -264,7 +264,7 @@ export function CheckinSheet({
           type="button"
           onClick={onClose}
           style={{
-            marginTop: 8,
+            marginTop: "var(--s-2)",
             width: "100%",
             height: 38,
             borderRadius: "var(--r-md)",
@@ -272,7 +272,7 @@ export function CheckinSheet({
             background: "none",
             cursor: "pointer",
             fontFamily: "var(--font-sans)",
-            fontSize: 13,
+            fontSize: "var(--fs-label)",
             fontWeight: 600,
             color: "var(--text-muted)",
           }}

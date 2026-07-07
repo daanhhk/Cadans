@@ -151,9 +151,9 @@ export function ConditiePmc({ rows }: { rows: WellnessInput[] }) {
       <div
         style={{
           fontFamily: "var(--font-sans)",
-          fontSize: 11.5,
+          fontSize: "var(--fs-caption)",
           color: "var(--text-muted)",
-          marginTop: 4,
+          marginTop: "var(--s-1)",
         }}
       >
         vorm = fitheid − vermoeidheid
@@ -163,11 +163,11 @@ export function ConditiePmc({ rows }: { rows: WellnessInput[] }) {
         <div
           style={{
             fontFamily: "var(--font-sans)",
-            fontSize: 13,
+            fontSize: "var(--fs-label)",
             color: "var(--text-muted)",
             textAlign: "center",
-            padding: "20px 8px",
-            lineHeight: 1.5,
+            padding: "var(--s-5) var(--s-2)",
+            lineHeight: "var(--lh-body)",
           }}
         >
           Je conditie-balans bouwt op zodra je ritten binnenkomen.
@@ -178,8 +178,8 @@ export function ConditiePmc({ rows }: { rows: WellnessInput[] }) {
             style={{
               display: "flex",
               alignItems: "baseline",
-              gap: 9,
-              marginTop: 12,
+              gap: "var(--s-2)",
+              marginTop: "var(--s-3)",
             }}
           >
             <Num size="30px" color={zone?.color ?? "var(--text-primary)"}>
@@ -198,7 +198,7 @@ export function ConditiePmc({ rows }: { rows: WellnessInput[] }) {
                   borderRadius: "var(--r-pill)",
                   padding: "3px 9px",
                   fontFamily: "var(--font-sans)",
-                  fontSize: 11.5,
+                  fontSize: "var(--fs-caption)",
                   fontWeight: 600,
                 }}
               >
@@ -206,7 +206,7 @@ export function ConditiePmc({ rows }: { rows: WellnessInput[] }) {
                   style={{
                     width: 6,
                     height: 6,
-                    borderRadius: 999,
+                    borderRadius: "var(--r-pill)",
                     background: zone.color,
                   }}
                 />
@@ -217,7 +217,7 @@ export function ConditiePmc({ rows }: { rows: WellnessInput[] }) {
               style={{
                 marginLeft: "auto",
                 fontFamily: "var(--font-sans)",
-                fontSize: 11,
+                fontSize: "var(--fs-caption)",
                 color: "var(--text-muted)",
               }}
             >
@@ -228,7 +228,12 @@ export function ConditiePmc({ rows }: { rows: WellnessInput[] }) {
           <Pmc pts={pts} vorm={vorm} />
 
           <div
-            style={{ display: "flex", gap: 16, marginTop: 6, flexWrap: "wrap" }}
+            style={{
+              display: "flex",
+              gap: "var(--s-4)",
+              marginTop: "var(--s-2)",
+              flexWrap: "wrap",
+            }}
           >
             <Leg
               c="var(--text-secondary)"
