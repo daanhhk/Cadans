@@ -10,6 +10,7 @@ import type {
   CheckinInput,
   EventItem,
   PlannerDay,
+  PowerCurveResponse,
   RpeEntry,
   SettingsInput,
   WeekplanEntries,
@@ -69,6 +70,13 @@ export function getRpe(): Promise<RpeEntry[]> {
 /** GET /api/weekplans/recent?monday= — recente weekplan-entries (opaque JSON-blob). */
 export function getWeekplans(mondayISO: string): Promise<WeekplanEntries> {
   return apiGet<WeekplanEntries>(`/api/weekplans/recent?monday=${mondayISO}`);
+}
+
+/** GET /api/power-curve?window= — genormaliseerd rijdersprofiel (of `{empty:true}`). */
+export function getPowerCurve(
+  window: "90d" | "1y",
+): Promise<PowerCurveResponse> {
+  return apiGet<PowerCurveResponse>(`/api/power-curve?window=${window}`);
 }
 
 /** GET /api/checkin/:date — 404 → null (nog niet ingevuld, GEEN fout). */

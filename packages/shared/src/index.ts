@@ -10,6 +10,13 @@ export type {
 } from "./activities";
 export type { CheckinInput } from "./checkin";
 export type { ApiError, ApiOk } from "./http";
+export type {
+  PowerCurveEmpty,
+  PowerCurveMarker,
+  PowerCurvePoint,
+  PowerCurveProfile,
+  PowerCurveResponse,
+} from "./powercurve";
 export type { RpeEntry } from "./rpe";
 export type { SettingsInput } from "./settings";
 export type { EventItem, PlannerDay } from "./weekgen";

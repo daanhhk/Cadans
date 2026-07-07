@@ -14,6 +14,7 @@
  * dag-bucket-logica via dates.ts (nooit toISOString → UTC).
  */
 import { pcNormalize_ } from "@cadans/engine";
+import type { PowerCurveResponse } from "@cadans/shared";
 import { CURRENT_USER_ID, makeDb } from "../db/client";
 import { toD1Date } from "../db/dates";
 import {
@@ -118,7 +119,7 @@ export async function readNormalizedPowerCurve(
   userId: number = CURRENT_USER_ID,
   window?: string,
   opts: PowerCurveOpts = {},
-): Promise<any> {
+): Promise<PowerCurveResponse> {
   const w = normalizeWindow(window);
   const today = toD1Date(opts.now ?? new Date());
   const db = makeDb(env.DB);
@@ -151,5 +152,7 @@ export async function readNormalizedPowerCurve(
   // (ftp-afhankelijke velden DEFERRED). weight komt uit curve.weight (RAW-entry).
   const settings = await readSettings(db, userId);
   const ftp = settings?.ftp ?? undefined;
-  return pcNormalize_(curve, raw.activities || {}, ftp); // engine, puur; output NOOIT cachen
+  // engine, puur; output NOOIT cachen. pcNormalize_ is los `any`-getypeerd → cast naar
+  // de wire-DTO (byte-identiek aan de shape; STAP-0 bevestigd enkel strings/numbers/null).
+  return pcNormalize_(curve, raw.activities || {}, ftp) as PowerCurveResponse;
 }

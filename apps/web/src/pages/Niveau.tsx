@@ -11,21 +11,25 @@ import {
   setGewichtProvider,
   tssPerHourRecent_,
 } from "@cadans/engine";
-import type { ActivitiesResponse, SettingsInput } from "@cadans/shared";
+import type {
+  ActivitiesResponse,
+  PowerCurveResponse,
+  SettingsInput,
+} from "@cadans/shared";
 import { useEffect, useMemo, useState } from "react";
 import {
   DoelProjectie,
   type DoelProjectieProps,
   type GapDim,
 } from "../components/niveau/DoelProjectie";
-import { NiveauSoonCard } from "../components/niveau/NiveauSoonCard";
 import {
   type NiveauPoint,
   ProgressieCard,
 } from "../components/niveau/ProgressieCard";
+import { Rijdersprofiel } from "../components/niveau/Rijdersprofiel";
 import { VermogenSnapshot } from "../components/niveau/VermogenSnapshot";
 import { parseActivityRows } from "../lib/activities";
-import { getActivities, getSettings } from "../lib/api";
+import { getActivities, getPowerCurve, getSettings } from "../lib/api";
 import { todayIso } from "../lib/dates";
 
 // Niveau-tab v1 — VermogenSnapshot + ProgressieCard (live), Rijdersprofiel +
@@ -38,6 +42,31 @@ export function Niveau() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [nonce, setNonce] = useState(0);
+  const [pcWindow, setPcWindow] = useState<"90d" | "1y">("1y");
+  const [pc, setPc] = useState<PowerCurveResponse | null>(null);
+  const [pcLoading, setPcLoading] = useState(true);
+
+  // Power-curve apart: eigen laadstaat + window-toggle → refetch los van settings/activities.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: nonce = bewuste reload-trigger.
+  useEffect(() => {
+    let alive = true;
+    setPcLoading(true);
+    getPowerCurve(pcWindow)
+      .then((r) => {
+        if (!alive) return;
+        setPc(r);
+        setPcLoading(false);
+      })
+      .catch(() => {
+        // cache leeg / geen intervals-auth lokaal → degradeer naar de lege staat.
+        if (!alive) return;
+        setPc({ empty: true });
+        setPcLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [pcWindow, nonce]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: nonce is een bewuste reload-trigger (de "Opnieuw"-knop).
   useEffect(() => {
@@ -199,11 +228,11 @@ export function Niveau() {
         eftp={derived.eftp}
       />
       <ProgressieCard serie={derived.serie} />
-      <NiveauSoonCard
-        title="Rijdersprofiel"
-        subtitle="Beste inspanning per duur"
-        tag="Fase 2"
-        body="De power-duration-curve + rijderstype (sprinter ↔ diesel) verschijnen zodra de power-curve-bron is aangesloten."
+      <Rijdersprofiel
+        data={pc}
+        window={pcWindow}
+        onWindow={setPcWindow}
+        loading={pcLoading}
       />
       <DoelProjectie {...derived.projectie} />
     </div>

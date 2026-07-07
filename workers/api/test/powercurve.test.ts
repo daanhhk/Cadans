@@ -96,6 +96,8 @@ describe("power-curve RAW-cache (D1, gemockt)", () => {
     expect(viaCache).toEqual(direct);
     // Deterministisch (SelfTest testPowerCurve_): 7200 capped (60min), 120s/0-watt
     // geskipt → 5 curve-punten; 5 markers (5s/1m/5m/20m/60m allemaal >0).
+    if ("empty" in viaCache)
+      throw new Error("verwacht een gevulde power-curve");
     expect(viaCache.curve.length).toBe(5);
     expect(viaCache.window.label).toBe("1y");
     expect(viaCache.riderType).toBeDefined();
