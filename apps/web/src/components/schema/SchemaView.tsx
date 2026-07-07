@@ -9,6 +9,7 @@ import {
 import { Card, Overline } from "../ui";
 import { CoachReadinessBanner } from "./CoachReadinessBanner";
 import { DayStrip } from "./DayStrip";
+import { PeriodTimeline } from "./PeriodTimeline";
 import { WeekLoad } from "./WeekLoad";
 import { WorkoutDetail } from "./WorkoutDetail";
 
@@ -21,6 +22,7 @@ const STATE_LABEL: Record<DayState, string> = {
 
 // PURE Schema-presentatie op het view-model. Interne state = geselecteerde datum
 // (default today). Geen fetch/derivatie hier — de container (pages/Schema.tsx) voedt 'm.
+// Sectie-volgorde volgt schema.jsx: PeriodTimeline → WeekLoad → DayStrip → dag-detail.
 export function SchemaView({
   proposalWeek,
   readiness,
@@ -52,29 +54,21 @@ export function SchemaView({
         paddingTop: "var(--s-2)",
       }}
     >
-      {/* Week-niveau macro-fase — licht NL-label (geen PeriodTimeline; die is geparkeerd). */}
-      {view.macroFaseLabel && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "baseline",
-            gap: "var(--s-2)",
-            padding: "0 2px",
-          }}
-        >
-          <Overline>Fase</Overline>
-          <span
-            style={{
-              fontFamily: "var(--font-sans)",
-              fontSize: "var(--fs-label)",
-              fontWeight: 600,
-              color: "var(--text-primary)",
-            }}
-          >
-            {view.macroFaseLabel}
-          </span>
-        </div>
-      )}
+      <PeriodTimeline
+        faseLabel={view.macroFaseLabel}
+        macroFase={view.macroFase}
+        eventNaam={view.eventNaam}
+        wekenTotEvent={view.wekenTotEvent}
+        planModus={view.planModus}
+      />
+
+      <WeekLoad
+        tss={view.tss}
+        minuten={view.minuten}
+        dagen={view.dagen}
+        onRegen={onRegen}
+        regenerating={regenerating}
+      />
 
       <DayStrip
         days={view.days}
@@ -155,14 +149,6 @@ export function SchemaView({
           )}
         </Card>
       )}
-
-      <WeekLoad
-        tss={view.tss}
-        minuten={view.minuten}
-        dagen={view.dagen}
-        onRegen={onRegen}
-        regenerating={regenerating}
-      />
     </div>
   );
 }

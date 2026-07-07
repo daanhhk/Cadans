@@ -57,6 +57,12 @@ export interface ProposalWeek {
   weekMonday: string;
   /** Week-niveau macro-fase (rauwe engine-waarde: Base/Build/Peak/Test/Recovery). */
   macroFase: string;
+  /** Naam van het A/trip-hoofdevent, of null als er geen komend event is. */
+  eventNaam: string | null;
+  /** Weken tot het hoofdevent (afgerond), of null zonder event. */
+  wekenTotEvent: number | null;
+  /** Plan-modus voor de ModeChip ("Doel-gericht" bij een event; null anders). */
+  planModus: string | null;
   days: ProposalDay[];
 }
 
@@ -158,6 +164,14 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
         isTrip: macro.taperEvent.type === "trip",
       }
     : null;
+  // Periodisering-kaart-data (week-niveau) — puur uit `macro`, engine ongewijzigd.
+  // Plan-modus: een komend event = event-driven → "Doel-gericht" (spiegelt GAS
+  // planModeLabel_ voor de event-tak). Volume-target zit NIET op `macro` → weggelaten.
+  const eventNaam: string | null =
+    (macro?.hoofdEvent?.naam as string | undefined) ?? null;
+  const wekenTotEvent: number | null =
+    typeof macro?.wekenTot === "number" ? macro.wekenTot : null;
+  const planModus: string | null = macro ? "Doel-gericht" : null;
 
   // 3. mesoWeek uit settings.doelStart (vaste keuze; geen DocProp).
   const mesoWeek = weekIndexFromStart_(settingsE);
@@ -311,5 +325,12 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
     };
   });
 
-  return { weekMonday, macroFase, days };
+  return {
+    weekMonday,
+    macroFase,
+    eventNaam,
+    wekenTotEvent,
+    planModus,
+    days,
+  };
 }

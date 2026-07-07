@@ -148,8 +148,13 @@ export interface DoneEntry {
 
 export interface SchemaView {
   weekMonday: string;
-  /** NL macro-fase-label voor de tab-kopregel (week-niveau). */
+  /** NL macro-fase-label voor de periodisering-kaart (week-niveau). */
   macroFaseLabel: string;
+  /** Rauwe macro-fase (Base/Build/Peak/…) — markeert de huidige fase in de sequentie-bar. */
+  macroFase: string;
+  eventNaam: string | null;
+  wekenTotEvent: number | null;
+  planModus: string | null;
   todayISO: string;
   days: SchemaDay[];
   tss: LoadStat;
@@ -243,6 +248,10 @@ export function deriveSchemaView(
   return {
     weekMonday: proposalWeek.weekMonday,
     macroFaseLabel: macroFaseLabel(proposalWeek.macroFase),
+    macroFase: proposalWeek.macroFase,
+    eventNaam: proposalWeek.eventNaam,
+    wekenTotEvent: proposalWeek.wekenTotEvent,
+    planModus: proposalWeek.planModus,
     todayISO,
     days,
     tss,

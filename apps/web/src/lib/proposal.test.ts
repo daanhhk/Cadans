@@ -362,4 +362,28 @@ describe("buildWeekProposal", () => {
       }
     }
   });
+
+  it("periodisering-threading: eventNaam + wekenTot + plan-modus op de week", () => {
+    const withEvent = buildWeekProposal({
+      settings: settings(),
+      plannerDays: WEEK,
+      events: EV_FAR,
+      wellness: WELL_OK,
+      ...base,
+    });
+    expect(withEvent.eventNaam).toBe("Doelrace");
+    expect(typeof withEvent.wekenTotEvent).toBe("number");
+    expect(withEvent.planModus).toBe("Doel-gericht");
+
+    const noEvent = buildWeekProposal({
+      settings: settings(),
+      plannerDays: WEEK,
+      events: [],
+      wellness: WELL_OK,
+      ...base,
+    });
+    expect(noEvent.eventNaam).toBeNull();
+    expect(noEvent.wekenTotEvent).toBeNull();
+    expect(noEvent.planModus).toBeNull();
+  });
 });
