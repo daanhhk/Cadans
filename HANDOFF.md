@@ -11,9 +11,11 @@ live tot cutover.
 
 ## Stand
 
-**SCHEMA-TAB AFGEROND (GAS-niveau) — laatste code-commit `fdc2c27`, CI groen.**
-Fase 0-4 klaar. Fase 5 (de PWA, `apps/web`) loopt; de **Schema-tab is nu op GAS-niveau
-afgewerkt**. Alles apps/web — `packages/engine` ONGEWIJZIGD.
+**SCHEMA + NIVEAU-TAB AFGEROND (GAS-niveau) — laatste code-commit `a077f04`, CI groen.**
+Fase 0-4 klaar. Fase 5 (de PWA, `apps/web`) loopt; de **Schema- én Niveau-tab zijn nu op
+GAS-niveau afgewerkt** (telefoon-geverifieerd). Alles apps/web — `packages/engine` ONGEWIJZIGD.
+Code-commits deze slag: `b598dc1` (DoelProjectie) · `ffe9ac5` (hours-unit fix) · `7634759`
+(Rijdersprofiel + `PowerCurveResponse`-DTO) · `a077f04` (dode `NiveauSoonCard` verwijderd).
 
 **Gate-vloeren (nooit onder; bron van waarheid — NOOIT hardcoden in een prompt):**
 engine-selftest `toBe(957)` · vitest-totaal **140**.
@@ -39,6 +41,17 @@ consumeren UITSLUITEND `--s-*/--fs-*/--lh-*/--r-*` (kleur was al gedisciplineerd
   gestript (`stripFaseSuffix`).
 - **CoachReadinessBanner** op today (Cadans-toevoeging t.o.v. GAS — behouden).
 
+**Niveau-tab — vier secties, alle LIVE (telefoon-geverifieerd; beide "volgt later"-stubs weg).**
+- **VermogenSnapshot** + **ProgressieCard** (v1): FTP / W-kg / tier + trajectorie (W/kg·Fitheid, 1M/6M/12M/Alles).
+- **Rijdersprofiel**: power-duration-curve (log-x SVG, markers 5s/1m/5m/20m/60m, key 5m/20m/60m) + stat-boxes
+  (W · W/kg · maand) + type-staaf (Sprinter↔Diesel via `riderType.pos`, `(1-pos)` op de Sprinter-links-as) +
+  parity-proza. Data uit **`GET /api/power-curve`** (engine `pcNormalize_`, server-side) met **90d|1y-toggle**;
+  nieuwe shared-DTO **`PowerCurveResponse`** (`packages/shared`) typeert de worker-route + de client-fetch
+  (`any` weg). Lokaal `power_curve_cache` leeg → nette empty-state tot een sync.
+- **DoelProjectie**: 3 gap-rows (`activeGoalProfile_`+`goalGap_`, client-side geassembleerd) + uren→potentieel
+  (CTL-ramp via `ctlPlateauFromVolume_`/`ctlApproachWeeks_`/`ctlAtWeek_`, SVG) + speculatieve FTP-band
+  (`ftpBandFromProjection_`, gestreept, aannames uitklapbaar). Alle compute uit de engine (`niveau.ts`); UI-only.
+
 ### Geparkeerde debts (bewust, niet nu)
 - **PeriodTimeline**: proportionele fase-breedtes + you-are-here-marker ontbreken (per-fase-weekduur
   zit niet in de engine-output); event-tags B/A; Volume-stat (geen CTL-/volume-target in de keten).
@@ -50,20 +63,23 @@ consumeren UITSLUITEND `--s-*/--fs-*/--lh-*/--r-*` (kleur was al gedisciplineerd
 - **macroFase-proza** in `planner.ts:620-626`/`:680` blijft Engels (reden-string) → eind-audit.
 - **Font-subsets**: `@fontsource` trekt alle subsets mee (28 woff2); versmallen naar latin(+ext) =
   kleine optimalisatie.
-- **Geen geautomatiseerde collapse-interactie-test**: vereist jsdom + `@testing-library/react` (nieuwe
-  deps + config) = aparte test-harness-klus.
+- **Client-side goal-assembler**: `buildGoalProfile_` (GAS-assembler) zat NIET in engine-core → client-side
+  samengesteld uit `activeGoalProfile_`+`goalGap_` (`Niveau.tsx`). Eind-audit: 1-op-1 mirror van de
+  GAS-assembler verifiëren.
+- **DoelProjectie start-CTL op maand-granulariteit** (`ctlReeksMaandelijks_` laatste maand) i.p.v. GAS
+  dag-`vorm.CTL` → de klaar-marker kan ~1 week schuiven; eind-audit.
+- **riderType-proza UI-mapped**: parity-mirror van GAS `nvTypeDuiding_` (3 strings); engine levert enkel
+  `{pos,label}` → parity-copy-debt, eind-audit.
+- **Geen geautomatiseerde interactie-tests** (Schema-collapse, DoelProjectie uren-slider, Rijdersprofiel
+  90d|1y-toggle): vereist jsdom + `@testing-library/react` (nieuwe deps + config) = aparte test-harness-klus.
 - **Bredere debts** (detail: §Deferred debts): remote-D1-drift (g), users-bootstrap voor remote deploy
   (m), engine-`any`-cast in apps/web (a)/(l), `/api/activities` server-side typing (k).
 
 ### Volgende fase (grootste gap eerst)
-- **NIVEAU-tab**: mist het **RIJDERSPROFIEL** (power-duration-curve + 5s-60m-stats +
-  sprinter/klimmer-classificatie) en de **DOEL-projectie** (uren→potentieel + FTP-test-voorspelling);
-  beide tonen nu een "volgt later"-placeholder. Recon-first: waar leeft die data (engine-output? nieuwe
-  berekening? aparte activities-analyse?).
-- **VORM-tab**: kleiner, structureel (GAS heeft een carrousel; Cadans' conditie-historie is al rijker).
-  Vormgeving-reconciliatie zoals Schema.
+- **VORM-tab** (verse chat, eigen recon): structureel (GAS heeft een carrousel; Cadans' conditie-historie is
+  al rijker) → vormgeving-reconciliatie zoals Schema/Niveau.
 - **Sluitstuk vóór cutover**: read-only **eind-audit** van de geporte engine-functies (adresseert de
-  engine-debts hierboven) + een findings-doc.
+  engine/parity-debts hierboven) + een findings-doc.
 
 ### Lokaal (miniflare `--local`, GEEN remote/deploy)
 `settings` via `PUT /api/settings` = ftp 280 / gewicht 75; **244** activities + **366** wellness via
