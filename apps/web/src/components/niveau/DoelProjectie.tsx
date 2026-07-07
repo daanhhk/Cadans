@@ -132,8 +132,8 @@ function GapRow({ dim }: { dim: GapDim }) {
             color: "var(--text-muted)",
           }}
         >
+          {/* geen losse unit: de sub-copy draagt 'm al, en fmtMetric embed 'u' voor longRideH */}
           / {fmtMetric(dim.metric, dim.target)}
-          {dim.unit ? ` ${dim.unit}` : ""}
         </span>
       </div>
       <span
