@@ -119,7 +119,7 @@ function Pmc({ pts, vorm }: { pts: WellnessInput[]; vorm: number | null }) {
         fontSize="10"
         fontFamily="var(--font-num)"
       >
-        ~12 wk
+        12 wk
       </text>
       <text
         x={W - padR}
