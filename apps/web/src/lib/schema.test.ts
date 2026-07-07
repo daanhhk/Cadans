@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  blokFromEngine,
   focusLabel,
   MACRO_FASE_NL,
   macroFaseLabel,
@@ -55,5 +56,43 @@ describe("stripFaseSuffix", () => {
     for (const fase of Object.keys(MACRO_FASE_NL)) {
       expect(stripFaseSuffix(`Naam (${fase})`)).toBe("Naam");
     }
+  });
+});
+
+describe("blokFromEngine", () => {
+  it("mapt engine-buckets naar de GAS-hoogtePct-stappen (25/45/65/85/100)", () => {
+    expect(blokFromEngine({ minuten: 10, zone: "rust" })?.hoogtePct).toBe(25);
+    expect(blokFromEngine({ minuten: 10, zone: "z2" })?.hoogtePct).toBe(45);
+    expect(blokFromEngine({ minuten: 10, zone: "tempo" })?.hoogtePct).toBe(65);
+    expect(blokFromEngine({ minuten: 10, zone: "drempel" })?.hoogtePct).toBe(
+      85,
+    );
+    expect(blokFromEngine({ minuten: 10, zone: "anaeroob" })?.hoogtePct).toBe(
+      100,
+    );
+  });
+  it("kleurt via de --zone-*-tokens (lijnt met de legend)", () => {
+    expect(blokFromEngine({ minuten: 5, zone: "z2" })?.color).toBe(
+      "var(--zone-2)",
+    );
+    expect(blokFromEngine({ minuten: 5, zone: "drempel" })?.color).toBe(
+      "var(--zone-4)",
+    );
+    expect(blokFromEngine({ minuten: 5, zone: "anaeroob" })?.color).toBe(
+      "var(--zone-5)",
+    );
+  });
+  it("onbekende bucket → z2-default (zoals GAS)", () => {
+    const b = blokFromEngine({ minuten: 5, zone: "onzin" });
+    expect(b?.hoogtePct).toBe(45);
+    expect(b?.color).toBe("var(--zone-2)");
+  });
+  it("negeert lege/ongeldige blokken (minuten ≤ 0 of geen object)", () => {
+    expect(blokFromEngine({ minuten: 0, zone: "z2" })).toBeNull();
+    expect(blokFromEngine(null)).toBeNull();
+    expect(blokFromEngine("x")).toBeNull();
+  });
+  it("behoudt de minuten", () => {
+    expect(blokFromEngine({ minuten: 12.5, zone: "z2" })?.minuten).toBe(12.5);
   });
 });

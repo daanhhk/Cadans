@@ -182,7 +182,7 @@ export function WeekLoad({
               height: "100%",
               width: `${pct}%`,
               borderRadius: "var(--r-pill)",
-              background: "var(--accent)",
+              background: "var(--accent-grad)", // conform schema.jsx WeekLoad
             }}
           />
         </div>

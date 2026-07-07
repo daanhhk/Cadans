@@ -2,6 +2,7 @@ import type { SchemaSession } from "../../lib/schema";
 import { Num, Overline } from "../ui";
 import { BlockList } from "./BlockList";
 import { ZoneBar } from "./ZoneBar";
+import { ZoneLegend } from "./ZoneLegend";
 
 // Eén sessie: naam/focus + duur/TSS + zone-pills + blok-lijst + eindopmerking.
 // session.focus is in het view-model al NL-gemapt + gededupliceerd t.o.v. de zone-pill
@@ -67,7 +68,8 @@ export function WorkoutDetail({
           </span>
         </div>
       </div>
-      <ZoneBar zones={session.zones} />
+      <ZoneBar blokken={session.blokken} />
+      <ZoneLegend zones={session.zones} />
       <BlockList structuur={session.structuur} />
       {session.eindopmerking && (
         <div

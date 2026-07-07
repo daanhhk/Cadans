@@ -74,6 +74,40 @@ export function stripFaseSuffix(naam: string): string {
 const ZONE_ORDER: ZoneKey[] = ["low", "high", "anaerobic"];
 const WEEKDAYS = ["zo", "ma", "di", "wo", "do", "vr", "za"];
 
+/**
+ * Blok-bucket (engine `pctZoneBucket_`: rust/z2/tempo/drempel/anaeroob) → staafhoogte
+ * (0-100 intensiteit) + Cadans zone-kleur voor de proportionele workout-bar. De
+ * hoogtePct-stappen zijn 1-op-1 geport uit de GAS-bron (WebApp.gs `DASH_BUCKET_STYLE_`:
+ * 25/45/65/85/100); de kleuren gebruiken de bestaande --zone-*-tokens zodat de bar met de
+ * legend-chips lijnt (z2→--zone-2, drempel→--zone-4, anaeroob→--zone-5 = exact de
+ * ZONE_META-legendkleuren). Onbekende bucket → z2-default (zoals GAS).
+ */
+const BAR_BUCKET: Record<string, { hoogtePct: number; color: string }> = {
+  rust: { hoogtePct: 25, color: "var(--zone-1)" },
+  z2: { hoogtePct: 45, color: "var(--zone-2)" },
+  tempo: { hoogtePct: 65, color: "var(--zone-3)" },
+  drempel: { hoogtePct: 85, color: "var(--zone-4)" },
+  anaeroob: { hoogtePct: 100, color: "var(--zone-5)" },
+};
+const BAR_FALLBACK = { hoogtePct: 45, color: "var(--zone-2)" }; // z2 (zoals GAS)
+
+/** Eén workout-blok, klaar voor de proportionele bar: minuten + staafhoogte + kleur. */
+export interface SessionBlok {
+  minuten: number;
+  hoogtePct: number;
+  color: string;
+}
+
+/** Rauw engine-blok `{ minuten, zone, pctLo?, pctHi? }` → SessionBlok (of null als leeg). */
+export function blokFromEngine(b: unknown): SessionBlok | null {
+  if (!b || typeof b !== "object") return null;
+  const o = b as { minuten?: unknown; zone?: unknown };
+  const minuten = Number(o.minuten) || 0;
+  if (minuten <= 0) return null;
+  const meta = BAR_BUCKET[String(o.zone)] ?? BAR_FALLBACK;
+  return { minuten, hoogtePct: meta.hoogtePct, color: meta.color };
+}
+
 export interface SchemaSession {
   naam: string;
   focus: string | null;
@@ -82,6 +116,8 @@ export interface SchemaSession {
   tss: number;
   /** 5-tuples [label, dur, watt-range, hr-range, note] uit de engine. */
   structuur: string[][];
+  /** Per-interval blokken voor de proportionele workout-bar (afgeleid uit engine-blokken). */
+  blokken: SessionBlok[];
   eindopmerking: string | null;
 }
 
@@ -130,10 +166,15 @@ function toSession(w: ProposalWorkout): SchemaSession {
         Array.isArray(row) ? row.map((c) => String(c ?? "")) : [String(row)],
       )
     : [];
+  const blokken = Array.isArray(w.blokken)
+    ? (w.blokken as unknown[])
+        .map(blokFromEngine)
+        .filter((b): b is SessionBlok => b !== null)
+    : [];
   const orderedZones = ZONE_ORDER.filter((z) => zones.includes(z));
-  // Chip-dedup: de zone-pill (ZoneBar) is de canonieke plek voor het zone-woord.
+  // Chip-dedup: de zone-legend (ZoneLegend) is de canonieke plek voor het zone-woord.
   // Onderdruk de focus-subtitel als die (na NL-mapping) een woord toont dat een
-  // zone-pill al toont; proza-focus (bv. "lactate clearance") blijft staan.
+  // legend-chip al toont; proza-focus (bv. "lactate clearance") blijft staan.
   const zoneLabels = new Set(orderedZones.map((z) => ZONE_META[z].label));
   const rawFocus = typeof w.focus === "string" ? w.focus : null;
   const focusDisplay = rawFocus ? focusLabel(rawFocus) : null;
@@ -146,6 +187,7 @@ function toSession(w: ProposalWorkout): SchemaSession {
     totaalMin: Number(w.totaalMin) || 0,
     tss: Number(w.tss) || 0,
     structuur,
+    blokken,
     eindopmerking: typeof w.eindopmerking === "string" ? w.eindopmerking : null,
   };
 }
