@@ -30,11 +30,11 @@ export function CoachReadinessBanner({
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 12,
+        gap: "var(--s-3)",
         background: "var(--bg-elevated)",
         borderRadius: "var(--r-md)",
         borderLeft: `3px solid ${color}`,
-        padding: "10px 12px",
+        padding: "10px 12px", // banner-interne padding
       }}
     >
       <div
@@ -42,12 +42,14 @@ export function CoachReadinessBanner({
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          minWidth: 40,
+          minWidth: 40, // score-kolombreedte (grafisch)
         }}
       >
+        {/* TODO off-scale: 22px valt tussen --fs-num-sm (17) en --fs-num-md (26) */}
         <Num size="22px" color={color}>
           {readiness.score ?? "—"}
         </Num>
+        {/* TODO off-scale: 8.5px < --fs-caption (11), geen kleiner type-token */}
         <Overline style={{ fontSize: 8.5 }}>Gereed</Overline>
       </div>
       <div style={{ minWidth: 0 }}>
@@ -55,10 +57,10 @@ export function CoachReadinessBanner({
         <div
           style={{
             fontFamily: "var(--font-sans)",
-            fontSize: 13.5,
+            fontSize: "var(--fs-label)",
             fontWeight: 600,
             color: "var(--text-primary)",
-            marginTop: 2,
+            marginTop: 2, // tight label-gap (sub-4pt)
           }}
         >
           {verdict(readiness.score)}
@@ -67,9 +69,9 @@ export function CoachReadinessBanner({
           <div
             style={{
               fontFamily: "var(--font-sans)",
-              fontSize: 11.5,
+              fontSize: "var(--fs-caption)",
               color: "var(--text-muted)",
-              marginTop: 3,
+              marginTop: 3, // tight chip-gap (sub-4pt)
             }}
           >
             {readiness.chips.map((c) => c.label).join(" · ")}

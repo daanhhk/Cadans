@@ -48,10 +48,34 @@ export function SchemaView({
       style={{
         display: "flex",
         flexDirection: "column",
-        gap: 16,
-        paddingTop: 8,
+        gap: "var(--s-4)",
+        paddingTop: "var(--s-2)",
       }}
     >
+      {/* Week-niveau macro-fase — licht NL-label (geen PeriodTimeline; die is geparkeerd). */}
+      {view.macroFaseLabel && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            gap: "var(--s-2)",
+            padding: "0 2px",
+          }}
+        >
+          <Overline>Fase</Overline>
+          <span
+            style={{
+              fontFamily: "var(--font-sans)",
+              fontSize: "var(--fs-label)",
+              fontWeight: 600,
+              color: "var(--text-primary)",
+            }}
+          >
+            {view.macroFaseLabel}
+          </span>
+        </div>
+      )}
+
       <DayStrip
         days={view.days}
         selected={day?.datum ?? ""}
@@ -65,7 +89,7 @@ export function SchemaView({
           </Overline>
 
           {day.state === "today" && (
-            <div style={{ marginTop: 12 }}>
+            <div style={{ marginTop: "var(--s-3)" }}>
               <CoachReadinessBanner readiness={readiness} />
             </div>
           )}
@@ -74,9 +98,9 @@ export function SchemaView({
             <div
               style={{
                 fontFamily: "var(--font-sans)",
-                fontSize: 12.5,
+                fontSize: "var(--fs-label)",
                 color: "var(--text-secondary)",
-                marginTop: 12,
+                marginTop: "var(--s-3)",
               }}
             >
               {day.reden}
@@ -87,11 +111,11 @@ export function SchemaView({
             <div
               style={{
                 fontFamily: "var(--font-sans)",
-                fontSize: 13,
+                fontSize: "var(--fs-label)",
                 color: "var(--text-muted)",
                 textAlign: "center",
-                padding: "20px 8px 8px",
-                lineHeight: 1.5,
+                padding: "var(--s-5) var(--s-2) var(--s-2)",
+                lineHeight: "var(--lh-body)",
               }}
             >
               Rustdag — van herstel word je beter.
@@ -101,8 +125,8 @@ export function SchemaView({
               style={{
                 display: "flex",
                 flexDirection: "column",
-                gap: 16,
-                marginTop: 14,
+                gap: "var(--s-4)",
+                marginTop: "var(--s-4)",
               }}
             >
               {day.sessions.map((s, i) => (
@@ -112,7 +136,7 @@ export function SchemaView({
                     i > 0
                       ? {
                           borderTop: "1px solid var(--border-subtle)",
-                          paddingTop: 16,
+                          paddingTop: "var(--s-4)",
                         }
                       : undefined
                   }

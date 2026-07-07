@@ -1,9 +1,11 @@
-import { focusLabel, type SchemaSession } from "../../lib/schema";
+import type { SchemaSession } from "../../lib/schema";
 import { Num, Overline } from "../ui";
 import { BlockList } from "./BlockList";
 import { ZoneBar } from "./ZoneBar";
 
 // Eén sessie: naam/focus + duur/TSS + zone-pills + blok-lijst + eindopmerking.
+// session.focus is in het view-model al NL-gemapt + gededupliceerd t.o.v. de zone-pill
+// (lib/schema.ts toSession) → hier rauw renderen, geen dubbel zone-woord.
 export function WorkoutDetail({
   session,
   overline,
@@ -12,16 +14,18 @@ export function WorkoutDetail({
   overline?: string;
 }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+    <div
+      style={{ display: "flex", flexDirection: "column", gap: "var(--s-3)" }}
+    >
       {overline && <Overline>{overline}</Overline>}
       <div>
         <div
           style={{
             fontFamily: "var(--font-sans)",
-            fontSize: 16,
+            fontSize: "var(--fs-h2)",
             fontWeight: 600,
             color: "var(--text-primary)",
-            lineHeight: 1.25,
+            lineHeight: "var(--lh-h2)",
           }}
         >
           {session.naam}
@@ -30,25 +34,35 @@ export function WorkoutDetail({
           <div
             style={{
               fontFamily: "var(--font-sans)",
-              fontSize: 12.5,
+              fontSize: "var(--fs-label)",
               color: "var(--text-muted)",
-              marginTop: 2,
+              marginTop: 2, // tight label-gap (sub-4pt)
             }}
           >
-            {focusLabel(session.focus)}
+            {session.focus}
           </div>
         )}
       </div>
-      <div style={{ display: "flex", gap: 18 }}>
+      <div style={{ display: "flex", gap: "var(--s-4)" }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: 3 }}>
-          <Num size="18px">{session.totaalMin}</Num>
-          <span style={{ fontSize: 11.5, color: "var(--text-muted)" }}>
+          <Num size="var(--fs-num-sm)">{session.totaalMin}</Num>
+          <span
+            style={{
+              fontSize: "var(--fs-caption)",
+              color: "var(--text-muted)",
+            }}
+          >
             min
           </span>
         </div>
         <div style={{ display: "flex", alignItems: "baseline", gap: 3 }}>
-          <Num size="18px">{session.tss}</Num>
-          <span style={{ fontSize: 11.5, color: "var(--text-muted)" }}>
+          <Num size="var(--fs-num-sm)">{session.tss}</Num>
+          <span
+            style={{
+              fontSize: "var(--fs-caption)",
+              color: "var(--text-muted)",
+            }}
+          >
             TSS
           </span>
         </div>
@@ -59,11 +73,11 @@ export function WorkoutDetail({
         <div
           style={{
             fontFamily: "var(--font-sans)",
-            fontSize: 12.5,
+            fontSize: "var(--fs-label)",
             color: "var(--text-secondary)",
             fontStyle: "italic",
             borderTop: "1px solid var(--border-subtle)",
-            paddingTop: 10,
+            paddingTop: 10, // divider-ademruimte (tussen --s-2/--s-3)
           }}
         >
           {session.eindopmerking}

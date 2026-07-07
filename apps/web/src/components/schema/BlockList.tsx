@@ -2,7 +2,9 @@
 export function BlockList({ structuur }: { structuur: string[][] }) {
   if (structuur.length === 0) return null;
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+    <div
+      style={{ display: "flex", flexDirection: "column", gap: "var(--s-2)" }}
+    >
       {structuur.map((row) => {
         const label = row[0] ?? "";
         const dur = row[1] ?? "";
@@ -15,18 +17,18 @@ export function BlockList({ structuur }: { structuur: string[][] }) {
             style={{
               display: "flex",
               flexDirection: "column",
-              gap: 2,
-              borderLeft: "2px solid var(--border-strong)",
-              paddingLeft: 11,
+              gap: 2, // tight label↔meta-gap (sub-4pt)
+              borderLeft: "2px solid var(--border-strong)", // zone-rule (grafische maat)
+              paddingLeft: 11, // inspring voorbij de rule (grafisch)
             }}
           >
             <div
               style={{
                 display: "flex",
                 justifyContent: "space-between",
-                gap: 8,
+                gap: "var(--s-2)",
                 fontFamily: "var(--font-sans)",
-                fontSize: 12.5,
+                fontSize: "var(--fs-label)",
                 fontWeight: 600,
                 color: "var(--text-primary)",
               }}
@@ -46,7 +48,7 @@ export function BlockList({ structuur }: { structuur: string[][] }) {
               <div
                 style={{
                   fontFamily: "var(--font-sans)",
-                  fontSize: 11.5,
+                  fontSize: "var(--fs-caption)",
                   color: "var(--text-muted)",
                 }}
               >

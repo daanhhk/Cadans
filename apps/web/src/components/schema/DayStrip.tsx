@@ -25,7 +25,7 @@ function Indicator({ day }: { day: SchemaDay }) {
     return (
       <span
         style={{
-          width: 8,
+          width: 8, // rustdag-streepje (grafische maat)
           height: 2,
           borderRadius: 2,
           background: "var(--border-strong)",
@@ -39,9 +39,9 @@ function Indicator({ day }: { day: SchemaDay }) {
         <span
           key={`${s.naam}-${s.tss}`}
           style={{
-            width: 6,
+            width: 6, // zone-dot per sessie (grafische maat)
             height: 6,
-            borderRadius: 999,
+            borderRadius: "var(--r-pill)",
             background: s.zones[0]
               ? ZONE_META[s.zones[0]].color
               : "var(--accent)",
@@ -67,9 +67,9 @@ export function DayStrip({
     <div
       style={{
         display: "flex",
-        gap: 8,
+        gap: "var(--s-2)",
         overflowX: "auto",
-        padding: "2px 2px 6px",
+        padding: "2px 2px 6px", // scroll-strip padding (grafisch)
       }}
     >
       {days.map((day) => {
@@ -83,12 +83,12 @@ export function DayStrip({
             onClick={() => onSelect(day.datum)}
             style={{
               flex: "0 0 auto",
-              width: 50,
-              padding: "9px 0 8px",
+              width: 50, // vaste chip-breedte (grafisch)
+              padding: "9px 0 8px", // chip-interne padding
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              gap: 5,
+              gap: 5, // tight interne stapeling (sub-4pt)
               cursor: "pointer",
               borderRadius: "var(--r-md)",
               background: isSel ? "var(--accent-soft)" : "var(--bg-surface)",
@@ -104,7 +104,7 @@ export function DayStrip({
             <span
               style={{
                 fontFamily: "var(--font-sans)",
-                fontSize: 10.5,
+                fontSize: "var(--fs-caption)",
                 fontWeight: 600,
                 letterSpacing: "0.04em",
                 textTransform: "uppercase",
@@ -114,14 +114,14 @@ export function DayStrip({
               {day.weekday}
             </span>
             <Num
-              size="17px"
+              size="var(--fs-num-sm)"
               color={isSel ? "var(--accent)" : "var(--text-primary)"}
             >
               {day.dayNum}
             </Num>
             <span
               style={{
-                height: 11,
+                height: 11, // vaste indicator-rijhoogte (grafisch)
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",

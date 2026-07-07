@@ -42,6 +42,35 @@ export function focusLabel(focus: string): string {
   return focus in ZONE_META ? ZONE_META[focus as ZoneKey].label : focus;
 }
 
+/**
+ * Macro-fase (rauwe engine-waarde) → NL-label. ÉÉN bron: de keys zijn tevens de
+ * fase-tokens die de engine in het workout-naam-suffix bakt (planner.ts renderVariant_),
+ * hergebruikt door `stripFaseSuffix`. Onbekende waarden gaan onveranderd terug.
+ */
+export const MACRO_FASE_NL: Record<string, string> = {
+  Base: "Basis",
+  Recovery: "Herstel",
+  Build: "Build",
+  Peak: "Peak",
+  Test: "Test",
+};
+
+export function macroFaseLabel(fase: string): string {
+  return MACRO_FASE_NL[fase] ?? fase;
+}
+
+// Engine-naam-suffix (planner.ts renderVariant_): "<naam> (<Fase>[, ingekort])".
+// Gerichte, end-anchored strip met ALLEEN bekende fase-tokens — "ingekort" blijft,
+// lege haakjes verdwijnen. GEEN globale replace (voorkomt false positives).
+const FASE_SUFFIX_RE = new RegExp(
+  `\\s*\\((?:${Object.keys(MACRO_FASE_NL).join("|")})(,\\s*ingekort)?\\)\\s*$`,
+);
+export function stripFaseSuffix(naam: string): string {
+  return naam.replace(FASE_SUFFIX_RE, (_m, ingekort) =>
+    ingekort ? " (ingekort)" : "",
+  );
+}
+
 const ZONE_ORDER: ZoneKey[] = ["low", "high", "anaerobic"];
 const WEEKDAYS = ["zo", "ma", "di", "wo", "do", "vr", "za"];
 
@@ -83,6 +112,8 @@ export interface DoneEntry {
 
 export interface SchemaView {
   weekMonday: string;
+  /** NL macro-fase-label voor de tab-kopregel (week-niveau). */
+  macroFaseLabel: string;
   todayISO: string;
   days: SchemaDay[];
   tss: LoadStat;
@@ -99,10 +130,19 @@ function toSession(w: ProposalWorkout): SchemaSession {
         Array.isArray(row) ? row.map((c) => String(c ?? "")) : [String(row)],
       )
     : [];
+  const orderedZones = ZONE_ORDER.filter((z) => zones.includes(z));
+  // Chip-dedup: de zone-pill (ZoneBar) is de canonieke plek voor het zone-woord.
+  // Onderdruk de focus-subtitel als die (na NL-mapping) een woord toont dat een
+  // zone-pill al toont; proza-focus (bv. "lactate clearance") blijft staan.
+  const zoneLabels = new Set(orderedZones.map((z) => ZONE_META[z].label));
+  const rawFocus = typeof w.focus === "string" ? w.focus : null;
+  const focusDisplay = rawFocus ? focusLabel(rawFocus) : null;
+  const focus =
+    focusDisplay && !zoneLabels.has(focusDisplay) ? focusDisplay : null;
   return {
-    naam: String(w.naam ?? ""),
-    focus: typeof w.focus === "string" ? w.focus : null,
-    zones: ZONE_ORDER.filter((z) => zones.includes(z)),
+    naam: stripFaseSuffix(String(w.naam ?? "")),
+    focus,
+    zones: orderedZones,
     totaalMin: Number(w.totaalMin) || 0,
     tss: Number(w.tss) || 0,
     structuur,
@@ -160,6 +200,7 @@ export function deriveSchemaView(
 
   return {
     weekMonday: proposalWeek.weekMonday,
+    macroFaseLabel: macroFaseLabel(proposalWeek.macroFase),
     todayISO,
     days,
     tss,

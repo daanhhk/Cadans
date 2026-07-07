@@ -33,28 +33,29 @@ function Stat({
           display: "flex",
           alignItems: "baseline",
           justifyContent: "center",
-          gap: 3,
+          gap: 3, // tight waarde↔/gepland-gap (sub-4pt)
         }}
       >
+        {/* TODO off-scale: 20px valt tussen --fs-num-sm (17) en --fs-num-md (26) */}
         <Num size="20px">{fmt(gedaan)}</Num>
         <span
           style={{
             fontFamily: "var(--font-num)",
-            fontSize: 11,
+            fontSize: 11, // TODO off-scale: num-suffix, geen --fs-num-stap op 11
             color: "var(--text-muted)",
           }}
         >
           /{fmt(gepland)}
         </span>
       </div>
+      {/* TODO off-scale: 9.5px < --fs-caption (11), geen kleiner type-token */}
       <Overline style={{ marginTop: 5, fontSize: 9.5 }}>{label}</Overline>
     </div>
   );
 }
 
 // "Deze week · gepland vs gedaan": TSS/Uren/Dagen (gedaan/gepland) + voortgangsbalk +
-// regenereer-knop. GEPLAND uit het voorstel, GEDAAN uit doneTssByDate (uren-gedaan nog 0
-// tot een done-minuten-bron bestaat — stap 3). onRegen is in stap 2 een no-op stub.
+// regenereer-knop. GEPLAND uit het voorstel, GEDAAN uit doneTssByDate.
 export function WeekLoad({
   tss,
   minuten,
@@ -90,10 +91,10 @@ export function WeekLoad({
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
-            width: 32,
+            width: 32, // vaste icoonknop (grafisch)
             height: 32,
             padding: 0,
-            borderRadius: 999,
+            borderRadius: "var(--r-pill)",
             border: "1px solid var(--border-strong)",
             background: "var(--bg-elevated)",
             cursor: regenerating ? "default" : "pointer",
@@ -124,7 +125,7 @@ export function WeekLoad({
           </svg>
         </button>
       </div>
-      <div style={{ display: "flex", marginTop: 12 }}>
+      <div style={{ display: "flex", marginTop: "var(--s-3)" }}>
         <Stat
           first
           gedaan={tss.gedaan}
@@ -145,32 +146,33 @@ export function WeekLoad({
           fmt={(n) => String(n)}
         />
       </div>
-      <div style={{ marginTop: 14 }}>
+      <div style={{ marginTop: "var(--s-4)" }}>
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "baseline",
-            marginBottom: 6,
+            marginBottom: "var(--s-2)",
           }}
         >
           <span
             style={{
               fontFamily: "var(--font-sans)",
-              fontSize: 11.5,
+              fontSize: "var(--fs-caption)",
               color: "var(--text-secondary)",
             }}
           >
             Voortgang
           </span>
+          {/* TODO off-scale: 11px num-figuur, geen --fs-num-stap op 11 */}
           <Num size="11px" color="var(--text-secondary)">
             {`${pct}% van plan`}
           </Num>
         </div>
         <div
           style={{
-            height: 6,
-            borderRadius: 999,
+            height: 6, // voortgangsbalk-dikte (grafische maat)
+            borderRadius: "var(--r-pill)",
             background: "var(--bg-sunken)",
             overflow: "hidden",
           }}
@@ -179,7 +181,7 @@ export function WeekLoad({
             style={{
               height: "100%",
               width: `${pct}%`,
-              borderRadius: 999,
+              borderRadius: "var(--r-pill)",
               background: "var(--accent)",
             }}
           />

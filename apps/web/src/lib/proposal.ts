@@ -55,6 +55,8 @@ export interface ProposalDay {
 
 export interface ProposalWeek {
   weekMonday: string;
+  /** Week-niveau macro-fase (rauwe engine-waarde: Base/Build/Peak/Test/Recovery). */
+  macroFase: string;
   days: ProposalDay[];
 }
 
@@ -309,5 +311,5 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
     };
   });
 
-  return { weekMonday, days };
+  return { weekMonday, macroFase, days };
 }
