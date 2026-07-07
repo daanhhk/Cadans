@@ -33,6 +33,15 @@ export const ZONE_META: Record<ZoneKey, { label: string; color: string }> = {
   high: { label: "Drempel", color: "var(--zone-4)" },
   anaerobic: { label: "VO2max", color: "var(--zone-5)" },
 };
+
+/**
+ * Rauwe engine focus-bucket (low/high/anaerobic) → NL ZONE_META-label; elke andere
+ * (proza-)focus, bv. "lactate clearance", gaat onveranderd terug.
+ */
+export function focusLabel(focus: string): string {
+  return focus in ZONE_META ? ZONE_META[focus as ZoneKey].label : focus;
+}
+
 const ZONE_ORDER: ZoneKey[] = ["low", "high", "anaerobic"];
 const WEEKDAYS = ["zo", "ma", "di", "wo", "do", "vr", "za"];
 

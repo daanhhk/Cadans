@@ -1,4 +1,4 @@
-import type { SchemaSession } from "../../lib/schema";
+import { focusLabel, type SchemaSession } from "../../lib/schema";
 import { Num, Overline } from "../ui";
 import { BlockList } from "./BlockList";
 import { ZoneBar } from "./ZoneBar";
@@ -35,7 +35,7 @@ export function WorkoutDetail({
               marginTop: 2,
             }}
           >
-            {session.focus}
+            {focusLabel(session.focus)}
           </div>
         )}
       </div>
