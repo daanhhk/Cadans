@@ -1,4 +1,5 @@
 import type {
+  ActivitiesResponse,
   CheckinInput,
   SettingsInput,
   WellnessInput,
@@ -9,8 +10,15 @@ import { ConditiePmc } from "../components/vorm/ConditiePmc";
 import { LevelCard } from "../components/vorm/LevelCard";
 import { MetricRow } from "../components/vorm/MetricRow";
 import { ReadinessCard } from "../components/vorm/ReadinessCard";
-import { getCheckin, getSettings, getWellness } from "../lib/api";
-import { todayIso } from "../lib/dates";
+import { parseActivityRows } from "../lib/activities";
+import {
+  getActivities,
+  getCheckin,
+  getSettings,
+  getWellness,
+} from "../lib/api";
+import { todayIso, weekMondayIso } from "../lib/dates";
+import { deriveNiveauSerie, weekTss } from "../lib/niveau";
 import { deriveReadiness } from "../lib/readiness";
 
 // Vorm-tab (Vorm-lite, Fase 5.1b) — vervangt de 5.1a-health-steiger. Data uit drie
@@ -19,6 +27,7 @@ import { deriveReadiness } from "../lib/readiness";
 export function Vorm() {
   const [settings, setSettings] = useState<SettingsInput | null>(null);
   const [wellness, setWellness] = useState<WellnessInput[]>([]);
+  const [activities, setActivities] = useState<ActivitiesResponse>([]);
   const [checkin, setCheckin] = useState<CheckinInput | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,12 +40,18 @@ export function Vorm() {
     let alive = true;
     setLoading(true);
     setError(null);
-    Promise.all([getSettings(), getWellness(), getCheckin(date)])
-      .then(([s, w, c]) => {
+    Promise.all([
+      getSettings(),
+      getWellness(),
+      getCheckin(date),
+      getActivities(),
+    ])
+      .then(([s, w, c, a]) => {
         if (!alive) return;
         setSettings(s);
         setWellness(w);
         setCheckin(c);
+        setActivities(a);
         setLoading(false);
       })
       .catch((e: unknown) => {
@@ -55,6 +70,14 @@ export function Vorm() {
     () => deriveReadiness(wellness, checkin),
     [wellness, checkin],
   );
+
+  // Niveau-serie + week-TSS via de GEDEELDE Niveau-bron (lib/niveau; dezelfde engine-fns
+  // als de Niveau-tab) → voedt de LevelCard-tier/delta + de MetricRow-week-TSS.
+  const niveau = useMemo(() => {
+    const rows = parseActivityRows(activities);
+    const { serie } = deriveNiveauSerie(settings, rows);
+    return { serie, weekTss: weekTss(rows, weekMondayIso()) };
+  }, [settings, activities]);
 
   if (loading) {
     return (
@@ -128,8 +151,8 @@ export function Vorm() {
         readiness={readiness}
         onOpenCheckin={() => setSheetOpen(true)}
       />
-      <LevelCard settings={settings} />
-      <MetricRow settings={settings} />
+      <LevelCard settings={settings} serie={niveau.serie} />
+      <MetricRow settings={settings} weekTss={niveau.weekTss} />
       <ConditiePmc rows={wellness} />
 
       <CheckinSheet
