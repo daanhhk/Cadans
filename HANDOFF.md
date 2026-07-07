@@ -11,6 +11,16 @@ live tot cutover.
 
 ## Stand
 
+**Fase 5.3c-ii NAZORG — focus-prettify + demo-seed — KLAAR (code `c63d217`, CI groen).**
+Laatste code-commit `c63d217`: de Schema-tab focus-ondertitel toont nu NL-labels via de helper `focusLabel`
+(`apps/web/src/lib/schema.ts` → low="Duur", high="Drempel", anaerobic="VO2max"), bekabeld in
+`apps/web/src/components/schema/WorkoutDetail.tsx`; proza-focus (bv. "lactate clearance", "volume + key zone")
+gaat onveranderd door. Het fase-token ("Build") blijft nog Engels → **debt (p)**. De lokale miniflare-D1 kreeg
+een DEMO-SEED (NIET in repo, NIET remote): `settings.doel='Ardennen-trip'`, `lthr=178`, `doel_start='2026-06-01'`
++ 1 event op `2026-08-23` → macro-fase **Build**. Daarmee + de prettify zijn de drie Schema-leaks ("· null",
+"0-0 bpm", rauwe focus-bucket) weg — telefoon-geverifieerd (**debt (o)** opgelost). Engine ONAANGEROERD
+(**957/0**, expliciet ongewijzigd); vitest **127 → 129**; CI success run 28842265930.
+
 **Fase 5.3c-ii — SCHEMA-TAB LIVE + macro-fase-fix — KLAAR (Schema live `d8492b7`, fix `34d10fe`, CI groen).**
 De Schema-tab draait nu op live `/api`-data (`loadSchemaWeek` → `buildWeekProposal` + `deriveReadiness`,
 client-side, TZ-veilig). **Telefoon-check #2 geslaagd:** de Schema-readiness-banner is identiek aan de
@@ -161,6 +171,12 @@ cap-verhoging (geparkeerd). Power-curve NIET gesynct (voedt alleen de Fase-2-stu
 Niveau + Vorm tonen nu **live data lokaal**. NB: de `users`-tabel was leeg → PUT/sync
 schenden de FK tot een `users(1)`-rij bestaat; lokaal handmatig geseed (zie debt (m)).
 
+**Lokale demo-seed-recipe (miniflare `--local`; NIET remote, NIET in repo).** Voor een leak-vrije
+Schema-demo, alles via `wrangler d1 execute cadans --local`:
+- `UPDATE settings SET doel='Ardennen-trip', lthr=178, doel_start='2026-06-01' WHERE user_id=1;`
+- `INSERT INTO events (user_id, datum, naam, type, prioriteit, afstand_km, hoogtemeters, klim_type, notitie) VALUES (1, '2026-08-23', 'Ardennen-trip', 'trip', 'A', 140, 2000, 'heuvel', NULL);`
+- `planner_days` is geseed voor de week 2026-07-06..2026-07-12; een later weergegeven week opnieuw seeden.
+
 **Twee geparkeerde fundament-keuzes — BESLOTEN (v1):** (1) **GEEN charting-lib** —
 hand-rolled SVG (zoals de Vorm-PMC); de Fase-2-grafieken (log-x power-curve,
 CTL-ramp) mogen deze keuze heropenen. (2) **Pure engine CLIENT-SIDE** — TZ-veilig
@@ -173,16 +189,15 @@ wrinkle (l)): **Niveau 49 vs Vorm 50 = granulariteits-artefact** (maandbuckets v
 wellness-CTL), GEEN engine-unificatie nodig → afgevinkt. De andere tak van (l) (engine-fns
 retourneren `any` → `apps/web` cast) blijft open. Geen prod-deploy / remote-D1-mutatie gedaan.
 
-**Volgende — schone lokale demo + verificatie, dan de volgende fase.**
-5.3c-ii is KLAAR (Schema live + macro-fase-fix). Direct daarop:
-- **Lokale seed aanvullen** voor een schone demo: `settings.doel` + `settings.lthr` (+ `weekplans` voor de
-  doelweek) → dan op /dev verifiëren dat de context-regel ("· null" weg) + de blok-bpm ("0-0" weg) nu
-  correct zijn (**debt (o)**). Optioneel: focus-prettify (bucket→NL via `ZONE_META`).
+**Volgende — Daan kiest bij chat-start.** De Schema-demo is leak-vrij (seed + prettify) en telefoon-geverifieerd.
+Twee hoofdopties:
+- (i) **fase-prettify** ("Build" → NL) via engine-copy óf een discreet `macroFase`-veld — gelokaliseerd op
+  `planner.ts:623` (reden) + `:1079` (workout-naam); NIET UI-only (zie **debt (p)**).
+- (ii) **EIND-AUDIT** starten: read-only kritische review van alle geporte engine-functies → findings-doc dat
+  Daan reviewt vóór cutover. De parallel-run "produceert Cadans dezelfde week als GAS?" is de leidende
+  validatie — elke bewuste divergentie = **debt (n)**.
 - **Trainingen** vergt eerst duidelijkheid of er een workouts-route/-bron is.
 - Screen-free: `eventCtx` (debt (n)). Met-UI: day-overrides/freeze (debt (n)).
-- **EIND-AUDIT:** read-only kritische review van alle geporte functies (engine + client-pipeline)
-  → findings-doc dat Daan reviewt vóór cutover. De parallel-run "produceert Cadans dezelfde week
-  als GAS?" is de leidende validatie — daarom is elke bewuste divergentie (debt (n)) gelogd.
 
 **Fase 4 — WORKER-ROUTES (Hono) — KLAAR.** Getypeerde Hono-app
 (`new Hono<{ Bindings: IntervalsEnv }>()`) met `app.onError` + `app.notFound`
@@ -509,11 +524,18 @@ Open schulden die bewust naar een latere fase zijn geschoven:
   **Gecorrigeerd (5.3c-ii):** de in `d8492b7` als "debt n / naamlek" gevlagde "[object Object]" was
   GÉÉN engine-residu — het was de apps/web `computeMacroPhase`-object-fallback in `proposal.ts` (moest
   `.fase`), gefixt in `34d10fe` + regressie-getest. Geen engine-debt.
-- **(o) 5.3c-ii live-Schema-cosmetica — lokale-seed-gaten + focus-prettify (NIEUW, geen code-bug).**
-  Op de live /dev-Schema met de kale lokale seed: (1) de context-regel toont "· null" want
-  `settings.doel`=NULL; (2) de blok-subtitel toont "0-0 bpm" want `settings.lthr`=NULL (de watts kloppen,
-  FTP 280); (3) de rauwe focus-bucket "low"/"high" verschijnt als workout-ondertitel — engine-emit
-  (`planner.ts` `renderVariant_` `focus: variant.zone`), optionele UI-prettify via `ZONE_META` (bucket→NL).
-  (1)+(2) lossen op door de lokale seed aan te vullen (`doel` + `lthr` + `weekplans`) — GEEN code-fix. De
-  `EMPTY_SETTINGS`-fallback in `loadSchemaWeek` verzacht een verse user maar raakt de users-bootstrap-debt
-  (kruisverwijzing **(m)**).
+- **(o) 5.3c-ii live-Schema-cosmetica — OPGELOST (seed + focus-prettify).** De drie leaks op de live
+  /dev-Schema zijn weg: (1) ~~"· null"~~ → `settings.doel='Ardennen-trip'` geseed; (2) ~~"0-0 bpm"~~ →
+  `settings.lthr=178` geseed (watts klopten al, FTP 280); (3) ~~rauwe focus-bucket "low"/"high"/"anaerobic"~~
+  → geprettify't via `focusLabel` (`apps/web/src/lib/schema.ts`, commit `c63d217`) naar Duur/Drempel/VO2max,
+  proza-focus onveranderd. Telefoon-geverifieerd. Seed = LOKAAL (miniflare, zie seed-recipe), NIET in
+  repo/remote. De `EMPTY_SETTINGS`-fallback in `loadSchemaWeek` verzacht een verse user maar raakt de
+  users-bootstrap-debt (kruisverwijzing **(m)**).
+- **(p) Fase-token nog Engels ("Build") — engine-copy, NIEUW (5.3c-ii nazorg).** De macro-fase wordt
+  INGEBAKKEN in engine-strings: `packages/engine/src/planner.ts:623` (reden, "… — fase <macroFase>") én
+  `:1079` (workout-naam, bv. "Z2 progressief (Build, ingekort)"). Er is GEEN discreet `macroFase`-veld op
+  `ProposalDay`/`ProposalWeek`/`SchemaDay`. NL-prettify van de fase kan dus NIET UI-only (anders dan de
+  focus, debt (o)): vereist een engine-copy-wijziging óf een discreet fase-veld dat de UI apart labelt.
+- **(q) Engine-bpm-quirk in over-under-sets (low prio) — NIEUW (5.3c-ii nazorg).** De
+  "Herstel · Easy tussen de sets"-blokken erven de set-drempel-HR (bv. 157-178 bij `lthr`=178) i.p.v. een
+  lage herstel-HR. Visueel bevestigd op de telefoon. Engine-emit (geen UI-fix); parkeren tot de eind-audit.
