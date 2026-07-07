@@ -13,3 +13,14 @@ export function makeDb(d1: D1Database) {
 }
 
 export type Db = ReturnType<typeof makeDb>;
+
+/**
+ * Idempotently ensure the single v1 user row (CURRENT_USER_ID) exists. The schema
+ * is multi-user-ready (FK user_id on every table) but no route ever inserts into
+ * `users`, so a freshly-migrated D1 has no row to FK against — the first mutating
+ * write would orphan its rows. INSERT OR IGNORE (onConflictDoNothing) makes this a
+ * no-op once the row exists; only `id` is required (all other columns nullable).
+ */
+export async function ensureUser(db: Db, userId: number): Promise<void> {
+  await db.insert(schema.users).values({ id: userId }).onConflictDoNothing();
+}
