@@ -9,6 +9,7 @@ import {
 import { Card, Overline } from "../ui";
 import { CoachReadinessBanner } from "./CoachReadinessBanner";
 import { DayStrip } from "./DayStrip";
+import { DoneDetail } from "./DoneDetail";
 import { PeriodTimeline } from "./PeriodTimeline";
 import { WeekLoad } from "./WeekLoad";
 import { WorkoutDetail } from "./WorkoutDetail";
@@ -104,7 +105,9 @@ export function SchemaView({
             </div>
           )}
 
-          {day.sessions.length === 0 ? (
+          {day.done ? (
+            <DoneDetail done={day.done} />
+          ) : day.sessions.length === 0 ? (
             <div
               style={{
                 fontFamily: "var(--font-sans)",

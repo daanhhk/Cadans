@@ -1,6 +1,11 @@
-import { formatDate, stripTime_ } from "@cadans/engine";
+import {
+  actualZoneMinutes_,
+  formatDate,
+  stripTime_,
+  zoneTimesFromCell_,
+} from "@cadans/engine";
 import type { SettingsInput } from "@cadans/shared";
-import { parseActivityRows } from "./activities";
+import { type ActValuesRow, parseActivityRows } from "./activities";
 import {
   getActivities,
   getCheckin,
@@ -133,6 +138,8 @@ export interface SchemaDay {
   reden: string | null;
   sessions: SchemaSession[];
   doneTss: number;
+  /** De gereden rit van die dag (of null) — voedt de VOLTOOID-kaart (fase 2a). */
+  done: DoneEntry | null;
 }
 
 export interface LoadStat {
@@ -140,10 +147,99 @@ export interface LoadStat {
   gedaan: number;
 }
 
-/** Gedane belasting per datum (uit de activities: TSS idx8 + duur idx3-minuten). */
+/**
+ * Gedane belasting per datum (uit de activities). tss idx8 + duur idx3; type idx1 + naam idx2 +
+ * reële zone-minuten (idx15 via `actualZoneMinutes_`) voeden de VOLTOOID-kaart (fase 2a).
+ */
 export interface DoneEntry {
   tss: number;
   minuten: number;
+  type: string;
+  naam: string;
+  zoneMinutes: Record<ZoneKey, number> | null;
+}
+
+// ── Done-rit-afleidingen (fase 2a): PURE, getest ──────────────────────────
+const DONE_BAR_HOOGTE: Record<ZoneKey, number> = {
+  low: 45, // z2
+  high: 85, // drempel
+  anaerobic: 100, // anaeroob
+};
+
+/** Eén activity-rij → done-object (type idx1, naam idx2, duur idx3, tss idx8, reële zones uit idx15). */
+export function buildDoneEntry(row: ActValuesRow): DoneEntry {
+  const zm = actualZoneMinutes_(
+    { icu_zone_times: zoneTimesFromCell_(row[15]) },
+    null,
+  ) as { low: number; high: number; anaerobic: number } | null;
+  return {
+    tss: Number(row[8]) || 0,
+    minuten: Number(row[3]) || 0,
+    type: String(row[1] ?? ""),
+    naam: String(row[2] ?? ""),
+    zoneMinutes: zm
+      ? { low: zm.low, high: zm.high, anaerobic: zm.anaerobic }
+      : null,
+  };
+}
+
+/** Aggregeer twee done-objecten van dezelfde dag: som tss/min/zones, houd naam/type van de langste. */
+function mergeDone(a: DoneEntry, b: DoneEntry): DoneEntry {
+  const primary = b.minuten > a.minuten ? b : a;
+  const zoneMinutes =
+    a.zoneMinutes || b.zoneMinutes
+      ? {
+          low: (a.zoneMinutes?.low ?? 0) + (b.zoneMinutes?.low ?? 0),
+          high: (a.zoneMinutes?.high ?? 0) + (b.zoneMinutes?.high ?? 0),
+          anaerobic:
+            (a.zoneMinutes?.anaerobic ?? 0) + (b.zoneMinutes?.anaerobic ?? 0),
+        }
+      : null;
+  return {
+    tss: a.tss + b.tss,
+    minuten: a.minuten + b.minuten,
+    type: primary.type,
+    naam: primary.naam,
+    zoneMinutes,
+  };
+}
+
+/** De aanwezige reële zone-buckets (low→high→anaerobic), voor de ZoneLegend. */
+export function doneZones(zm: Record<ZoneKey, number> | null): ZoneKey[] {
+  if (!zm) return [];
+  return ZONE_ORDER.filter((z) => (zm[z] ?? 0) > 0);
+}
+
+/** 3-bucket reële zone-minuten → SessionBlok[] voor de done-ZoneBar (low→high→anaerobic). */
+export function doneZoneBlokken(
+  zm: Record<ZoneKey, number> | null,
+): SessionBlok[] {
+  if (!zm) return [];
+  return doneZones(zm).map((z) => ({
+    minuten: zm[z],
+    hoogtePct: DONE_BAR_HOOGTE[z],
+    color: ZONE_META[z].color,
+  }));
+}
+
+/** NL-type-label van een gereden rit = de dominante reële zone (Duur/Drempel/VO2max); zonder zones → rauwe type of "Rit". */
+export function doneLabel(done: DoneEntry): string {
+  const zm = done.zoneMinutes;
+  if (zm) {
+    let best: ZoneKey | null = null;
+    for (const z of ZONE_ORDER) {
+      if ((zm[z] ?? 0) > 0 && (best == null || zm[z] > zm[best])) best = z;
+    }
+    if (best) return ZONE_META[best].label;
+  }
+  return done.type || "Rit";
+}
+
+/** Duur "1u01"-stijl (GAS cfDur_) — spiegelt DoelProjectie.tsx:62. */
+export function formatDuurU(min: number): string {
+  const h = Math.floor(min / 60);
+  const m = Math.round(min % 60);
+  return m > 0 ? `${h}u${String(m).padStart(2, "0")}` : `${h}u`;
 }
 
 export interface SchemaView {
@@ -242,6 +338,7 @@ export function deriveSchemaView(
       reden: d.reden,
       sessions,
       doneTss,
+      done: done ?? null,
     };
   });
 
@@ -329,10 +426,9 @@ export async function loadSchemaWeek(): Promise<{
     if (!(d instanceof Date)) continue;
     const key = formatDate(stripTime_(d), "yyyy-MM-dd");
     if (!weekDates.has(key)) continue;
-    const e = doneByDate[key] ?? { tss: 0, minuten: 0 };
-    e.tss += Number(row[8]) || 0; // idx8 = TSS
-    e.minuten += Number(row[3]) || 0; // idx3 = Duur (min)
-    doneByDate[key] = e;
+    const de = buildDoneEntry(row);
+    const prev = doneByDate[key];
+    doneByDate[key] = prev ? mergeDone(prev, de) : de;
   }
 
   const readiness = deriveReadiness(wellness, checkin);

@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
+import type { ActValuesRow } from "./activities";
 import {
   blokFromEngine,
+  buildDoneEntry,
+  doneLabel,
   focusLabel,
+  formatDuurU,
   MACRO_FASE_NL,
   macroFaseLabel,
   stripFaseSuffix,
@@ -94,5 +98,75 @@ describe("blokFromEngine", () => {
   });
   it("behoudt de minuten", () => {
     expect(blokFromEngine({ minuten: 12.5, zone: "z2" })?.minuten).toBe(12.5);
+  });
+});
+
+describe("buildDoneEntry (fase 2a done-object)", () => {
+  const doneRow = (o: {
+    type?: string;
+    naam?: string;
+    duur?: number;
+    tss?: number;
+    zt?: string;
+  }): ActValuesRow => {
+    const r: ActValuesRow = new Array(17).fill("");
+    r[0] = new Date(2026, 6, 6);
+    r[1] = o.type ?? "";
+    r[2] = o.naam ?? "";
+    r[3] = o.duur ?? 0;
+    r[8] = o.tss ?? 0;
+    r[15] = o.zt ?? "";
+    return r;
+  };
+
+  it("extraheert type/naam/duur/tss + reële zones (idx15)", () => {
+    const d = buildDoneEntry(
+      doneRow({
+        type: "Ride",
+        naam: "Ochtendrit",
+        duur: 90,
+        tss: 75,
+        zt: JSON.stringify([
+          { id: "Z2", secs: 3600 },
+          { id: "Z4", secs: 600 },
+        ]),
+      }),
+    );
+    expect(d.type).toBe("Ride");
+    expect(d.naam).toBe("Ochtendrit");
+    expect(d.minuten).toBe(90);
+    expect(d.tss).toBe(75);
+    expect(d.zoneMinutes).toEqual({ low: 60, high: 10, anaerobic: 0 });
+  });
+
+  it("ontbrekende zone-data → zoneMinutes null (naam/duur blijven)", () => {
+    const d = buildDoneEntry(doneRow({ naam: "Rit", duur: 60, tss: 40 }));
+    expect(d.zoneMinutes).toBeNull();
+    expect(d.minuten).toBe(60);
+    expect(d.naam).toBe("Rit");
+  });
+});
+
+describe("doneLabel + formatDuurU", () => {
+  it("doneLabel = dominante reële zone", () => {
+    expect(
+      doneLabel({
+        tss: 0,
+        minuten: 0,
+        type: "Ride",
+        naam: "",
+        zoneMinutes: { low: 20, high: 40, anaerobic: 0 },
+      }),
+    ).toBe(ZONE_META.high.label); // Drempel
+  });
+  it("doneLabel zonder zones → rauwe type of 'Rit'", () => {
+    const base = { tss: 0, minuten: 0, naam: "", zoneMinutes: null };
+    expect(doneLabel({ ...base, type: "Ride" })).toBe("Ride");
+    expect(doneLabel({ ...base, type: "" })).toBe("Rit");
+  });
+  it("formatDuurU: 61→1u01, 90→1u30, 60→1u", () => {
+    expect(formatDuurU(61)).toBe("1u01");
+    expect(formatDuurU(90)).toBe("1u30");
+    expect(formatDuurU(60)).toBe("1u");
   });
 });
