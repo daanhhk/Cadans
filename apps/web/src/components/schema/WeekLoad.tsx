@@ -62,12 +62,14 @@ export function WeekLoad({
   dagen,
   onRegen,
   regenerating = false,
+  syncNote = null,
 }: {
   tss: LoadStat;
   minuten: LoadStat;
   dagen: LoadStat;
   onRegen: () => void;
   regenerating?: boolean;
+  syncNote?: { text: string; error: boolean } | null;
 }) {
   const pct =
     tss.gepland > 0 ? Math.round((tss.gedaan / tss.gepland) * 100) : 0;
@@ -125,6 +127,18 @@ export function WeekLoad({
           </svg>
         </button>
       </div>
+      {syncNote && (
+        <div
+          style={{
+            marginTop: "var(--s-2)",
+            fontFamily: "var(--font-sans)",
+            fontSize: "var(--fs-caption)",
+            color: syncNote.error ? "var(--danger)" : "var(--text-secondary)",
+          }}
+        >
+          {syncNote.text}
+        </div>
+      )}
       <div style={{ display: "flex", marginTop: "var(--s-3)" }}>
         <Stat
           first

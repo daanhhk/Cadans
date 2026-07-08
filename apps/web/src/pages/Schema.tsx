@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { SchemaView } from "../components/schema/SchemaView";
+import { postSyncActivities, postSyncWellness } from "../lib/api";
 import type { ProposalWeek } from "../lib/proposal";
 import type { ReadinessResult } from "../lib/readiness";
 import { type DoneEntry, loadSchemaWeek } from "../lib/schema";
@@ -21,6 +22,11 @@ export function Schema() {
   const [error, setError] = useState<string | null>(null);
   const [regenerating, setRegenerating] = useState(false);
   const [nonce, setNonce] = useState(0);
+  const [syncing, setSyncing] = useState(false);
+  const [syncNote, setSyncNote] = useState<{
+    text: string;
+    error: boolean;
+  } | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -44,6 +50,43 @@ export function Schema() {
       alive = false;
     };
   }, [nonce]);
+
+  // "Werk week bij" = echte sync (activities + wellness, parallel) → daarna de week
+  // her-berekenen met de verse D1-data. Icoon disabled tijdens de run (geen dubbel-
+  // sync); minstens één geslaagde pull → wél her-deriveren.
+  async function handleSync() {
+    if (syncing) return;
+    setSyncing(true);
+    setSyncNote({ text: "Synchroniseren…", error: false });
+    const [actR, wellR] = await Promise.allSettled([
+      postSyncActivities(),
+      postSyncWellness(),
+    ]);
+    const reason = (r: unknown): string =>
+      r instanceof Error ? r.message : String(r);
+    const fails: string[] = [];
+    if (actR.status === "rejected")
+      fails.push(`activiteiten (${reason(actR.reason)})`);
+    if (wellR.status === "rejected")
+      fails.push(`wellness (${reason(wellR.reason)})`);
+    const anyOk = actR.status === "fulfilled" || wellR.status === "fulfilled";
+    if (fails.length === 0) {
+      const n = actR.status === "fulfilled" ? actR.value.upserted : 0;
+      setSyncNote({ text: `Bijgewerkt · ${n} activiteiten`, error: false });
+    } else if (anyOk) {
+      setSyncNote({
+        text: `Deels bijgewerkt — mislukt: ${fails.join(", ")}`,
+        error: true,
+      });
+    } else {
+      setSyncNote({
+        text: `Synchroniseren mislukt: ${fails.join(", ")}`,
+        error: true,
+      });
+    }
+    setSyncing(false);
+    if (anyOk) setNonce((n) => n + 1);
+  }
 
   if (loading) {
     return (
@@ -112,8 +155,9 @@ export function Schema() {
       readiness={data.readiness}
       doneByDate={data.doneByDate}
       todayISO={data.todayISO}
-      onRegen={() => setNonce((n) => n + 1)}
-      regenerating={regenerating}
+      onRegen={handleSync}
+      regenerating={syncing || regenerating}
+      syncNote={syncNote}
     />
   );
 }

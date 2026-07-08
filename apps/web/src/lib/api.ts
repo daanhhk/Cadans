@@ -123,3 +123,29 @@ export async function putCheckin(
     throw new Error(errMessage(parsed, resp.status));
   }
 }
+
+/** Sync-respons van de intervals.icu-pull-routes. */
+export interface SyncResult {
+  fetched: number;
+  upserted: number;
+}
+
+async function postSync(path: string): Promise<SyncResult> {
+  const resp = await fetch(path, {
+    method: "POST",
+    headers: { Accept: "application/json" },
+  });
+  const body = await parseBody(resp);
+  if (!resp.ok) throw new Error(errMessage(body, resp.status));
+  return body as SyncResult;
+}
+
+/** POST /api/sync/activities — pull recente ritten uit intervals.icu (engine-default venster). */
+export function postSyncActivities(): Promise<SyncResult> {
+  return postSync("/api/sync/activities");
+}
+
+/** POST /api/sync/wellness — pull recente wellness uit intervals.icu (engine-default venster). */
+export function postSyncWellness(): Promise<SyncResult> {
+  return postSync("/api/sync/wellness");
+}

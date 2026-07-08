@@ -30,6 +30,7 @@ export function SchemaView({
   todayISO,
   onRegen,
   regenerating,
+  syncNote,
 }: {
   proposalWeek: ProposalWeek;
   readiness: ReadinessResult;
@@ -37,6 +38,7 @@ export function SchemaView({
   todayISO: string;
   onRegen: () => void;
   regenerating: boolean;
+  syncNote: { text: string; error: boolean } | null;
 }) {
   const view = useMemo(
     () => deriveSchemaView(proposalWeek, doneByDate, todayISO),
@@ -68,6 +70,7 @@ export function SchemaView({
         dagen={view.dagen}
         onRegen={onRegen}
         regenerating={regenerating}
+        syncNote={syncNote}
       />
 
       <DayStrip
