@@ -11,7 +11,20 @@ live tot cutover.
 
 ## Stand
 
-**SCHEMA + NIVEAU + VORM-TAB AFGEROND (GAS-niveau) — laatste code-commit `f2d2fa3`, CI groen.**
+**EERSTE CLOUDFLARE-DEPLOY LIVE (post-deploy).** Worker `cadans-api` draait op
+**https://cadans-api.dtkorteweg.workers.dev** (Version ID `bde322ec-017b-4ef2-81ba-2c03812cb18a`);
+assets-binding + whole-origin basic-auth actief (username `daan` hardcoded in `src/index.ts`; auth
+alleen aan als het secret staat). Auth-afdwinging objectief bevestigd: `GET /api/health` én `GET /`
+zónder/foute creds → **401 + `WWW-Authenticate: Basic realm="Secure Area"`**. Remote D1 `cadans`
+gemigreerd (`0000` + `0001` → **12 tabellen** live, + interne D1-tabellen). Secrets via het
+Cloudflare-dashboard gezet: `BASIC_AUTH_PASSWORD`, `INTERVALS_API_KEY`, `INTERVALS_ATHLETE_ID`
+(namen only, nooit waarden). Code deze chat (workers/api): ensure-user middleware = commit
+`2cc3f23` (idempotente `INSERT OR IGNORE users(id=1)` op non-GET); whole-origin basic-auth = commit
+`d96867c` (`run_worker_first` true + conditionele `basicAuth` + `ASSETS.fetch`-fallback +
+`/api`-404-guard); plan-doc `docs/DEPLOY-RECON.md` = commit `87df348`. **Remote D1 is nu LEEG → de
+app toont "—" tot een sync + een settings-PUT gedaan zijn** (zie FOCUS onder Volgende fase).
+
+**SCHEMA + NIVEAU + VORM-TAB AFGEROND (GAS-niveau) — laatste UI-code-commit `f2d2fa3`, CI groen.**
 Fase 0-4 klaar. Fase 5 (de PWA, `apps/web`) loopt; **Schema, Niveau én Vorm zijn nu op GAS-
 conformiteit afgewerkt** (telefoon-geverifieerd). **Alle hoofd-tabs (Schema/Niveau/Vorm +
 Status/Today) staan op niveau.** Alles apps/web — `packages/engine` ONGEWIJZIGD.
@@ -23,7 +36,8 @@ verdwaalde tilde weg; ab8ac1a's perl-replace nam 10-spatie-inspringing aan terwi
 heeft → vervanging sloeg stil over).
 
 **Gate-vloeren (nooit onder; bron van waarheid — NOOIT hardcoden in een prompt):**
-engine-selftest `toBe(957)` · vitest-totaal **150**.
+engine-selftest `toBe(957)` · vitest-totaal **156** (was 150; +6 uit de deploy-commits `2cc3f23`
+ensure-user +2 en `d96867c` basic-auth +4).
 
 **Fundament:** IBM Plex Sans (400/500/600) + Mono (500/600), self-hosted via `@fontsource`,
 offline-precached (`main.tsx`). Het UI-kader ligt vast in **`apps/web/docs/UI-KADER.md`**:
@@ -98,11 +112,14 @@ consumeren UITSLUITEND `--s-*/--fs-*/--lh-*/--r-*` (kleur was al gedisciplineerd
   (m), engine-`any`-cast in apps/web (a)/(l), `/api/activities` server-side typing (k).
 
 ### Volgende fase (grootste gap eerst)
-- **EERSTE DEPLOY — recon-first.** Read-only recon eerst; niets muteren. Scope: **remote-D1-drift** migreren
-  (forward-only, drizzle-kit; debt (g)), **users-bootstrap-route** toevoegen (`PUT /api/settings` vereist een
-  bestaande `users`-rij, geen route seedt `users`; debt (m)), **Worker-secret** zetten (`wrangler secret put`,
-  bv. `INTERVALS_API_KEY`), en de **no-auth-exposure** afdekken. Ruimt de twee geparkeerde deploy-debts op
-  (remote-D1-drift + users-bootstrap).
+- **EERSTE DEPLOY — GEDAAN.** Worker + assets + remote D1 live achter whole-origin basic-auth (zie Stand).
+  De twee geparkeerde deploy-debts zijn GESLOTEN: remote-D1-drift (g) + users-bootstrap (m). No-auth-exposure
+  afgedekt. RESTEREND deploy-debt: (d) TZ-UTC op de sync-routes = OPEN, v1-geaccepteerd (aparte chat).
+- **FOCUS — de app bruikbaar maken (remote D1 is LEEG → toont "—"):**
+  - **(i) Sync-trigger-UI:** het ververs-icoon op de Schema-tab is NIET werkend gekoppeld aan
+    `POST /api/sync/{activities,wellness,power-curve}` (klik doet niks) → wiren + loading/feedback.
+  - **(ii) Settings-invoer-UI ontbreekt:** geen scherm om FTP + gewicht (+ de volledige 12
+    `EngineSettings`-velden) te zetten via `PUT /api/settings` (FULL-REPLACE, geen partial).
 - **Op de horizon:** Garmin-workout-push (externe device-integratie, apart traject); beschikbaarheid/
   weekplanning-bewerken (Schema/instellingen); en de read-only **eind-audit** van alle geporte engine-fns
   (sluitstuk vóór cutover — adresseert de engine/parity-debts hierboven).
@@ -203,7 +220,9 @@ Open schulden die bewust naar een latere fase zijn geschoven:
   SERVER-side weekgen-deploy: runtime-TZ pinnen of `now` expliciet doorgeven. **Client-side (Fase 1b):** `parseLocalDate`
   (`apps/web/src/lib/dates.ts`) is nu de ENE bron voor ISO→lokale-Date, gedeeld door
   `parseActivityRows` + de readiness-converter (nooit UTC) → een stukje client-UTC-risico
-  gedicht; de server-side sync-routes blijven de openstaande UTC-blocker.
+  gedicht; de server-side sync-routes blijven de openstaande UTC-blocker. **Post-deploy (v1) BEWUST
+  GEACCEPTEERD:** de UTC-sync-buckets (`wellness.ts:98`, `intervals.ts:89`, `powercurve.ts:94`+`124`)
+  zijn een bekende near-midnight-NL-misbucket — niet-blokkerend; fix in een aparte vervolgchat.
 - **(e) D1-TEXT-datum → Date-mapping — GEDEELTELIJK OPGELOST (Fase 3a).** De
   conversielaag `workers/api/src/db/dates.ts` (`fromD1`/`toD1Date`/`toD1DateTime`)
   is geïmplementeerd + getest (incl. DST-grenzen) en wordt door de repo-laag
@@ -217,10 +236,9 @@ Open schulden die bewust naar een latere fase zijn geschoven:
   `aa302c17-915b-44cb-8823-89c416974f50` staat in `workers/api/wrangler.jsonc`.
   Nog niet gemigreerd/geseed op remote (dat is een deploy-stap, Fase 4+); de
   lokale --local/miniflare-flow gebruikt de binding-naam, niet dit id.
-- **(g) Remote-D1-migratie-drift — NIEUW (Fase 3c).** `power_curve_cache`
-  (migratie `0001_magical_lady_mastermind.sql`) is LOKAAL geapplied, remote NIET.
-  Pre-deploy vereist een expliciete remote migratie-apply
-  (`wrangler d1 migrations apply --remote`). Bewuste drift, geen fout.
+- **(g) Remote-D1-migratie-drift — GESLOTEN (eerste deploy).** `0000` + `0001` zijn nu remote
+  toegepast (`wrangler d1 migrations apply cadans --remote`); `migrations list --remote` = niets
+  pending; de 12 in de migraties gedefinieerde tabellen zijn remote geverifieerd aanwezig. Geen drift meer.
 - **(h) Wellness→readiness-afleiding — AFGEROND (Fase 1a port + Fase 1b wiring).**
   `getReadinessScore_` (engine, `readiness.ts`) verwacht AFGELEIDE input:
   `fs.{form,ctl,atl,ramp}` + `wellness.{hrvDeficit,hrvRecent,sleepAvg3,sleepLastNight}`.
@@ -256,13 +274,11 @@ Open schulden die bewust naar een latere fase zijn geschoven:
   Fase 1b `deriveReadiness` → lokaal `ReadinessResult`); een engine-shape-drift wordt
   daardoor NIET door TS in apps/web gevangen. Echte fix = de engine-returns typeren (staat
   al onder debt (a) "future typing"; raakt meerdere consumers). BLIJFT OPEN.
-- **(m) PUT /api/settings + sync vereisen een bestaande `users`-rij — NIEUW (data-load).**
-  `settings.user_id` / `activities.user_id` / `wellness.user_id` → FK naar `users.id`,
-  maar GEEN route seedt `users` (alleen de vitest-`beforeEach`). Lokaal nu handmatig
-  geseed (`users(1,'daan@example.com')` via `wrangler d1 execute cadans --local`) →
-  zónder die rij geeft de eerste PUT/sync een **500** (FK-schending). Een echte
-  remote-deploy heeft **user-bootstrap** nodig (migratie-seed of een ensure-user in de
-  settings-handler). Blokkeert v1 NIET (`CURRENT_USER_ID = 1` hardcoded), wél de eerste deploy.
+- **(m) users-bootstrap — GESLOTEN (commit `2cc3f23`).** `ensureUser(db, userId)` = idempotente
+  `INSERT OR IGNORE users(id=1)` (`src/db/client.ts`), gedraaid door een non-GET Hono-middleware in
+  `src/index.ts` → elke muterende write self-heal't de FK-rij (dekt de 3 PUT + 3 POST + toekomstige
+  muterende routes). Getest: `test/routes.ensure-user.test.ts` (PUT tegen lege D1 → `users(1)` +
+  settings-rij bestaan). Geen losse seed-stap meer nodig; `CURRENT_USER_ID = 1` blijft hardcoded.
 - **(n) Weekgen-port: open residuen + bewuste parity-divergenties — NIEUW (Fase 5.3).**
   NIEUW open: (1) `eventCtx=undefined` in `buildWeekProposal` (`eventContextFrom_` niet geport)
   → workouts niet event-getailord; screen-free porteerbaar. (2) day-overrides/freeze niet geport
