@@ -11,6 +11,33 @@ live tot cutover.
 
 ## Stand
 
+**ISSUE 2 (dagkaart-VOLTOOID) Fase 2a+2b + DATA-OPSCHOON Fase 1 — DONE + LIVE (deze reeks chats).**
+- **2a rit-weergave** (`44ecb65` → Version `3246abc6`): `DoneEntry` uitgebreid (type/naam/zoneMinutes); een
+  verleden/vandaag-dag met een gereden rit toont de VOLTOOID-kaart (naam + NL-type-label uit de dominante
+  reële zone + duur + zone-bars) i.p.v. "Rustdag".
+- **2b-1 horizontale zone-bars** (`c328de5` → Version `c2beed72`): de verticale `ZoneBar` + pill-`ZoneLegend`
+  vervangen door één `ZoneBars` (per zone ALTIJD Z1-Z5, horizontale balk + dot + NL-label + minuten),
+  design-geankerd op `coach-feedback.jsx` ZoneCompareRow. Oude componenten verwijderd.
+- **2b-2 gepland-vs-gedaan-kaart** (`a184859` → **Version `b3781946`**, laatste deploy): `coachFeedback_`
+  (engine, PUUR aangeroepen) → state/score/type-labels; nieuwe `DoneCompareCard`/`ZoneCompare`/`ZonePill`
+  (badge-pill + titel + AlignChip + %-balk + gepland|gedaan-tabel + compare-bars). Twee dispatch-fixes:
+  same-day-flip (voltooide vandaag → done-kaart; nieuwe `SchemaDay.isToday` houdt de dag-strip-markering) +
+  no-plan-fallback (done zonder plan → gereduceerde kaart). Geplande workout voor done-dagen gereconstrueerd
+  via `proposal.ts` `plannedForDone`.
+- **BEKENDE OPEN BUG (2b-2):** op een dag met ZOWEL een geplande sessie ALS een afwijkende gereden rit (bv.
+  WO 8: gepland Duurrit, gedaan Drempel) rendert de VOLLE vergelijkingskaart NIET — toont titel + geplande
+  sessie + enkele zone-bars i.p.v. chip/%-balk/gepland|gedaan-tabel/compare-bars. Te fixen in de design-lijn
+  (fase-lijst #1/#2 hieronder).
+- **DATA-OPSCHOON Fase 1 (D1-data, GEEN repo/code):** REMOTE D1 (`cadans`, `aa302c17…`) `settings.doel` user 1
+  **VO2max → 'FTP'** (`doel_start`/`doel_duur`/`ftp` onveranderd) — verhelpt de girona-fallback in Niveau.
+  LOKALE dev-D1: test-event-rij "Ardennen-trip" (id 1) VERWIJDERD — verhelpt de event-fasekaart in Schema.
+  GEEN nieuw event geseed (het echte A-event **Amstel Gold Race 2027-04-18** komt later via de events-editor +
+  activeringsdrempel; nu bewust niet).
+- **Correctie op eerdere aanname:** de "Ardennen-trip"-vervuiling zat UITSLUITEND op de LOKALE dev-D1; de
+  REMOTE was al leeg. "Girona" is een 1-op-1 uit GAS geporte constant (`niveau.ts:573`,
+  `GOAL_PROFILES_.ftp`/`girona`), getriggerd door een niet-FTP-doel — GEEN CC-verzinsel. Provenance-audit:
+  `docs/DATA-PROVENANCE-SCHEMA.md`.
+
 **ISSUE 1 (dagtype-model) + PENDEL-DUUR — DONE + LIVE (deze sessie).**
 - **Dagtype-model** — de Weekplanner vraagt geen dagtype meer: per dag Train? + minuten-**slider**
   (30-360, step 15) + **Pendel?-toggle**; dagtype wordt client-side AFGELEID (`deriveDagtype`: pendel >
@@ -67,8 +94,9 @@ verdwaalde tilde weg; ab8ac1a's perl-replace nam 10-spatie-inspringing aan terwi
 heeft → vervanging sloeg stil over).
 
 **Gate-vloeren (nooit onder; bron van waarheid — NOOIT hardcoden in een prompt):**
-engine-selftest `toBe(957)` · vitest-totaal **189** (178 → 182 dagtype `0782b1a` +4 → 185 plannerSignal
-`937c031` +3 → 189 pendel-helper `faed841` +4). CI groen.
+engine-selftest `toBe(957)` (`packages/engine/src/selftest.test.ts:3668`, ongewijzigd) · vitest-totaal
+**208** (gemeten deze close-out; de oude "189" was STALE — fase 2a `44ecb65` → 194, fase 2b-2 `a184859`
++14 → 208). CI groen. Hard floors — niet regresseren.
 
 **Fundament:** IBM Plex Sans (400/500/600) + Mono (500/600), self-hosted via `@fontsource`,
 offline-precached (`main.tsx`). Het UI-kader ligt vast in **`apps/web/docs/UI-KADER.md`**:
@@ -77,7 +105,7 @@ consumeren UITSLUITEND `--s-*/--fs-*/--lh-*/--r-*` (kleur was al gedisciplineerd
 
 **Schema-tab — sectie-volgorde: PeriodTimeline → WeekLoad → DayStrip → dag-detail.**
 - **PeriodTimeline** (periodisering-kaart): overline + kop "<NL-fase> · nog X wkn tot
-  <eventNaam>" (echte naam, bv. "Ardennen-trip"), fase-staven [Basis/Build/Peak] met de huidige
+  <eventNaam>" (uit de events-tabel op D1), fase-staven [Basis/Build/Peak] met de huidige
   fase gemarkeerd, Fase-stat + Tot-stat + ModeChip "Doel-gericht". Gethread uit de engine-`macro`
   in `proposal.ts`: `eventNaam`, `wekenTotEvent`, `planModus` (afgeleid).
 - **WeekLoad**: 3 stats (TSS/uren/dagen gepland vs gedaan) + voortgangsbalk met `--accent-grad`.
@@ -152,17 +180,23 @@ consumeren UITSLUITEND `--s-*/--fs-*/--lh-*/--r-*` (kleur was al gedisciplineerd
 - **ISSUE 1 (dagtype-model) — DONE + LIVE** (zie Stand): Pendel?-toggle + client-side afleiding, slider,
   Schema auto-refresh, pendel-duur enkele-reis. Bron-recons `BESCHIKBAARHEID-MOBILE-RECON` +
   `ENGINE-DAGTYPE-BRANCHES-RECON`.
-- **ISSUE 2 (dagkaart-VOLTOOID) — VOLGENDE, grote gefaseerde port.** Bron-spec =
-  `docs/DAGKAART-PENDEL-RECON.md` SECTIE A (gepind op commit `32d7ed7`:
-  https://raw.githubusercontent.com/daanhhk/Cadans/32d7ed7a23ef6bbe3ef005f878c90f933c2bef72/docs/DAGKAART-PENDEL-RECON.md).
-  Een verleden dag met een gereden rit toont nu "Rustdag" — Cadans' `DoneEntry` = enkel `{tss, minuten}`.
-  Het datacontract moet UITGEBREID: done rit-type/naam/duur + zone-gedaan-minuten + planned-vs-done-
-  **alignment** + coach-impact-laag. **Fasering:** (2a) rit-weergave (naam/type/duur + zone-balk uit de
-  activity) → (2b) alignment/zone-vergelijking (state/score) → (2c) coach-impact + adapt-/Garmin-knoppen.
-  Overweeg ook week-navigatie op de Schema-dag-strip (nu current-week-only; de Weekplanner heeft die al).
-- **CHECKPUNT (los, na pendel):** weekdoel-afwijking GAS **254 TSS / 5:45 / 4 dagen** vs Cadans **134 /
-  3:15 / 3 dagen** — waarschijnlijk planning-gerelateerd; verifieer of de pendel-fix + juiste dagtypes het
-  dicht; anders een gerichte recon.
+- **ISSUE 2 (dagkaart-VOLTOOID) — 2a + 2b-1 + 2b-2 DONE + LIVE** (zie Stand-top). Bron-spec =
+  `docs/DAGKAART-PENDEL-RECON.md` SECTIE A + `docs/DATA-PROVENANCE-SCHEMA.md`. RESTEREND: de 2b-2-render-bug,
+  2c + 2d — volgorde in de fase-lijst hieronder.
+
+### Geparkeerde fase-lijst (volgorde volgende chat)
+1. **Design-lijn hervatten:** DAGKAART-DESIGN-DIFF-recon met **GAS als BINDENDE meetlat** (`design/` levert
+   enkel tokens) — GAS `doneDetailHtml_` vs `design/coach-feedback.jsx` vs Cadans-nu — én in dezelfde recon
+   de **2b-2-render-bug** diagnosticeren (waarom rendert de volle kaart niet op een gepland-én-gedaan-dag).
+2. **2b-2-render-fix + 2c** (coach-impact-callout + knoppen), gebouwd tegen GAS.
+3. **Event-activeringsdrempel:** een A-event slaapt tot ~8-12 wkn en neemt pas dán de periodisering over; tot
+   dan draait het gekozen schema (FTP). Recon-first met GAS als meetlat; raakt waarschijnlijk deels de engine
+   → sign-off.
+4. **Events-editor** (schrijfpad + UI): vervangt de handmatige D1-seed; hierna Amstel Gold Race invoeren.
+5. **planModus-port (client):** echte mode-logica i.p.v. hardcoded "Doel-gericht" (`proposal.ts:179`).
+6. **Weekdoel-consistentie:** nu 184 TSS getoond (was wisselend); verifieer stabiliteit bij dag-selecties;
+   gat naar GAS 254 uitzoeken.
+- **2d** (ritdetails-drill-down, extra activity-stats zoals in GAS) blijft na 2c op de rol.
 - **Op de horizon:** Garmin-workout-push (externe device-integratie, apart traject); en de read-only
   **eind-audit** van alle geporte engine-fns (sluitstuk vóór cutover — adresseert de engine/parity-debts
   hierboven). (Beschikbaarheid/weekplanning-bewerken = GEDAAN deze sessie.)
@@ -170,10 +204,15 @@ consumeren UITSLUITEND `--s-*/--fs-*/--lh-*/--r-*` (kleur was al gedisciplineerd
 ### Lokaal (miniflare `--local`, GEEN remote/deploy)
 `settings` via `PUT /api/settings` = ftp 280 / gewicht 75; **244** activities + **366** wellness via
 `POST /api/sync/{activities,wellness}` (cap `days=365`). `users(1)` handmatig geseed (FK; zie debt (m)).
-**Demo-seed-recipe** (leak-vrije Schema-demo; NIET in repo/remote), via `wrangler d1 execute cadans --local`:
-- `UPDATE settings SET doel='Ardennen-trip', lthr=178, doel_start='2026-06-01' WHERE user_id=1;`
-- `INSERT INTO events (user_id, datum, naam, type, prioriteit, afstand_km, hoogtemeters, klim_type, notitie) VALUES (1, '2026-08-23', 'Ardennen-trip', 'trip', 'A', 140, 2000, 'heuvel', NULL);`
-- `planner_days` geseed voor de week 2026-07-06..2026-07-12; een later weergegeven week opnieuw seeden.
+**Demo-seed-recipe — HISTORISCH** (de "Ardennen-trip"-event-seed is in **Fase 1 VERWIJDERD**; zie Stand-top).
+De seed zat UITSLUITEND op de LOKALE miniflare-D1 (nooit remote). NB: `settings.doel` mag ALLEEN een geldige
+`DOEL_OPTIONS`-waarde zijn (FTP/Conditie/Beklimmingen/VO2max/Onderhoud) — een event-naam in `doel` was de oude
+fout (→ girona-fallback in Niveau). Een leak-vrije demo vereist GEEN nep-event meer; het echte A-event komt via
+de events-editor (fase-lijst #4). Resterend lokaal: `settings` (ftp 280 etc.) + activities/wellness + `planner_days`.
+
+**AANDACHTSPUNT — lokale dev-D1 en remote-D1 liepen uit sync** (lokaal: Ardennen-event + doel=FTP; remote: leeg
++ doel=VO2max). NA Fase 1: **beide doel=FTP, beide geen event.** Bij verificatie ALTIJD weten of je LOKAAL
+(`192.168.1.201:5173`) of PRODUCTIE (`cadans-api.dtkorteweg.workers.dev`) bekijkt — ze lezen verschillende D1's.
 
 **Twee geparkeerde fundament-keuzes — BESLOTEN (v1):** (1) GEEN charting-lib (hand-rolled SVG). (2) pure
 engine CLIENT-SIDE (TZ-veilig want de browser = Amsterdam; omzeilt de UTC-worker-blocker, debt (d)).
