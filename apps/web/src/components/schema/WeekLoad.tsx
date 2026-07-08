@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import type { LoadStat } from "../../lib/schema";
 import { Card, Num, Overline } from "../ui";
 
@@ -83,49 +84,93 @@ export function WeekLoad({
         }}
       >
         <Overline>Deze week · gepland vs gedaan</Overline>
-        <button
-          type="button"
-          onClick={onRegen}
-          disabled={regenerating}
-          aria-label="Werk week bij"
-          title="Werk week bij"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: 32, // vaste icoonknop (grafisch)
-            height: 32,
-            padding: 0,
-            borderRadius: "var(--r-pill)",
-            border: "1px solid var(--border-strong)",
-            background: "var(--bg-elevated)",
-            cursor: regenerating ? "default" : "pointer",
-            opacity: regenerating ? 0.5 : 1,
-            color: "var(--accent)",
-          }}
+        <div
+          style={{ display: "flex", alignItems: "center", gap: "var(--s-2)" }}
         >
-          <svg
-            width="15"
-            height="15"
-            viewBox="0 0 14 14"
-            fill="none"
-            aria-hidden="true"
+          <Link
+            to="/weekplanner"
+            aria-label="Weekplanner"
+            title="Beschikbaarheid plannen"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 32,
+              height: 32,
+              borderRadius: "var(--r-pill)",
+              border: "1px solid var(--border-strong)",
+              background: "var(--bg-elevated)",
+              color: "var(--accent)",
+            }}
           >
-            <path
-              d="M12 7a5 5 0 11-1.5-3.6"
-              stroke="var(--accent)"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-            />
-            <path
-              d="M12 1.5V4.2H9.3"
-              stroke="var(--accent)"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 16 16"
+              fill="none"
+              aria-hidden="true"
+            >
+              <rect
+                x="2.5"
+                y="3.5"
+                width="11"
+                height="10"
+                rx="2"
+                stroke="var(--accent)"
+                strokeWidth="1.4"
+              />
+              <path
+                d="M2.5 6.5h11M5.5 2v3M10.5 2v3"
+                stroke="var(--accent)"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+              />
+            </svg>
+          </Link>
+          <button
+            type="button"
+            onClick={onRegen}
+            disabled={regenerating}
+            aria-label="Werk week bij"
+            title="Werk week bij"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 32, // vaste icoonknop (grafisch)
+              height: 32,
+              padding: 0,
+              borderRadius: "var(--r-pill)",
+              border: "1px solid var(--border-strong)",
+              background: "var(--bg-elevated)",
+              cursor: regenerating ? "default" : "pointer",
+              opacity: regenerating ? 0.5 : 1,
+              color: "var(--accent)",
+            }}
+          >
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 14 14"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M12 7a5 5 0 11-1.5-3.6"
+                stroke="var(--accent)"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+              <path
+                d="M12 1.5V4.2H9.3"
+                stroke="var(--accent)"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+        </div>
       </div>
       {syncNote && (
         <div

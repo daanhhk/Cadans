@@ -14,6 +14,7 @@ import type {
   CheckinInput,
   EventItem,
   PlannerDay,
+  PlannerDayInput,
   RpeEntry,
   SettingsInput,
   WellnessInput,
@@ -328,6 +329,39 @@ export async function readPlannerDays(
     voorgesteldType: r.voorgesteldType,
     gedaan: r.gedaan === 1,
   }));
+}
+
+/**
+ * FULL-REPLACE de beschikbaarheid van een week: upsert per dag op (userId, datum)
+ * → idempotent, nooit dupliceren (de 7 datums zijn vast per week). Persisteert ALLEEN
+ * de invoervelden; `voorgesteldType` blijft null (generator-output, client herberekent
+ * live) en `gedaan` = 0. Een niet-train-dag → minuten/dagtype/toelichting null.
+ */
+export async function writePlannerDays(
+  db: Db,
+  userId: number,
+  days: PlannerDayInput[],
+): Promise<void> {
+  for (const d of days) {
+    const vals = {
+      userId,
+      datum: d.datum,
+      train: d.train ? 1 : 0,
+      dag: null,
+      minuten: d.train ? d.minuten : null,
+      dagtype: d.train ? d.dagtype : null,
+      toelichting: d.train ? d.toelichting : null,
+      voorgesteldType: null,
+      gedaan: 0,
+    };
+    await db
+      .insert(plannerDays)
+      .values(vals)
+      .onConflictDoUpdate({
+        target: [plannerDays.userId, plannerDays.datum],
+        set: vals,
+      });
+  }
 }
 
 /** Alle events van de user, oudste-eerst (eventFase_ selecteert later, 5.3c). */

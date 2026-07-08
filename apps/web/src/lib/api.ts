@@ -10,6 +10,7 @@ import type {
   CheckinInput,
   EventItem,
   PlannerDay,
+  PlannerDayInput,
   PowerCurveResponse,
   RpeEntry,
   SettingsInput,
@@ -73,6 +74,25 @@ export function getActivities(): Promise<ActivitiesResponse> {
 /** GET /api/planner/:monday — planner-dagen van de doelweek, oudste-eerst. */
 export function getPlanner(mondayISO: string): Promise<PlannerDay[]> {
   return apiGet<PlannerDay[]>(`/api/planner/${mondayISO}`);
+}
+
+/**
+ * PUT /api/planner/:monday — FULL-REPLACE de beschikbaarheid van die week (7 dagen).
+ * Non-2xx → throw met de server-foutreden (bv. de 400-melding).
+ */
+export async function putPlanner(
+  mondayISO: string,
+  days: PlannerDayInput[],
+): Promise<void> {
+  const resp = await fetch(`/api/planner/${mondayISO}`, {
+    method: "PUT",
+    headers: { "content-type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ days }),
+  });
+  if (!resp.ok) {
+    const parsed = await parseBody(resp);
+    throw new Error(errMessage(parsed, resp.status));
+  }
 }
 
 /** GET /api/events — alle events, oudste-eerst. */

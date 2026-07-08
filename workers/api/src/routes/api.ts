@@ -7,6 +7,7 @@
  * pre-deploy). athleteId komt uit c.env.INTERVALS_ATHLETE_ID (niet geëxposed).
  * User = CURRENT_USER_ID (vervalt in de auth-fase).
  */
+import type { PlannerDayInput } from "@cadans/shared";
 import { type Context, Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { CURRENT_USER_ID, makeDb } from "../db/client";
@@ -25,6 +26,7 @@ import {
   readWellness,
   type WellnessRecord,
   writeCheckin,
+  writePlannerDays,
   writeSettings,
   writeWeekplan,
 } from "../db/repo";
@@ -375,5 +377,48 @@ api.put("/weekplan/:monday", async (c) => {
     throw new HTTPException(400, { message: "body.entries must be an array" });
   }
   await writeWeekplan(db, CURRENT_USER_ID, monday, entries);
+  return c.json({ ok: true });
+});
+
+// FULL-REPLACE de weekplanner-beschikbaarheid van :monday. Body = { days: [...] } met
+// de 7 dagen (ma-zo) als PlannerDayInput. Upsert op (user_id, datum) → idempotent.
+// voorgesteldType/gedaan worden NIET geaccepteerd (de repo zet ze op null/0).
+api.put("/planner/:monday", async (c) => {
+  const db = makeDb(c.env.DB);
+  const monday = c.req.param("monday");
+  if (!isIsoDate(monday)) {
+    throw new HTTPException(400, {
+      message: "invalid monday, expected yyyy-MM-dd",
+    });
+  }
+  const body = await readJsonObject(c);
+  const rawDays = body.days;
+  if (!Array.isArray(rawDays)) {
+    throw new HTTPException(400, { message: "body.days must be an array" });
+  }
+  const days: PlannerDayInput[] = rawDays.map((raw, i) => {
+    const o = (raw ?? {}) as Record<string, unknown>;
+    if (typeof o.datum !== "string" || !isIsoDate(o.datum)) {
+      throw new HTTPException(400, {
+        message: `day ${i}: datum must be yyyy-MM-dd`,
+      });
+    }
+    const minuten =
+      o.minuten == null ? null : numField(o.minuten, `day ${i} minuten`);
+    const dagtype =
+      o.dagtype == null ? null : strField(o.dagtype, `day ${i} dagtype`);
+    const toelichting =
+      o.toelichting == null
+        ? null
+        : strField(o.toelichting, `day ${i} toelichting`);
+    return {
+      datum: o.datum,
+      train: o.train === true,
+      minuten,
+      dagtype,
+      toelichting,
+    };
+  });
+  await writePlannerDays(db, CURRENT_USER_ID, days);
   return c.json({ ok: true });
 });

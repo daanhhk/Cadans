@@ -1,0 +1,439 @@
+import type { CSSProperties } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { getPlanner, putPlanner } from "../lib/api";
+import { weekMondayIso } from "../lib/dates";
+import {
+  buildWeekForm,
+  DAGTYPE_OPTIONS,
+  type DayForm,
+  dayNum,
+  formToInputs,
+  isoAddDays,
+  weekdayLabel,
+  weekRangeLabel,
+} from "../lib/planner";
+
+// Weekplanner-editor: losse per-week beschikbaarheid → PUT /api/planner/:monday
+// (FULL-REPLACE). Full-screen met eigen terug-knop (geen bottom-nav). Week-navigatie
+// vrij vooruit/achteruit; elke week apart geladen via getPlanner (leeg = alles uit).
+
+const fieldStyle: CSSProperties = {
+  height: "var(--field-height)",
+  background: "var(--field-bg)",
+  border: "1px solid var(--field-border)",
+  borderRadius: "var(--field-radius)",
+  color: "var(--field-text)",
+  padding: "0 var(--field-pad-x)",
+  fontFamily: "var(--font-num)",
+  fontSize: "var(--fs-body)",
+  boxSizing: "border-box",
+};
+
+const WEEKDAY_FULL: Record<string, string> = {
+  ma: "Maandag",
+  di: "Dinsdag",
+  wo: "Woensdag",
+  do: "Donderdag",
+  vr: "Vrijdag",
+  za: "Zaterdag",
+  zo: "Zondag",
+};
+
+function DayCard({
+  day,
+  onChange,
+}: {
+  day: DayForm;
+  onChange: (patch: Partial<DayForm>) => void;
+}) {
+  const label = WEEKDAY_FULL[weekdayLabel(day.datum)] ?? "";
+  return (
+    <div
+      style={{
+        background: "var(--bg-surface)",
+        border: "1px solid var(--border-subtle)",
+        borderRadius: "var(--r-lg)",
+        padding: "var(--s-3) var(--s-4)",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "var(--s-3)",
+        }}
+      >
+        <div style={{ minWidth: 0 }}>
+          <span
+            style={{
+              fontFamily: "var(--font-sans)",
+              fontSize: "var(--fs-h3)",
+              fontWeight: 600,
+              color: "var(--text-primary)",
+            }}
+          >
+            {label}
+          </span>
+          <span
+            style={{
+              marginLeft: "var(--s-2)",
+              fontFamily: "var(--font-num)",
+              fontSize: "var(--fs-caption)",
+              color: "var(--text-muted)",
+            }}
+          >
+            {dayNum(day.datum)}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => onChange({ train: !day.train })}
+          aria-pressed={day.train}
+          style={{
+            flexShrink: 0,
+            padding: "5px 12px",
+            borderRadius: "var(--r-pill)",
+            cursor: "pointer",
+            background: day.train ? "var(--accent-soft)" : "var(--bg-sunken)",
+            border: `1px solid ${day.train ? "var(--accent)" : "var(--border-strong)"}`,
+            color: day.train ? "var(--accent)" : "var(--text-secondary)",
+            fontFamily: "var(--font-sans)",
+            fontSize: "var(--fs-caption)",
+            fontWeight: 600,
+          }}
+        >
+          {day.train ? "Trainen" : "Rustdag"}
+        </button>
+      </div>
+
+      {day.train && (
+        <div
+          style={{
+            marginTop: "var(--s-3)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "var(--s-2)",
+          }}
+        >
+          <div style={{ display: "flex", gap: "var(--s-2)" }}>
+            <input
+              type="number"
+              inputMode="numeric"
+              value={day.minuten}
+              onChange={(e) => onChange({ minuten: e.target.value })}
+              placeholder="min"
+              aria-label="Minuten"
+              style={{
+                ...fieldStyle,
+                width: 90,
+                textAlign: "right",
+                fontWeight: 600,
+              }}
+            />
+            <select
+              value={day.dagtype}
+              onChange={(e) => onChange({ dagtype: e.target.value })}
+              aria-label="Dagtype"
+              style={{
+                ...fieldStyle,
+                flex: 1,
+                fontFamily: "var(--font-sans)",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              <option value="">Dagtype…</option>
+              {DAGTYPE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <input
+            type="text"
+            value={day.toelichting}
+            onChange={(e) => onChange({ toelichting: e.target.value })}
+            placeholder="Toelichting (optioneel)"
+            aria-label="Toelichting"
+            style={{
+              ...fieldStyle,
+              width: "100%",
+              fontFamily: "var(--font-sans)",
+              fontSize: "var(--fs-label)",
+            }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function Weekplanner() {
+  const navigate = useNavigate();
+  const thisMonday = weekMondayIso();
+  const [monday, setMonday] = useState(thisMonday);
+  const [form, setForm] = useState<DayForm[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [nonce, setNonce] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [note, setNote] = useState<{ text: string; error: boolean } | null>(
+    null,
+  );
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: nonce is een bewuste re-fetch-trigger (na opslaan) — geen echte data-afhankelijkheid.
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    setLoadError(null);
+    setNote(null);
+    getPlanner(monday)
+      .then((rows) => {
+        if (!alive) return;
+        setForm(buildWeekForm(monday, rows));
+        setLoading(false);
+      })
+      .catch((e: unknown) => {
+        if (!alive) return;
+        setLoadError(e instanceof Error ? e.message : "Laden mislukt");
+        setLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [monday, nonce]);
+
+  const patchDay = (i: number) => (patch: Partial<DayForm>) => {
+    setForm((f) => f.map((d, idx) => (idx === i ? { ...d, ...patch } : d)));
+    setNote(null);
+  };
+
+  async function save() {
+    if (saving) return;
+    setSaving(true);
+    setNote(null);
+    try {
+      await putPlanner(monday, formToInputs(form));
+      // Re-fetch de server-waarheid; de Schema-tab haalt bij zijn eigen mount opnieuw
+      // op (geen gedeelde cache) → het gegenereerde schema verschijnt bij terugkeer.
+      setNote({ text: "Opgeslagen — je schema is bijgewerkt", error: false });
+      setNonce((n) => n + 1);
+    } catch (e: unknown) {
+      setNote({
+        text: `Opslaan mislukt: ${e instanceof Error ? e.message : ""}`,
+        error: true,
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const isThisWeek = monday === thisMonday;
+
+  return (
+    <div style={{ minHeight: "100dvh", background: "var(--bg-app)" }}>
+      <div
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 5,
+          background: "var(--bg-app)",
+          borderBottom: "1px solid var(--border-subtle)",
+          padding:
+            "calc(env(safe-area-inset-top, 0px) + 14px) var(--s-3) var(--s-3)",
+          display: "flex",
+          alignItems: "center",
+          gap: "var(--s-1)",
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          aria-label="Terug"
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: "var(--r-pill)",
+            background: "var(--bg-elevated)",
+            border: "1px solid var(--border-strong)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            flexShrink: 0,
+          }}
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 13 14"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M9 2L4 7l5 5"
+              stroke="var(--text-secondary)"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+        <h1
+          style={{
+            margin: "0 0 0 var(--s-2)",
+            fontFamily: "var(--font-sans)",
+            fontSize: "var(--fs-h1)",
+            fontWeight: 700,
+            color: "var(--text-primary)",
+            letterSpacing: "-0.01em",
+          }}
+        >
+          Weekplanner
+        </h1>
+      </div>
+
+      <div style={{ padding: "var(--s-4) var(--s-4) 48px" }}>
+        {/* week-navigatie */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "var(--s-2)",
+            marginBottom: "var(--s-4)",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setMonday((m) => isoAddDays(m, -7))}
+            aria-label="Vorige week"
+            style={navBtnStyle}
+          >
+            ‹
+          </button>
+          <div style={{ textAlign: "center", minWidth: 0 }}>
+            <div
+              style={{
+                fontFamily: "var(--font-sans)",
+                fontSize: "var(--fs-label)",
+                fontWeight: 600,
+                color: "var(--text-primary)",
+              }}
+            >
+              {weekRangeLabel(monday)}
+            </div>
+            {isThisWeek && (
+              <div
+                style={{
+                  fontFamily: "var(--font-sans)",
+                  fontSize: "var(--fs-caption)",
+                  color: "var(--accent)",
+                  fontWeight: 600,
+                }}
+              >
+                deze week
+              </div>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setMonday((m) => isoAddDays(m, 7))}
+            aria-label="Volgende week"
+            style={navBtnStyle}
+          >
+            ›
+          </button>
+        </div>
+
+        {loading ? (
+          <div style={loadingStyle}>Laden…</div>
+        ) : loadError ? (
+          <div style={{ ...loadingStyle, color: "var(--danger)" }}>
+            {loadError}
+          </div>
+        ) : (
+          <>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "var(--s-2)",
+              }}
+            >
+              {form.map((day, i) => (
+                <DayCard key={day.datum} day={day} onChange={patchDay(i)} />
+              ))}
+            </div>
+
+            {note && (
+              <div
+                style={{
+                  marginTop: "var(--s-4)",
+                  padding: "var(--s-3)",
+                  borderRadius: "var(--r-md)",
+                  background: note.error
+                    ? "var(--danger-soft)"
+                    : "var(--good-soft)",
+                  border: `1px solid ${note.error ? "var(--danger)" : "var(--good)"}`,
+                  color: note.error ? "var(--danger)" : "var(--good)",
+                  fontFamily: "var(--font-sans)",
+                  fontSize: "var(--fs-label)",
+                  fontWeight: 600,
+                }}
+              >
+                {note.text}
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={save}
+              disabled={saving}
+              style={{
+                marginTop: "var(--s-4)",
+                width: "100%",
+                height: "var(--btn-height)",
+                borderRadius: "var(--btn-radius)",
+                border: "none",
+                cursor: saving ? "default" : "pointer",
+                background: "var(--btn-primary-bg)",
+                color: "var(--btn-primary-text)",
+                fontFamily: "var(--font-sans)",
+                fontSize: "var(--fs-h3)",
+                fontWeight: 700,
+                opacity: saving ? 0.6 : 1,
+              }}
+            >
+              {saving ? "Opslaan…" : "Beschikbaarheid opslaan"}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const navBtnStyle: CSSProperties = {
+  width: 40,
+  height: 40,
+  flexShrink: 0,
+  borderRadius: "var(--r-pill)",
+  background: "var(--bg-elevated)",
+  border: "1px solid var(--border-strong)",
+  color: "var(--text-secondary)",
+  fontFamily: "var(--font-sans)",
+  fontSize: 20,
+  cursor: "pointer",
+};
+
+const loadingStyle: CSSProperties = {
+  padding: "40px 8px",
+  textAlign: "center",
+  fontFamily: "var(--font-sans)",
+  fontSize: "var(--fs-label)",
+  color: "var(--text-muted)",
+};

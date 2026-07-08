@@ -5,6 +5,7 @@ import { Instellingen } from "./pages/Instellingen";
 import { Niveau } from "./pages/Niveau";
 import { Schema } from "./pages/Schema";
 import { Vorm } from "./pages/Vorm";
+import { Weekplanner } from "./pages/Weekplanner";
 
 // App-shell: same-origin mount + react-router + bottom-nav. Schema/Trainingen zijn
 // "binnenkort"-placeholders; Vorm (5.1b, Vorm-lite) en Niveau (5.2, Vermogen-
@@ -25,6 +26,9 @@ export default function App() {
         {/* Instellingen = full-screen (eigen terug-knop, geen bottom-nav) → sibling
             van de shell-layout; het tandwiel in de AppShell-header navigeert hierheen. */}
         <Route path="/instellingen" element={<Instellingen />} />
+        {/* Weekplanner-editor = full-screen; bereikbaar via het kalender-icoon op de
+            Schema-tab (WeekLoad). Sibling van de shell-layout. */}
+        <Route path="/weekplanner" element={<Weekplanner />} />
       </Routes>
     </BrowserRouter>
   );
