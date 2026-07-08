@@ -11,6 +11,23 @@ live tot cutover.
 
 ## Stand
 
+**INVOER-UI + SYNC LIVE (deze sessie).** De drie data-invoer-gaten zijn gedicht + gedeployed;
+remote D1 is nu GEVULD.
+- **Settings-invoer** — `/instellingen` via het tandwiel in de AppShell-header; FULL-REPLACE
+  `PUT /api/settings`-client + form (alle 12 `EngineSettings`-velden, incl. Geavanceerd
+  hartslag/pendel/fase). Commit `d6398dd` → deploy Version `b456867a`. Telefoon-geverifieerd.
+- **Schema-sync-knop** — "Werk week bij" gekoppeld aan `POST /api/sync/{activities,wellness}` (parallel
+  via `Promise.allSettled`, inline-feedback; power-curve bewust NIET — Niveau laadt die via read-through).
+  Commit `0abaf34` → deploy Version `6ff09e3f`. Telefoon-geverifieerd (15 activiteiten gesynct).
+- **Weekplanner-invoer** — `PUT /api/planner/:monday` FULL-REPLACE (idempotente upsert op
+  `(user_id, datum)`; `voorgesteldType` blijft null → client herberekent live; `gedaan`=0). Editor op
+  `/weekplanner` via het kalender-icoon in de WeekLoad-kaartkop, vrije week-navigatie. Commit `2fe521a`
+  → deploy Version `2a23798c`. Vitest +13.
+- **Allowlist verbreed** (commit `32ac2d3`): 7 read-only allow-patronen (`echo` + `wrangler
+  whoami`/`d1 list`/`d1 migrations list`, wrangler+npx). Deny-regels + `wrangler deploy`-prompt ONGEMOEID.
+- **Remote D1 GEVULD** (was leeg): 15 activiteiten (user_id=1, datum-range 12-06..06-07), settings
+  (FTP 280 / gewicht 75 / doel VO2max / blok-start 29-06 / 12 wk), `planner_days` huidige week ingevuld.
+
 **EERSTE CLOUDFLARE-DEPLOY LIVE (post-deploy).** Worker `cadans-api` draait op
 **https://cadans-api.dtkorteweg.workers.dev** (Version ID `bde322ec-017b-4ef2-81ba-2c03812cb18a`);
 assets-binding + whole-origin basic-auth actief (username `daan` hardcoded in `src/index.ts`; auth
@@ -21,8 +38,8 @@ Cloudflare-dashboard gezet: `BASIC_AUTH_PASSWORD`, `INTERVALS_API_KEY`, `INTERVA
 (namen only, nooit waarden). Code deze chat (workers/api): ensure-user middleware = commit
 `2cc3f23` (idempotente `INSERT OR IGNORE users(id=1)` op non-GET); whole-origin basic-auth = commit
 `d96867c` (`run_worker_first` true + conditionele `basicAuth` + `ASSETS.fetch`-fallback +
-`/api`-404-guard); plan-doc `docs/DEPLOY-RECON.md` = commit `87df348`. **Remote D1 is nu LEEG → de
-app toont "—" tot een sync + een settings-PUT gedaan zijn** (zie FOCUS onder Volgende fase).
+`/api`-404-guard); plan-doc `docs/DEPLOY-RECON.md` = commit `87df348`. (Remote D1 was toen nog LEEG;
+**inmiddels gevuld** — zie het sessie-blok hierboven.)
 
 **SCHEMA + NIVEAU + VORM-TAB AFGEROND (GAS-niveau) — laatste UI-code-commit `f2d2fa3`, CI groen.**
 Fase 0-4 klaar. Fase 5 (de PWA, `apps/web`) loopt; **Schema, Niveau én Vorm zijn nu op GAS-
@@ -36,8 +53,8 @@ verdwaalde tilde weg; ab8ac1a's perl-replace nam 10-spatie-inspringing aan terwi
 heeft → vervanging sloeg stil over).
 
 **Gate-vloeren (nooit onder; bron van waarheid — NOOIT hardcoden in een prompt):**
-engine-selftest `toBe(957)` · vitest-totaal **156** (was 150; +6 uit de deploy-commits `2cc3f23`
-ensure-user +2 en `d96867c` basic-auth +4).
+engine-selftest `toBe(957)` · vitest-totaal **178** (was 156; +9 settings-serializer-units `d6398dd`,
++13 weekplanner `2fe521a` [5 route + 8 planner-lib]; sync-wiring `0abaf34` voegde geen units toe).
 
 **Fundament:** IBM Plex Sans (400/500/600) + Mono (500/600), self-hosted via `@fontsource`,
 offline-precached (`main.tsx`). Het UI-kader ligt vast in **`apps/web/docs/UI-KADER.md`**:
@@ -108,21 +125,33 @@ consumeren UITSLUITEND `--s-*/--fs-*/--lh-*/--r-*` (kleur was al gedisciplineerd
 - **Token-schaal-gaten (NIEUW, cross-cutting — niet Vorm-specifiek):** er is geen `--fs-num-*`-schaal voor
   20/30/52px, en off-scale font-sizes (17.5/19/14.5/8.5), tight gaps (5/6/10) en chip/knop-padding zijn bewust
   off-scale gelaten (geen tokens verzinnen). Vraagt een aparte schaal-uitbreidings-pass die de hele app raakt.
-- **Bredere debts** (detail: §Deferred debts): remote-D1-drift (g), users-bootstrap voor remote deploy
-  (m), engine-`any`-cast in apps/web (a)/(l), `/api/activities` server-side typing (k).
+- **Bredere debts** (detail: §Deferred debts): (g) remote-D1-drift + (m) users-bootstrap = GESLOTEN
+  (deploy); OPEN: engine-`any`-cast in apps/web (a)/(l), `/api/activities` server-side typing (k),
+  (d) TZ-UTC op de sync-routes (v1-geaccepteerd).
 
 ### Volgende fase (grootste gap eerst)
 - **EERSTE DEPLOY — GEDAAN.** Worker + assets + remote D1 live achter whole-origin basic-auth (zie Stand).
   De twee geparkeerde deploy-debts zijn GESLOTEN: remote-D1-drift (g) + users-bootstrap (m). No-auth-exposure
   afgedekt. RESTEREND deploy-debt: (d) TZ-UTC op de sync-routes = OPEN, v1-geaccepteerd (aparte chat).
-- **FOCUS — de app bruikbaar maken (remote D1 is LEEG → toont "—"):**
-  - **(i) Sync-trigger-UI:** het ververs-icoon op de Schema-tab is NIET werkend gekoppeld aan
-    `POST /api/sync/{activities,wellness,power-curve}` (klik doet niks) → wiren + loading/feedback.
-  - **(ii) Settings-invoer-UI ontbreekt:** geen scherm om FTP + gewicht (+ de volledige 12
-    `EngineSettings`-velden) te zetten via `PUT /api/settings` (FULL-REPLACE, geen partial).
-- **Op de horizon:** Garmin-workout-push (externe device-integratie, apart traject); beschikbaarheid/
-  weekplanning-bewerken (Schema/instellingen); en de read-only **eind-audit** van alle geporte engine-fns
-  (sluitstuk vóór cutover — adresseert de engine/parity-debts hierboven).
+- **FOCUS (i) sync-trigger + (ii) settings-invoer + weekplanner-invoer — GEDAAN (deze sessie):** alle
+  drie gebouwd + LIVE + telefoon-geverifieerd; remote D1 gevuld (zie sessie-blok bovenaan Stand).
+- **VOLGENDE (recon-first) — twee open issues.** Bron-recon `docs/PLANNER-DAYTYPE-DONE-RECON.md`
+  (raw op commit `e7490d5`:
+  https://raw.githubusercontent.com/daanhhk/Cadans/e7490d54b9b030b574ae6f3cb6f8bd08981375eb/docs/PLANNER-DAYTYPE-DONE-RECON.md).
+  - **ISSUE 1 — Dagtype-model. BESLIST:** naar het **Train?+Pendel?-model** (user zet train-toggle +
+    minuten + pendel-toggle; dagtype `pendel/vrij/weekend/recovery` wordt AFGELEID, niet gekozen). Reden:
+    het mobiele GAS-"Beschikbaarheid"-scherm (screenshots) + gewenste UX. LET OP: `assignWorkouts`
+    vertakt op `d.type` (4 waarden) → de afleiding moet die 4 produceren; dagtype-kolom NIET droppen.
+    Eerste stap: recon het MOBIELE "Beschikbaarheid"-sheet in de GAS-code (`daanhhk/training`, read-only)
+    — de eerste recon las alleen de spreadsheet-tab (dropdown). Bestaat dat mobiele sheet níet in
+    `3e8090a` → de live GAS-app is nieuwer dan de bron-commit → bredere beslissing over de port-bron.
+  - **ISSUE 2 — Gereden ritten onzichtbaar op Schema.** De dag-detailkaart rendert alleen geplande
+    sessies → een verleden dag met activiteit toont "Rustdag" i.p.v. de rit. Fix: (a) de kaart een
+    gereden rit laten tonen (naam/type/tss — `DoneEntry` mist rit-naam/-type), (b) week-navigatie op de
+    Schema-dag-strip (nu current-week-only; de Weekplanner-editor heeft die al).
+- **Op de horizon:** Garmin-workout-push (externe device-integratie, apart traject); en de read-only
+  **eind-audit** van alle geporte engine-fns (sluitstuk vóór cutover — adresseert de engine/parity-debts
+  hierboven). (Beschikbaarheid/weekplanning-bewerken = GEDAAN deze sessie.)
 
 ### Lokaal (miniflare `--local`, GEEN remote/deploy)
 `settings` via `PUT /api/settings` = ftp 280 / gewicht 75; **244** activities + **366** wellness via
