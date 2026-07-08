@@ -12,6 +12,7 @@ import {
   weekdayLabel,
   weekRangeLabel,
 } from "../lib/planner";
+import { bumpPlannerVersion } from "../lib/plannerSignal";
 
 // Weekplanner-editor: losse per-week beschikbaarheid → PUT /api/planner/:monday
 // (FULL-REPLACE). Full-screen met eigen terug-knop (geen bottom-nav). Week-navigatie
@@ -116,21 +117,36 @@ function DayCard({
             gap: "var(--s-2)",
           }}
         >
-          <div style={{ display: "flex", gap: "var(--s-2)" }}>
+          <div
+            style={{ display: "flex", alignItems: "center", gap: "var(--s-2)" }}
+          >
             <input
-              type="number"
-              inputMode="numeric"
-              value={day.minuten}
+              type="range"
+              min={30}
+              max={360}
+              step={15}
+              value={Number(day.minuten) || 120}
               onChange={(e) => onChange({ minuten: e.target.value })}
-              placeholder="min"
               aria-label="Minuten"
               style={{
-                ...fieldStyle,
-                width: 90,
-                textAlign: "right",
-                fontWeight: 600,
+                flex: 1,
+                accentColor: "var(--slider-fill)",
+                cursor: "pointer",
               }}
             />
+            <span
+              style={{
+                flexShrink: 0,
+                minWidth: 52,
+                textAlign: "right",
+                fontFamily: "var(--font-num)",
+                fontSize: "var(--fs-label)",
+                fontWeight: 600,
+                color: "var(--text-primary)",
+              }}
+            >
+              {Number(day.minuten) || 120} min
+            </span>
             <button
               type="button"
               onClick={() => onChange({ pendel: !day.pendel })}
@@ -151,7 +167,7 @@ function DayCard({
                 fontWeight: 600,
               }}
             >
-              Pendel?
+              Pendel
             </button>
           </div>
           <input
@@ -219,8 +235,9 @@ export function Weekplanner() {
     setNote(null);
     try {
       await putPlanner(monday, formToInputs(form));
-      // Re-fetch de server-waarheid; de Schema-tab haalt bij zijn eigen mount opnieuw
-      // op (geen gedeelde cache) → het gegenereerde schema verschijnt bij terugkeer.
+      // Signaleer de Schema-tab (planner-mutatie) → die herbouwt het voorstel automatisch,
+      // puur uit planner_days (geen intervals-sync). Lokaal re-fetcht deze editor via nonce.
+      bumpPlannerVersion();
       setNote({ text: "Opgeslagen — je schema is bijgewerkt", error: false });
       setNonce((n) => n + 1);
     } catch (e: unknown) {

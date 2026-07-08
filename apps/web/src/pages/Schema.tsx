@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { SchemaView } from "../components/schema/SchemaView";
 import { postSyncActivities, postSyncWellness } from "../lib/api";
+import { subscribePlannerVersion } from "../lib/plannerSignal";
 import type { ProposalWeek } from "../lib/proposal";
 import type { ReadinessResult } from "../lib/readiness";
 import { type DoneEntry, loadSchemaWeek } from "../lib/schema";
@@ -51,6 +52,10 @@ export function Schema() {
     };
   }, [nonce]);
 
+  // Planner-mutatie-signaal: herbouw het voorstel (via nonce) zodra een Weekplanner-save
+  // planner_days muteert — puur planner-gedreven, geen intervals-sync.
+  useEffect(() => subscribePlannerVersion(() => setNonce((n) => n + 1)), []);
+
   // "Werk week bij" = echte sync (activities + wellness, parallel) → daarna de week
   // her-berekenen met de verse D1-data. Icoon disabled tijdens de run (geen dubbel-
   // sync); minstens één geslaagde pull → wél her-deriveren.
@@ -85,7 +90,9 @@ export function Schema() {
       });
     }
     setSyncing(false);
-    if (anyOk) setNonce((n) => n + 1);
+    // Re-derive ALTIJD (ontkoppeld van de sync-uitkomst): de week herbouwt uit de huidige
+    // D1 (planner_days + activities), ook als de intervals-sync faalde.
+    setNonce((n) => n + 1);
   }
 
   if (loading) {
