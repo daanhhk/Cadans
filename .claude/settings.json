@@ -46,7 +46,14 @@
       "Bash(wrangler types:*)",
       "Bash(wrangler dev:*)",
       "Bash(wrangler d1 migrations apply cadans --local:*)",
-      "Bash(wrangler d1 execute cadans --local:*)"
+      "Bash(wrangler d1 execute cadans --local:*)",
+      "Bash(echo:*)",
+      "Bash(wrangler whoami:*)",
+      "Bash(npx wrangler whoami:*)",
+      "Bash(wrangler d1 list:*)",
+      "Bash(npx wrangler d1 list:*)",
+      "Bash(wrangler d1 migrations list:*)",
+      "Bash(npx wrangler d1 migrations list:*)"
     ],
     "deny": [
       "Edit(C:\\Users\\daan\\Projects\\training\\**)",
