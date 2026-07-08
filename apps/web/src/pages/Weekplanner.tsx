@@ -5,7 +5,6 @@ import { getPlanner, putPlanner } from "../lib/api";
 import { weekMondayIso } from "../lib/dates";
 import {
   buildWeekForm,
-  DAGTYPE_OPTIONS,
   type DayForm,
   dayNum,
   formToInputs,
@@ -132,25 +131,28 @@ function DayCard({
                 fontWeight: 600,
               }}
             />
-            <select
-              value={day.dagtype}
-              onChange={(e) => onChange({ dagtype: e.target.value })}
-              aria-label="Dagtype"
+            <button
+              type="button"
+              onClick={() => onChange({ pendel: !day.pendel })}
+              aria-pressed={day.pendel}
               style={{
-                ...fieldStyle,
-                flex: 1,
-                fontFamily: "var(--font-sans)",
-                fontWeight: 600,
+                flexShrink: 0,
+                height: "var(--field-height)",
+                padding: "0 16px",
+                borderRadius: "var(--r-pill)",
                 cursor: "pointer",
+                background: day.pendel
+                  ? "var(--accent-soft)"
+                  : "var(--bg-sunken)",
+                border: `1px solid ${day.pendel ? "var(--accent)" : "var(--border-strong)"}`,
+                color: day.pendel ? "var(--accent)" : "var(--text-secondary)",
+                fontFamily: "var(--font-sans)",
+                fontSize: "var(--fs-label)",
+                fontWeight: 600,
               }}
             >
-              <option value="">Dagtype…</option>
-              {DAGTYPE_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
+              Pendel?
+            </button>
           </div>
           <input
             type="text"

@@ -2,19 +2,22 @@ import { formatDate } from "@cadans/engine";
 import type { PlannerDay, PlannerDayInput } from "@cadans/shared";
 import { parseLocalDate } from "./dates";
 
-// Weekplanner-form-laag: dagtype-opties + pure helpers (week-datums, pre-fill uit de
-// GET, serialisatie naar de PUT-body). Losse per-week editor: lege week = alle dagen
-// uit (geen default-seed).
+// Weekplanner-form-laag: pure helpers (week-datums, pre-fill uit de GET, serialisatie
+// naar de PUT-body). Losse per-week editor: lege week = alle dagen uit (geen default-seed).
+// De user kiest GEEN dagtype meer — enkel Pendel? (naast Train? + minuten); dagtype wordt
+// afgeleid (deriveDagtype, spiegelt GAS Script.html:1035). `recovery` komt NOOIT uit
+// availability (het wellness-signal dekt de recovery-behoefte, engine-kant).
 
-// Toegestane dagtypes = exact de engine-set (pendel = multi-sessie-tak in proposal.ts;
-// vrij/weekend/recovery = normale dag). Bron: engine-selftest dW-helper + GAS
-// DAGTYPE_OPTIONS. Values = de ruwe engine-strings, NL-labels als display.
-export const DAGTYPE_OPTIONS: { value: string; label: string }[] = [
-  { value: "pendel", label: "Pendel" },
-  { value: "vrij", label: "Vrij" },
-  { value: "weekend", label: "Weekend" },
-  { value: "recovery", label: "Herstel" },
-];
+/** De 4 engine-dagtypes (`d.type`). De availability-afleiding levert alleen de eerste 3. */
+export type DagType = "pendel" | "weekend" | "vrij" | "recovery";
+
+/**
+ * Client-side dagtype-afleiding — pendel wint van weekend (pendel EERST gecheckt, exact
+ * GAS Script.html:1035): `pendel ? 'pendel' : (weekend ? 'weekend' : 'vrij')`.
+ */
+export function deriveDagtype(pendel: boolean, isWeekend: boolean): DagType {
+  return pendel ? "pendel" : isWeekend ? "weekend" : "vrij";
+}
 
 const NL_DAYS = ["ma", "di", "wo", "do", "vr", "za", "zo"];
 const NL_MONTHS = [
@@ -52,6 +55,12 @@ export function weekdayLabel(iso: string): string {
   return NL_DAYS[(d + 6) % 7] ?? "";
 }
 
+/** Za/Zo? TZ-veilig via parseLocalDate (yyyy-MM-dd → lokale (y,m-1,d)-constructor). */
+export function isWeekend(iso: string): boolean {
+  const dow = parseLocalDate(iso).getDay(); // 0=zo..6=za
+  return dow === 0 || dow === 6;
+}
+
 /** Dag-nummer voor een ISO-datum. */
 export function dayNum(iso: string): number {
   return parseLocalDate(iso).getDate();
@@ -72,7 +81,8 @@ export interface DayForm {
   datum: string;
   train: boolean;
   minuten: string;
-  dagtype: string;
+  /** Pendel?-toggle (onafhankelijk van Train?, net als GAS). */
+  pendel: boolean;
   toelichting: string;
 }
 
@@ -91,7 +101,7 @@ export function buildWeekForm(
       datum,
       train: e?.train ?? false,
       minuten: e?.minuten != null ? String(e.minuten) : "",
-      dagtype: e?.dagtype ?? "",
+      pendel: e?.dagtype === "pendel",
       toelichting: e?.toelichting ?? "",
     };
   });
@@ -116,7 +126,8 @@ export function formToInputs(days: DayForm[]): PlannerDayInput[] {
       datum: d.datum,
       train: true,
       minuten: min && !Number.isNaN(n) ? n : null,
-      dagtype: d.dagtype ? d.dagtype : null,
+      // dagtype AFGELEID (nooit door de user gekozen): pendel > weekend > vrij.
+      dagtype: deriveDagtype(d.pendel, isWeekend(d.datum)),
       toelichting: tl ? tl : null,
     };
   });

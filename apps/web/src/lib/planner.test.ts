@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   buildWeekForm,
   type DayForm,
+  deriveDagtype,
   formToInputs,
   isoAddDays,
+  isWeekend,
   weekDatesFromMonday,
   weekdayLabel,
 } from "./planner";
@@ -64,7 +66,7 @@ describe("buildWeekForm (pre-fill)", () => {
     const di = f.find((d) => d.datum === "2026-07-07");
     expect(di?.train).toBe(true);
     expect(di?.minuten).toBe("150");
-    expect(di?.dagtype).toBe("pendel");
+    expect(di?.pendel).toBe(true); // dagtype 'pendel' → Pendel?-toggle aan
     expect(di?.toelichting).toBe("heen/terug");
     expect(f.find((d) => d.datum === MON)?.train).toBe(false);
   });
@@ -75,7 +77,7 @@ describe("formToInputs (serialisatie)", () => {
     datum: "2026-07-07",
     train: false,
     minuten: "",
-    dagtype: "",
+    pendel: false,
     toelichting: "",
     ...o,
   });
@@ -91,19 +93,54 @@ describe("formToInputs (serialisatie)", () => {
     });
   });
 
-  it("train-dag → getypeerde invoer (minuten als number)", () => {
+  it("train-dag → getypeerde invoer + afgeleide dagtype (pendel)", () => {
     const [d] = formToInputs([
-      day({ train: true, minuten: "150", dagtype: "pendel", toelichting: "x" }),
+      day({ train: true, minuten: "150", pendel: true, toelichting: "x" }),
     ]);
     expect(d.train).toBe(true);
     expect(d.minuten).toBe(150);
     expect(typeof d.minuten).toBe("number");
-    expect(d.dagtype).toBe("pendel");
+    expect(d.dagtype).toBe("pendel"); // pendel wint (di, geen weekend)
     expect(d.toelichting).toBe("x");
+  });
+
+  it("train-dag zonder pendel: weekdag → 'vrij', Za/Zo → 'weekend'", () => {
+    const [wd] = formToInputs([
+      day({ train: true, minuten: "60", pendel: false }),
+    ]); // 2026-07-07 = di
+    expect(wd.dagtype).toBe("vrij");
+    const [za] = formToInputs([
+      day({ datum: "2026-07-11", train: true, minuten: "120", pendel: false }),
+    ]); // za
+    expect(za.dagtype).toBe("weekend");
+    const [zaP] = formToInputs([
+      day({ datum: "2026-07-11", train: true, minuten: "80", pendel: true }),
+    ]); // za + pendel → pendel wint
+    expect(zaP.dagtype).toBe("pendel");
   });
 
   it("train-dag zonder minuten → null (geen NaN)", () => {
     const [d] = formToInputs([day({ train: true, minuten: "  " })]);
     expect(d.minuten).toBeNull();
+  });
+});
+
+describe("deriveDagtype (2x2, pendel wint van weekend)", () => {
+  it("pendel dringt door ongeacht weekend", () => {
+    expect(deriveDagtype(true, false)).toBe("pendel");
+    expect(deriveDagtype(true, true)).toBe("pendel");
+  });
+  it("geen pendel → weekend/vrij", () => {
+    expect(deriveDagtype(false, true)).toBe("weekend");
+    expect(deriveDagtype(false, false)).toBe("vrij");
+  });
+});
+
+describe("isWeekend (TZ-veilig)", () => {
+  it("Za/Zo → true, doordeweeks → false", () => {
+    expect(isWeekend("2026-07-11")).toBe(true); // za
+    expect(isWeekend("2026-07-12")).toBe(true); // zo
+    expect(isWeekend("2026-07-06")).toBe(false); // ma
+    expect(isWeekend("2026-07-07")).toBe(false); // di
   });
 });
