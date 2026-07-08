@@ -1,15 +1,24 @@
 import { describe, expect, it } from "vitest";
 import type { ActValuesRow } from "./activities";
+import type { ProposalDay, ProposalWeek, ProposalWorkout } from "./proposal";
 import {
+  alignKindFromState,
   blokFromEngine,
+  buildDoneCompare,
   buildDoneEntry,
+  type DoneEntry,
+  deriveSchemaView,
+  doneBadge,
   doneLabel,
   focusLabel,
   formatDuurU,
+  formatIf,
   MACRO_FASE_NL,
   macroFaseLabel,
   stripFaseSuffix,
   ZONE_META,
+  zoneCompareRows,
+  zoneNumFromToken,
 } from "./schema";
 
 describe("focusLabel", () => {
@@ -108,24 +117,27 @@ describe("buildDoneEntry (fase 2a done-object)", () => {
     duur?: number;
     tss?: number;
     zt?: string;
+    iff?: number;
   }): ActValuesRow => {
     const r: ActValuesRow = new Array(17).fill("");
     r[0] = new Date(2026, 6, 6);
     r[1] = o.type ?? "";
     r[2] = o.naam ?? "";
     r[3] = o.duur ?? 0;
+    if (o.iff != null) r[7] = o.iff;
     r[8] = o.tss ?? 0;
     r[15] = o.zt ?? "";
     return r;
   };
 
-  it("extraheert type/naam/duur/tss + reële zones (idx15)", () => {
+  it("extraheert type/naam/duur/IF(idx7)/tss + reële zones (idx15)", () => {
     const d = buildDoneEntry(
       doneRow({
         type: "Ride",
         naam: "Ochtendrit",
         duur: 90,
         tss: 75,
+        iff: 0.88,
         zt: JSON.stringify([
           { id: "Z2", secs: 3600 },
           { id: "Z4", secs: 600 },
@@ -136,12 +148,14 @@ describe("buildDoneEntry (fase 2a done-object)", () => {
     expect(d.naam).toBe("Ochtendrit");
     expect(d.minuten).toBe(90);
     expect(d.tss).toBe(75);
+    expect(d.ifReal).toBe(0.88);
     expect(d.zoneMinutes).toEqual({ low: 60, high: 10, anaerobic: 0 });
   });
 
-  it("ontbrekende zone-data → zoneMinutes null (naam/duur blijven)", () => {
+  it("ontbrekende zone-data + lege IF → zoneMinutes/ifReal null (naam/duur blijven)", () => {
     const d = buildDoneEntry(doneRow({ naam: "Rit", duur: 60, tss: 40 }));
     expect(d.zoneMinutes).toBeNull();
+    expect(d.ifReal).toBeNull();
     expect(d.minuten).toBe(60);
     expect(d.naam).toBe("Rit");
   });
@@ -156,11 +170,18 @@ describe("doneLabel + formatDuurU", () => {
         type: "Ride",
         naam: "",
         zoneMinutes: { low: 20, high: 40, anaerobic: 0 },
+        ifReal: null,
       }),
     ).toBe(ZONE_META.high.label); // Drempel
   });
   it("doneLabel zonder zones → rauwe type of 'Rit'", () => {
-    const base = { tss: 0, minuten: 0, naam: "", zoneMinutes: null };
+    const base = {
+      tss: 0,
+      minuten: 0,
+      naam: "",
+      zoneMinutes: null,
+      ifReal: null,
+    };
     expect(doneLabel({ ...base, type: "Ride" })).toBe("Ride");
     expect(doneLabel({ ...base, type: "" })).toBe("Rit");
   });
@@ -168,5 +189,215 @@ describe("doneLabel + formatDuurU", () => {
     expect(formatDuurU(61)).toBe("1u01");
     expect(formatDuurU(90)).toBe("1u30");
     expect(formatDuurU(60)).toBe("1u");
+  });
+});
+
+// ── Fase 2b-2: plan-vs-gedaan (compare-mapping + coachFeedback_-brug + dispatch-flip) ──
+
+// Geplande workouts als RAUWE engine-blokken (toSession mapt ze via blokFromEngine).
+const plannedSS: ProposalWorkout = {
+  naam: "Sweet Spot 3×12",
+  zones: ["low", "high"],
+  totaalMin: 60,
+  tss: 78,
+  structuur: [],
+  blokken: [
+    { minuten: 6, zone: "rust" },
+    { minuten: 12, zone: "z2" },
+    { minuten: 38, zone: "drempel" },
+    { minuten: 4, zone: "anaeroob" },
+  ],
+};
+const doneSS: DoneEntry = {
+  tss: 81,
+  minuten: 62,
+  type: "Ride",
+  naam: "Ochtendrit",
+  zoneMinutes: { low: 18, high: 43, anaerobic: 0 },
+  ifReal: 0.89,
+};
+
+describe("formatIf", () => {
+  it("2 decimalen NL-komma; null/NaN → –", () => {
+    expect(formatIf(0.88)).toBe("0,88");
+    expect(formatIf(0.9)).toBe("0,90");
+    expect(formatIf(null)).toBe("–");
+    expect(formatIf(Number.NaN)).toBe("–");
+  });
+});
+
+describe("zoneNumFromToken", () => {
+  it("--zone-N → N; onbekend → 2 (default)", () => {
+    expect(zoneNumFromToken("--zone-4")).toBe(4);
+    expect(zoneNumFromToken("--zone-1")).toBe(1);
+    expect(zoneNumFromToken("rubbish")).toBe(2);
+  });
+});
+
+describe("alignKindFromState", () => {
+  it("engine-state → design AlignChip-kind", () => {
+    expect(alignKindFromState("on-plan")).toBe("op-plan");
+    expect(alignKindFromState("deviated")).toBe("afgeweken");
+    expect(alignKindFromState("different")).toBe("anders");
+    expect(alignKindFromState("missed")).toBe("gemist");
+    expect(alignKindFromState("onzin")).toBe("anders");
+  });
+});
+
+describe("zoneCompareRows", () => {
+  it("gepland aggregeert blok-kleuren; gedaan mapt 3-bucket → Z2/Z4/Z5; altijd Z1..Z5", () => {
+    const blokken = [
+      { minuten: 6, hoogtePct: 25, color: "var(--zone-1)" },
+      { minuten: 12, hoogtePct: 45, color: "var(--zone-2)" },
+      { minuten: 38, hoogtePct: 85, color: "var(--zone-4)" },
+      { minuten: 4, hoogtePct: 100, color: "var(--zone-5)" },
+    ];
+    const rows = zoneCompareRows(blokken, { low: 18, high: 43, anaerobic: 0 });
+    expect(rows.map((r) => r.z)).toEqual([1, 2, 3, 4, 5]);
+    expect(rows[0]).toEqual({ z: 1, plan: 6, done: 0 });
+    expect(rows[1]).toEqual({ z: 2, plan: 12, done: 18 }); // low→Z2
+    expect(rows[2]).toEqual({ z: 3, plan: 0, done: 0 });
+    expect(rows[3]).toEqual({ z: 4, plan: 38, done: 43 }); // high→Z4
+    expect(rows[4]).toEqual({ z: 5, plan: 4, done: 0 });
+  });
+  it("geen done-zones → alle done 0", () => {
+    const rows = zoneCompareRows(
+      [{ minuten: 10, hoogtePct: 45, color: "var(--zone-2)" }],
+      null,
+    );
+    expect(rows.every((r) => r.done === 0)).toBe(true);
+  });
+});
+
+describe("doneBadge", () => {
+  it("dominante reële zone → {zoneNum,label}; geen zones → null", () => {
+    expect(doneBadge(doneSS)).toEqual({ zoneNum: 4, label: "Drempel" }); // high dominant
+    expect(doneBadge({ ...doneSS, zoneMinutes: null })).toBeNull();
+  });
+});
+
+describe("buildDoneCompare (coachFeedback_-brug)", () => {
+  it("op-plan: trouw uitgevoerde sweet_spot → chip op-plan, gepland/gedaan Sweet Spot, compare-zones", () => {
+    const c = buildDoneCompare(doneSS, plannedSS, "sweet_spot", "Build");
+    expect(c).not.toBeNull();
+    if (!c) return;
+    expect(c.chipKind).toBe("op-plan");
+    expect(c.planType).toBe("Sweet Spot");
+    expect(c.doneType).toBe("Sweet Spot");
+    expect(c.deviate).toBe(false);
+    expect(c.titel).toBe("Sweet Spot-rit · 1u02");
+    expect(c.badgeZone).toBe(4);
+    expect(typeof c.scorePct).toBe("number");
+    const ifRow = c.rows.find((r) => r.k === "IF");
+    expect(ifRow).toEqual({ k: "IF", p: "0,88", d: "0,89" });
+    const z4 = c.zones.find((z) => z.z === 4);
+    expect(z4).toEqual({ z: 4, plan: 38, done: 43 });
+  });
+  it("different: duur gereden i.p.v. geplande vo2max → chip anders, deviate, doneType Duur", () => {
+    const doneDuur: DoneEntry = {
+      tss: 50,
+      minuten: 75,
+      type: "Ride",
+      naam: "Lange rit",
+      zoneMinutes: { low: 70, high: 5, anaerobic: 0 },
+      ifReal: 0.68,
+    };
+    const plannedVo2: ProposalWorkout = {
+      naam: "VO2max 5×4",
+      zones: ["anaerobic"],
+      totaalMin: 60,
+      tss: 95,
+      structuur: [],
+      blokken: [
+        { minuten: 15, zone: "rust" },
+        { minuten: 20, zone: "z2" },
+        { minuten: 25, zone: "anaeroob" },
+      ],
+    };
+    const c = buildDoneCompare(doneDuur, plannedVo2, "vo2max", "Build");
+    expect(c?.chipKind).toBe("anders");
+    expect(c?.deviate).toBe(true);
+    expect(c?.planType).toBe("VO2max");
+    expect(c?.doneType).toBe("Duur");
+  });
+  it("geen geplande workout → null (reduced kaart)", () => {
+    expect(buildDoneCompare(doneSS, null, "sweet_spot", "Build")).toBeNull();
+    expect(buildDoneCompare(doneSS, plannedSS, null, "Build")).toBeNull();
+  });
+});
+
+describe("deriveSchemaView dispatch (flip + doneCompare)", () => {
+  const TODAY = "2026-03-11";
+  const pday = (datum: string, o: Partial<ProposalDay> = {}): ProposalDay => ({
+    datum,
+    dagIdx: 0,
+    voorgesteldType: null,
+    reden: null,
+    archetypeId: null,
+    sessions: [],
+    plannedForDone: null,
+    ...o,
+  });
+  const pweek = (days: ProposalDay[]): ProposalWeek => ({
+    weekMonday: "2026-03-09",
+    macroFase: "Build",
+    eventNaam: null,
+    wekenTotEvent: null,
+    planModus: null,
+    days,
+  });
+  const de = (o: Partial<DoneEntry> = {}): DoneEntry => ({
+    tss: 60,
+    minuten: 60,
+    type: "Ride",
+    naam: "Rit",
+    zoneMinutes: null,
+    ifReal: null,
+    ...o,
+  });
+
+  it("same-day-flip: voltooide vandaag → state 'done' (isToday blijft true)", () => {
+    const v = deriveSchemaView(
+      pweek([pday(TODAY)]),
+      { [TODAY]: de({ tss: 70 }) },
+      TODAY,
+    );
+    expect(v.days[0].state).toBe("done");
+    expect(v.days[0].isToday).toBe(true);
+  });
+  it("vandaag zonder rit → state 'today'", () => {
+    const v = deriveSchemaView(pweek([pday(TODAY)]), {}, TODAY);
+    expect(v.days[0].state).toBe("today");
+    expect(v.days[0].isToday).toBe(true);
+  });
+  it("verleden dag met rit → state 'done', isToday false", () => {
+    const v = deriveSchemaView(
+      pweek([pday("2026-03-09")]),
+      { "2026-03-09": de({ tss: 70 }) },
+      TODAY,
+    );
+    expect(v.days[0].state).toBe("done");
+    expect(v.days[0].isToday).toBe(false);
+  });
+  it("done zónder plannedForDone → doneCompare null; mét → gevuld", () => {
+    const zonder = deriveSchemaView(
+      pweek([pday("2026-03-09")]),
+      { "2026-03-09": de({ tss: 70 }) },
+      TODAY,
+    );
+    expect(zonder.days[0].doneCompare).toBeNull();
+
+    const met = deriveSchemaView(
+      pweek([
+        pday("2026-03-09", {
+          voorgesteldType: "sweet_spot",
+          plannedForDone: plannedSS,
+        }),
+      ]),
+      { "2026-03-09": doneSS },
+      TODAY,
+    );
+    expect(met.days[0].doneCompare).not.toBeNull();
+    expect(met.days[0].doneCompare?.planType).toBe("Sweet Spot");
   });
 });

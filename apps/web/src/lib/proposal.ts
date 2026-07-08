@@ -51,6 +51,11 @@ export interface ProposalDay {
   // sessies (vroege = steady pendel_z2, laatste = de dag-intent). Dag-niveau
   // voorgesteldType/reden/archetypeId beschrijven de intent, sessions de realisatie.
   sessions: ProposalWorkout[];
+  // De GEPLANDE workout voor een reeds-verstreken/voltooide trainingsdag (assignWorkouts
+  // bouwt `sessions` ALLEEN voor tePlannen → done-dagen houden sessions=[]). Gereconstrueerd
+  // uit voorgesteldType + planner-minuten zodat de VOLTOOID-kaart plan-vs-gedaan kan
+  // vergelijken (2b-2). null = geen intent (bv. wedstrijd zonder voorstel) → reduced kaart.
+  plannedForDone: ProposalWorkout | null;
 }
 
 export interface ProposalWeek {
@@ -315,6 +320,28 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
         if (wo) sessions.push(wo);
       }
     }
+    // Verstreken/voltooide trainingsdag (niet in tePlannen) met een intent → reconstrueer
+    // de geplande workout (deterministisch uit voorgesteldType + planner-minuten). Voedt de
+    // VOLTOOID-kaart-vergelijking; telt NIET mee in `sessions` (week-load blijft ongewijzigd).
+    let plannedForDone: ProposalWorkout | null = null;
+    if (
+      !tePlannenSet.has(d.dagIdx) &&
+      d.train &&
+      d.voorgesteldType &&
+      d.minuten
+    ) {
+      plannedForDone =
+        (buildWorkout(
+          d.voorgesteldType,
+          d.minuten,
+          settingsE,
+          mesoWeek,
+          macroFase,
+          undefined,
+          d.dagIdx,
+          d.archetypeId,
+        ) as ProposalWorkout | null) ?? null;
+    }
     return {
       datum: formatDate(stripTime_(d.datum), "yyyy-MM-dd"),
       dagIdx: d.dagIdx,
@@ -322,6 +349,7 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
       reden: d.reden,
       archetypeId: d.archetypeId,
       sessions,
+      plannedForDone,
     };
   });
 

@@ -197,6 +197,26 @@ describe("buildWeekProposal", () => {
     expect(r.days[6].sessions).toHaveLength(0);
   });
 
+  it("plannedForDone: voltooide dag reconstrueert de geplande workout; tePlannen/rust → null", () => {
+    const r = buildWeekProposal({
+      settings: settings(),
+      plannerDays: WEEK,
+      events: EV_FAR,
+      wellness: WELL_OK,
+      ...base,
+    });
+    // Voltooide dag 03-09 (sweet_spot, gedaan): sessions leeg, maar plannedForDone
+    // gereconstrueerd → voedt de VOLTOOID-kaart plan-vs-gedaan (2b-2).
+    expect(r.days[0].sessions).toHaveLength(0);
+    expect(r.days[0].plannedForDone).not.toBeNull();
+    expect(r.days[0].plannedForDone?.totaalMin).toBeGreaterThan(0);
+    expect(r.days[0].plannedForDone?.tss).toBeGreaterThan(0);
+    // tePlannen-dag (03-11) draagt zijn plan in `sessions` → geen plannedForDone.
+    expect(r.days[2].plannedForDone).toBeNull();
+    // Rustdag (03-15, !train) → geen plannedForDone.
+    expect(r.days[6].plannedForDone).toBeNull();
+  });
+
   it("wellness recovery → tePlannen-dag gedemoot naar recovery", () => {
     const r = buildWeekProposal({
       settings: settings(),

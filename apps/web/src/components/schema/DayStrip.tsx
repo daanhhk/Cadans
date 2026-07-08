@@ -74,7 +74,9 @@ export function DayStrip({
     >
       {days.map((day) => {
         const isSel = day.datum === selected;
-        const isToday = day.state === "today";
+        // isToday is kalender-vandaag (NIET state==='today'): een voltooide vandaag flipt
+        // naar state 'done' maar houdt zijn vandaag-markering op de strip (2b-2 STAP 1).
+        const isToday = day.isToday;
         const accentEdge = isSel || isToday;
         return (
           <button

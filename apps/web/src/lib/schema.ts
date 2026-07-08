@@ -1,5 +1,6 @@
 import {
   actualZoneMinutes_,
+  coachFeedback_,
   formatDate,
   stripTime_,
   zoneTimesFromCell_,
@@ -134,12 +135,17 @@ export interface SchemaDay {
   weekday: string;
   dayNum: number;
   state: DayState;
+  /** Kalender-vandaag (los van `state`: een voltooide vandaag flipt naar state 'done',
+   * maar houdt de vandaag-markering op de dag-strip — 2b-2 STAP 1). */
+  isToday: boolean;
   voorgesteldType: string | null;
   reden: string | null;
   sessions: SchemaSession[];
   doneTss: number;
   /** De gereden rit van die dag (of null) — voedt de VOLTOOID-kaart (fase 2a). */
   done: DoneEntry | null;
+  /** Plan-vs-gedaan-vergelijking als er een geplande sessie was; null → gereduceerde kaart (2b-2). */
+  doneCompare: DoneCompare | null;
 }
 
 export interface LoadStat {
@@ -150,6 +156,7 @@ export interface LoadStat {
 /**
  * Gedane belasting per datum (uit de activities). tss idx8 + duur idx3; type idx1 + naam idx2 +
  * reële zone-minuten (idx15 via `actualZoneMinutes_`) voeden de VOLTOOID-kaart (fase 2a).
+ * ifReal (idx7, icu-schaal — coachFeedback_ normaliseert) voedt de plan-vs-gedaan-alignment (2b-2).
  */
 export interface DoneEntry {
   tss: number;
@@ -157,6 +164,7 @@ export interface DoneEntry {
   type: string;
   naam: string;
   zoneMinutes: Record<ZoneKey, number> | null;
+  ifReal: number | null;
 }
 
 // ── Done-rit-afleidingen (fase 2a): PURE, getest ──────────────────────────
@@ -166,12 +174,13 @@ const DONE_BAR_HOOGTE: Record<ZoneKey, number> = {
   anaerobic: 100, // anaeroob
 };
 
-/** Eén activity-rij → done-object (type idx1, naam idx2, duur idx3, tss idx8, reële zones uit idx15). */
+/** Eén activity-rij → done-object (type idx1, naam idx2, duur idx3, IF idx7, tss idx8, reële zones uit idx15). */
 export function buildDoneEntry(row: ActValuesRow): DoneEntry {
   const zm = actualZoneMinutes_(
     { icu_zone_times: zoneTimesFromCell_(row[15]) },
     null,
   ) as { low: number; high: number; anaerobic: number } | null;
+  const rawIf = Number(row[7]);
   return {
     tss: Number(row[8]) || 0,
     minuten: Number(row[3]) || 0,
@@ -180,6 +189,8 @@ export function buildDoneEntry(row: ActValuesRow): DoneEntry {
     zoneMinutes: zm
       ? { low: zm.low, high: zm.high, anaerobic: zm.anaerobic }
       : null,
+    ifReal:
+      row[7] !== "" && row[7] != null && Number.isFinite(rawIf) ? rawIf : null,
   };
 }
 
@@ -201,6 +212,7 @@ function mergeDone(a: DoneEntry, b: DoneEntry): DoneEntry {
     type: primary.type,
     naam: primary.naam,
     zoneMinutes,
+    ifReal: primary.ifReal,
   };
 }
 
@@ -240,6 +252,194 @@ export function formatDuurU(min: number): string {
   const h = Math.floor(min / 60);
   const m = Math.round(min % 60);
   return m > 0 ? `${h}u${String(m).padStart(2, "0")}` : `${h}u`;
+}
+
+// ── VOLTOOID plan-vs-gedaan (fase 2b-2): coachFeedback_-brug + compare-aggregatie ──
+// Design-autoriteit: design/src/coach-feedback.jsx (DayHead/AlignChip/AlignBar/Reading/
+// ZoneCompare). De engine (coach.ts) levert state/score/type-labels; hier alleen mappen.
+
+/** Design AlignChip-kind. */
+export type AlignKind = "op-plan" | "afgeweken" | "anders" | "gemist";
+
+/** Eén metric-rij van de gepland|gedaan-tabel (Type/Duur/IF/TSS). */
+export interface DoneCompareTableRow {
+  k: string;
+  p: string;
+  d: string;
+}
+
+/** Eén zone-rij van de compare-bars (gepland vs gedaan, minuten). */
+export interface DoneCompareZone {
+  z: number;
+  plan: number;
+  done: number;
+}
+
+/** View-model voor de VOLLE VOLTOOID-kaart (geplande sessie bestaat → vergelijking). */
+export interface DoneCompare {
+  /** GAS-stijl "Drempel-rit · 1u01" (rit-type + duur). */
+  titel: string;
+  badgeZone: number;
+  badgeName: string;
+  chipKind: AlignKind;
+  chipLabel: string;
+  /** Uitvoering-volgt-plan-% (coach-score), of null. */
+  scorePct: number | null;
+  planType: string;
+  doneType: string;
+  deviate: boolean;
+  rows: DoneCompareTableRow[];
+  zones: DoneCompareZone[];
+}
+
+/** IF-getal → NL "0,88" (2 decimalen, komma); null/NaN → "–". */
+export function formatIf(ifv: number | null): string {
+  return ifv == null || !Number.isFinite(ifv)
+    ? "–"
+    : ifv.toFixed(2).replace(".", ",");
+}
+
+/** "--zone-4" → 4; fallback 2 (duur/z2, de engine-default). */
+export function zoneNumFromToken(token: string): number {
+  const m = /--zone-(\d)/.exec(token);
+  return m ? Number(m[1]) : 2;
+}
+
+const ALIGN_KIND: Record<string, AlignKind> = {
+  "on-plan": "op-plan",
+  deviated: "afgeweken",
+  different: "anders",
+  missed: "gemist",
+};
+/** Engine alignment-state → design AlignChip-kind. */
+export function alignKindFromState(state: string): AlignKind {
+  return ALIGN_KIND[state] ?? "anders";
+}
+
+// Geplande blok-kleur (--zone-N, BAR_BUCKET) → zone-nummer; 3-bucket done (low/high/
+// anaerobic) → representatieve zone (Z2/Z4/Z5 = de done-ZONE_META-kleuren, want het
+// 3-bucket-model kent geen Z1/Z3 op de gedaan-kant).
+const PLAN_COLOR_ZONE: Record<string, number> = {
+  "var(--zone-1)": 1,
+  "var(--zone-2)": 2,
+  "var(--zone-3)": 3,
+  "var(--zone-4)": 4,
+  "var(--zone-5)": 5,
+};
+const DONE_ZONE_NUM: Record<ZoneKey, number> = {
+  low: 2,
+  high: 4,
+  anaerobic: 5,
+};
+
+/**
+ * Geplande blokken (SessionBlok[]) + reële done-zone-minuten → per-zone gepland-vs-gedaan
+ * (Z1..Z5) voor de compare-bars. Gepland aggregeert de blok-kleuren; gedaan mapt de 3
+ * engine-buckets op hun representatieve zone (low→Z2, high→Z4, anaerobic→Z5).
+ */
+export function zoneCompareRows(
+  plannedBlokken: SessionBlok[],
+  doneZm: Record<ZoneKey, number> | null,
+): DoneCompareZone[] {
+  const plan = [0, 0, 0, 0, 0, 0];
+  for (const b of plannedBlokken) {
+    const z = PLAN_COLOR_ZONE[b.color];
+    if (z) plan[z] += b.minuten;
+  }
+  const done = [0, 0, 0, 0, 0, 0];
+  if (doneZm) {
+    for (const k of ZONE_ORDER) done[DONE_ZONE_NUM[k]] += doneZm[k] ?? 0;
+  }
+  return [1, 2, 3, 4, 5].map((z) => ({
+    z,
+    plan: Math.round(plan[z]),
+    done: Math.round(done[z]),
+  }));
+}
+
+// 3-bucket done-zones → de 5-bucket-vorm die coachFeedback_ leest (low→z2, high→drempel,
+// anaerobic→anaeroob; rust/tempo bestaan niet in het 3-bucket-done-model).
+function doneZm5_(
+  zm: Record<ZoneKey, number> | null,
+): Record<string, number> | undefined {
+  if (!zm) return undefined;
+  return {
+    rust: 0,
+    z2: zm.low,
+    tempo: 0,
+    drempel: zm.high,
+    anaeroob: zm.anaerobic,
+  };
+}
+
+/** Dominante reële zone → pill {zoneNum,label} (Duur/Drempel/VO2max) voor de reduced kaart; geen zones → null. */
+export function doneBadge(
+  done: DoneEntry,
+): { zoneNum: number; label: string } | null {
+  const zm = done.zoneMinutes;
+  if (!zm) return null;
+  let best: ZoneKey | null = null;
+  for (const z of ZONE_ORDER) {
+    if ((zm[z] ?? 0) > 0 && (best == null || zm[z] > zm[best])) best = z;
+  }
+  return best
+    ? { zoneNum: DONE_ZONE_NUM[best], label: ZONE_META[best].label }
+    : null;
+}
+
+/**
+ * coachFeedback_ (engine, PUUR aangeroepen — niet gewijzigd) + de reële zones → het VOLLE
+ * VOLTOOID-vergelijk-view-model. Geen geplande workout (bv. wedstrijd zonder voorstel) of
+ * geen intent → null → de aanroeper valt terug op de gereduceerde kaart (2b-2 STAP 2).
+ */
+export function buildDoneCompare(
+  done: DoneEntry,
+  plannedWo: ProposalWorkout | null,
+  voorgesteldType: string | null,
+  macroFase: string,
+): DoneCompare | null {
+  if (!plannedWo || !voorgesteldType) return null;
+  const plannedSession = toSession(plannedWo);
+  const fb = coachFeedback_(
+    {
+      type: voorgesteldType,
+      titel: plannedWo.naam,
+      duurMin: plannedSession.totaalMin,
+      tss: plannedSession.tss,
+      segmenten: null,
+    },
+    {
+      naam: done.naam,
+      duurMin: done.minuten,
+      tss: done.tss,
+      ifReal: done.ifReal,
+      zoneMin: doneZm5_(done.zoneMinutes),
+    },
+    { fase: macroFase },
+    false,
+  );
+  if (!fb?.done) return null;
+  return {
+    titel: `${fb.done.typeLabel}-rit · ${formatDuurU(done.minuten)}`,
+    badgeZone: zoneNumFromToken(fb.done.badgeZone),
+    badgeName: fb.done.typeLabel,
+    chipKind: alignKindFromState(fb.state),
+    chipLabel: fb.chipLabel,
+    scorePct: typeof fb.score === "number" ? fb.score : null,
+    planType: fb.planned.typeLabel,
+    doneType: fb.done.typeLabel,
+    deviate: fb.state === "different",
+    rows: [
+      {
+        k: "Duur",
+        p: formatDuurU(fb.planned.duurMin),
+        d: formatDuurU(done.minuten),
+      },
+      { k: "IF", p: formatIf(fb.planned.ifv), d: formatIf(fb.done.ifv) },
+      { k: "TSS", p: String(fb.planned.tss), d: String(done.tss) },
+    ],
+    zones: zoneCompareRows(plannedSession.blokken, done.zoneMinutes),
+  };
 }
 
 export interface SchemaView {
@@ -311,10 +511,13 @@ export function deriveSchemaView(
     const hasSessions = sessions.length > 0;
     const isToday = d.datum === todayISO;
     const isDone = doneTss > 0;
-    const state: DayState = isToday
-      ? "today"
-      : isDone
-        ? "done"
+    // STAP 1 (same-day-flip): een VOLTOOIDE activity wint van 'vandaag' → done-kaart, ook
+    // vandaag (zoals GAS: readiness vervalt zodra er gereden is). isToday blijft apart voor
+    // de dag-strip-markering. Vandaag zónder rit → 'today' (readiness + geplande workout).
+    const state: DayState = isDone
+      ? "done"
+      : isToday
+        ? "today"
         : hasSessions
           ? "planned"
           : "rest";
@@ -328,17 +531,31 @@ export function deriveSchemaView(
     minuten.gedaan += done?.minuten ?? 0;
     if (isDone) dagen.gedaan += 1;
 
+    // VOLLE vergelijking als er een geplande workout was (2b-2 STAP 3); anders (bv.
+    // wedstrijd zonder voorstel) blijft dit null → gereduceerde kaart (STAP 2).
+    const doneCompare =
+      isDone && done
+        ? buildDoneCompare(
+            done,
+            d.plannedForDone,
+            d.voorgesteldType,
+            proposalWeek.macroFase,
+          )
+        : null;
+
     return {
       datum: d.datum,
       dagIdx: d.dagIdx,
       weekday: WEEKDAYS[dt.getDay()] ?? "",
       dayNum: dt.getDate(),
       state,
+      isToday,
       voorgesteldType: d.voorgesteldType,
       reden: d.reden,
       sessions,
       doneTss,
       done: done ?? null,
+      doneCompare,
     };
   });
 

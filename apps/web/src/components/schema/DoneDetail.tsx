@@ -1,15 +1,19 @@
 import {
   type DoneEntry,
+  doneBadge,
   doneLabel,
   doneZoneBlokken,
   formatDuurU,
 } from "../../lib/schema";
 import { ZoneBars } from "./ZoneBars";
+import { ZonePill } from "./ZonePill";
 
-// Gereden-rit-weergave op een VOLTOOID-dag (fase 2a): naam + NL-type-label (dominante reële zone) +
-// duur + per-zone bars van de reële time-in-zone. GEEN alignment/coach/impact (= 2b/2c).
+// Gereduceerde VOLTOOID-kaart (2b-2 STAP 2): een gereden rit ZONDER geplande sessie (bv.
+// wedstrijd) kan niet vergelijken → ritnaam + type-pill + per-zone bars van de reële
+// time-in-zone. GEEN chip/tabel/vergelijking/callout (= de volle DoneCompareCard / 2c).
 export function DoneDetail({ done }: { done: DoneEntry }) {
   const blokken = doneZoneBlokken(done.zoneMinutes);
+  const badge = doneBadge(done);
   return (
     <div
       style={{
@@ -20,6 +24,11 @@ export function DoneDetail({ done }: { done: DoneEntry }) {
       }}
     >
       <div>
+        {badge && (
+          <div style={{ marginBottom: "var(--s-2)" }}>
+            <ZonePill zone={badge.zoneNum} name={badge.label} />
+          </div>
+        )}
         <div
           style={{
             fontFamily: "var(--font-sans)",
@@ -38,7 +47,9 @@ export function DoneDetail({ done }: { done: DoneEntry }) {
             marginTop: 2,
           }}
         >
-          {doneLabel(done)} · {formatDuurU(done.minuten)}
+          {badge
+            ? formatDuurU(done.minuten)
+            : `${doneLabel(done)} · ${formatDuurU(done.minuten)}`}
         </div>
       </div>
       {blokken.length > 0 && <ZoneBars blokken={blokken} />}
