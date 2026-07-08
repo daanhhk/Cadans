@@ -1,4 +1,4 @@
-import { Outlet } from "react-router-dom";
+import { Link, Outlet } from "react-router-dom";
 import { BottomNav } from "./BottomNav";
 import { CadansMark } from "./CadansMark";
 
@@ -39,6 +39,45 @@ export function AppShell() {
         >
           Cadans
         </span>
+        <Link
+          to="/instellingen"
+          aria-label="Instellingen"
+          style={{
+            marginLeft: "auto",
+            width: 36,
+            height: 36,
+            borderRadius: "var(--r-pill)",
+            background: "var(--bg-elevated)",
+            border: "1px solid var(--border-strong)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+            color: "var(--text-secondary)",
+          }}
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 20 20"
+            fill="none"
+            aria-hidden="true"
+          >
+            <circle
+              cx="10"
+              cy="10"
+              r="2.5"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            />
+            <path
+              d="M10 2.4v2.1M10 15.5v2.1M2.4 10h2.1M15.5 10h2.1M4.6 4.6l1.5 1.5M13.9 13.9l1.5 1.5M15.4 4.6l-1.5 1.5M6.1 13.9l-1.5 1.5"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
+          </svg>
+        </Link>
       </header>
 
       <main style={{ flex: 1, overflowY: "auto", padding: "0 16px 16px" }}>

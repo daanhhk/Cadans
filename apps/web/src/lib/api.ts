@@ -42,6 +42,24 @@ export function getSettings(): Promise<SettingsInput | null> {
   return apiGet<SettingsInput | null>("/api/settings");
 }
 
+/**
+ * PUT /api/settings — FULL-REPLACE. `body` bevat ALLEEN de te bewaren velden
+ * (weglaten = clearen naar null; nooit null/"" sturen — dat geeft 400). Non-2xx
+ * → throw met de server-foutreden (bv. de 400-melding). Zie lib/settings.ts voor
+ * de pure form→body-serialisatie.
+ */
+export async function putSettings(body: Partial<SettingsInput>): Promise<void> {
+  const resp = await fetch("/api/settings", {
+    method: "PUT",
+    headers: { "content-type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!resp.ok) {
+    const parsed = await parseBody(resp);
+    throw new Error(errMessage(parsed, resp.status));
+  }
+}
+
 /** GET /api/wellness — oudste-eerst. */
 export function getWellness(): Promise<WellnessInput[]> {
   return apiGet<WellnessInput[]>("/api/wellness");

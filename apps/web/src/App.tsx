@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
 import { ComingSoon } from "./pages/ComingSoon";
+import { Instellingen } from "./pages/Instellingen";
 import { Niveau } from "./pages/Niveau";
 import { Schema } from "./pages/Schema";
 import { Vorm } from "./pages/Vorm";
@@ -21,6 +22,9 @@ export default function App() {
           <Route path="/niveau" element={<Niveau />} />
           <Route path="*" element={<Navigate to="/schema" replace />} />
         </Route>
+        {/* Instellingen = full-screen (eigen terug-knop, geen bottom-nav) → sibling
+            van de shell-layout; het tandwiel in de AppShell-header navigeert hierheen. */}
+        <Route path="/instellingen" element={<Instellingen />} />
       </Routes>
     </BrowserRouter>
   );
