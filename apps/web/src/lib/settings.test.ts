@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   EMPTY_FORM,
+  legToRoundTrip,
+  roundTripToLeg,
   type SettingsForm,
   settingsFormToBody,
   settingsToForm,
@@ -138,5 +140,20 @@ describe("settingsToForm (pre-fill)", () => {
       doelStart: "2026-06-01",
       profielPreset: "gevorderd",
     });
+  });
+});
+
+describe("pendel duur (enkele reis ↔ retour)", () => {
+  it("legToRoundTrip(75) === 150", () => {
+    expect(legToRoundTrip(75)).toBe(150);
+  });
+  it("roundTripToLeg(150) === 75", () => {
+    expect(roundTripToLeg(150)).toBe(75);
+  });
+  it("roundTripToLeg(75) === 38 (oneven legacy rondt)", () => {
+    expect(roundTripToLeg(75)).toBe(38);
+  });
+  it("roundTripToLeg(legToRoundTrip(75)) === 75", () => {
+    expect(roundTripToLeg(legToRoundTrip(75))).toBe(75);
   });
 });

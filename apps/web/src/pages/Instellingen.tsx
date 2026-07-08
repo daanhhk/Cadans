@@ -6,7 +6,9 @@ import {
   DOEL_OPTIONS,
   EMPTY_FORM,
   FASE_OPTIONS,
+  legToRoundTrip,
   PROFIEL_PRESET_OPTIONS,
+  roundTripToLeg,
   type SettingsForm,
   settingsFormToBody,
   settingsToForm,
@@ -510,10 +512,18 @@ export function Instellingen() {
             </Section>
 
             <Section title="Geavanceerd · pendel & fase">
-              <Row label="Pendel-duur">
+              <Row label="Pendel (enkele reis)" sub="heen + terug = 2×">
                 <NumInput
-                  value={form.pendelDuurMin}
-                  onChange={set("pendelDuurMin")}
+                  value={
+                    form.pendelDuurMin.trim()
+                      ? String(roundTripToLeg(Number(form.pendelDuurMin)))
+                      : ""
+                  }
+                  onChange={(v) =>
+                    set("pendelDuurMin")(
+                      v.trim() ? String(legToRoundTrip(Number(v))) : "",
+                    )
+                  }
                   unit="min"
                 />
               </Row>

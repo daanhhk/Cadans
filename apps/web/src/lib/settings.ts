@@ -113,3 +113,12 @@ export const FASE_OPTIONS: { value: string; label: string }[] = [
   { value: "", label: "Automatisch" },
   { value: "maintain", label: "Onderhoud (maintain)" },
 ];
+
+// Pendel duration is STORED as the full round-trip (heen + terug); the settings UI presents it as one leg
+// (enkele reis). The engine reads the round-trip value and splits it into two halves.
+export function legToRoundTrip(legMin: number): number {
+  return legMin * 2;
+}
+export function roundTripToLeg(roundTripMin: number): number {
+  return Math.round(roundTripMin / 2);
+}
