@@ -2,15 +2,14 @@ import { useId, useState } from "react";
 import type { SchemaSession } from "../../lib/schema";
 import { Num, Overline } from "../ui";
 import { BlockList } from "./BlockList";
-import { ZoneBar } from "./ZoneBar";
-import { ZoneLegend } from "./ZoneLegend";
+import { ZoneBars } from "./ZoneBars";
 
-// Eén sessie: naam/focus + duur/TSS + zone-bar/legend + (inklapbare) blok-lijst +
+// Eén sessie: naam/focus + duur/TSS + per-zone bars + (inklapbare) blok-lijst +
 // eindopmerking. session.focus is in het view-model al NL-gemapt + gededupliceerd t.o.v.
-// de zone-legend (lib/schema.ts toSession) → hier rauw renderen. De tekstuele stappen
-// (BlockList) staan DEFAULT ingeklapt; klik op de bar+legend+samenvatting klapt ze uit
+// de zone-labels (lib/schema.ts toSession) → hier rauw renderen. De tekstuele stappen
+// (BlockList) staan DEFAULT ingeklapt; klik op de bars+samenvatting klapt ze uit
 // (conform schema.jsx ProposalDetail). De toggle is een echte <button> met aria-expanded/
-// aria-controls (a11y-bron; de ZoneBar blijft decoratief aria-hidden).
+// aria-controls.
 export function WorkoutDetail({
   session,
   overline,
@@ -102,8 +101,7 @@ export function WorkoutDetail({
               color: "inherit",
             }}
           >
-            <ZoneBar blokken={session.blokken} />
-            <ZoneLegend zones={session.zones} />
+            <ZoneBars blokken={session.blokken} />
             <div
               style={{
                 display: "flex",
@@ -161,10 +159,7 @@ export function WorkoutDetail({
           </div>
         </>
       ) : (
-        <>
-          <ZoneBar blokken={session.blokken} />
-          <ZoneLegend zones={session.zones} />
-        </>
+        <ZoneBars blokken={session.blokken} />
       )}
 
       {session.eindopmerking && (

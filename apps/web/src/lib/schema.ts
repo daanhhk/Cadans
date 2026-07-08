@@ -204,7 +204,7 @@ function mergeDone(a: DoneEntry, b: DoneEntry): DoneEntry {
   };
 }
 
-/** De aanwezige reële zone-buckets (low→high→anaerobic), voor de ZoneLegend. */
+/** De aanwezige reële zone-buckets (low→high→anaerobic). */
 export function doneZones(zm: Record<ZoneKey, number> | null): ZoneKey[] {
   if (!zm) return [];
   return ZONE_ORDER.filter((z) => (zm[z] ?? 0) > 0);

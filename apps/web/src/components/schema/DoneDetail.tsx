@@ -2,17 +2,14 @@ import {
   type DoneEntry,
   doneLabel,
   doneZoneBlokken,
-  doneZones,
   formatDuurU,
 } from "../../lib/schema";
-import { ZoneBar } from "./ZoneBar";
-import { ZoneLegend } from "./ZoneLegend";
+import { ZoneBars } from "./ZoneBars";
 
 // Gereden-rit-weergave op een VOLTOOID-dag (fase 2a): naam + NL-type-label (dominante reële zone) +
-// duur + één zone-balk van de reële time-in-zone. GEEN alignment/coach/impact (= 2b/2c).
+// duur + per-zone bars van de reële time-in-zone. GEEN alignment/coach/impact (= 2b/2c).
 export function DoneDetail({ done }: { done: DoneEntry }) {
   const blokken = doneZoneBlokken(done.zoneMinutes);
-  const zones = doneZones(done.zoneMinutes);
   return (
     <div
       style={{
@@ -44,12 +41,7 @@ export function DoneDetail({ done }: { done: DoneEntry }) {
           {doneLabel(done)} · {formatDuurU(done.minuten)}
         </div>
       </div>
-      {blokken.length > 0 && (
-        <>
-          <ZoneBar blokken={blokken} />
-          <ZoneLegend zones={zones} />
-        </>
-      )}
+      {blokken.length > 0 && <ZoneBars blokken={blokken} />}
     </div>
   );
 }
