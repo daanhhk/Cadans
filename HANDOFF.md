@@ -11,7 +11,21 @@ live tot cutover.
 
 ## Stand
 
-**INVOER-UI + SYNC LIVE (deze sessie).** De drie data-invoer-gaten zijn gedicht + gedeployed;
+**ISSUE 1 (dagtype-model) + PENDEL-DUUR — DONE + LIVE (deze sessie).**
+- **Dagtype-model** — de Weekplanner vraagt geen dagtype meer: per dag Train? + minuten-**slider**
+  (30-360, step 15) + **Pendel?-toggle**; dagtype wordt client-side AFGELEID (`deriveDagtype`: pendel >
+  weekend (Za/Zo) > vrij; `recovery` NOOIT uit availability — het wellness-signal dekt dat). Commit
+  `0782b1a`.
+- **Schema auto-refresh** — een in-memory `plannerSignal` (bump/subscribe) laat Schema het voorstel
+  herbouwen na een Weekplanner-save (puur planner-gedreven, GEEN intervals-sync); de ververs-knop
+  re-derive't nu ONVOORWAARDELIJK (ontkoppeld van de sync-uitkomst). Commit `937c031`.
+- **Pendel-duur = "enkele reis"** — het settings-veld toont de enkele reis; opgeslagen als retour
+  (2×, `legToRoundTrip`), de engine leest de retour + splitst heen/terug (`planner.ts:1948-1949`).
+  Pendel-dag = leg+leg (bv. 75+75=150). GEEN engine/`proposal.ts`/`planner.ts`-wijziging. Commit `faed841`.
+- **Live Version ID `9120970c`**; laatste main-commit = `faed841`. CI groen. Recon-docs deze chat
+  (achtergrond): `BESCHIKBAARHEID-MOBILE-RECON`, `ENGINE-DAGTYPE-BRANCHES-RECON`, `DAGKAART-PENDEL-RECON`.
+
+**INVOER-UI + SYNC LIVE (vorige sessie).** De drie data-invoer-gaten zijn gedicht + gedeployed;
 remote D1 is nu GEVULD.
 - **Settings-invoer** — `/instellingen` via het tandwiel in de AppShell-header; FULL-REPLACE
   `PUT /api/settings`-client + form (alle 12 `EngineSettings`-velden, incl. Geavanceerd
@@ -53,8 +67,8 @@ verdwaalde tilde weg; ab8ac1a's perl-replace nam 10-spatie-inspringing aan terwi
 heeft → vervanging sloeg stil over).
 
 **Gate-vloeren (nooit onder; bron van waarheid — NOOIT hardcoden in een prompt):**
-engine-selftest `toBe(957)` · vitest-totaal **178** (was 156; +9 settings-serializer-units `d6398dd`,
-+13 weekplanner `2fe521a` [5 route + 8 planner-lib]; sync-wiring `0abaf34` voegde geen units toe).
+engine-selftest `toBe(957)` · vitest-totaal **189** (178 → 182 dagtype `0782b1a` +4 → 185 plannerSignal
+`937c031` +3 → 189 pendel-helper `faed841` +4). CI groen.
 
 **Fundament:** IBM Plex Sans (400/500/600) + Mono (500/600), self-hosted via `@fontsource`,
 offline-precached (`main.tsx`). Het UI-kader ligt vast in **`apps/web/docs/UI-KADER.md`**:
@@ -135,20 +149,20 @@ consumeren UITSLUITEND `--s-*/--fs-*/--lh-*/--r-*` (kleur was al gedisciplineerd
   afgedekt. RESTEREND deploy-debt: (d) TZ-UTC op de sync-routes = OPEN, v1-geaccepteerd (aparte chat).
 - **FOCUS (i) sync-trigger + (ii) settings-invoer + weekplanner-invoer — GEDAAN (deze sessie):** alle
   drie gebouwd + LIVE + telefoon-geverifieerd; remote D1 gevuld (zie sessie-blok bovenaan Stand).
-- **VOLGENDE (recon-first) — twee open issues.** Bron-recon `docs/PLANNER-DAYTYPE-DONE-RECON.md`
-  (raw op commit `e7490d5`:
-  https://raw.githubusercontent.com/daanhhk/Cadans/e7490d54b9b030b574ae6f3cb6f8bd08981375eb/docs/PLANNER-DAYTYPE-DONE-RECON.md).
-  - **ISSUE 1 — Dagtype-model. BESLIST:** naar het **Train?+Pendel?-model** (user zet train-toggle +
-    minuten + pendel-toggle; dagtype `pendel/vrij/weekend/recovery` wordt AFGELEID, niet gekozen). Reden:
-    het mobiele GAS-"Beschikbaarheid"-scherm (screenshots) + gewenste UX. LET OP: `assignWorkouts`
-    vertakt op `d.type` (4 waarden) → de afleiding moet die 4 produceren; dagtype-kolom NIET droppen.
-    Eerste stap: recon het MOBIELE "Beschikbaarheid"-sheet in de GAS-code (`daanhhk/training`, read-only)
-    — de eerste recon las alleen de spreadsheet-tab (dropdown). Bestaat dat mobiele sheet níet in
-    `3e8090a` → de live GAS-app is nieuwer dan de bron-commit → bredere beslissing over de port-bron.
-  - **ISSUE 2 — Gereden ritten onzichtbaar op Schema.** De dag-detailkaart rendert alleen geplande
-    sessies → een verleden dag met activiteit toont "Rustdag" i.p.v. de rit. Fix: (a) de kaart een
-    gereden rit laten tonen (naam/type/tss — `DoneEntry` mist rit-naam/-type), (b) week-navigatie op de
-    Schema-dag-strip (nu current-week-only; de Weekplanner-editor heeft die al).
+- **ISSUE 1 (dagtype-model) — DONE + LIVE** (zie Stand): Pendel?-toggle + client-side afleiding, slider,
+  Schema auto-refresh, pendel-duur enkele-reis. Bron-recons `BESCHIKBAARHEID-MOBILE-RECON` +
+  `ENGINE-DAGTYPE-BRANCHES-RECON`.
+- **ISSUE 2 (dagkaart-VOLTOOID) — VOLGENDE, grote gefaseerde port.** Bron-spec =
+  `docs/DAGKAART-PENDEL-RECON.md` SECTIE A (gepind op commit `32d7ed7`:
+  https://raw.githubusercontent.com/daanhhk/Cadans/32d7ed7a23ef6bbe3ef005f878c90f933c2bef72/docs/DAGKAART-PENDEL-RECON.md).
+  Een verleden dag met een gereden rit toont nu "Rustdag" — Cadans' `DoneEntry` = enkel `{tss, minuten}`.
+  Het datacontract moet UITGEBREID: done rit-type/naam/duur + zone-gedaan-minuten + planned-vs-done-
+  **alignment** + coach-impact-laag. **Fasering:** (2a) rit-weergave (naam/type/duur + zone-balk uit de
+  activity) → (2b) alignment/zone-vergelijking (state/score) → (2c) coach-impact + adapt-/Garmin-knoppen.
+  Overweeg ook week-navigatie op de Schema-dag-strip (nu current-week-only; de Weekplanner heeft die al).
+- **CHECKPUNT (los, na pendel):** weekdoel-afwijking GAS **254 TSS / 5:45 / 4 dagen** vs Cadans **134 /
+  3:15 / 3 dagen** — waarschijnlijk planning-gerelateerd; verifieer of de pendel-fix + juiste dagtypes het
+  dicht; anders een gerichte recon.
 - **Op de horizon:** Garmin-workout-push (externe device-integratie, apart traject); en de read-only
   **eind-audit** van alle geporte engine-fns (sluitstuk vóór cutover — adresseert de engine/parity-debts
   hierboven). (Beschikbaarheid/weekplanning-bewerken = GEDAAN deze sessie.)
