@@ -62,6 +62,7 @@ const done = (o: Partial<DoneEntry>): DoneEntry => ({
 const FULL_WEEK: ProposalWeek = {
   weekMonday: "2026-07-06",
   macroFase: "Base",
+  fase: "Base", // geen taper → balk-actieve-fase = macroFase (Basis licht op)
   eventNaam: "Amstel Gold Race",
   wekenTotEvent: 40,
   planModus: "Doel-gericht",
@@ -168,6 +169,7 @@ const FULL_READY: ReadinessResult = {
 const EMPTY_WEEK: ProposalWeek = {
   weekMonday: "2026-07-06",
   macroFase: "Base",
+  fase: "Base",
   eventNaam: null,
   wekenTotEvent: null,
   planModus: null,
@@ -191,6 +193,18 @@ const EMPTY_READY: ReadinessResult = {
   checkinDelta: 0,
   checkinSummary: "Nog geen wellness-data",
   checkin: null,
+};
+
+// ── "Taper-week" — fase="Taper" (engine-overlay) terwijl de onderliggende macro "Peak" is → het 4e
+// balk-segment (Taper) licht op (FASE 2 Brok 1). Zelfde dagen/ritten als de volle week.
+const TAPER_WEEK: ProposalWeek = {
+  weekMonday: "2026-07-06",
+  macroFase: "Peak",
+  fase: "Taper",
+  eventNaam: "Amstel Gold Race",
+  wekenTotEvent: 1,
+  planModus: "Doel-gericht",
+  days: FULL_WEEK.days,
 };
 
 interface Fixture {
@@ -217,6 +231,14 @@ const FIXTURES: Fixture[] = [
     proposalWeek: EMPTY_WEEK,
     doneByDate: {},
     readiness: EMPTY_READY,
+    todayISO: "2026-07-08",
+  },
+  {
+    key: "taper",
+    label: "Taper-week",
+    proposalWeek: TAPER_WEEK,
+    doneByDate: FULL_DONE,
+    readiness: FULL_READY,
     todayISO: "2026-07-08",
   },
 ];

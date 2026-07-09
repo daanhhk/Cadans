@@ -62,7 +62,7 @@ export function SchemaView({
     >
       <PeriodTimeline
         faseLabel={view.macroFaseLabel}
-        macroFase={view.macroFase}
+        fase={view.fase}
         eventNaam={view.eventNaam}
         wekenTotEvent={view.wekenTotEvent}
         planModus={view.planModus}

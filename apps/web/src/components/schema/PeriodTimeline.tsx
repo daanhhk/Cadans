@@ -76,18 +76,20 @@ function ModeChip({ label }: { label: string }) {
 // sequentie-staven met de huidige fase gemarkeerd; echte eventNaam + wekenTot.
 export function PeriodTimeline({
   faseLabel,
-  macroFase,
+  fase,
   eventNaam,
   wekenTotEvent,
   planModus,
 }: {
   faseLabel: string;
-  macroFase: string;
+  fase: string;
   eventNaam: string | null;
   wekenTotEvent: number | null;
   planModus: string | null;
 }) {
-  const curIdx = FASE_SEQ.findIndex((p) => p.key === macroFase);
+  // FASE 2 Brok 1: het actieve segment volgt de engine-'fase' (incl. "Taper"); niet-sequentie-waarden
+  // (Recovery/Test) → curIdx -1 → geen segment actief (bewust: geen crash, geen willekeurig segment).
+  const curIdx = FASE_SEQ.findIndex((p) => p.key === fase);
   const hasEvent = eventNaam != null && wekenTotEvent != null;
   const segBg = (i: number): string =>
     i < curIdx

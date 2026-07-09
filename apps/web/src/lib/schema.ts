@@ -458,8 +458,10 @@ export interface SchemaView {
   weekMonday: string;
   /** NL macro-fase-label voor de periodisering-kaart (week-niveau). */
   macroFaseLabel: string;
-  /** Rauwe macro-fase (Base/Build/Peak/…) — markeert de huidige fase in de sequentie-bar. */
+  /** Rauwe macro-fase (Base/Build/Peak/…) — voor de kop/label; de sequentie-bar markeert `fase`. */
   macroFase: string;
+  /** Effectieve fase incl. taper-overlay (Base/Build/Peak/Taper/Recovery/Test) — het actieve balk-segment. */
+  fase: string;
   eventNaam: string | null;
   wekenTotEvent: number | null;
   planModus: string | null;
@@ -582,6 +584,7 @@ export function deriveSchemaView(
     weekMonday: proposalWeek.weekMonday,
     macroFaseLabel: macroFaseLabel(proposalWeek.macroFase),
     macroFase: proposalWeek.macroFase,
+    fase: proposalWeek.fase,
     eventNaam: proposalWeek.eventNaam,
     wekenTotEvent: proposalWeek.wekenTotEvent,
     planModus: proposalWeek.planModus,
