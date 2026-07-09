@@ -2,9 +2,10 @@ import { useId, useState } from "react";
 import type { SchemaSession } from "../../lib/schema";
 import { Num, Overline } from "../ui";
 import { BlockList } from "./BlockList";
-import { ZoneBars } from "./ZoneBars";
+import { ZoneBar } from "./ZoneBar";
 
-// Eén sessie: naam/focus + duur/TSS + per-zone bars + (inklapbare) blok-lijst +
+// Eén sessie: naam/focus + duur/TSS + proportioneel per-interval silhouet (ZoneBar) +
+// (inklapbare) blok-lijst +
 // eindopmerking. session.focus is in het view-model al NL-gemapt + gededupliceerd t.o.v.
 // de zone-labels (lib/schema.ts toSession) → hier rauw renderen. De tekstuele stappen
 // (BlockList) staan DEFAULT ingeklapt; klik op de bars+samenvatting klapt ze uit
@@ -101,7 +102,7 @@ export function WorkoutDetail({
               color: "inherit",
             }}
           >
-            <ZoneBars blokken={session.blokken} />
+            <ZoneBar blokken={session.blokken} />
             <div
               style={{
                 display: "flex",
@@ -159,7 +160,7 @@ export function WorkoutDetail({
           </div>
         </>
       ) : (
-        <ZoneBars blokken={session.blokken} />
+        <ZoneBar blokken={session.blokken} />
       )}
 
       {session.eindopmerking && (

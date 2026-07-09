@@ -15,6 +15,7 @@ import {
   formatIf,
   MACRO_FASE_NL,
   macroFaseLabel,
+  silhouetSegments,
   stripFaseSuffix,
   ZONE_META,
   zoneCompareRows,
@@ -107,6 +108,56 @@ describe("blokFromEngine", () => {
   });
   it("behoudt de minuten", () => {
     expect(blokFromEngine({ minuten: 12.5, zone: "z2" })?.minuten).toBe(12.5);
+  });
+});
+
+describe("silhouetSegments (§5b proportioneel per-interval silhouet)", () => {
+  const blok = (
+    minuten: number,
+    hoogtePct: number,
+    color = "var(--zone-2)",
+  ) => ({
+    minuten,
+    hoogtePct,
+    color,
+  });
+
+  it("geeft één segment per blok, in ARRAY-volgorde (x monotoon stijgend)", () => {
+    const segs = silhouetSegments([
+      blok(15, 25, "var(--zone-1)"),
+      blok(30, 85, "var(--zone-4)"),
+      blok(15, 45, "var(--zone-2)"),
+    ]);
+    expect(segs).toHaveLength(3);
+    expect(segs[0]?.x).toBe(0);
+    expect(segs[1]?.x).toBeGreaterThan(segs[0]?.x ?? 0);
+    expect(segs[2]?.x).toBeGreaterThan(segs[1]?.x ?? 0);
+  });
+
+  it("breedte ∝ minuten: het dubbel-zo-lange blok is ~2× zo breed", () => {
+    const segs = silhouetSegments([blok(20, 45), blok(40, 45)]);
+    const w0 = segs[0]?.bw ?? 0;
+    const w1 = segs[1]?.bw ?? 0;
+    // gelijke hoogtePct, dus alleen de minuten sturen de breedte (± de GAP-correctie).
+    expect(w1 / w0).toBeGreaterThan(1.8);
+    expect(w1 / w0).toBeLessThan(2.2);
+  });
+
+  it("hoogte = hoogtePct en bottom-aligned (y = 100 − hoogte)", () => {
+    const segs = silhouetSegments([blok(10, 25), blok(10, 100)]);
+    expect(segs[0]?.h).toBe(25);
+    expect(segs[0]?.y).toBe(75);
+    expect(segs[1]?.h).toBe(100);
+    expect(segs[1]?.y).toBe(0);
+  });
+
+  it("draagt de blok-kleur (zone-token) door", () => {
+    const segs = silhouetSegments([blok(10, 85, "var(--zone-4)")]);
+    expect(segs[0]?.color).toBe("var(--zone-4)");
+  });
+
+  it("leeg in → leeg uit (geen segmenten)", () => {
+    expect(silhouetSegments([])).toEqual([]);
   });
 });
 

@@ -51,7 +51,7 @@ Overline boven de kaart: volledige dagnaam "Donderdag Do 9 Jul" = datum · ✓
   - Titel "Rustdag" + subtekst "Geen training gepland vandaag. Herstel is training." = engine/lege-staat-copy · ✓/→
   - GEDEELD KNOPPEN-BLOK (zie 5e)
 
-5b · GEPLAND (toekomst/train): type-pill + workout-naam + duur + zone-bars = engine voorstel · grotendeels ✓
+5b · GEPLAND (toekomst/train): type-pill + workout-naam + duur + proportioneel per-interval silhouet (rects in tijd-volgorde; breedte ∝ minuten, hoogte ∝ hoogtePct-intensiteit, kleur = zone) + inklapbare "Blokstructuur · N blokken" (label · duur · watt; default ingeklapt) = engine voorstel · ✓. Per-zone-TOTAAL-bars horen NIET op §5b — alleen op de done-kaarten §5c/§5d.
 
 5c · VOLTOOID — VOLLE VERGELIJKING (in Cadans: voltooid-VANDAAG):
   - Header-rij: overline "WO 8 JUL · VOLTOOID" (links) + align-chip "● Anders getraind" (rechts) =

@@ -114,6 +114,43 @@ export function blokFromEngine(b: unknown): SessionBlok | null {
   return { minuten, hoogtePct: meta.hoogtePct, color: meta.color };
 }
 
+/** Eén rect in het proportionele per-interval silhouet (viewBox 0 0 100 100). */
+export interface SilhouetSeg {
+  x: number; // linkerrand, cumulatief in ARRAY-volgorde
+  bw: number; // breedte ∝ minuten (min. MINW, gerenormaliseerd naar 100)
+  y: number; // bovenrand — bottom-aligned: 100 − hoogte
+  h: number; // hoogte = hoogtePct
+  color: string;
+}
+/**
+ * Silhouet-geometrie voor de ZoneBar, geport uit de GAS `zoneBar` (Script.html): per blok
+ * één rect in tijd-volgorde, breedte ∝ minuten/som-minuten (MINW-vloer zodat korte blokken
+ * zichtbaar blijven, daarna gerenormaliseerd naar exact 100), hoogte = hoogtePct, staven
+ * groeien van onderaf (y = 100 − hoogte). Pure geometrie → testbaar zonder DOM.
+ */
+export function silhouetSegments(blokken: SessionBlok[]): SilhouetSeg[] {
+  if (blokken.length === 0) return [];
+  const W = 100;
+  const MINW = 1.4; // min. staafbreedte
+  const GAP = 0.6; // smalle gap tussen staven
+  const totMin = blokken.reduce((a, b) => a + b.minuten, 0) || 1;
+  const weights = blokken.map((b) => Math.max(MINW, (b.minuten / totMin) * W));
+  const sum = weights.reduce((a, b) => a + b, 0) || 1;
+  let x = 0;
+  return blokken.map((b, i) => {
+    const w = ((weights[i] ?? 0) / sum) * W; // renormaliseer naar exact 100
+    const seg: SilhouetSeg = {
+      x,
+      bw: Math.max(0.8, w - GAP),
+      y: 100 - b.hoogtePct,
+      h: b.hoogtePct,
+      color: b.color,
+    };
+    x += w;
+    return seg;
+  });
+}
+
 export interface SchemaSession {
   naam: string;
   focus: string | null;
