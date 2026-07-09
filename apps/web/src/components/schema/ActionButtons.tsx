@@ -4,8 +4,8 @@ import { Link } from "react-router-dom";
 // Gedeeld knoppen-blok (§5e) onder de rustdag- (§5a) ÉN voltooid-volle-kaart (§5c). Vaste UI-labels
 // (UI-chrome, geen data). "Beschikbaarheid aanpassen" → de bestaande /weekplanner-route (actief).
 // De overige acties hebben nog geen scherm/backend → expliciete "binnenkort"-staat (disabled),
-// GEEN dode knop / nep-flow. §5d (verleden, geparkeerd) krijgt dit blok NIET. "Bekijk ritdetails ›"
-// alleen op §5c (leidt straks naar het ritdetail-scherm = 2d).
+// GEEN dode knop / nep-flow. §5d (verleden, geparkeerd) krijgt dit blok NIET. De §5c-"Bekijk
+// ritdetails ›" leeft in DoneCompareCard (boven de coach-impact-box), niet hier.
 
 const baseBtn: CSSProperties = {
   height: "var(--btn-height)",
@@ -23,7 +23,9 @@ const baseBtn: CSSProperties = {
   textDecoration: "none",
 };
 
-function SoonBtn({ label }: { label: string }) {
+// "Binnenkort"-knop (disabled, geen dode flow). Gedeeld: ook de §5c-"Bekijk ritdetails ›" (in
+// DoneCompareCard, boven de coach-impact-box) hergebruikt deze stijl.
+export function SoonButton({ label }: { label: string }) {
   return (
     <button
       type="button"
@@ -46,11 +48,7 @@ function SoonBtn({ label }: { label: string }) {
   );
 }
 
-export function ActionButtons({
-  rideDetails = false,
-}: {
-  rideDetails?: boolean;
-}) {
+export function ActionButtons() {
   return (
     <div
       style={{
@@ -60,12 +58,11 @@ export function ActionButtons({
         marginTop: "var(--s-4)",
       }}
     >
-      {rideDetails && <SoonBtn label="Bekijk ritdetails ›" />}
-      <SoonBtn label="Andere training kiezen" />
+      <SoonButton label="Andere training kiezen" />
       <Link to="/weekplanner" style={{ ...baseBtn, cursor: "pointer" }}>
         Beschikbaarheid aanpassen
       </Link>
-      <SoonBtn label="Push naar Garmin" />
+      <SoonButton label="Push naar Garmin" />
     </div>
   );
 }

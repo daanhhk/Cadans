@@ -126,10 +126,11 @@ export function SchemaView({
 
           {day.done ? (
             day.doneCompare ? (
-              // §5c voltooid-volle → volle kaart + gedeeld knoppen-blok (incl. ritdetails).
+              // §5c voltooid-volle → volle kaart (incl. ritdetails-link + impact-box) + gedeeld
+              // knoppen-blok. §5a (rustdag) rendert exact hetzelfde ActionButtons-blok (ongewijzigd).
               <>
                 <DoneCompareCard card={day.doneCompare} />
-                <ActionButtons rideDetails />
+                <ActionButtons />
               </>
             ) : (
               // §5d voltooid-verleden (gereduceerd, geparkeerd) → GEEN knoppen-blok.

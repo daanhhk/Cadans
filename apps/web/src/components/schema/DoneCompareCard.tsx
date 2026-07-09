@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import type { DoneCompare } from "../../lib/schema";
+import { SoonButton } from "./ActionButtons";
 import { ZoneCompare } from "./ZoneCompare";
 import { ZonePill } from "./ZonePill";
 
@@ -242,7 +243,10 @@ function CoachImpact({
   return (
     <div
       style={{
+        // STAP 2: extra ruimte ónder de impact-box zodat 'ie losstaat van de knoppen-rij. Door
+        // margin-collapse (blok-siblings) telt de max met de knoppen-marge (s-4) → s-6 wint.
         marginTop: "var(--s-4)",
+        marginBottom: "var(--s-6)",
         background: "var(--coach-bg)",
         border: `1px solid ${impact ? "var(--coach-border-impact)" : "var(--coach-border)"}`,
         borderRadius: "var(--r-md)",
@@ -304,6 +308,17 @@ export function DoneCompareCard({ card }: { card: DoneCompare }) {
         <AlignBar pct={card.scorePct} />
       )}
       <Reading card={card} />
+      {/* §5c-volgorde (STAP 1): "Bekijk ritdetails ›" NA de zone-vergelijking, VÓÓR de coach-impact-
+          box. Zelfde "binnenkort"-staat als het gedeelde knoppen-blok (leidt straks naar 2d). */}
+      <div
+        style={{
+          marginTop: "var(--s-4)",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <SoonButton label="Bekijk ritdetails ›" />
+      </div>
       {card.narrative && (
         <CoachImpact
           narrative={card.narrative}
