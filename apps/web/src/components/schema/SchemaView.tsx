@@ -7,6 +7,7 @@ import {
   deriveSchemaView,
 } from "../../lib/schema";
 import { Card, Overline } from "../ui";
+import { ActionButtons } from "./ActionButtons";
 import { AlignChip } from "./AlignChip";
 import { CoachReadinessBanner } from "./CoachReadinessBanner";
 import { DayStrip } from "./DayStrip";
@@ -125,23 +126,32 @@ export function SchemaView({
 
           {day.done ? (
             day.doneCompare ? (
-              <DoneCompareCard card={day.doneCompare} />
+              // §5c voltooid-volle → volle kaart + gedeeld knoppen-blok (incl. ritdetails).
+              <>
+                <DoneCompareCard card={day.doneCompare} />
+                <ActionButtons rideDetails />
+              </>
             ) : (
+              // §5d voltooid-verleden (gereduceerd, geparkeerd) → GEEN knoppen-blok.
               <DoneDetail done={day.done} />
             )
           ) : day.sessions.length === 0 ? (
-            <div
-              style={{
-                fontFamily: "var(--font-sans)",
-                fontSize: "var(--fs-label)",
-                color: "var(--text-muted)",
-                textAlign: "center",
-                padding: "var(--s-5) var(--s-2) var(--s-2)",
-                lineHeight: "var(--lh-body)",
-              }}
-            >
-              Rustdag — van herstel word je beter.
-            </div>
+            // §5a rustdag → lege-staat-copy + gedeeld knoppen-blok (zonder ritdetails).
+            <>
+              <div
+                style={{
+                  fontFamily: "var(--font-sans)",
+                  fontSize: "var(--fs-label)",
+                  color: "var(--text-muted)",
+                  textAlign: "center",
+                  padding: "var(--s-5) var(--s-2) var(--s-2)",
+                  lineHeight: "var(--lh-body)",
+                }}
+              >
+                Rustdag — van herstel word je beter.
+              </div>
+              <ActionButtons />
+            </>
           ) : (
             <div
               style={{
