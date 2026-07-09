@@ -1,12 +1,15 @@
 import { Overline } from "../ui";
 
-// Vaste macro-fase-volgorde (de engine periodiseert op wekenTot: ≥9 Base / ≥5 Build /
-// else Peak). Labels via dezelfde NL-conventie als MACRO_FASE_NL. Taper is een overlay
-// (nooit een macroFase-waarde) → niet in de sequentie.
+// Vaste macro-fase-volgorde voor de periodisering-balk (spec §2): Basis · Build · Peak · Taper.
+// LET OP — Taper licht (nog) NIET op: de balk-actieve-fase leest `macroFase` (= proposalWeek.macroFase
+// = de engine-macroFase Base/Build/Peak/Recovery/Test, NOOIT "Taper"; effectiveMacroFase_ planner.ts:88).
+// De engine berekent Taper WEL, maar als OVERLAY in het `fase`-veld (phase.ts:165), niet in macroFase →
+// het 4e segment wordt getoond maar activeert pas als die overlay wordt doorgekoppeld (open FASE-2-mapping).
 const FASE_SEQ = [
   { key: "Base", label: "Basis" },
   { key: "Build", label: "Build" },
   { key: "Peak", label: "Peak" },
+  { key: "Taper", label: "Taper" },
 ];
 
 function Stat({
