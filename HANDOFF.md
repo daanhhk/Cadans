@@ -197,20 +197,25 @@ consumeren UITSLUITEND `--s-*/--fs-*/--lh-*/--r-*` (kleur was al gedisciplineerd
   `docs/DAGKAART-PENDEL-RECON.md` SECTIE A + `docs/DATA-PROVENANCE-SCHEMA.md`. RESTEREND: de 2b-2-render-bug,
   2c + 2d — volgorde in de fase-lijst hieronder.
 
-### Geparkeerde fase-lijst (volgorde volgende chat)
+### VORMGEVING-MEETLAT (bevroren)
+`docs/VORMGEVING-SPEC.md` = de **BEVROREN Schema-flow vormgeving-standaard** (LIVE GAS = meetlat, app-tokens
+= styling, elk veld → zijn bron [engine/settings/D1/intervals], nooit hardcoded; **≠** = data-gedwongen
+afwijking). Vastgelegd uit 8 live-GAS-schermen + het instellingen-scherm; bevat een 13-punts
+RECON-CHECKLIST + de faseringsvolgorde. Leidend voor de Schema-flow-bouw hieronder.
+
+### Geparkeerde fase-lijst (volgorde volgende chat) — SPEC-GEDREVEN
 DONE deze reeks: ~~design-diff-recon (GAS-meetlat) + 2b-2-render-bug-diagnose~~ (`docs/DAGKAART-DESIGN-DIFF-RECON.md`)
 · ~~2b-2-render-fix (done-vandaag)~~ (`baa0762`; verleden-dag bewust geparkeerd — zie Stand).
-1. **2c coach-proza/callout + knoppen** (coach-impact-callout + "Bekijk ritdetails"/"Beschikbaarheid
-   aanpassen"/"Push naar Garmin"), bewust uitgesteld in de design-diff-recon; gebouwd tegen GAS.
-2. **2d ritdetails-drill-down** (extra activity-stats zoals in GAS), na 2c.
-3. **Preview-loop** (dev-only fixture-route): deterministische demo-states zodat de done-vandaag/verleden-
-   kaarten zónder live-trigger zichtbaar zijn — haalt de deploy-per-iteratie weg; bouwen zodra Daan thuis is.
-4. **Event-activeringsdrempel:** een A-event slaapt tot ~8-12 wkn en neemt pas dán de periodisering over; tot
-   dan draait het gekozen schema (FTP). Recon-first met GAS als meetlat; raakt waarschijnlijk deels de engine
-   → sign-off.
-5. **Events-editor** (schrijfpad + UI): vervangt de handmatige D1-seed; hierna Amstel Gold Race invoeren.
-6. **planModus-port (client):** echte mode-logica i.p.v. hardcoded "Doel-gericht" (`proposal.ts:179`).
-7. **Weekdoel-consistentie:** verifieer stabiliteit bij dag-selecties; gat naar GAS 254 uitzoeken.
+1. **Vormgeving-delta-recon:** Cadans-nu meten tegen elke regel van `docs/VORMGEVING-SPEC.md` (de 13-punts
+   RECON-CHECKLIST) — vastleggen wat ✓/○/≠/⏸ is.
+2. **Bouw de delta naar de spec — Schema-flow EERST** (dagkaart-states + sticky bottom-nav + coach-impact 2c),
+   geverifieerd via de **preview-loop** (dev-only fixtures, géén deploy per stap).
+3. **Ritdetails-drill-down (2d)** — na de Schema-flow.
+4. **Instellingen + events-editor** (bron-laag; vervangt de handmatige D1-seed; hierna Amstel Gold Race invoeren).
+Onder deze spec-gedreven lijn scharen (niet meer los): 2c coach-callout/knoppen · preview-loop-infra ·
+events-editor. Losstaand blijven: **event-activeringsdrempel** (A-event slaapt tot ~8-12 wkn; recon-first,
+raakt deels de engine → sign-off) · **planModus-port** (echte mode-logica i.p.v. hardcoded "Doel-gericht",
+`proposal.ts:179`) · **weekdoel-consistentie** (stabiliteit bij dag-selecties; gat naar GAS 254).
 - **Op de horizon:** Garmin-workout-push (externe device-integratie, apart traject); en de read-only
   **eind-audit** van alle geporte engine-fns (sluitstuk vóór cutover — adresseert de engine/parity-debts
   hierboven). (Beschikbaarheid/weekplanning-bewerken = GEDAAN deze sessie.)
