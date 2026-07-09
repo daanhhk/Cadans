@@ -290,6 +290,8 @@ export interface DoneCompare {
   deviate: boolean;
   rows: DoneCompareTableRow[];
   zones: DoneCompareZone[];
+  /** Coach-impact-proza (coachFeedback_ narrative; §6/2c). null = geen tekst → box weglaten. */
+  narrative: string | null;
 }
 
 /** IF-getal → NL "0,88" (2 decimalen, komma); null/NaN → "–". */
@@ -444,6 +446,11 @@ export function buildDoneCompare(
       { k: "TSS", p: String(fb.planned.tss), d: String(done.tss) },
     ],
     zones: zoneCompareRows(plannedSession.blokken, done.zoneMinutes),
+    // §6/2c: het coach-proza uit coachFeedback_ (niet meer weggegooid); leeg → box weglaten.
+    narrative:
+      typeof fb.narrative === "string" && fb.narrative.trim()
+        ? fb.narrative
+        : null,
   };
 }
 

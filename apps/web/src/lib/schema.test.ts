@@ -320,6 +320,7 @@ describe("buildDoneCompare (coachFeedback_-brug)", () => {
     expect(c?.planType).toBe("VO2max");
     expect(c?.doneType).toBe("Duur");
     expect(c?.titel).toBe("Duur-rit · 1u15"); // P2: different → <doneType>-rit · <duur>
+    expect(typeof c?.narrative).toBe("string"); // §6: coach-proza doorgegeven, niet weggegooid
   });
   it("geen geplande workout → null (reduced kaart)", () => {
     expect(buildDoneCompare(doneSS, null, "sweet_spot", "Build")).toBeNull();
