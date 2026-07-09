@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
 import { ComingSoon } from "./pages/ComingSoon";
@@ -6,6 +7,13 @@ import { Niveau } from "./pages/Niveau";
 import { Schema } from "./pages/Schema";
 import { Vorm } from "./pages/Vorm";
 import { Weekplanner } from "./pages/Weekplanner";
+
+// Dev-only preview-loop (fixture-render van de Schema-flow). import.meta.env.DEV is een
+// compile-time-constant → in de prod-build wordt deze tak (incl. de dynamic import) ge-DCE'd,
+// dus Preview.tsx + de fixtures belanden NIET in de prod-bundel (geverifieerd via bundel-grep).
+const PreviewPage = import.meta.env.DEV
+  ? lazy(() => import("./pages/Preview").then((m) => ({ default: m.Preview })))
+  : null;
 
 // App-shell: same-origin mount + react-router + bottom-nav. Schema/Trainingen zijn
 // "binnenkort"-placeholders; Vorm (5.1b, Vorm-lite) en Niveau (5.2, Vermogen-
@@ -21,6 +29,16 @@ export default function App() {
           <Route path="/vorm" element={<Vorm />} />
           <Route path="/trainingen" element={<ComingSoon tab="Trainingen" />} />
           <Route path="/niveau" element={<Niveau />} />
+          {import.meta.env.DEV && PreviewPage && (
+            <Route
+              path="/preview"
+              element={
+                <Suspense fallback={null}>
+                  <PreviewPage />
+                </Suspense>
+              }
+            />
+          )}
           <Route path="*" element={<Navigate to="/schema" replace />} />
         </Route>
         {/* Instellingen = full-screen (eigen terug-knop, geen bottom-nav) → sibling
