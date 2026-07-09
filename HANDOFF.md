@@ -11,6 +11,38 @@ live tot cutover.
 
 ## Stand
 
+**FASE 1 (Schema-flow zuivere vormgeving) AFGEROND + FASE 2 gestart (bron-recon + brok 1) — deze reeks chats.**
+Meetlat = `docs/VORMGEVING-SPEC.md` (BEVROREN). Zichtbaar in de dev-`/preview`-loop + de productie-render.
+- **Voltooid-vandaag-kaart (§5c) compleet:** align-chip (overline-rij) · type-pill + titel · gepland|gedaan-
+  tabel (Type/Duur/IF/TSS) · zone-vergelijking · "Bekijk ritdetails ›" (disabled/"binnenkort", = 2d) ·
+  **coach-impact-box** ("COACH · IMPACT", `coachFeedback_.narrative` — bron-gedreven) · **gedeeld knoppen-blok**
+  (§5e: Andere training / Beschikbaarheid aanpassen → `/weekplanner` / Push naar Garmin) onder de rust- ÉN
+  voltooid-kaart.
+- **Periodisering fase-balk = 4 segmenten** (Basis/Build/Peak/Taper); Taper LICHT OP wanneer de engine
+  `fase="Taper"` geeft (`ProposalWeek.fase` doorgekoppeld uit `eventFase_`; `PeriodTimeline` keyt op `fase`,
+  niet `macroFase`). Recovery/Test → geen actief segment (bewust).
+- **Dev-only `/preview`-route** (`apps/web/src/pages/Preview.tsx`, `import.meta.env.DEV`-gated, DCE-vrij in
+  prod — `grep PREVIEWONLYFIXTURE dist` = 0 hits) met fixtures **Volle week / Lege week / Taper-week** die de
+  ECHTE `SchemaView` voeden → vormgeving zonder deploy verifieerbaar.
+- **Bottom-nav sticky-fix** (`AppShell` `height:100dvh` + `<main min-height:0>` → nav plakt onderaan; safe-area behouden).
+- **Commits (chronologisch):** `e05d4a4` nav-fix · `2dfa5af` dev-only /preview · `1248f69` coach-impact-box ·
+  `18c34c5` gedeeld knoppen-blok · `f299e4e` §5c-polish (ritdetails-volgorde + marge) · `d7a2356` Taper-4e-segment
+  · `398a9e9` FASE-2-bron-recon · `c17a205` Taper-activering (balk keyt op `fase`).
+- **FASE 2 BRON-RECON:** `docs/FASE2-BRON-RECON.md` (gepind op `398a9e9`). Kernconclusie: **GEEN brok vereist een
+  `packages/engine`-wijziging** — alle 5 via web/api/D1/shared. Engine-sign-off enkel OPTIONEEL bij de canonieke
+  port van brok 2 (`phase.ts`) of brok 5 (`zones.ts`).
+- **FASE 2 BOUWPLAN (volgorde):** brok 1 Taper **✓ KLAAR** → **4b Volume→uren** (web-only; uren-RANGE ontbreekt —
+  nu enkel punt-labels ~3/~5/~7u) → **2 Opbouw-pill** (web-port `planModeLabel_` uit GAS `Doel.gs:294-297`;
+  vervangt de hardcoded "Doel-gericht") → **3 header coachNaam** (full-stack D1+shared+api+web; NIEUW veld;
+  avatar-naambron apart beslissen) → **4a events-editor** (model bestaat `EventItem.prioriteit`; `PUT /events`
+  + UI ontbreken) → **5 zones 3→5** (web-pad; **PRODUCTKEUZE eerst**: GAS-parity=3 behouden vs 5 als enhancement —
+  GAS toont done óók in ~3, dus 5 DIVERGEERT van GAS).
+- **OPEN AANDACHTSPUNTEN:** (i) taper-week kop/balk-inconsistentie — de kop toont de onderliggende macro (bv.
+  "Peak") terwijl de balk Taper markeert; meenemen bij brok 2 (kop/pill-laag). (ii) brok 5 vergt een
+  productkeuze vóór bouw. (iii) done-vandaag-kaart nog niet visueel geverifieerd op productie (zie ISSUE 2 hieronder).
+- **Vormgeving-meetlat blijft `docs/VORMGEVING-SPEC.md` (bevroren).** Een Claude Design-review = EXPLICIETE
+  slotstap NÁ de hele app, niet tussendoor.
+
 **ISSUE 2 (dagkaart-VOLTOOID) Fase 2a+2b + DATA-OPSCHOON Fase 1 — DONE + LIVE (deze reeks chats).**
 - **2a rit-weergave** (`44ecb65` → Version `3246abc6`): `DoneEntry` uitgebreid (type/naam/zoneMinutes); een
   verleden/vandaag-dag met een gereden rit toont de VOLTOOID-kaart (naam + NL-type-label uit de dominante
@@ -203,19 +235,16 @@ consumeren UITSLUITEND `--s-*/--fs-*/--lh-*/--r-*` (kleur was al gedisciplineerd
 afwijking). Vastgelegd uit 8 live-GAS-schermen + het instellingen-scherm; bevat een 13-punts
 RECON-CHECKLIST + de faseringsvolgorde. Leidend voor de Schema-flow-bouw hieronder.
 
-### Geparkeerde fase-lijst (volgorde volgende chat) — SPEC-GEDREVEN
-DONE deze reeks: ~~design-diff-recon (GAS-meetlat) + 2b-2-render-bug-diagnose~~ (`docs/DAGKAART-DESIGN-DIFF-RECON.md`)
-· ~~2b-2-render-fix (done-vandaag)~~ (`baa0762`; verleden-dag bewust geparkeerd — zie Stand).
-1. **Vormgeving-delta-recon:** Cadans-nu meten tegen elke regel van `docs/VORMGEVING-SPEC.md` (de 13-punts
-   RECON-CHECKLIST) — vastleggen wat ✓/○/≠/⏸ is.
-2. **Bouw de delta naar de spec — Schema-flow EERST** (dagkaart-states + sticky bottom-nav + coach-impact 2c),
-   geverifieerd via de **preview-loop** (dev-only fixtures, géén deploy per stap).
-3. **Ritdetails-drill-down (2d)** — na de Schema-flow.
-4. **Instellingen + events-editor** (bron-laag; vervangt de handmatige D1-seed; hierna Amstel Gold Race invoeren).
-Onder deze spec-gedreven lijn scharen (niet meer los): 2c coach-callout/knoppen · preview-loop-infra ·
-events-editor. Losstaand blijven: **event-activeringsdrempel** (A-event slaapt tot ~8-12 wkn; recon-first,
-raakt deels de engine → sign-off) · **planModus-port** (echte mode-logica i.p.v. hardcoded "Doel-gericht",
-`proposal.ts:179`) · **weekdoel-consistentie** (stabiliteit bij dag-selecties; gat naar GAS 254).
+### Geparkeerde fase-lijst — SPEC-GEDREVEN (grotendeels VOLTOOID → verder in de FASE 2 BOUWPLAN bovenaan Stand)
+DONE deze reeks: ~~design-diff-recon + 2b-2-render-bug-diagnose~~ (`docs/DAGKAART-DESIGN-DIFF-RECON.md`) ·
+~~2b-2-render-fix (done-vandaag)~~ (`baa0762`) · ~~vormgeving-delta-recon~~ (`9ba0e1a`, `docs/VORMGEVING-DELTA-RECON.md`)
+· ~~FASE 1 Schema-flow bouw (dagkaart-states + sticky nav + coach-impact 2c + §5e-knoppen)~~ (zie Stand) ·
+~~FASE 2 bron-recon~~ (`398a9e9`) · ~~brok 1 Taper~~ (`c17a205`).
+**RESTEREND** — volgorde in de **FASE 2 BOUWPLAN** bovenaan Stand: 4b Volume→uren · 2 Opbouw-pill
+(= planModus-port `planModeLabel_`) · 3 header coachNaam · 4a events-editor (+ dan Amstel Gold Race invoeren) ·
+5 zones 3→5 (productkeuze) · 2d ritdetails. Losstaand blijven: **event-activeringsdrempel** (A-event slaapt
+tot ~8-12 wkn; recon-first, raakt deels de engine → sign-off) · **weekdoel-consistentie** (stabiliteit bij
+dag-selecties; gat naar GAS 254).
 - **Op de horizon:** Garmin-workout-push (externe device-integratie, apart traject); en de read-only
   **eind-audit** van alle geporte engine-fns (sluitstuk vóór cutover — adresseert de engine/parity-debts
   hierboven). (Beschikbaarheid/weekplanning-bewerken = GEDAAN deze sessie.)
