@@ -24,10 +24,23 @@ live tot cutover.
   same-day-flip (voltooide vandaag → done-kaart; nieuwe `SchemaDay.isToday` houdt de dag-strip-markering) +
   no-plan-fallback (done zonder plan → gereduceerde kaart). Geplande workout voor done-dagen gereconstrueerd
   via `proposal.ts` `plannedForDone`.
-- **BEKENDE OPEN BUG (2b-2):** op een dag met ZOWEL een geplande sessie ALS een afwijkende gereden rit (bv.
-  WO 8: gepland Duurrit, gedaan Drempel) rendert de VOLLE vergelijkingskaart NIET — toont titel + geplande
-  sessie + enkele zone-bars i.p.v. chip/%-balk/gepland|gedaan-tabel/compare-bars. Te fixen in de design-lijn
-  (fase-lijst #1/#2 hieronder).
+- **2b-2-render-fix + GAS-getrouwheid** (`baa0762` → **Version `48eb51b6`**, laatste deploy): done-VANDAAG
+  plan-bron-fix (P1) — `deriveSchemaView` (`apps/web/src/lib/schema.ts`) gebruikt `plannedForDone ??
+  sessions[laatste]`, gerouteerd op de activity-done-staat → volle `DoneCompareCard`. Plus GAS-getrouwheid:
+  P2 titel (`coachTitle_`-port: gedaan-type "<type>-rit · <duur>" ALLEEN bij state `different`/"anders", anders
+  `planned.naam`), P3 %-balk verborgen bij "anders", P4 align-chip op de overline-rij (nieuw `AlignChip.tsx`).
+  +1 regressietest. **STATUS done-vandaag-kaart: nog NIET visueel geverifieerd** (geen done-vandaag-dag tijdens
+  de sessie) → verifieer bij de eerstvolgende voltooide training-VANDAAG op PRODUCTIE (incognito/hard refresh,
+  SW-cache).
+- **VERLEDEN voltooide dagen — BEWUST GEPARKEERD:** tonen de gereduceerde `DoneDetail` i.p.v. de volle
+  vergelijking. Reden: de plan-bron is niet reproduceerbaar — de engine-planner leest ambient `new Date()`
+  (`planner.ts:537` + kwaliteitspad-keuze `:209`), dus regeneratie vanuit een latere "vandaag" FLIPT het plan
+  (WO 8: `long_z2` → `sweet_spot`), semantisch FOUT (de determinisme-guard bewees dat aanpak A fout was).
+  **PRODUCTBESLISSING:** de app kijkt vooruit; geen verleden-reconstructie; een nieuwe gebruiker start zonder
+  historie. Indien terugkijken later gewenst: **aanpak B** (voorgesteldType/plan PERSISTEREN bij generatie →
+  werkt vooruit, dekt bestaande verleden dagen niet retroactief). NOOIT de engine-asOf-refactor (aanpak C —
+  afgeblazen als overkill; C loste een niet-nagestreefd geval op). Recon: `docs/DAGKAART-DESIGN-DIFF-RECON.md`
+  (GAS-meetlat, verschil-typen D/C/X/=, bug-diagnose).
 - **DATA-OPSCHOON Fase 1 (D1-data, GEEN repo/code):** REMOTE D1 (`cadans`, `aa302c17…`) `settings.doel` user 1
   **VO2max → 'FTP'** (`doel_start`/`doel_duur`/`ftp` onveranderd) — verhelpt de girona-fallback in Niveau.
   LOKALE dev-D1: test-event-rij "Ardennen-trip" (id 1) VERWIJDERD — verhelpt de event-fasekaart in Schema.
@@ -95,8 +108,8 @@ heeft → vervanging sloeg stil over).
 
 **Gate-vloeren (nooit onder; bron van waarheid — NOOIT hardcoden in een prompt):**
 engine-selftest `toBe(957)` (`packages/engine/src/selftest.test.ts:3668`, ongewijzigd) · vitest-totaal
-**208** (gemeten deze close-out; de oude "189" was STALE — fase 2a `44ecb65` → 194, fase 2b-2 `a184859`
-+14 → 208). CI groen. Hard floors — niet regresseren.
+**209** (fase 2b-2 `a184859` → 208 + de 2b-2-render-fix `baa0762` +1 regressietest → 209; de oude "189"/"208"
+waren stale). CI groen. Hard floors — niet regresseren.
 
 **Fundament:** IBM Plex Sans (400/500/600) + Mono (500/600), self-hosted via `@fontsource`,
 offline-precached (`main.tsx`). Het UI-kader ligt vast in **`apps/web/docs/UI-KADER.md`**:
@@ -185,18 +198,19 @@ consumeren UITSLUITEND `--s-*/--fs-*/--lh-*/--r-*` (kleur was al gedisciplineerd
   2c + 2d — volgorde in de fase-lijst hieronder.
 
 ### Geparkeerde fase-lijst (volgorde volgende chat)
-1. **Design-lijn hervatten:** DAGKAART-DESIGN-DIFF-recon met **GAS als BINDENDE meetlat** (`design/` levert
-   enkel tokens) — GAS `doneDetailHtml_` vs `design/coach-feedback.jsx` vs Cadans-nu — én in dezelfde recon
-   de **2b-2-render-bug** diagnosticeren (waarom rendert de volle kaart niet op een gepland-én-gedaan-dag).
-2. **2b-2-render-fix + 2c** (coach-impact-callout + knoppen), gebouwd tegen GAS.
-3. **Event-activeringsdrempel:** een A-event slaapt tot ~8-12 wkn en neemt pas dán de periodisering over; tot
+DONE deze reeks: ~~design-diff-recon (GAS-meetlat) + 2b-2-render-bug-diagnose~~ (`docs/DAGKAART-DESIGN-DIFF-RECON.md`)
+· ~~2b-2-render-fix (done-vandaag)~~ (`baa0762`; verleden-dag bewust geparkeerd — zie Stand).
+1. **2c coach-proza/callout + knoppen** (coach-impact-callout + "Bekijk ritdetails"/"Beschikbaarheid
+   aanpassen"/"Push naar Garmin"), bewust uitgesteld in de design-diff-recon; gebouwd tegen GAS.
+2. **2d ritdetails-drill-down** (extra activity-stats zoals in GAS), na 2c.
+3. **Preview-loop** (dev-only fixture-route): deterministische demo-states zodat de done-vandaag/verleden-
+   kaarten zónder live-trigger zichtbaar zijn — haalt de deploy-per-iteratie weg; bouwen zodra Daan thuis is.
+4. **Event-activeringsdrempel:** een A-event slaapt tot ~8-12 wkn en neemt pas dán de periodisering over; tot
    dan draait het gekozen schema (FTP). Recon-first met GAS als meetlat; raakt waarschijnlijk deels de engine
    → sign-off.
-4. **Events-editor** (schrijfpad + UI): vervangt de handmatige D1-seed; hierna Amstel Gold Race invoeren.
-5. **planModus-port (client):** echte mode-logica i.p.v. hardcoded "Doel-gericht" (`proposal.ts:179`).
-6. **Weekdoel-consistentie:** nu 184 TSS getoond (was wisselend); verifieer stabiliteit bij dag-selecties;
-   gat naar GAS 254 uitzoeken.
-- **2d** (ritdetails-drill-down, extra activity-stats zoals in GAS) blijft na 2c op de rol.
+5. **Events-editor** (schrijfpad + UI): vervangt de handmatige D1-seed; hierna Amstel Gold Race invoeren.
+6. **planModus-port (client):** echte mode-logica i.p.v. hardcoded "Doel-gericht" (`proposal.ts:179`).
+7. **Weekdoel-consistentie:** verifieer stabiliteit bij dag-selecties; gat naar GAS 254 uitzoeken.
 - **Op de horizon:** Garmin-workout-push (externe device-integratie, apart traject); en de read-only
   **eind-audit** van alle geporte engine-fns (sluitstuk vóór cutover — adresseert de engine/parity-debts
   hierboven). (Beschikbaarheid/weekplanning-bewerken = GEDAAN deze sessie.)
