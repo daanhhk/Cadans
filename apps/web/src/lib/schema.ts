@@ -420,7 +420,12 @@ export function buildDoneCompare(
   );
   if (!fb?.done) return null;
   return {
-    titel: `${fb.done.typeLabel}-rit · ${formatDuurU(done.minuten)}`,
+    // P2 (GAS coachTitle_, Script.html:581): `planned.naam` bij on-plan/afgeweken; alleen bij
+    // 'different' de "<doneType>-rit · <duur>"-vorm.
+    titel:
+      fb.state === "different"
+        ? `${fb.done.typeLabel}-rit · ${formatDuurU(done.minuten)}`
+        : plannedSession.naam,
     badgeZone: zoneNumFromToken(fb.done.badgeZone),
     badgeName: fb.done.typeLabel,
     chipKind: alignKindFromState(fb.state),
@@ -533,11 +538,18 @@ export function deriveSchemaView(
 
     // VOLLE vergelijking als er een geplande workout was (2b-2 STAP 3); anders (bv.
     // wedstrijd zonder voorstel) blijft dit null → gereduceerde kaart (STAP 2).
+    // P1 (render-bug): de plan-bron mag NIET aan de planner-`gedaan`-vlag (tePlannen) hangen.
+    // Een done-dag (activity-afgeleid `isDone`) levert zijn geplande workout via `plannedForDone`
+    // (verstreken dag) OF — voor een done-VANDAAG die nog in tePlannen zit (gedaan=0) — via de
+    // al-gebouwde dag-sessie `d.sessions[laatste]`. Spiegelt GAS' `voorstel && actual`
+    // (WebApp.gs:1152), los van de gedaan-vlag. Beide zijn dezelfde ProposalWorkout-shape.
+    const plannedForCompare =
+      d.plannedForDone ?? d.sessions[d.sessions.length - 1] ?? null;
     const doneCompare =
       isDone && done
         ? buildDoneCompare(
             done,
-            d.plannedForDone,
+            plannedForCompare,
             d.voorgesteldType,
             proposalWeek.macroFase,
           )

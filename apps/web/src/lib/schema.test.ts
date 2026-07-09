@@ -285,7 +285,7 @@ describe("buildDoneCompare (coachFeedback_-brug)", () => {
     expect(c.planType).toBe("Sweet Spot");
     expect(c.doneType).toBe("Sweet Spot");
     expect(c.deviate).toBe(false);
-    expect(c.titel).toBe("Sweet Spot-rit · 1u02");
+    expect(c.titel).toBe("Sweet Spot 3×12"); // P2: on-plan → planned.naam (niet type-rit)
     expect(c.badgeZone).toBe(4);
     expect(typeof c.scorePct).toBe("number");
     const ifRow = c.rows.find((r) => r.k === "IF");
@@ -319,6 +319,7 @@ describe("buildDoneCompare (coachFeedback_-brug)", () => {
     expect(c?.deviate).toBe(true);
     expect(c?.planType).toBe("VO2max");
     expect(c?.doneType).toBe("Duur");
+    expect(c?.titel).toBe("Duur-rit · 1u15"); // P2: different → <doneType>-rit · <duur>
   });
   it("geen geplande workout → null (reduced kaart)", () => {
     expect(buildDoneCompare(doneSS, null, "sweet_spot", "Build")).toBeNull();
@@ -399,5 +400,19 @@ describe("deriveSchemaView dispatch (flip + doneCompare)", () => {
     );
     expect(met.days[0].doneCompare).not.toBeNull();
     expect(met.days[0].doneCompare?.planType).toBe("Sweet Spot");
+  });
+  it("render-bug regressie (P1): done-vandaag met sessions maar zónder plannedForDone → volle compare", () => {
+    // WO-8-scenario: activity aanwezig (isDone) maar planner gedaan=0 → dag zit nog in tePlannen
+    // → plannedForDone=null, de geplande workout leeft in d.sessions[laatste]. Vóór de P1-fix gaf
+    // dit doneCompare=null (gereduceerde kaart); nu moet de volle compare gevuld zijn.
+    const day = pday(TODAY, {
+      voorgesteldType: "sweet_spot",
+      sessions: [plannedSS],
+      plannedForDone: null,
+    });
+    const v = deriveSchemaView(pweek([day]), { [TODAY]: doneSS }, TODAY);
+    expect(v.days[0].state).toBe("done");
+    expect(v.days[0].doneCompare).not.toBeNull();
+    expect(v.days[0].doneCompare?.planType).toBe("Sweet Spot");
   });
 });

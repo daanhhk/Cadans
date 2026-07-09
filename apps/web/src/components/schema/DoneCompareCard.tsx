@@ -1,52 +1,13 @@
 import type { CSSProperties } from "react";
-import type { AlignKind, DoneCompare } from "../../lib/schema";
+import type { DoneCompare } from "../../lib/schema";
 import { ZoneCompare } from "./ZoneCompare";
 import { ZonePill } from "./ZonePill";
 
 // VOLLE VOLTOOID-kaart (2b-2): geplande sessie bestaat → plan-vs-gedaan. Design-geankerd op
-// design/src/coach-feedback.jsx (DayHead-badge/AlignChip/AlignBar/Reading/ZoneCompare). De
-// dag-overline ("Di 4 · Voltooid") staat al boven de kaart (SchemaView) → hier badge + titel
-// + chip + %-balk + gepland|gedaan-tabel + zone-compare. GEEN coach-callout/knoppen (= 2c).
+// design/src/coach-feedback.jsx (DayHead-badge/AlignBar/Reading/ZoneCompare). De dag-overline
+// ("Di 4 · Voltooid") + de align-chip staan al boven de kaart (SchemaView, P4) → hier badge +
+// titel + %-balk + gepland|gedaan-tabel + zone-compare. GEEN coach-callout/knoppen (= 2c).
 // Strikt de --align-*/--reading-*/--zcompare-* tokens; micro-geometrie volgt de design-literals.
-
-const ALIGN: Record<AlignKind, { c: string; s: string }> = {
-  "op-plan": { c: "var(--align-on-plan)", s: "var(--align-on-plan-soft)" },
-  afgeweken: { c: "var(--align-deviated)", s: "var(--align-deviated-soft)" },
-  anders: { c: "var(--align-different)", s: "var(--align-different-soft)" },
-  gemist: { c: "var(--align-missed)", s: "var(--align-missed-soft)" },
-};
-
-function AlignChip({ kind, label }: { kind: AlignKind; label: string }) {
-  const a = ALIGN[kind] ?? ALIGN.anders;
-  return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 5,
-        borderRadius: "var(--r-pill)",
-        padding: "3px 9px",
-        fontFamily: "var(--font-sans)",
-        fontSize: "var(--fs-caption)",
-        fontWeight: 600,
-        background: a.s,
-        color: a.c,
-        border: `1px solid color-mix(in srgb, ${a.c} 40%, transparent)`,
-        flexShrink: 0,
-      }}
-    >
-      <span
-        style={{
-          width: 6,
-          height: 6,
-          borderRadius: "var(--r-pill)",
-          background: a.c,
-        }}
-      />
-      {label}
-    </span>
-  );
-}
 
 function AlignBar({ pct }: { pct: number }) {
   return (
@@ -235,16 +196,8 @@ function Reading({ card }: { card: DoneCompare }) {
 export function DoneCompareCard({ card }: { card: DoneCompare }) {
   return (
     <div style={{ marginTop: "var(--s-3)" }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: "var(--s-2)",
-        }}
-      >
+      <div style={{ display: "flex", alignItems: "center" }}>
         <ZonePill zone={card.badgeZone} name={card.badgeName} />
-        <AlignChip kind={card.chipKind} label={card.chipLabel} />
       </div>
       <div
         style={{
@@ -259,7 +212,11 @@ export function DoneCompareCard({ card }: { card: DoneCompare }) {
       >
         {card.titel}
       </div>
-      {card.scorePct != null && <AlignBar pct={card.scorePct} />}
+      {/* P3 (GAS coachPctHtml_, Script.html:575): %-balk verbergen bij 'anders' (different)
+          + 'gemist'; alleen tonen bij op-plan/afgeweken. */}
+      {card.scorePct != null && card.chipKind !== "anders" && (
+        <AlignBar pct={card.scorePct} />
+      )}
       <Reading card={card} />
     </div>
   );

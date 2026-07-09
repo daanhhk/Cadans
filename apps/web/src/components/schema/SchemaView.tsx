@@ -7,6 +7,7 @@ import {
   deriveSchemaView,
 } from "../../lib/schema";
 import { Card, Overline } from "../ui";
+import { AlignChip } from "./AlignChip";
 import { CoachReadinessBanner } from "./CoachReadinessBanner";
 import { DayStrip } from "./DayStrip";
 import { DoneCompareCard } from "./DoneCompareCard";
@@ -83,9 +84,25 @@ export function SchemaView({
 
       {day && (
         <Card>
-          <Overline>
-            {day.weekday} {day.dayNum} · {STATE_LABEL[day.state]}
-          </Overline>
+          {/* P4: align-chip op de overline-rij (GAS Script.html:585 / design DayHead-right). */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: "var(--s-2)",
+            }}
+          >
+            <Overline>
+              {day.weekday} {day.dayNum} · {STATE_LABEL[day.state]}
+            </Overline>
+            {day.doneCompare && (
+              <AlignChip
+                kind={day.doneCompare.chipKind}
+                label={day.doneCompare.chipLabel}
+              />
+            )}
+          </div>
 
           {day.state === "today" && (
             <div style={{ marginTop: "var(--s-3)" }}>
