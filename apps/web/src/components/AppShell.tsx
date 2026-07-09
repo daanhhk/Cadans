@@ -10,7 +10,7 @@ export function AppShell() {
   return (
     <div
       style={{
-        minHeight: "100dvh",
+        height: "100dvh",
         display: "flex",
         flexDirection: "column",
         background: "var(--bg-app)",
@@ -80,7 +80,14 @@ export function AppShell() {
         </Link>
       </header>
 
-      <main style={{ flex: 1, overflowY: "auto", padding: "0 16px 16px" }}>
+      <main
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: "auto",
+          padding: "0 16px 16px",
+        }}
+      >
         <Outlet />
       </main>
 
