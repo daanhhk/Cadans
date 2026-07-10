@@ -11,37 +11,55 @@ live tot cutover.
 
 ## Stand
 
-**FASE 1 (Schema-flow zuivere vormgeving) AFGEROND + FASE 2 gestart (bron-recon + brok 1) — deze reeks chats.**
-Meetlat = `docs/VORMGEVING-SPEC.md` (BEVROREN). Zichtbaar in de dev-`/preview`-loop + de productie-render.
-- **Voltooid-vandaag-kaart (§5c) compleet:** align-chip (overline-rij) · type-pill + titel · gepland|gedaan-
-  tabel (Type/Duur/IF/TSS) · zone-vergelijking · "Bekijk ritdetails ›" (disabled/"binnenkort", = 2d) ·
-  **coach-impact-box** ("COACH · IMPACT", `coachFeedback_.narrative` — bron-gedreven) · **gedeeld knoppen-blok**
-  (§5e: Andere training / Beschikbaarheid aanpassen → `/weekplanner` / Push naar Garmin) onder de rust- ÉN
-  voltooid-kaart.
-- **Periodisering fase-balk = 4 segmenten** (Basis/Build/Peak/Taper); Taper LICHT OP wanneer de engine
-  `fase="Taper"` geeft (`ProposalWeek.fase` doorgekoppeld uit `eventFase_`; `PeriodTimeline` keyt op `fase`,
-  niet `macroFase`). Recovery/Test → geen actief segment (bewust).
-- **Dev-only `/preview`-route** (`apps/web/src/pages/Preview.tsx`, `import.meta.env.DEV`-gated, DCE-vrij in
-  prod — `grep PREVIEWONLYFIXTURE dist` = 0 hits) met fixtures **Volle week / Lege week / Taper-week** die de
-  ECHTE `SchemaView` voeden → vormgeving zonder deploy verifieerbaar.
-- **Bottom-nav sticky-fix** (`AppShell` `height:100dvh` + `<main min-height:0>` → nav plakt onderaan; safe-area behouden).
-- **Commits (chronologisch):** `e05d4a4` nav-fix · `2dfa5af` dev-only /preview · `1248f69` coach-impact-box ·
-  `18c34c5` gedeeld knoppen-blok · `f299e4e` §5c-polish (ritdetails-volgorde + marge) · `d7a2356` Taper-4e-segment
-  · `398a9e9` FASE-2-bron-recon · `c17a205` Taper-activering (balk keyt op `fase`).
-- **FASE 2 BRON-RECON:** `docs/FASE2-BRON-RECON.md` (gepind op `398a9e9`). Kernconclusie: **GEEN brok vereist een
-  `packages/engine`-wijziging** — alle 5 via web/api/D1/shared. Engine-sign-off enkel OPTIONEEL bij de canonieke
-  port van brok 2 (`phase.ts`) of brok 5 (`zones.ts`).
-- **FASE 2 BOUWPLAN (volgorde):** brok 1 Taper **✓ KLAAR** → **4b Volume→uren** (web-only; uren-RANGE ontbreekt —
-  nu enkel punt-labels ~3/~5/~7u) → **2 Opbouw-pill** (web-port `planModeLabel_` uit GAS `Doel.gs:294-297`;
-  vervangt de hardcoded "Doel-gericht") → **3 header coachNaam** (full-stack D1+shared+api+web; NIEUW veld;
-  avatar-naambron apart beslissen) → **4a events-editor** (model bestaat `EventItem.prioriteit`; `PUT /events`
-  + UI ontbreken) → **5 zones 3→5** (web-pad; **PRODUCTKEUZE eerst**: GAS-parity=3 behouden vs 5 als enhancement —
-  GAS toont done óók in ~3, dus 5 DIVERGEERT van GAS).
-- **OPEN AANDACHTSPUNTEN:** (i) taper-week kop/balk-inconsistentie — de kop toont de onderliggende macro (bv.
-  "Peak") terwijl de balk Taper markeert; meenemen bij brok 2 (kop/pill-laag). (ii) brok 5 vergt een
-  productkeuze vóór bouw. (iii) done-vandaag-kaart nog niet visueel geverifieerd op productie (zie ISSUE 2 hieronder).
-- **Vormgeving-meetlat blijft `docs/VORMGEVING-SPEC.md` (bevroren).** Een Claude Design-review = EXPLICIETE
-  slotstap NÁ de hele app, niet tussendoor.
+**FASE 1 + FASE 2 (§5b + 4b + brok 2) — deze reeks chats.** Meetlat = `docs/VORMGEVING-SPEC.md` (BEVROREN);
+geverifieerd via de dev-`/preview`-loop.
+
+**VLOEREN** (mogen niet regresseren; NIET in prompts hardcoden): engine-selftest-assert-count **957** ·
+vitest-totaal **221**.
+
+**FASE 1 (schema-flow zuivere vormgeving):** VOLLEDIG AF + visueel geverifieerd in `/preview`.
+
+**FASE 2 (data/bron-laag, spec-gedreven, geverifieerd via `/preview` dev-fixtures):**
+- **brok 1 Taper AF** (`c17a205`): `PeriodTimeline` fase-balk keyt op `fase`; Taper-activering werkt.
+- **§5b GEPLAND-kaart AF** (`16cf462` + `1410013`): render terug naar proportioneel per-interval silhouet —
+  component `ZoneBar` hersteld uit `c328de5^`, geometrie in de pure helper `silhouetSegments` (`schema.ts`),
+  consumeert `session.blokken` `hoogtePct`. `ZoneBars` (meervoud = zone-totalen) blijft op §5c/§5d.
+  VORMGEVING-SPEC §5b verduidelijkt. Fixture engine-gedreven gemaakt: de geplande dag roept
+  `buildWorkout`→`toSession` aan (variant `ss_2x20`, constante `PREVIEW_FTP` 250) i.p.v. een hand-object →
+  twee tempo-pieken = de echte, GAS-conforme vorm; week-aggregaten by construction uit de dag-sessions.
+- **4b §2 Volume-stat AF** (`a97d869`): single-target (GAS bouwt GÉÉN range), web-only via nieuwe pure helper
+  `presetHoursLabel` op `PROFIEL_PRESET_OPTIONS`; gethreaded via `ProposalWeek.profielPreset` → `view.volumeUren`;
+  null/onbekend/Custom → stat weggelaten (omit-conventie). VORMGEVING-SPEC §2 gecorrigeerd (web-only
+  single-target, geen range).
+- **brok 2 Opbouw-pill + taper-kop-fase AF** (`859905b`): plan-mode-pill via HERGEBRUIK van de
+  engine-geëxporteerde `planModeLabel_` (`phase.ts:180`) via de web-wrapper `planModusLabel` — drie labels
+  "Onderhoud"/"Doel-gericht"/"Opbouw"; vervangt de hardcoded pill (engine ongemoeid). Taper-kop-bug gefixt:
+  kop-regel + FASE-stat + fase-balk keyen nu ALLE op `view.fase` (`macroFaseLabel("Taper")`→"Taper"); was
+  GAS-non-conform. VORMGEVING-SPEC §2 gecorrigeerd (pill = plan-mode niet macro-fase; effectieve-fase-regel
+  toegevoegd; stale "Volume 4-7u"→"7u").
+
+**RESTEREND FASE 2:**
+- **brok 3 header coachNaam** — ENIGE full-stack: D1-migratie (nieuw `coachNaam`-veld) + shared-DTO +
+  api-endpoint + web-render, plus avatar-initialen (uit `coachNaam`) + ISO-week in de header. NOG NIET gestart.
+- **brok 4a events-editor** — model `EventItem.prioriteit` bestaat al; `PUT /events`-endpoint + editor-UI ontbreken.
+- **brok 5 zones 3→5** — PRODUCTKEUZE VOOR DE BOUW: GAS toont de done-kant óók in ~3 zones, dus Cadans staat al
+  op GAS-parity; "3→5" is een enhancement die van GAS DIVERGEERT (zoals 4b), geen parity-herstel.
+
+**CLOSE-OUT-LIJST / kleine follow-ups** (geen zichtbare bug op default-view):
+- Twee hand-geschreven fixtures met silhouet-drift-risico: Za "Lange duurrit" (`2026-07-11`) + Wo-8
+  `plannedForDone` "Drempel 3x10" (`2026-07-08`); de 3x10 zou 3 pieken tonen. Overweeg engine-gedreven te maken
+  zoals de §5b-geplande dag. (Za duurrit is inherent vlak = laag risico; de 3x10 voedt de §5c-vergelijking via
+  zone-TOTALEN, niet het silhouet.)
+- eventDriven-synthese-naad: de web-wrapper synthetiseert `eventDriven = (macro != null)` omdat de engine
+  `eventFase_` het niet emit; lichte tech-debt (drift als de engine event-driven ooit anders zou bepalen).
+
+**RECON-DOCS** (gepind, referentie): `FASE2-BRON-RECON.md` (`398a9e9`) · `FASE2-5B-RECON.md` (`6d2c18e`) ·
+`FASE2-5B-DATA-RECON.md` (`2c7b4dc`). Het 4b- en het brok-2-recon waren rapport-only (geen doc).
+
+**FOCUS VOLGENDE CHAT:** brok 3 — header coachNaam (de enige full-stack brok). Recon-first → migratie/DTO-proposal
+ter review (durable artefact = D1-schema + shared-DTO, dus vóór de bouw gereviewd) → bouw. Daarna brok 4a
+(events-editor: `PUT /events` + editor-UI), dan brok 5 (zones 3→5, PRODUCTKEUZE eerst). Kleine follow-ups van de
+close-out-lijst kunnen tussendoor.
 
 **ISSUE 2 (dagkaart-VOLTOOID) Fase 2a+2b + DATA-OPSCHOON Fase 1 — DONE + LIVE (deze reeks chats).**
 - **2a rit-weergave** (`44ecb65` → Version `3246abc6`): `DoneEntry` uitgebreid (type/naam/zoneMinutes); een
@@ -140,8 +158,8 @@ heeft → vervanging sloeg stil over).
 
 **Gate-vloeren (nooit onder; bron van waarheid — NOOIT hardcoden in een prompt):**
 engine-selftest `toBe(957)` (`packages/engine/src/selftest.test.ts:3668`, ongewijzigd) · vitest-totaal
-**209** (fase 2b-2 `a184859` → 208 + de 2b-2-render-fix `baa0762` +1 regressietest → 209; de oude "189"/"208"
-waren stale). CI groen. Hard floors — niet regresseren.
+**221** (gegroeid: §5b `silhouetSegments` +5 → 214, 4b `presetHoursLabel` +3 → 217, brok 2 `planModusLabel`
++4 → 221; de oude "209" was stale). CI groen. Hard floors — niet regresseren.
 
 **Fundament:** IBM Plex Sans (400/500/600) + Mono (500/600), self-hosted via `@fontsource`,
 offline-precached (`main.tsx`). Het UI-kader ligt vast in **`apps/web/docs/UI-KADER.md`**:
