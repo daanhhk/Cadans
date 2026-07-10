@@ -1,3 +1,4 @@
+import { buildWorkout } from "@cadans/engine";
 import { useState } from "react";
 import { SchemaView } from "../components/schema/SchemaView";
 import type {
@@ -58,6 +59,22 @@ const done = (o: Partial<DoneEntry>): DoneEntry => ({
   ...o,
 });
 
+// Engine-gedreven geplande workout (§5b) — DEZELFDE prod-keten als productie: buildWorkout(...)
+// levert de ProposalWorkout, deriveSchemaView→toSession mapt 'm bij render. sweet_spot + Base +
+// slot 0 → variant ss_2x20 → per-rep blokken (twee tempo-pieken), GAS-conform. Naam/min/TSS/
+// blokken/structuur komen ALLE uit de engine — niet meer met de hand. doelStart:null → weekIndex 0.
+const PREVIEW_FTP = 250;
+const PREVIEW_PLANNED_SESSION = buildWorkout(
+  "sweet_spot",
+  90, // beschikbare minuten (Base sweet-spot dag)
+  { ftp: PREVIEW_FTP, lthr: 160, doel: "ftp", doelStart: null },
+  0, // mesoWeek = weekIndex 0 → mesoFactor 1.0
+  "Base", // = FULL_WEEK.macroFase (periodisering-balk toont Basis)
+  undefined,
+  0, // slot (dagIdx) → rotatie-index 0 = ss_2x20
+  null,
+) as ProposalWorkout;
+
 // ── "Volle week" — vandaag = wo 2026-07-08 (voltooid-volle), elke dagkaart-state gedekt ──
 const FULL_WEEK: ProposalWeek = {
   weekMonday: "2026-07-06",
@@ -81,35 +98,11 @@ const FULL_WEEK: ProposalWeek = {
         { minuten: 6, zone: "rust" },
       ]),
     }),
-    // Do — GEPLAND (toekomst, sessie aanwezig, niet gedaan) → WorkoutDetail
+    // Do — GEPLAND (toekomst, sessie aanwezig, niet gedaan) → WorkoutDetail. Engine-gedreven
+    // (PREVIEW_PLANNED_SESSION) → silhouet toont de echte per-rep vorm (twee tempo-pieken).
     day("2026-07-09", 3, {
       voorgesteldType: "sweet_spot",
-      sessions: [
-        wo(
-          "Sweet Spot 2×15",
-          ["low", "high"],
-          75,
-          78,
-          [
-            { minuten: 15, zone: "rust" },
-            { minuten: 15, zone: "z2" },
-            { minuten: 30, zone: "drempel" },
-            { minuten: 10, zone: "z2" },
-            { minuten: 5, zone: "rust" },
-          ],
-          [
-            ["Warmup", "15:00", "150-180 W", "-", "rustig opbouwen"],
-            [
-              "Sweet Spot 2×15",
-              "30:00",
-              "238-250 W",
-              "-",
-              "2 blokken, 5′ rust",
-            ],
-            ["Uitrijden", "10:00", "130 W", "-", ""],
-          ],
-        ),
-      ],
+      sessions: [PREVIEW_PLANNED_SESSION],
     }),
     // Vr — RUSTDAG
     day("2026-07-10", 4),
