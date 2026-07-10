@@ -398,6 +398,7 @@ describe("deriveSchemaView dispatch (flip + doneCompare)", () => {
     eventNaam: null,
     wekenTotEvent: null,
     planModus: null,
+    profielPreset: null,
     days,
   });
   const de = (o: Partial<DoneEntry> = {}): DoneEntry => ({

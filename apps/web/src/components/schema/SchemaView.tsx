@@ -66,6 +66,7 @@ export function SchemaView({
         eventNaam={view.eventNaam}
         wekenTotEvent={view.wekenTotEvent}
         planModus={view.planModus}
+        volumeUren={view.volumeUren}
       />
 
       <WeekLoad

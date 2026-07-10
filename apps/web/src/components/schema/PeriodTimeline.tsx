@@ -80,12 +80,14 @@ export function PeriodTimeline({
   eventNaam,
   wekenTotEvent,
   planModus,
+  volumeUren,
 }: {
   faseLabel: string;
   fase: string;
   eventNaam: string | null;
   wekenTotEvent: number | null;
   planModus: string | null;
+  volumeUren: string | null;
 }) {
   // FASE 2 Brok 1: het actieve segment volgt de engine-'fase' (incl. "Taper"); niet-sequentie-waarden
   // (Recovery/Test) → curIdx -1 → geen segment actief (bewust: geen crash, geen willekeurig segment).
@@ -166,6 +168,9 @@ export function PeriodTimeline({
         }}
       >
         <Stat label="Fase" val={faseLabel} accent />
+        {/* §2 Volume-stat (single-target uren uit profielPreset, web-only). null → weggelaten,
+            zoals de zusters (event/ModeChip); gegroepeerd bij Fase = de design-"twee kolommen". */}
+        {volumeUren && <Stat label="Volume" val={volumeUren} />}
         {hasEvent && (
           <Stat label={`Tot ${eventNaam}`} val={`${wekenTotEvent} wkn`} />
         )}

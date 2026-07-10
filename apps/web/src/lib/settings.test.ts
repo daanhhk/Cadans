@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   EMPTY_FORM,
   legToRoundTrip,
+  presetHoursLabel,
   roundTripToLeg,
   type SettingsForm,
   settingsFormToBody,
@@ -155,5 +156,22 @@ describe("pendel duur (enkele reis ↔ retour)", () => {
   });
   it("roundTripToLeg(legToRoundTrip(75)) === 75", () => {
     expect(roundTripToLeg(legToRoundTrip(75))).toBe(75);
+  });
+});
+
+describe("presetHoursLabel (§2 Volume-stat)", () => {
+  it("mapt bekende presets naar het compacte uren-token uit PROFIEL_PRESET_OPTIONS", () => {
+    expect(presetHoursLabel("amateur")).toBe("3u");
+    expect(presetHoursLabel("gemiddeld")).toBe("5u");
+    expect(presetHoursLabel("gevorderd")).toBe("7u");
+    expect(presetHoursLabel("professional")).toBe("10u+");
+  });
+  it("null → null (lege staat)", () => {
+    expect(presetHoursLabel(null)).toBeNull();
+  });
+  it("onbekende key / custom-profiel zonder uren-bron → null (lege staat)", () => {
+    expect(presetHoursLabel("custom")).toBeNull();
+    expect(presetHoursLabel("onzin")).toBeNull();
+    expect(presetHoursLabel("")).toBeNull();
   });
 });

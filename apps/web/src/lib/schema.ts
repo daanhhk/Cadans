@@ -24,6 +24,7 @@ import {
   type ProposalWorkout,
 } from "./proposal";
 import { deriveReadiness, type ReadinessResult } from "./readiness";
+import { presetHoursLabel } from "./settings";
 
 // View-model voor de Schema-tab. ALLE derivatie hier (componenten = puur). De engine-
 // ProposalWorkout is los `any`-getypeerd; we casten 'm hier 1-op-1 naar SchemaSession
@@ -502,6 +503,9 @@ export interface SchemaView {
   eventNaam: string | null;
   wekenTotEvent: number | null;
   planModus: string | null;
+  /** §2 Volume-stat: uren-doel uit profielPreset (web-only mapping), of null → lege staat
+   * (geen preset / onbekende key / custom-profiel zonder uren-bron). */
+  volumeUren: string | null;
   todayISO: string;
   days: SchemaDay[];
   tss: LoadStat;
@@ -625,6 +629,7 @@ export function deriveSchemaView(
     eventNaam: proposalWeek.eventNaam,
     wekenTotEvent: proposalWeek.wekenTotEvent,
     planModus: proposalWeek.planModus,
+    volumeUren: presetHoursLabel(proposalWeek.profielPreset),
     todayISO,
     days,
     tss,

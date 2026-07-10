@@ -27,8 +27,9 @@ STATUS-LEGENDA: ✓ vermoedelijk al in Cadans · ○ nog te bouwen · ≠ data-g
     periodisering. BEVESTIGD 4 fasen voor Cadans-engine (incl. Taper). · ○
   * Chip "AGR Toerversie · 283d" = EERSTVOLGENDE event + dagen-teller (settings.events; 09-07-2026 ->
     18-04-2027 = 283d). NIET plan-versie. · ○
-  * Twee kolommen: "Fase / Basis" (engine) · "Volume / 4–7 u" (engine fase-volume-range; voeding uit
-    trainingsprofiel "Gevorderd 7u"). → recon: profiel->uren-mapping · ○
+  * Twee kolommen: "Fase / Basis" (engine) · "Volume / 7u" (WEB-ONLY single-target uren uit
+    profielPreset via presetHoursLabel op PROFIEL_PRESET_OPTIONS; engine leest profielPreset NIET;
+    GEEN range — GAS bouwt er ook geen; null/onbekend/custom → stat weggelaten). · ✓
 
 --- 3 · DEZE WEEK · GEPLAND VS GEDAAN ---
 - Overline "DEZE WEEK · GEPLAND VS GEDAAN" + refresh-icoon rechts · ✓ (→ recon: ook kalender-icoon? GAS toont enkel refresh)

@@ -68,6 +68,9 @@ export interface ProposalWeek {
   wekenTotEvent: number | null;
   /** Plan-modus voor de ModeChip ("Doel-gericht" bij een event; null anders). */
   planModus: string | null;
+  /** Volume-profiel-key (settings.profielPreset) → §2 Volume-stat via de web-mapping
+   * (presetHoursLabel). WEB-ONLY: de engine leest profielPreset niet. */
+  profielPreset: string | null;
   /** Effectieve huidige fase incl. taper-overlay (engine `eventFase_` 'fase': Base/Build/Peak/Taper/
    * Recovery/Test). Voedt het ACTIEVE segment van de periodisering-balk (Taper licht hierop op);
    * `macroFase` blijft de onderliggende macro voor de kop/label. */
@@ -366,6 +369,7 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
     // FASE 2 Brok 1: exact de engine-'fase' (overlay incl. "Taper"); geen event/macro → val terug op
     // de (effectieve) macroFase. Voedt de balk-actieve-fase; macroFase blijft voor kop/label.
     fase: (macro?.fase as string | undefined) ?? macroFase,
+    profielPreset: settings.profielPreset ?? null,
     days,
   };
 }

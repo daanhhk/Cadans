@@ -83,6 +83,7 @@ const FULL_WEEK: ProposalWeek = {
   eventNaam: "Amstel Gold Race",
   wekenTotEvent: 40,
   planModus: "Doel-gericht",
+  profielPreset: "gemiddeld", // → §2 Volume-stat toont "5u"
   days: [
     // Ma — VOLTOOID-VERLEDEN: gedaan, GEEN plan-bron → kale DoneDetail
     day("2026-07-06", 0),
@@ -166,6 +167,7 @@ const EMPTY_WEEK: ProposalWeek = {
   eventNaam: null,
   wekenTotEvent: null,
   planModus: null,
+  profielPreset: null, // → Volume-stat lege staat (stat weggelaten, zoals event/ModeChip)
   days: [
     day("2026-07-06", 0),
     day("2026-07-07", 1),
@@ -197,6 +199,7 @@ const TAPER_WEEK: ProposalWeek = {
   eventNaam: "Amstel Gold Race",
   wekenTotEvent: 1,
   planModus: "Doel-gericht",
+  profielPreset: "gevorderd", // → §2 Volume-stat toont "7u"
   days: FULL_WEEK.days,
 };
 

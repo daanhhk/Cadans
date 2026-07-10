@@ -107,6 +107,19 @@ export const PROFIEL_PRESET_OPTIONS: {
   { value: "professional", label: "Professional", sub: "10u+/wk" },
 ];
 
+/**
+ * profielPreset (opgeslagen value-key) → compacte uren-weergave voor de §2 Volume-stat.
+ * ENIGE bron = PROFIEL_PRESET_OPTIONS (`sub`, bv. "~5u/wk"); pakt het bestaande "Nu"/"Nu+"-
+ * token eruit → "3u"/"5u"/"7u"/"10u+". null (→ lege staat) voor: geen preset, een onbekende
+ * key, of een preset zonder uren-bron (bv. een custom-profiel). Verzint geen getal/format.
+ */
+export function presetHoursLabel(profielPreset: string | null): string | null {
+  if (!profielPreset) return null;
+  const opt = PROFIEL_PRESET_OPTIONS.find((p) => p.value === profielPreset);
+  const m = opt?.sub.match(/\d+u\+?/);
+  return m ? m[0] : null;
+}
+
 // fase: de engine leest alléén "maintain" (planModeLabel_, phase.ts) → een
 // override; leeg = automatisch (weggelaten uit de body → null).
 export const FASE_OPTIONS: { value: string; label: string }[] = [
