@@ -8,6 +8,7 @@ import {
   effectiveMacroFase_,
   eventFase_,
   formatDate,
+  planModeLabel_,
   recentHardDate_,
   rollingZoneCoverage_,
   rpeSignal_,
@@ -122,6 +123,20 @@ function intentByDateFrom(weekplans: unknown[]): IntentByDate {
 }
 
 /**
+ * Plan-mode-pill-label — web-only glue over de engine-1:1-GAS-port `planModeLabel_` (phase.ts).
+ * `eventFase_` emit géén `eventDriven`-veld → we synthetiseren die uit macro-truthiness (macro ===
+ * null ⟺ geen komend event). De labels "Onderhoud"/"Doel-gericht"/"Opbouw" komen uit de engine-port
+ * (single source, geen duplicatie). doel==="Onderhoud" wint; anders event→"Doel-gericht",
+ * fase==="maintain"→"Onderhoud", else "Opbouw".
+ */
+export function planModusLabel(
+  settings: SettingsInput,
+  eventDriven: boolean,
+): string {
+  return planModeLabel_(settings, { eventDriven }) as string;
+}
+
+/**
  * buildWeekProposal — client-side weekgeneratie-orkestratie (getrouw aan de GAS
  * generateProposal, plan-gekoppeld). PUUR: rekent op reeds-gehaalde /api-data, doet
  * zelf GEEN fetch en persisteert NIETS. Ambient Amsterdam-TZ (browser) = correct.
@@ -177,13 +192,14 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
       }
     : null;
   // Periodisering-kaart-data (week-niveau) — puur uit `macro`, engine ongewijzigd.
-  // Plan-modus: een komend event = event-driven → "Doel-gericht" (spiegelt GAS
-  // planModeLabel_ voor de event-tak). Volume-target zit NIET op `macro` → weggelaten.
+  // Plan-modus: de VOLLE planModeLabel_-logica (Onderhoud/Doel-gericht/Opbouw) via de web-glue
+  // planModusLabel; event-driven = macro-truthiness (macro===null ⟺ geen event). GAS toont de
+  // pill altijd → geen null-tak meer. Volume-target zit NIET op `macro` → weggelaten.
   const eventNaam: string | null =
     (macro?.hoofdEvent?.naam as string | undefined) ?? null;
   const wekenTotEvent: number | null =
     typeof macro?.wekenTot === "number" ? macro.wekenTot : null;
-  const planModus: string | null = macro ? "Doel-gericht" : null;
+  const planModus: string | null = planModusLabel(settings, macro != null);
 
   // 3. mesoWeek uit settings.doelStart (vaste keuze; geen DocProp).
   const mesoWeek = weekIndexFromStart_(settingsE);

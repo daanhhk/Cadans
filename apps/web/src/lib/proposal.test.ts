@@ -6,7 +6,11 @@ import type {
 } from "@cadans/shared";
 import { describe, expect, it } from "vitest";
 import type { ActValuesRow } from "./activities";
-import { buildWeekProposal, type ProposalWeek } from "./proposal";
+import {
+  buildWeekProposal,
+  type ProposalWeek,
+  planModusLabel,
+} from "./proposal";
 
 // TODAY vast (woensdag); week-maandag = 2026-03-09. NB: weekIndexFromStart_ +
 // computeMacroPhase lezen ambient new Date() (engine, niet todayISO-geparametreerd),
@@ -404,6 +408,34 @@ describe("buildWeekProposal", () => {
     });
     expect(noEvent.eventNaam).toBeNull();
     expect(noEvent.wekenTotEvent).toBeNull();
-    expect(noEvent.planModus).toBeNull();
+    // Geen event + doel "FTP" + fase null → planModeLabel_-tak "Opbouw" (niet meer null:
+    // GAS toont de pill altijd).
+    expect(noEvent.planModus).toBe("Opbouw");
+  });
+});
+
+describe("planModusLabel (plan-mode-pill, planModeLabel_-mirror)", () => {
+  it("doel 'Onderhoud' → 'Onderhoud' (wint, ook event-driven)", () => {
+    expect(planModusLabel(settings({ doel: "Onderhoud" }), false)).toBe(
+      "Onderhoud",
+    );
+    expect(planModusLabel(settings({ doel: "Onderhoud" }), true)).toBe(
+      "Onderhoud",
+    );
+  });
+  it("event-driven (doel ≠ Onderhoud) → 'Doel-gericht'", () => {
+    expect(planModusLabel(settings({ doel: "FTP" }), true)).toBe(
+      "Doel-gericht",
+    );
+  });
+  it("fase 'maintain' (geen event) → 'Onderhoud'", () => {
+    expect(
+      planModusLabel(settings({ doel: "FTP", fase: "maintain" }), false),
+    ).toBe("Onderhoud");
+  });
+  it("else (geen event, geen maintain) → 'Opbouw'", () => {
+    expect(planModusLabel(settings({ doel: "FTP", fase: null }), false)).toBe(
+      "Opbouw",
+    );
   });
 });

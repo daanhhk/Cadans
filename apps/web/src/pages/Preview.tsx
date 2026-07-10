@@ -166,7 +166,7 @@ const EMPTY_WEEK: ProposalWeek = {
   fase: "Base",
   eventNaam: null,
   wekenTotEvent: null,
-  planModus: null,
+  planModus: "Opbouw", // geen event + geen maintain → planModeLabel_-tak "Opbouw"
   profielPreset: null, // → Volume-stat lege staat (stat weggelaten, zoals event/ModeChip)
   days: [
     day("2026-07-06", 0),

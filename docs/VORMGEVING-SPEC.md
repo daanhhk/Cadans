@@ -20,11 +20,15 @@ STATUS-LEGENDA: ✓ vermoedelijk al in Cadans · ○ nog te bouwen · ≠ data-g
 - Overline "PLAN · PERIODISERING" · ✓
 - Titel "Basis · geen A-event gepland": fase-naam (engine) + "· geen A-event gepland" AFGELEID van
   event-prioriteit (settings.events; enige event = prioriteit B, geen A). ✓ fase / ○ event-suffix
-- Status-pill "Opbouw" (oranje outline) = macro-fase (engine) · ○
+- Status-pill "Opbouw"/"Doel-gericht"/"Onderhoud" (oranje outline) = plan-MODE via web-only
+  planModeLabel_-mirror (planModusLabel → engine-port planModeLabel_) op doel/event-driven/fase;
+  NIET de macro-fase, NIET engine-berekend. GAS toont 'm altijd (geen null-tak). · ✓
 - Chevron -> kaart uitklapbaar · ○
 - UITGEKLAPT:
   * 4-fasen segmented bar: Basis · Build · Peak · Taper (actief = oranje gevuld + dot) = engine
-    periodisering. BEVESTIGD 4 fasen voor Cadans-engine (incl. Taper). · ○
+    periodisering (4 fasen, incl. Taper). Kop-regel, FASE-stat ÉN de bar keyen ALLE op de EFFECTIEVE
+    fase (proposalWeek.fase, incl. Taper-override) via faseLabel = macroFaseLabel(fase) — GAS-conform;
+    de eerdere taper-kop-split (kop=macro, bar=effectief) was een bug, nu gefixt. · ✓
   * Chip "AGR Toerversie · 283d" = EERSTVOLGENDE event + dagen-teller (settings.events; 09-07-2026 ->
     18-04-2027 = 283d). NIET plan-versie. · ○
   * Twee kolommen: "Fase / Basis" (engine) · "Volume / 7u" (WEB-ONLY single-target uren uit
@@ -109,7 +113,7 @@ de safe-area-inset onderaan (thuisbalk telefoon). · ○ (layout — perfect via
 Dit scherm VOEDT de andere schermen. Titel "Instellingen" + X. Secties (overlines):
 - JOUW COACH: coach-naam-veld + preset-chips (Coach · Daan · Merckx · Sven · Anna) -> settings.coachNaam
 - PROFIEL: naam · FTP (W) · gewicht (kg) · W/kg (afgeleid) · "FTP automatisch bijwerken"-toggle -> settings/profiel
-- TRAININGSPROFIEL: volume-profiel dropdown ("Gevorderd 7u") -> settings; voedt "Volume 4–7 u" (§2)
+- TRAININGSPROFIEL: volume-profiel dropdown ("Gevorderd 7u") -> settings; voedt "Volume 7u" (§2, single-target via presetHoursLabel)
 - DOEL & BLOK: 5-knops grid (FTP/drempel · Duurvermogen · Klimmen · VO2max · Onderhoud) + startdatum-picker
   + duur (wkn) -> settings.doel (voedt Niveau-tab) + periodisering-start
 - KOPPELINGEN: intervals.icu-status · Athlete-ID · API-key (masked) · Garmin-sync-tijd -> settings
