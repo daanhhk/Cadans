@@ -201,23 +201,76 @@ export interface DoneEntry {
   minuten: number;
   type: string;
   naam: string;
+  /** 3-bucket (low/high/anaerobic) — behouden voor load/debt-adjacente afleidingen. */
   zoneMinutes: Record<ZoneKey, number> | null;
+  /** 5-bucket reële zones (rust/z2/tempo/drempel/anaeroob) — voedt de done-zone-bars,
+   * de gepland-vs-gedaan-vergelijking én de coachFeedback_-aanroep (GAS-parity). */
+  zoneMin5: Zone5 | null;
   ifReal: number | null;
 }
 
 // ── Done-rit-afleidingen (fase 2a): PURE, getest ──────────────────────────
-const DONE_BAR_HOOGTE: Record<ZoneKey, number> = {
-  low: 45, // z2
-  high: 85, // drempel
-  anaerobic: 100, // anaeroob
+// 5-bucket reële zones (brok 5, GAS-parity met WebApp.gs coachActualZoneMin_). De zone-bars +
+// coachFeedback_ lezen de VOLLE 5-bucket-verdeling; de engine-3-bucket `actualZoneMinutes_`
+// (load/debt, weekprep) blijft ongemoeid. rust=Z1 · z2=Z2 · tempo=Z3 · drempel=Z4 · anaeroob=Z5.
+export type Zone5Key = "rust" | "z2" | "tempo" | "drempel" | "anaeroob";
+export type Zone5 = Record<Zone5Key, number>;
+
+const ZONE5_ORDER: Zone5Key[] = ["rust", "z2", "tempo", "drempel", "anaeroob"];
+const ZT_TO_ZONE5: Record<string, Zone5Key> = {
+  Z1: "rust",
+  Z2: "z2",
+  Z3: "tempo",
+  Z4: "drempel",
+  Z5: "anaeroob",
+  Z6: "anaeroob",
+  Z7: "anaeroob",
 };
+// Per bucket: zone-nummer + kleur + staafhoogte (parity met de plan-BAR_BUCKET) + NL-label.
+const DONE5_META: Record<
+  Zone5Key,
+  { zone: number; color: string; hoogtePct: number; label: string }
+> = {
+  rust: { zone: 1, color: "var(--zone-1)", hoogtePct: 25, label: "Herstel" },
+  z2: { zone: 2, color: "var(--zone-2)", hoogtePct: 45, label: "Duur" },
+  tempo: { zone: 3, color: "var(--zone-3)", hoogtePct: 65, label: "Tempo" },
+  drempel: { zone: 4, color: "var(--zone-4)", hoogtePct: 85, label: "Drempel" },
+  anaeroob: {
+    zone: 5,
+    color: "var(--zone-5)",
+    hoogtePct: 100,
+    label: "VO2max",
+  },
+};
+
+/**
+ * Ruwe icu_zone_times (Z1..Z7 + SS) → 5-bucket reële zone-minuten. EXACTE spiegel van GAS
+ * `coachActualZoneMin_` (WebApp.gs:728): Z1→rust · Z2→z2 · Z3→tempo · Z4→drempel · Z5-7→anaeroob;
+ * SS/overlays → skip; minuten = secs/60. Leeg/geen power-zonedata → null.
+ */
+export function actualZone5_(iczt: unknown): Zone5 | null {
+  if (!Array.isArray(iczt) || iczt.length === 0) return null;
+  const zm: Zone5 = { rust: 0, z2: 0, tempo: 0, drempel: 0, anaeroob: 0 };
+  let saw = false;
+  for (const z of iczt) {
+    const id = (z as { id?: unknown } | null)?.id;
+    if (typeof id !== "string") continue;
+    const bk = ZT_TO_ZONE5[id];
+    if (!bk) continue;
+    zm[bk] += (Number((z as { secs?: unknown }).secs) || 0) / 60;
+    saw = true;
+  }
+  return saw ? zm : null;
+}
 
 /** Eén activity-rij → done-object (type idx1, naam idx2, duur idx3, IF idx7, tss idx8, reële zones uit idx15). */
 export function buildDoneEntry(row: ActValuesRow): DoneEntry {
-  const zm = actualZoneMinutes_(
-    { icu_zone_times: zoneTimesFromCell_(row[15]) },
-    null,
-  ) as { low: number; high: number; anaerobic: number } | null;
+  const iczt = zoneTimesFromCell_(row[15]);
+  const zm = actualZoneMinutes_({ icu_zone_times: iczt }, null) as {
+    low: number;
+    high: number;
+    anaerobic: number;
+  } | null;
   const rawIf = Number(row[7]);
   return {
     tss: Number(row[8]) || 0,
@@ -227,6 +280,7 @@ export function buildDoneEntry(row: ActValuesRow): DoneEntry {
     zoneMinutes: zm
       ? { low: zm.low, high: zm.high, anaerobic: zm.anaerobic }
       : null,
+    zoneMin5: actualZone5_(iczt),
     ifReal:
       row[7] !== "" && row[7] != null && Number.isFinite(rawIf) ? rawIf : null,
   };
@@ -244,43 +298,53 @@ function mergeDone(a: DoneEntry, b: DoneEntry): DoneEntry {
             (a.zoneMinutes?.anaerobic ?? 0) + (b.zoneMinutes?.anaerobic ?? 0),
         }
       : null;
+  const zoneMin5 =
+    a.zoneMin5 || b.zoneMin5
+      ? {
+          rust: (a.zoneMin5?.rust ?? 0) + (b.zoneMin5?.rust ?? 0),
+          z2: (a.zoneMin5?.z2 ?? 0) + (b.zoneMin5?.z2 ?? 0),
+          tempo: (a.zoneMin5?.tempo ?? 0) + (b.zoneMin5?.tempo ?? 0),
+          drempel: (a.zoneMin5?.drempel ?? 0) + (b.zoneMin5?.drempel ?? 0),
+          anaeroob: (a.zoneMin5?.anaeroob ?? 0) + (b.zoneMin5?.anaeroob ?? 0),
+        }
+      : null;
   return {
     tss: a.tss + b.tss,
     minuten: a.minuten + b.minuten,
     type: primary.type,
     naam: primary.naam,
     zoneMinutes,
+    zoneMin5,
     ifReal: primary.ifReal,
   };
 }
 
-/** De aanwezige reële zone-buckets (low→high→anaerobic). */
-export function doneZones(zm: Record<ZoneKey, number> | null): ZoneKey[] {
+/** De aanwezige reële 5-bucket-zones (rust→…→anaeroob). */
+function doneZones5(zm: Zone5 | null): Zone5Key[] {
   if (!zm) return [];
-  return ZONE_ORDER.filter((z) => (zm[z] ?? 0) > 0);
+  return ZONE5_ORDER.filter((z) => (zm[z] ?? 0) > 0);
 }
 
-/** 3-bucket reële zone-minuten → SessionBlok[] voor de done-ZoneBar (low→high→anaerobic). */
-export function doneZoneBlokken(
-  zm: Record<ZoneKey, number> | null,
-): SessionBlok[] {
+/** 5-bucket reële zone-minuten → SessionBlok[] voor de done-ZoneBars (rust→…→anaeroob). */
+export function doneZoneBlokken(zm: Zone5 | null): SessionBlok[] {
   if (!zm) return [];
-  return doneZones(zm).map((z) => ({
+  return doneZones5(zm).map((z) => ({
     minuten: zm[z],
-    hoogtePct: DONE_BAR_HOOGTE[z],
-    color: ZONE_META[z].color,
+    hoogtePct: DONE5_META[z].hoogtePct,
+    color: DONE5_META[z].color,
   }));
 }
 
-/** NL-type-label van een gereden rit = de dominante reële zone (Duur/Drempel/VO2max); zonder zones → rauwe type of "Rit". */
+/** NL-type-label van een gereden rit = de dominante reële zone (Herstel/Duur/Tempo/Drempel/
+ * VO2max); zonder zones → rauwe type of "Rit". */
 export function doneLabel(done: DoneEntry): string {
-  const zm = done.zoneMinutes;
+  const zm = done.zoneMin5;
   if (zm) {
-    let best: ZoneKey | null = null;
-    for (const z of ZONE_ORDER) {
+    let best: Zone5Key | null = null;
+    for (const z of ZONE5_ORDER) {
       if ((zm[z] ?? 0) > 0 && (best == null || zm[z] > zm[best])) best = z;
     }
-    if (best) return ZONE_META[best].label;
+    if (best) return DONE5_META[best].label;
   }
   return done.type || "Rit";
 }
@@ -356,9 +420,8 @@ export function alignKindFromState(state: string): AlignKind {
   return ALIGN_KIND[state] ?? "anders";
 }
 
-// Geplande blok-kleur (--zone-N, BAR_BUCKET) → zone-nummer; 3-bucket done (low/high/
-// anaerobic) → representatieve zone (Z2/Z4/Z5 = de done-ZONE_META-kleuren, want het
-// 3-bucket-model kent geen Z1/Z3 op de gedaan-kant).
+// Geplande blok-kleur (--zone-N, BAR_BUCKET) → zone-nummer. De gedaan-kant is nu 5-bucket
+// (Zone5) → elke bucket op zijn eigen zone (rust→Z1 … anaeroob→Z5 via DONE5_META).
 const PLAN_COLOR_ZONE: Record<string, number> = {
   "var(--zone-1)": 1,
   "var(--zone-2)": 2,
@@ -366,20 +429,15 @@ const PLAN_COLOR_ZONE: Record<string, number> = {
   "var(--zone-4)": 4,
   "var(--zone-5)": 5,
 };
-const DONE_ZONE_NUM: Record<ZoneKey, number> = {
-  low: 2,
-  high: 4,
-  anaerobic: 5,
-};
 
 /**
- * Geplande blokken (SessionBlok[]) + reële done-zone-minuten → per-zone gepland-vs-gedaan
- * (Z1..Z5) voor de compare-bars. Gepland aggregeert de blok-kleuren; gedaan mapt de 3
- * engine-buckets op hun representatieve zone (low→Z2, high→Z4, anaerobic→Z5).
+ * Geplande blokken (SessionBlok[]) + reële done-zone-minuten (5-bucket) → per-zone
+ * gepland-vs-gedaan (Z1..Z5) voor de compare-bars. Gepland aggregeert de blok-kleuren;
+ * gedaan mapt elke 5-bucket op zijn eigen zone (rust→Z1 … anaeroob→Z5).
  */
 export function zoneCompareRows(
   plannedBlokken: SessionBlok[],
-  doneZm: Record<ZoneKey, number> | null,
+  doneZm: Zone5 | null,
 ): DoneCompareZone[] {
   const plan = [0, 0, 0, 0, 0, 0];
   for (const b of plannedBlokken) {
@@ -388,7 +446,7 @@ export function zoneCompareRows(
   }
   const done = [0, 0, 0, 0, 0, 0];
   if (doneZm) {
-    for (const k of ZONE_ORDER) done[DONE_ZONE_NUM[k]] += doneZm[k] ?? 0;
+    for (const k of ZONE5_ORDER) done[DONE5_META[k].zone] += doneZm[k] ?? 0;
   }
   return [1, 2, 3, 4, 5].map((z) => ({
     z,
@@ -397,33 +455,19 @@ export function zoneCompareRows(
   }));
 }
 
-// 3-bucket done-zones → de 5-bucket-vorm die coachFeedback_ leest (low→z2, high→drempel,
-// anaerobic→anaeroob; rust/tempo bestaan niet in het 3-bucket-done-model).
-function doneZm5_(
-  zm: Record<ZoneKey, number> | null,
-): Record<string, number> | undefined {
-  if (!zm) return undefined;
-  return {
-    rust: 0,
-    z2: zm.low,
-    tempo: 0,
-    drempel: zm.high,
-    anaeroob: zm.anaerobic,
-  };
-}
-
-/** Dominante reële zone → pill {zoneNum,label} (Duur/Drempel/VO2max) voor de reduced kaart; geen zones → null. */
+/** Dominante reële zone → pill {zoneNum,label} (Herstel/Duur/Tempo/Drempel/VO2max) voor de
+ * reduced kaart; geen zones → null. */
 export function doneBadge(
   done: DoneEntry,
 ): { zoneNum: number; label: string } | null {
-  const zm = done.zoneMinutes;
+  const zm = done.zoneMin5;
   if (!zm) return null;
-  let best: ZoneKey | null = null;
-  for (const z of ZONE_ORDER) {
+  let best: Zone5Key | null = null;
+  for (const z of ZONE5_ORDER) {
     if ((zm[z] ?? 0) > 0 && (best == null || zm[z] > zm[best])) best = z;
   }
   return best
-    ? { zoneNum: DONE_ZONE_NUM[best], label: ZONE_META[best].label }
+    ? { zoneNum: DONE5_META[best].zone, label: DONE5_META[best].label }
     : null;
 }
 
@@ -453,7 +497,7 @@ export function buildDoneCompare(
       duurMin: done.minuten,
       tss: done.tss,
       ifReal: done.ifReal,
-      zoneMin: doneZm5_(done.zoneMinutes),
+      zoneMin: done.zoneMin5 ?? undefined,
     },
     { fase: macroFase },
     false,
@@ -483,7 +527,7 @@ export function buildDoneCompare(
       { k: "IF", p: formatIf(fb.planned.ifv), d: formatIf(fb.done.ifv) },
       { k: "TSS", p: String(fb.planned.tss), d: String(done.tss) },
     ],
-    zones: zoneCompareRows(plannedSession.blokken, done.zoneMinutes),
+    zones: zoneCompareRows(plannedSession.blokken, done.zoneMin5),
     // §6/2c: het coach-proza uit coachFeedback_ (niet meer weggegooid); leeg → box weglaten.
     narrative:
       typeof fb.narrative === "string" && fb.narrative.trim()

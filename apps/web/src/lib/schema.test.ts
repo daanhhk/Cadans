@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ActValuesRow } from "./activities";
 import type { ProposalDay, ProposalWeek, ProposalWorkout } from "./proposal";
 import {
+  actualZone5_,
   alignKindFromState,
   blokFromEngine,
   buildDoneCompare,
@@ -201,11 +202,20 @@ describe("buildDoneEntry (fase 2a done-object)", () => {
     expect(d.tss).toBe(75);
     expect(d.ifReal).toBe(0.88);
     expect(d.zoneMinutes).toEqual({ low: 60, high: 10, anaerobic: 0 });
+    // 5-bucket (brok 5): Z2→z2, Z4→drempel; rust/tempo/anaeroob = 0.
+    expect(d.zoneMin5).toEqual({
+      rust: 0,
+      z2: 60,
+      tempo: 0,
+      drempel: 10,
+      anaeroob: 0,
+    });
   });
 
   it("ontbrekende zone-data + lege IF → zoneMinutes/ifReal null (naam/duur blijven)", () => {
     const d = buildDoneEntry(doneRow({ naam: "Rit", duur: 60, tss: 40 }));
     expect(d.zoneMinutes).toBeNull();
+    expect(d.zoneMin5).toBeNull();
     expect(d.ifReal).toBeNull();
     expect(d.minuten).toBe(60);
     expect(d.naam).toBe("Rit");
@@ -213,17 +223,18 @@ describe("buildDoneEntry (fase 2a done-object)", () => {
 });
 
 describe("doneLabel + formatDuurU", () => {
-  it("doneLabel = dominante reële zone", () => {
+  it("doneLabel = dominante reële zone (5-bucket: tempo → 'Tempo')", () => {
     expect(
       doneLabel({
         tss: 0,
         minuten: 0,
         type: "Ride",
         naam: "",
-        zoneMinutes: { low: 20, high: 40, anaerobic: 0 },
+        zoneMinutes: null,
+        zoneMin5: { rust: 0, z2: 20, tempo: 40, drempel: 5, anaeroob: 0 },
         ifReal: null,
       }),
-    ).toBe(ZONE_META.high.label); // Drempel
+    ).toBe("Tempo"); // het 3-bucket-model lumpte dit als "Drempel"
   });
   it("doneLabel zonder zones → rauwe type of 'Rit'", () => {
     const base = {
@@ -231,6 +242,7 @@ describe("doneLabel + formatDuurU", () => {
       minuten: 0,
       naam: "",
       zoneMinutes: null,
+      zoneMin5: null,
       ifReal: null,
     };
     expect(doneLabel({ ...base, type: "Ride" })).toBe("Ride");
@@ -265,6 +277,7 @@ const doneSS: DoneEntry = {
   type: "Ride",
   naam: "Ochtendrit",
   zoneMinutes: { low: 18, high: 43, anaerobic: 0 },
+  zoneMin5: { rust: 0, z2: 18, tempo: 0, drempel: 43, anaeroob: 0 },
   ifReal: 0.89,
 };
 
@@ -296,19 +309,25 @@ describe("alignKindFromState", () => {
 });
 
 describe("zoneCompareRows", () => {
-  it("gepland aggregeert blok-kleuren; gedaan mapt 3-bucket → Z2/Z4/Z5; altijd Z1..Z5", () => {
+  it("gepland aggregeert blok-kleuren; gedaan 5-bucket → eigen zone (Z1+Z3 nu gevuld); altijd Z1..Z5", () => {
     const blokken = [
       { minuten: 6, hoogtePct: 25, color: "var(--zone-1)" },
       { minuten: 12, hoogtePct: 45, color: "var(--zone-2)" },
       { minuten: 38, hoogtePct: 85, color: "var(--zone-4)" },
       { minuten: 4, hoogtePct: 100, color: "var(--zone-5)" },
     ];
-    const rows = zoneCompareRows(blokken, { low: 18, high: 43, anaerobic: 0 });
+    const rows = zoneCompareRows(blokken, {
+      rust: 5,
+      z2: 13,
+      tempo: 7,
+      drempel: 36,
+      anaeroob: 0,
+    });
     expect(rows.map((r) => r.z)).toEqual([1, 2, 3, 4, 5]);
-    expect(rows[0]).toEqual({ z: 1, plan: 6, done: 0 });
-    expect(rows[1]).toEqual({ z: 2, plan: 12, done: 18 }); // low→Z2
-    expect(rows[2]).toEqual({ z: 3, plan: 0, done: 0 });
-    expect(rows[3]).toEqual({ z: 4, plan: 38, done: 43 }); // high→Z4
+    expect(rows[0]).toEqual({ z: 1, plan: 6, done: 5 }); // rust→Z1 (was structureel 0)
+    expect(rows[1]).toEqual({ z: 2, plan: 12, done: 13 });
+    expect(rows[2]).toEqual({ z: 3, plan: 0, done: 7 }); // tempo→Z3 (was structureel 0)
+    expect(rows[3]).toEqual({ z: 4, plan: 38, done: 36 });
     expect(rows[4]).toEqual({ z: 5, plan: 4, done: 0 });
   });
   it("geen done-zones → alle done 0", () => {
@@ -322,8 +341,8 @@ describe("zoneCompareRows", () => {
 
 describe("doneBadge", () => {
   it("dominante reële zone → {zoneNum,label}; geen zones → null", () => {
-    expect(doneBadge(doneSS)).toEqual({ zoneNum: 4, label: "Drempel" }); // high dominant
-    expect(doneBadge({ ...doneSS, zoneMinutes: null })).toBeNull();
+    expect(doneBadge(doneSS)).toEqual({ zoneNum: 4, label: "Drempel" }); // drempel dominant
+    expect(doneBadge({ ...doneSS, zoneMin5: null })).toBeNull();
   });
 });
 
@@ -351,6 +370,7 @@ describe("buildDoneCompare (coachFeedback_-brug)", () => {
       type: "Ride",
       naam: "Lange rit",
       zoneMinutes: { low: 70, high: 5, anaerobic: 0 },
+      zoneMin5: { rust: 0, z2: 70, tempo: 0, drempel: 5, anaeroob: 0 },
       ifReal: 0.68,
     };
     const plannedVo2: ProposalWorkout = {
@@ -407,6 +427,7 @@ describe("deriveSchemaView dispatch (flip + doneCompare)", () => {
     type: "Ride",
     naam: "Rit",
     zoneMinutes: null,
+    zoneMin5: null,
     ifReal: null,
     ...o,
   });
@@ -468,5 +489,44 @@ describe("deriveSchemaView dispatch (flip + doneCompare)", () => {
     expect(v.days[0].state).toBe("done");
     expect(v.days[0].doneCompare).not.toBeNull();
     expect(v.days[0].doneCompare?.planType).toBe("Sweet Spot");
+  });
+});
+
+// GAS-parity: spiegelt coachActualZoneMin_ (WebApp.gs:728). Z1→rust · Z2→z2 · Z3→tempo ·
+// Z4→drempel · Z5-7→anaeroob; SS/overlay-ids overgeslagen; minuten = secs/60 (rauwe float,
+// GEEN per-bucket-afronding); leeg/niet-array/enkel-overlay → null.
+describe("actualZone5_", () => {
+  it("mapt Z1..Z7 → 5 buckets (secs→min); Z5+Z6+Z7 → anaeroob", () => {
+    const zm = actualZone5_([
+      { id: "Z1", secs: 300 }, // 5 min → rust
+      { id: "Z2", secs: 3600 }, // 60 min → z2
+      { id: "Z3", secs: 600 }, // 10 min → tempo
+      { id: "Z4", secs: 1200 }, // 20 min → drempel
+      { id: "Z5", secs: 120 }, // 2 min ┐
+      { id: "Z6", secs: 60 }, //  1 min ├→ anaeroob = 4
+      { id: "Z7", secs: 60 }, //  1 min ┘
+    ]);
+    expect(zm).toEqual({
+      rust: 5,
+      z2: 60,
+      tempo: 10,
+      drempel: 20,
+      anaeroob: 4,
+    });
+  });
+  it("slaat niet-Z1..Z7 (SweetSpot-overlay / onbekend) over", () => {
+    const zm = actualZone5_([
+      { id: "Z2", secs: 1800 }, // 30 min → z2
+      { id: "SS", secs: 999 }, // sweet-spot overlay → genegeerd
+      { id: "Z8", secs: 999 }, // onbekend → genegeerd
+    ]);
+    expect(zm).toEqual({ rust: 0, z2: 30, tempo: 0, drempel: 0, anaeroob: 0 });
+  });
+  it("lege / niet-array / enkel-overlay → null", () => {
+    expect(actualZone5_([])).toBeNull();
+    expect(actualZone5_(null)).toBeNull();
+    expect(actualZone5_(undefined)).toBeNull();
+    expect(actualZone5_("rubbish")).toBeNull();
+    expect(actualZone5_([{ id: "SS", secs: 999 }])).toBeNull(); // enkel overlay → geen valide bucket
   });
 });

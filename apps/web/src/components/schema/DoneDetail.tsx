@@ -12,7 +12,7 @@ import { ZonePill } from "./ZonePill";
 // wedstrijd) kan niet vergelijken → ritnaam + type-pill + per-zone bars van de reële
 // time-in-zone. GEEN chip/tabel/vergelijking/callout (= de volle DoneCompareCard / 2c).
 export function DoneDetail({ done }: { done: DoneEntry }) {
-  const blokken = doneZoneBlokken(done.zoneMinutes);
+  const blokken = doneZoneBlokken(done.zoneMin5);
   const badge = doneBadge(done);
   return (
     <div

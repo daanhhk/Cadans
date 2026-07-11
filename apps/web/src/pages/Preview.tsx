@@ -55,6 +55,7 @@ const done = (o: Partial<DoneEntry>): DoneEntry => ({
   type: "Ride",
   naam: "Rit",
   zoneMinutes: null,
+  zoneMin5: null,
   ifReal: null,
   ...o,
 });
@@ -121,12 +122,13 @@ const FULL_WEEK: ProposalWeek = {
 };
 
 const FULL_DONE: Record<string, DoneEntry> = {
-  // verleden: dominante Z2 → "Duur" in de kale kaart
+  // verleden: dominante Z2 → "Duur" in de kale kaart. 5-bucket: rust + tempo nu zichtbaar.
   "2026-07-06": done({
     tss: 68,
     minuten: 78,
     naam: "🚴 Ochtendrit",
     zoneMinutes: { low: 52, high: 20, anaerobic: 3 },
+    zoneMin5: { rust: 8, z2: 42, tempo: 12, drempel: 12, anaeroob: 4 },
     ifReal: 0.74,
   }),
   // vandaag: rustige duur gereden i.p.v. de geplande drempel → "Anders getraind"
@@ -135,6 +137,7 @@ const FULL_DONE: Record<string, DoneEntry> = {
     minuten: 80,
     naam: "🚴 Rustige duurrit",
     zoneMinutes: { low: 68, high: 6, anaerobic: 1 },
+    zoneMin5: { rust: 10, z2: 56, tempo: 8, drempel: 5, anaeroob: 1 },
     ifReal: 0.68,
   }),
 };
