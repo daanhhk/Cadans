@@ -5,13 +5,48 @@ import { useNavigate } from "react-router-dom";
 import { getEvents, putEvents } from "../lib/api";
 import { bumpPlannerVersion } from "../lib/plannerSignal";
 
-// Events-editor: races & trips met profiel → PUT /api/events (FULL-REPLACE). Full-screen
-// met eigen terug-knop naar /instellingen (geen bottom-nav). Velden = de GAS "Events"-kolommen.
+// Events-editor: races & trips met profiel → PUT /api/events (FULL-REPLACE). Full-screen met
+// eigen terug-knop naar /instellingen. Layout spiegelt de GAS-editor (Script.html
+// eventsSectionHtml_): primaire rij (naam/✕ · prio-cycle-badge · datum) + inklapbare Details
+// (Type · Klim-type · Afstand · Hoogtemeters · Notitie).
 
 const KLIM_TYPES = ["lang", "kort", "gemengd", "vlak"];
+const KLIM_LABELS: Record<string, string> = {
+  lang: "Lang",
+  kort: "Kort",
+  gemengd: "Gemengd",
+  vlak: "Vlak",
+};
+const PRIO_NEXT = { A: "B", B: "C", C: "A" } as const;
+const PRIO_STYLE: Record<string, { bg: string; fg: string; bd: string }> = {
+  A: { bg: "var(--accent-soft)", fg: "var(--accent)", bd: "var(--accent)" },
+  B: {
+    bg: "var(--bg-elevated)",
+    fg: "var(--text-secondary)",
+    bd: "var(--border-strong)",
+  },
+  C: {
+    bg: "var(--bg-sunken)",
+    fg: "var(--text-muted)",
+    bd: "var(--border-subtle)",
+  },
+};
+
+// Stabiele React-keys via een module-teller (NIET de secure-context-only Web-Crypto
+// randomUUID-API, die op een insecure origin — de http-LAN-dev-server voor mobiele test —
+// undefined is en de render deed crashen). Een teller werkt overal.
+let _rowSeq = 0;
+const nextRowKey = () => `ev-${++_rowSeq}`;
+
+function todayIsoLocal(): string {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
 
 interface EventRow {
   _key: string; // stabiele React-key (UI-only; niet in EventInput)
+  detailsOpen: boolean;
   datum: string;
   naam: string;
   type: string;
@@ -22,40 +57,54 @@ interface EventRow {
   notitie: string;
 }
 
+type StringKey =
+  | "datum"
+  | "naam"
+  | "type"
+  | "prioriteit"
+  | "afstandKm"
+  | "hoogtemeters"
+  | "klimType"
+  | "notitie";
+
 function rowFromItem(e: EventItem): EventRow {
   return {
-    _key: crypto.randomUUID(),
+    _key: nextRowKey(),
+    detailsOpen: false,
     datum: e.datum,
     naam: e.naam ?? "",
     type: e.type === "trip" ? "trip" : "race",
     prioriteit:
       e.prioriteit === "A" || e.prioriteit === "B" || e.prioriteit === "C"
         ? e.prioriteit
-        : "A",
+        : "C",
     afstandKm: e.afstandKm == null ? "" : String(e.afstandKm),
     hoogtemeters: e.hoogtemeters == null ? "" : String(e.hoogtemeters),
     klimType:
-      e.klimType != null && KLIM_TYPES.includes(e.klimType) ? e.klimType : "",
+      e.klimType != null && KLIM_TYPES.includes(e.klimType)
+        ? e.klimType
+        : "vlak",
     notitie: e.notitie ?? "",
   };
 }
 
 function blankRow(): EventRow {
   return {
-    _key: crypto.randomUUID(),
-    datum: "",
+    _key: nextRowKey(),
+    detailsOpen: false,
+    datum: todayIsoLocal(),
     naam: "",
     type: "race",
-    prioriteit: "A",
+    prioriteit: "C",
+    klimType: "vlak",
     afstandKm: "",
     hoogtemeters: "",
-    klimType: "",
     notitie: "",
   };
 }
 
-// EventRow → EventInput met client-validatie (mirror de RUN 1 server-regels). Gooit een
-// Error met event-index + veld bij de eerste fout.
+// EventRow → EventInput met client-validatie (mirror de RUN 1 server-regels). Klim-type is
+// altijd 1 van de 4 (de editor kent geen lege optie). Gooit een Error met event-index + veld.
 function toInput(r: EventRow, i: number): EventInput {
   const n = i + 1;
   const datum = r.datum;
@@ -71,6 +120,9 @@ function toInput(r: EventRow, i: number): EventInput {
   }
   if (r.prioriteit !== "A" && r.prioriteit !== "B" && r.prioriteit !== "C") {
     throw new Error(`Event ${n}: prioriteit ongeldig`);
+  }
+  if (!KLIM_TYPES.includes(r.klimType)) {
+    throw new Error(`Event ${n}: klim-type ongeldig`);
   }
   let afstandKm: number | null = null;
   if (r.afstandKm !== "") {
@@ -90,10 +142,6 @@ function toInput(r: EventRow, i: number): EventInput {
     }
     hoogtemeters = v;
   }
-  const klimType = r.klimType === "" ? null : r.klimType;
-  if (klimType != null && !KLIM_TYPES.includes(klimType)) {
-    throw new Error(`Event ${n}: klim-type ongeldig`);
-  }
   const notitie = r.notitie.trim() === "" ? null : r.notitie.trim();
   if (notitie != null && notitie.length > 200) {
     throw new Error(`Event ${n}: notitie te lang (max 200)`);
@@ -105,42 +153,53 @@ function toInput(r: EventRow, i: number): EventInput {
     prioriteit: r.prioriteit as "A" | "B" | "C",
     afstandKm,
     hoogtemeters,
-    klimType: klimType as EventInput["klimType"],
+    klimType: r.klimType as EventInput["klimType"],
     notitie,
   };
 }
 
-function Labeled({ label, children }: { label: string; children: ReactNode }) {
+function DetailRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: "var(--s-3)",
+      }}
+    >
       <span
         style={{
           fontFamily: "var(--font-sans)",
-          fontSize: "var(--fs-caption)",
-          fontWeight: 600,
-          color: "var(--text-muted)",
+          fontSize: "var(--fs-label)",
+          color: "var(--text-secondary)",
         }}
       >
         {label}
       </span>
-      {children}
+      <div style={{ flexShrink: 0 }}>{children}</div>
     </div>
   );
 }
 
 function EventCard({
   row,
-  index,
   onChange,
   onRemove,
 }: {
   row: EventRow;
-  index: number;
   onChange: (patch: Partial<EventRow>) => void;
   onRemove: () => void;
 }) {
-  const set = (k: keyof EventRow) => (e: { target: { value: string } }) =>
+  const set = (k: StringKey) => (e: { target: { value: string } }) =>
     onChange({ [k]: e.target.value });
+  const prio = PRIO_STYLE[row.prioriteit] ?? PRIO_STYLE.C;
   return (
     <div
       style={{
@@ -150,135 +209,195 @@ function EventCard({
         padding: "var(--s-3) var(--s-4)",
         display: "flex",
         flexDirection: "column",
-        gap: "var(--s-3)",
+        gap: "var(--s-2)",
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <span
-          style={{
-            fontFamily: "var(--font-sans)",
-            fontSize: "var(--fs-caption)",
-            fontWeight: 600,
-            letterSpacing: "0.1em",
-            textTransform: "uppercase",
-            color: "var(--text-muted)",
-          }}
-        >
-          Event {index + 1}
-        </span>
-        <button
-          type="button"
-          onClick={onRemove}
-          style={{
-            padding: "3px 10px",
-            borderRadius: "var(--r-pill)",
-            cursor: "pointer",
-            background: "var(--bg-sunken)",
-            border: "1px solid var(--border-strong)",
-            color: "var(--text-secondary)",
-            fontFamily: "var(--font-sans)",
-            fontSize: "var(--fs-caption)",
-            fontWeight: 600,
-          }}
-        >
-          Verwijderen
-        </button>
-      </div>
-
-      <Labeled label="Datum">
-        <input
-          type="date"
-          value={row.datum}
-          onChange={set("datum")}
-          style={inputStyle}
-        />
-      </Labeled>
-      <Labeled label="Naam">
+      {/* primaire rij 1: naam + verwijder-✕ */}
+      <div style={{ display: "flex", alignItems: "center", gap: "var(--s-2)" }}>
         <input
           type="text"
           value={row.naam}
           maxLength={60}
           onChange={set("naam")}
-          placeholder="Naam van het event"
-          style={{ ...inputStyle, fontFamily: "var(--font-sans)" }}
+          placeholder="Event-naam…"
+          style={{ ...inputStyle, flex: 1, fontFamily: "var(--font-sans)" }}
         />
-      </Labeled>
-      <div style={{ display: "flex", gap: "var(--s-2)" }}>
-        <div style={{ flex: 1 }}>
-          <Labeled label="Type">
-            <select value={row.type} onChange={set("type")} style={inputStyle}>
-              <option value="race">Race</option>
-              <option value="trip">Trip</option>
-            </select>
-          </Labeled>
-        </div>
-        <div style={{ flex: 1 }}>
-          <Labeled label="Prioriteit">
-            <select
-              value={row.prioriteit}
-              onChange={set("prioriteit")}
-              style={inputStyle}
-            >
-              <option value="A">A</option>
-              <option value="B">B</option>
-              <option value="C">C</option>
-            </select>
-          </Labeled>
-        </div>
-      </div>
-      <div style={{ display: "flex", gap: "var(--s-2)" }}>
-        <div style={{ flex: 1 }}>
-          <Labeled label="Afstand (km)">
-            <input
-              type="number"
-              inputMode="decimal"
-              value={row.afstandKm}
-              onChange={set("afstandKm")}
-              style={inputStyle}
-            />
-          </Labeled>
-        </div>
-        <div style={{ flex: 1 }}>
-          <Labeled label="Hoogtemeters">
-            <input
-              type="number"
-              inputMode="numeric"
-              value={row.hoogtemeters}
-              onChange={set("hoogtemeters")}
-              style={inputStyle}
-            />
-          </Labeled>
-        </div>
-      </div>
-      <Labeled label="Klim-type">
-        <select
-          value={row.klimType}
-          onChange={set("klimType")}
-          style={inputStyle}
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label="Verwijder event"
+          style={{
+            flexShrink: 0,
+            width: 36,
+            height: "var(--field-height)",
+            borderRadius: "var(--r-pill)",
+            cursor: "pointer",
+            background: "var(--bg-sunken)",
+            border: "1px solid var(--border-strong)",
+            color: "var(--text-muted)",
+            fontSize: "var(--fs-label)",
+          }}
         >
-          <option value="">—</option>
-          <option value="lang">Lang</option>
-          <option value="kort">Kort</option>
-          <option value="gemengd">Gemengd</option>
-          <option value="vlak">Vlak</option>
-        </select>
-      </Labeled>
-      <Labeled label="Notitie">
+          ✕
+        </button>
+      </div>
+
+      {/* primaire rij 2: prioriteit-cycle-badge + datum */}
+      <div style={{ display: "flex", alignItems: "center", gap: "var(--s-2)" }}>
+        <button
+          type="button"
+          onClick={() =>
+            onChange({
+              prioriteit: PRIO_NEXT[row.prioriteit as "A" | "B" | "C"],
+            })
+          }
+          aria-label={`Prioriteit ${row.prioriteit} — tik om te wisselen`}
+          style={{
+            flexShrink: 0,
+            width: 40,
+            height: "var(--field-height)",
+            borderRadius: "var(--r-pill)",
+            cursor: "pointer",
+            background: prio.bg,
+            color: prio.fg,
+            border: `1px solid ${prio.bd}`,
+            fontFamily: "var(--font-num)",
+            fontSize: "var(--fs-label)",
+            fontWeight: 700,
+          }}
+        >
+          {row.prioriteit}
+        </button>
         <input
-          type="text"
-          value={row.notitie}
-          maxLength={200}
-          onChange={set("notitie")}
-          placeholder="Optioneel"
-          style={{ ...inputStyle, fontFamily: "var(--font-sans)" }}
+          type="date"
+          value={row.datum}
+          onChange={set("datum")}
+          style={{ ...inputStyle, flex: 1 }}
         />
-      </Labeled>
+      </div>
+
+      {/* primaire rij 3: Details-toggle */}
+      <button
+        type="button"
+        onClick={() => onChange({ detailsOpen: !row.detailsOpen })}
+        aria-expanded={row.detailsOpen}
+        style={{
+          alignSelf: "flex-start",
+          display: "flex",
+          alignItems: "center",
+          gap: 4,
+          padding: "2px 0",
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          fontFamily: "var(--font-sans)",
+          fontSize: "var(--fs-caption)",
+          color: "var(--text-muted)",
+        }}
+      >
+        Details
+        <span
+          style={{
+            display: "inline-block",
+            transform: row.detailsOpen ? "rotate(180deg)" : "none",
+            transition: "transform .2s",
+          }}
+        >
+          ⌄
+        </span>
+      </button>
+
+      {row.detailsOpen && (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "var(--s-3)",
+            paddingTop: "var(--s-1)",
+          }}
+        >
+          <DetailRow label="Type">
+            <div style={{ display: "flex", gap: 4 }}>
+              {(["trip", "race"] as const).map((t) => {
+                const on = row.type === t;
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => onChange({ type: t })}
+                    style={{
+                      padding: "5px 14px",
+                      borderRadius: "var(--r-pill)",
+                      cursor: "pointer",
+                      background: on
+                        ? "var(--accent-soft)"
+                        : "var(--bg-sunken)",
+                      border: `1px solid ${on ? "var(--accent)" : "var(--border-strong)"}`,
+                      color: on ? "var(--accent)" : "var(--text-secondary)",
+                      fontFamily: "var(--font-sans)",
+                      fontSize: "var(--fs-label)",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {t === "trip" ? "Trip" : "Race"}
+                  </button>
+                );
+              })}
+            </div>
+          </DetailRow>
+          <DetailRow label="Klim-type">
+            <select
+              value={row.klimType}
+              onChange={set("klimType")}
+              style={{ ...inputStyle, width: 132 }}
+            >
+              {KLIM_TYPES.map((k) => (
+                <option key={k} value={k}>
+                  {KLIM_LABELS[k]}
+                </option>
+              ))}
+            </select>
+          </DetailRow>
+          <DetailRow label="Afstand">
+            <span style={ctlWithUnit}>
+              <input
+                type="number"
+                inputMode="decimal"
+                value={row.afstandKm}
+                onChange={set("afstandKm")}
+                style={{ ...inputStyle, width: 90, textAlign: "right" }}
+              />
+              <span style={unitStyle}>km</span>
+            </span>
+          </DetailRow>
+          <DetailRow label="Hoogtemeters">
+            <span style={ctlWithUnit}>
+              <input
+                type="number"
+                inputMode="numeric"
+                value={row.hoogtemeters}
+                onChange={set("hoogtemeters")}
+                style={{ ...inputStyle, width: 90, textAlign: "right" }}
+              />
+              <span style={unitStyle}>hm</span>
+            </span>
+          </DetailRow>
+          <DetailRow label="Notitie">
+            <input
+              type="text"
+              value={row.notitie}
+              maxLength={200}
+              onChange={set("notitie")}
+              placeholder="Optioneel"
+              style={{
+                ...inputStyle,
+                width: 180,
+                fontFamily: "var(--font-sans)",
+              }}
+            />
+          </DetailRow>
+        </div>
+      )}
     </div>
   );
 }
@@ -443,7 +562,6 @@ export function Events() {
                 <EventCard
                   key={row._key}
                   row={row}
-                  index={i}
                   onChange={patchRow(i)}
                   onRemove={() => removeRow(i)}
                 />
@@ -529,6 +647,19 @@ const inputStyle: CSSProperties = {
   fontFamily: "var(--font-num)",
   fontSize: "var(--fs-body)",
   boxSizing: "border-box",
+};
+
+const ctlWithUnit: CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "var(--s-1)",
+};
+
+const unitStyle: CSSProperties = {
+  fontFamily: "var(--font-sans)",
+  fontSize: "var(--fs-caption)",
+  color: "var(--text-muted)",
+  width: 18,
 };
 
 const loadingStyle: CSSProperties = {
