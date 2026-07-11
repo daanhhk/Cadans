@@ -84,6 +84,7 @@ const FULL_WEEK: ProposalWeek = {
   wekenTotEvent: 40,
   planModus: "Doel-gericht",
   profielPreset: "gemiddeld", // → §2 Volume-stat toont "5u"
+  coachNaam: "Coach Stelvio", // → §6 coach-box-kop "COACH STELVIO · IMPACT"
   days: [
     // Ma — VOLTOOID-VERLEDEN: gedaan, GEEN plan-bron → kale DoneDetail
     day("2026-07-06", 0),
@@ -200,6 +201,7 @@ const TAPER_WEEK: ProposalWeek = {
   wekenTotEvent: 1,
   planModus: "Doel-gericht",
   profielPreset: "gevorderd", // → §2 Volume-stat toont "7u"
+  coachNaam: "Coach Stelvio",
   days: FULL_WEEK.days,
 };
 

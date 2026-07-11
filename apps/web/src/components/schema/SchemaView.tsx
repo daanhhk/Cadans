@@ -130,7 +130,10 @@ export function SchemaView({
               // §5c voltooid-volle → volle kaart (incl. ritdetails-link + impact-box) + gedeeld
               // knoppen-blok. §5a (rustdag) rendert exact hetzelfde ActionButtons-blok (ongewijzigd).
               <>
-                <DoneCompareCard card={day.doneCompare} />
+                <DoneCompareCard
+                  card={day.doneCompare}
+                  coachNaam={view.coachNaam}
+                />
                 <ActionButtons />
               </>
             ) : (

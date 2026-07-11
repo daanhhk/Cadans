@@ -31,3 +31,22 @@ export function parseLocalDate(iso: string): Date {
   if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
   return new Date(iso);
 }
+
+// ISO-8601-kalenderweeknummer (1..53) — 1:1 port van GAS `isoWeek_` (Script.html:84).
+// Neemt de LOKALE kalenderdatum (y/m/d) en rekent in UTC om TZ-drift te vermijden; de
+// donderdag-in-de-week bepaalt het jaar. Voedt de app-header "Week N" (§1).
+export function isoWeekNumber(d: Date): number {
+  const u = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dn = (u.getUTCDay() + 6) % 7; // ma=0..zo=6
+  u.setUTCDate(u.getUTCDate() - dn + 3); // naar de donderdag van deze ISO-week
+  const firstThu = new Date(Date.UTC(u.getUTCFullYear(), 0, 4));
+  return (
+    1 +
+    Math.round(
+      ((u.getTime() - firstThu.getTime()) / 86400000 -
+        3 +
+        ((firstThu.getUTCDay() + 6) % 7)) /
+        7,
+    )
+  );
+}

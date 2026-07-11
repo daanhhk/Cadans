@@ -151,6 +151,66 @@ function NumInput({
   );
 }
 
+function TextInput({
+  value,
+  onChange,
+  maxLength,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  maxLength?: number;
+  placeholder?: string;
+}) {
+  return (
+    <input
+      type="text"
+      value={value}
+      maxLength={maxLength}
+      placeholder={placeholder}
+      onChange={(e) => onChange(e.target.value)}
+      style={{ ...fieldStyle, width: 168, fontFamily: "var(--font-sans)" }}
+    />
+  );
+}
+
+const COACH_PRESETS = ["Coach", "Daan", "Merckx", "Sven", "Anna"];
+function CoachPresetChips({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--s-2)" }}>
+      {COACH_PRESETS.map((p) => {
+        const on = value.trim() === p;
+        return (
+          <button
+            key={p}
+            type="button"
+            onClick={() => onChange(p)}
+            style={{
+              padding: "5px 12px",
+              borderRadius: "var(--r-pill)",
+              cursor: "pointer",
+              background: on ? "var(--accent-soft)" : "var(--bg-sunken)",
+              border: `1px solid ${on ? "var(--accent)" : "var(--border-strong)"}`,
+              color: on ? "var(--accent)" : "var(--text-secondary)",
+              fontFamily: "var(--font-sans)",
+              fontSize: "var(--fs-label)",
+              fontWeight: 600,
+            }}
+          >
+            {p}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function Segmented({
   value,
   options,
@@ -414,6 +474,14 @@ export function Instellingen() {
         ) : (
           <>
             <Section title="Profiel">
+              <Row label="Naam" sub="voor je avatar-initialen">
+                <TextInput
+                  value={form.naam}
+                  onChange={set("naam")}
+                  maxLength={24}
+                  placeholder="Je naam"
+                />
+              </Row>
               <Row label="FTP" sub="drempelvermogen">
                 <NumInput value={form.ftp} onChange={set("ftp")} unit="W" />
               </Row>
@@ -448,6 +516,37 @@ export function Instellingen() {
                   />
                 </div>
               </Row>
+            </Section>
+
+            <Section title="Jouw coach">
+              <div style={{ padding: "var(--s-3) var(--s-4)" }}>
+                <div
+                  style={{
+                    fontFamily: "var(--font-sans)",
+                    fontSize: "var(--fs-label)",
+                    fontWeight: 600,
+                    color: "var(--text-primary)",
+                    marginBottom: "var(--s-2)",
+                  }}
+                >
+                  Coachnaam{" "}
+                  <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>
+                    · header-woordmerk
+                  </span>
+                </div>
+                <TextInput
+                  value={form.coachNaam}
+                  onChange={set("coachNaam")}
+                  maxLength={24}
+                  placeholder="Coach"
+                />
+                <div style={{ marginTop: "var(--s-3)" }}>
+                  <CoachPresetChips
+                    value={form.coachNaam}
+                    onChange={set("coachNaam")}
+                  />
+                </div>
+              </div>
             </Section>
 
             <Section title="Doel & blok">

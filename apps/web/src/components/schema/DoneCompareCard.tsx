@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { displayCoach } from "../../lib/coach";
 import type { DoneCompare } from "../../lib/schema";
 import { SoonButton } from "./ActionButtons";
 import { ZoneCompare } from "./ZoneCompare";
@@ -196,8 +197,8 @@ function Reading({ card }: { card: DoneCompare }) {
 
 // §6/2c coach-impact-box: NA de zone-vergelijking, VÓÓR het knoppen-blok (SchemaView). Proza =
 // coachFeedback_ narrative (card.narrative), NOOIT hardcoded — ontbreekt → box weglaten. Design-
-// geankerd op coach-feedback.jsx CoachCallout + de --coach-*-tokens. Kop-naam: settings.coachNaam
-// bestaat nog NIET → GAS-default "Coach" (bron te wiren zodra het settings-veld er is).
+// geankerd op coach-feedback.jsx CoachCallout + de --coach-*-tokens. Kop-naam = displayCoach(coachNaam)
+// (settings.coachNaam, gethreaded via ProposalWeek→view→SchemaView); leeg → "Coach"-default.
 function CoachMark() {
   return (
     <span
@@ -236,9 +237,11 @@ function CoachMark() {
 function CoachImpact({
   narrative,
   impact,
+  coachNaam,
 }: {
   narrative: string;
   impact: boolean;
+  coachNaam: string | null;
 }) {
   return (
     <div
@@ -265,7 +268,9 @@ function CoachImpact({
             color: "var(--coach-label)",
           }}
         >
-          {impact ? "Coach · impact" : "Coach"}
+          {impact
+            ? `${displayCoach(coachNaam)} · impact`
+            : displayCoach(coachNaam)}
         </span>
       </div>
       <div
@@ -283,7 +288,13 @@ function CoachImpact({
   );
 }
 
-export function DoneCompareCard({ card }: { card: DoneCompare }) {
+export function DoneCompareCard({
+  card,
+  coachNaam,
+}: {
+  card: DoneCompare;
+  coachNaam: string | null;
+}) {
   return (
     <div style={{ marginTop: "var(--s-3)" }}>
       <div style={{ display: "flex", alignItems: "center" }}>
@@ -323,6 +334,7 @@ export function DoneCompareCard({ card }: { card: DoneCompare }) {
         <CoachImpact
           narrative={card.narrative}
           impact={card.chipKind !== "op-plan"}
+          coachNaam={coachNaam}
         />
       )}
     </div>

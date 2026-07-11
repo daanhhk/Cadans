@@ -507,6 +507,8 @@ export interface SchemaView {
   /** §2 Volume-stat: uren-doel uit profielPreset (web-only mapping), of null → lege staat
    * (geen preset / onbekende key / custom-profiel zonder uren-bron). */
   volumeUren: string | null;
+  /** Coach-naam (settings.coachNaam) → §6 coach-impact-box-kop; null → "Coach"-default. */
+  coachNaam: string | null;
   todayISO: string;
   days: SchemaDay[];
   tss: LoadStat;
@@ -631,6 +633,7 @@ export function deriveSchemaView(
     wekenTotEvent: proposalWeek.wekenTotEvent,
     planModus: proposalWeek.planModus,
     volumeUren: presetHoursLabel(proposalWeek.profielPreset),
+    coachNaam: proposalWeek.coachNaam ?? null,
     todayISO,
     days,
     tss,
