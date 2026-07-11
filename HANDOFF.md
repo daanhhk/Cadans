@@ -11,11 +11,25 @@ live tot cutover.
 
 ## Stand
 
-**FASE 1 + FASE 2 (§5b + 4b + brok 2 + brok 3 + brok 4a) — deze reeks chats.** Meetlat = `docs/VORMGEVING-SPEC.md`
-(BEVROREN); geverifieerd via de dev-`/preview`-loop. Brok 3 = de EERSTE prod-aanraking (remote-D1 + deploy).
+**FASE 1 + FASE 2 (§5b + 4b + brok 2 + brok 3 + brok 4a + brok 5) — deze reeks chats. FASE 2 = COMPLEET.** Meetlat =
+`docs/VORMGEVING-SPEC.md` (BEVROREN); geverifieerd via de dev-`/preview`-loop. Brok 3 = de EERSTE prod-aanraking
+(remote-D1 + deploy).
 
 **VLOEREN** (mogen niet regresseren; NIET in prompts hardcoden): engine-selftest-assert-count **957** ·
-vitest-totaal **240**.
+vitest-totaal **243**.
+
+### BRONHIERARCHIE VOOR PARITY (werkwijze — vast)
+- **daanhhk/training is PUBLIC + BEVROREN op `3e8090a`.** De chat leest de GAS-bron DIRECT via
+  `raw.githubusercontent.com/daanhhk/training/3e8090a/<pad>` — dat is de EERSTE reflex bij ELKE parity-vraag, niet
+  een samenvatting.
+- De regel "de chat kan de repo niet lezen" geldt ALLEEN voor de LEVENDE lokale Cadans-repo (ongecommit werk → via
+  Claude Code), NIET voor de bevroren GAS-bron.
+- **VORMGEVING-SPEC + HANDOFF = gepinde SAMENVATTING, geen vervanging.** Verifieer elke parity-claim tegen de bron;
+  een samenvatting kan de VERKEERDE fn als meetlat nemen.
+- **Concreet (brok 5):** een samenvatting claimde "GAS = 3 zones / de port wijkt af van 5-bucket". De bron toonde
+  3-bucket in de ENGINE-laag (`Algorithm.gs:364`, load/debt) NAAST 5-bucket in de WEB-APP-laag (`WebApp.gs:728`,
+  display). De juiste meetlat was de web-app-fn → de fix werd CLIENT-ONLY i.p.v. engine-rakend.
+- **Grens:** puur-VISUELE GAS-rendering (spacing/pixels) → screenshot of eigen oog; de LEVENDE Cadans-repo → CC.
 
 **FASE 1 (schema-flow zuivere vormgeving):** VOLLEDIG AF + visueel geverifieerd in `/preview`.
 
@@ -71,9 +85,20 @@ vitest-totaal **240**.
     wel degelijk een volwaardige events-editor (`Script.html :88-149`) — die is de layout-meetlat. Recons:
     `docs/FASE2-4A-EVENTS-RECON.md` (`0d16faf`) + `docs/FASE2-4A-EVENTS-PROPOSAL.md` (`a87f348`).
 
-**RESTEREND FASE 2:**
-- **brok 5 zones 3→5** — PRODUCTKEUZE VOOR DE BOUW: GAS toont de done-kant óók in ~3 zones, dus Cadans staat al
-  op GAS-parity; "3→5" is een enhancement die van GAS DIVERGEERT (zoals 4b), geen parity-herstel.
+- **brok 5 done-zones 3→5 AF** (`6028cfd`; deploy Version `52a51ae9`) — **CLIENT-ONLY, GAS-PARITY-HERSTEL** (GEEN
+  divergentie; de eerdere "3→5 divergeert zoals 4b"-aanname was FOUT). De zichtbare 5-bar-done-verdeling in GAS
+  draait op de WEB-APP-fn `coachActualZoneMin_` (`WebApp.gs:728`, 5-bucket {rust,z2,tempo,drempel,anaeroob}) — NIET
+  op de engine. Nieuwe pure helper `actualZone5_` (`apps/web/src/lib/schema.ts`) spiegelt 'm byte-getrouw
+  (Z1→rust·Z2→z2·Z3→tempo·Z4→drempel·Z5-7→anaeroob; `secs/60` rauwe float; SS/overlay-skip; leeg→null).
+  `DoneEntry.zoneMin5` NAAST de behouden 3-bucket `zoneMinutes`; ZoneBars/ZoneCompare/doneBadge/doneLabel +
+  `buildDoneCompare`→`coachFeedback_` lezen nu `zoneMin5` → **Z1 (Herstel) + Z3 (Tempo) niet langer structureel
+  leeg**. De engine-3-bucket (`actualZoneMinutes_`/`tryPowerZoneTimes_`) = GAS `Algorithm.gs:364/378` LOAD/DEBT,
+  ONGEMOEID (GAS-parity). Recon gecorrigeerd: `docs/FASE2-5-ZONES-RECON.md` (was (b) engine-rakend op de VERKEERDE
+  meetlat → nu (a) CLIENT-ONLY). Vitest +3 (`actualZone5_`). Live op prod (Basic-Auth) → done-bars in-browser door
+  Daan te verifiëren.
+
+**FASE 2 = COMPLEET** (§5b · 4b · brok 2 · brok 3 · brok 4a · brok 5 alle AF). Resteert los: 2d ritdetails +
+close-out-follow-ups; het echte A-event **Amstel Gold Race** nog via de prod-editor in te voeren.
 
 **CLOSE-OUT-LIJST / kleine follow-ups** (geen zichtbare bug op default-view):
 - Twee hand-geschreven fixtures met silhouet-drift-risico: Za "Lange duurrit" (`2026-07-11`) + Wo-8
@@ -98,11 +123,13 @@ vitest-totaal **240**.
   `crypto.randomUUID()` in client-code die ook op een http-origin (LAN-dev) moet renderen.
 
 **RECON-DOCS** (gepind, referentie): `FASE2-BRON-RECON.md` (`398a9e9`) · `FASE2-5B-RECON.md` (`6d2c18e`) ·
-`FASE2-5B-DATA-RECON.md` (`2c7b4dc`). Het 4b- en het brok-2-recon waren rapport-only (geen doc).
+`FASE2-5B-DATA-RECON.md` (`2c7b4dc`) · `FASE2-4A-EVENTS-RECON.md` (`0d16faf`) + `-PROPOSAL.md` (`a87f348`) ·
+`FASE2-5-ZONES-RECON.md` (`6028cfd`, GECORRIGEERD → (a) CLIENT-ONLY — zie BRONHIERARCHIE). Het 4b- en het
+brok-2-recon waren rapport-only (geen doc).
 
-**FOCUS VOLGENDE CHAT:** brok 5 (zones 3→5) — **PRODUCTKEUZE EERST** (moet expliciet geautoriseerd worden vóór
-bouw; GAS toont de done-kant óók in ~3 zones, dus 3→5 divergeert van GAS zoals 4b). Losse follow-ups van de
-close-out-lijst kunnen tussendoor. Nog in te voeren: het echte A-event **Amstel Gold Race** op prod via de editor.
+**FOCUS VOLGENDE CHAT:** FASE 2 is COMPLEET. Openstaand: **2d ritdetails** (fase-lijst) + de losse follow-ups van de
+close-out-lijst. Nog in te voeren: het echte A-event **Amstel Gold Race** op prod via de events-editor. Op de
+horizon: de read-only **eind-audit** van de geporte engine-fns + Garmin-workout-push.
 
 **ISSUE 2 (dagkaart-VOLTOOID) Fase 2a+2b + DATA-OPSCHOON Fase 1 — DONE + LIVE (deze reeks chats).**
 - **2a rit-weergave** (`44ecb65` → Version `3246abc6`): `DoneEntry` uitgebreid (type/naam/zoneMinutes); een
@@ -201,9 +228,10 @@ heeft → vervanging sloeg stil over).
 
 **Gate-vloeren (nooit onder; bron van waarheid — NOOIT hardcoden in een prompt):**
 engine-selftest `toBe(957)` (`packages/engine/src/selftest.test.ts:3668`, ongewijzigd) · vitest-totaal
-**240** (gegroeid: §5b `silhouetSegments` +5 → 214, 4b `presetHoursLabel` +3 → 217, brok 2 `planModusLabel`
+**243** (gegroeid: §5b `silhouetSegments` +5 → 214, 4b `presetHoursLabel` +3 → 217, brok 2 `planModusLabel`
 +4 → 221, brok 3 RUN 1 settings-round-trip +2 → 223, RUN 2 `isoWeekNumber`+`displayCoach`/`initials` +8 → 231,
-brok 4a RUN 1 events-write-tests +4 → 235, RUN 2 `eventsSummary` +5 → 240). CI groen. Hard floors — niet regresseren.
+brok 4a RUN 1 events-write-tests +4 → 235, RUN 2 `eventsSummary` +5 → 240, brok 5 `actualZone5_` +3 → 243). CI groen.
+Hard floors — niet regresseren.
 
 **Fundament:** IBM Plex Sans (400/500/600) + Mono (500/600), self-hosted via `@fontsource`,
 offline-precached (`main.tsx`). Het UI-kader ligt vast in **`apps/web/docs/UI-KADER.md`**:
@@ -302,11 +330,12 @@ DONE deze reeks: ~~design-diff-recon + 2b-2-render-bug-diagnose~~ (`docs/DAGKAAR
 ~~2b-2-render-fix (done-vandaag)~~ (`baa0762`) · ~~vormgeving-delta-recon~~ (`9ba0e1a`, `docs/VORMGEVING-DELTA-RECON.md`)
 · ~~FASE 1 Schema-flow bouw (dagkaart-states + sticky nav + coach-impact 2c + §5e-knoppen)~~ (zie Stand) ·
 ~~FASE 2 bron-recon~~ (`398a9e9`) · ~~brok 1 Taper~~ (`c17a205`).
-**RESTEREND** — volgorde in de **FASE 2 BOUWPLAN** bovenaan Stand: 4b Volume→uren · 2 Opbouw-pill
-(= planModus-port `planModeLabel_`) · 3 header coachNaam · 4a events-editor (+ dan Amstel Gold Race invoeren) ·
-5 zones 3→5 (productkeuze) · 2d ritdetails. Losstaand blijven: **event-activeringsdrempel** (A-event slaapt
-tot ~8-12 wkn; recon-first, raakt deels de engine → sign-off) · **weekdoel-consistentie** (stabiliteit bij
-dag-selecties; gat naar GAS 254).
+**RESTEREND** — volgorde in de **FASE 2 BOUWPLAN** bovenaan Stand: ~~4b Volume→uren~~ · ~~2 Opbouw-pill~~ ·
+~~3 header coachNaam~~ · ~~4a events-editor~~ · ~~5 zones 3→5~~ (alle AF; brok 5 = CLIENT-ONLY parity-herstel via
+`coachActualZoneMin_`-port, GEEN divergentie) · **2d ritdetails** (resteert). Losstaand blijven:
+**event-activeringsdrempel** (A-event slaapt tot ~8-12 wkn; recon-first, raakt deels de engine → sign-off) ·
+**weekdoel-consistentie** (stabiliteit bij dag-selecties; gat naar GAS 254). Nog invoeren: **Amstel Gold Race**
+via de prod-editor.
 - **Op de horizon:** Garmin-workout-push (externe device-integratie, apart traject); en de read-only
   **eind-audit** van alle geporte engine-fns (sluitstuk vóór cutover — adresseert de engine/parity-debts
   hierboven). (Beschikbaarheid/weekplanning-bewerken = GEDAAN deze sessie.)
