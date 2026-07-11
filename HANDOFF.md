@@ -11,11 +11,11 @@ live tot cutover.
 
 ## Stand
 
-**FASE 1 + FASE 2 (§5b + 4b + brok 2 + brok 3) — deze reeks chats.** Meetlat = `docs/VORMGEVING-SPEC.md`
+**FASE 1 + FASE 2 (§5b + 4b + brok 2 + brok 3 + brok 4a) — deze reeks chats.** Meetlat = `docs/VORMGEVING-SPEC.md`
 (BEVROREN); geverifieerd via de dev-`/preview`-loop. Brok 3 = de EERSTE prod-aanraking (remote-D1 + deploy).
 
 **VLOEREN** (mogen niet regresseren; NIET in prompts hardcoden): engine-selftest-assert-count **957** ·
-vitest-totaal **231**.
+vitest-totaal **240**.
 
 **FASE 1 (schema-flow zuivere vormgeving):** VOLLEDIG AF + visueel geverifieerd in `/preview`.
 
@@ -47,9 +47,31 @@ vitest-totaal **231**.
   (`displayCoach`/`initials`). LOKAAL + **REMOTE D1 gemigreerd** (`0002 --remote`) + **GEDEPLOYD**
   (`cadans-api.dtkorteweg.workers.dev`, Version `c9729e45`). Prod-API = Basic-Auth-gated (user "daan" +
   `BASIC_AUTH_PASSWORD`) → live key-verificatie + round-trip alléén in-browser door Daan.
+- **brok 4a events-editor AF** (RUN 1 backend `f08e527`; RUN 2 UI `efbb8f9`; crash-fix + GAS-layout `1b89145`;
+  laatste deploy Version `8514899d`) — full-stack, gate-groen + visueel geverifieerd op de dev-server.
+  - Backend (RUN 1): `EventInput`-write-DTO (`packages/shared`) + `writeEvents` repo (delete-voor-user +
+    `db.batch`-insert, atomisch; lege lijst wist alles) + `PUT /api/events` met per-rij-whitelist-validatie
+    (datum/naam/type/prioriteit verplicht; optioneel afstandKm/hoogtemeters/klimType/notitie; ongeldige rij →
+    400 met event-index+veld, GEEN write) → `writeEvents` → `readEvents` → verse `EventItem[]`. GEEN
+    D1-migratie (tabel `events` was al compleet). engine ONGEMOEID.
+  - Frontend (RUN 2 + fix): standalone `/events`-route (`apps/web/src/pages/Events.tsx`, BUITEN AppShell) +
+    `putEvents`-client (mirror `putPlanner`) + Instellingen-sectie 'Doelen & events' (`eventsSummary` +
+    Beheren-knop) + refetch via `bumpPlannerVersion()`. Editor = GAS-getrouw (`Script.html eventsSectionHtml_`
+    als meetlat): primaire rij (naam + verwijder + prioriteit-cycle-badge A→B→C + native datum), inklapbare
+    Details default dicht (Type Trip/Race-segment, Klim-type Lang/Kort/Gemengd/Vlak, Afstand km, Hoogtemeters
+    hm, Notitie). Nieuw-event-defaults GAS-parity: datum=vandaag (lokale delen, NIET toISOString), type=race,
+    prioriteit=C, klimType=vlak.
+  - Beslissing (proposal `a87f348`): FULL-REPLACE write (mirror `putPlanner`); nav-ingang via
+    `/instellingen`-sectie i.p.v. een contextuele PeriodTimeline-ingang (Cadans knipt het monolithische
+    GAS-settings-scherm bewust op in focus-schermen). `id` niet blootgesteld (FULL-REPLACE). Datum end-to-end
+    als rauwe yyyy-MM-dd-string (geverifieerd: geen UTC-shift). Editor + round-trip geverifieerd met een
+    test-event op de LOKALE dev-D1; het echte A-event op PROD nog in te voeren via de prod-editor (Version
+    `8514899d`, Basic-Auth) door Daan.
+  - LET OP recon-correctie: mijn eerste proposal nam aan dat GAS enkel een sheet-tab had; de GAS WEB-APP heeft
+    wel degelijk een volwaardige events-editor (`Script.html :88-149`) — die is de layout-meetlat. Recons:
+    `docs/FASE2-4A-EVENTS-RECON.md` (`0d16faf`) + `docs/FASE2-4A-EVENTS-PROPOSAL.md` (`a87f348`).
 
 **RESTEREND FASE 2:**
-- **brok 4a events-editor** — model `EventItem.prioriteit` bestaat al; `PUT /events`-endpoint + editor-UI ontbreken.
 - **brok 5 zones 3→5** — PRODUCTKEUZE VOOR DE BOUW: GAS toont de done-kant óók in ~3 zones, dus Cadans staat al
   op GAS-parity; "3→5" is een enhancement die van GAS DIVERGEERT (zoals 4b), geen parity-herstel.
 
@@ -67,13 +89,20 @@ vitest-totaal **231**.
   als `/instellingen` ooit BINNEN het AppShell-blok komt (dan stale tot hard reload).
 - **Dev-note:** start de dev-server LAN-breed voor mobiele verificatie: `wrangler dev --ip 0.0.0.0 --port 8787`
   (vanuit workers/api) → bereikbaar op `http://<PC-LAN-IP>:8787` vanaf de telefoon (i.p.v. alleen 127.0.0.1).
+- plannerSignal-naamgeneralisatie: events-edits hergebruiken `bumpPlannerVersion()`/`plannerSignal` (events
+  voeden dezelfde `loadSchemaWeek`→`buildWeekProposal`→PeriodTimeline-pipeline); de naam "planner" dekt nu
+  breder dan planner-dagen. Geen bug (beide invalideren dezelfde pipeline); later hernoemen naar een generiek
+  `schemaInputsSignal`.
+- **Nazorg-noot:** brok 4a RUN 2 introduceerde per abuis `crypto.randomUUID()` als row-key (secure-context-only)
+  → crash op de http-LAN-dev-server; gefixt in `1b89145` met een module-teller `nextRowKey()`. Les: geen
+  `crypto.randomUUID()` in client-code die ook op een http-origin (LAN-dev) moet renderen.
 
 **RECON-DOCS** (gepind, referentie): `FASE2-BRON-RECON.md` (`398a9e9`) · `FASE2-5B-RECON.md` (`6d2c18e`) ·
 `FASE2-5B-DATA-RECON.md` (`2c7b4dc`). Het 4b- en het brok-2-recon waren rapport-only (geen doc).
 
-**FOCUS VOLGENDE CHAT:** brok 4a — events-editor (`PUT /events`-endpoint + editor-UI; model
-`EventItem.prioriteit` bestaat al) → hierna het echte A-event Amstel Gold Race invoeren. Daarna brok 5 (zones
-3→5, PRODUCTKEUZE eerst). Kleine follow-ups van de close-out-lijst kunnen tussendoor.
+**FOCUS VOLGENDE CHAT:** brok 5 (zones 3→5) — **PRODUCTKEUZE EERST** (moet expliciet geautoriseerd worden vóór
+bouw; GAS toont de done-kant óók in ~3 zones, dus 3→5 divergeert van GAS zoals 4b). Losse follow-ups van de
+close-out-lijst kunnen tussendoor. Nog in te voeren: het echte A-event **Amstel Gold Race** op prod via de editor.
 
 **ISSUE 2 (dagkaart-VOLTOOID) Fase 2a+2b + DATA-OPSCHOON Fase 1 — DONE + LIVE (deze reeks chats).**
 - **2a rit-weergave** (`44ecb65` → Version `3246abc6`): `DoneEntry` uitgebreid (type/naam/zoneMinutes); een
@@ -172,9 +201,9 @@ heeft → vervanging sloeg stil over).
 
 **Gate-vloeren (nooit onder; bron van waarheid — NOOIT hardcoden in een prompt):**
 engine-selftest `toBe(957)` (`packages/engine/src/selftest.test.ts:3668`, ongewijzigd) · vitest-totaal
-**231** (gegroeid: §5b `silhouetSegments` +5 → 214, 4b `presetHoursLabel` +3 → 217, brok 2 `planModusLabel`
-+4 → 221, brok 3 RUN 1 settings-round-trip +2 → 223, RUN 2 `isoWeekNumber`+`displayCoach`/`initials` +8 → 231).
-CI groen. Hard floors — niet regresseren.
+**240** (gegroeid: §5b `silhouetSegments` +5 → 214, 4b `presetHoursLabel` +3 → 217, brok 2 `planModusLabel`
++4 → 221, brok 3 RUN 1 settings-round-trip +2 → 223, RUN 2 `isoWeekNumber`+`displayCoach`/`initials` +8 → 231,
+brok 4a RUN 1 events-write-tests +4 → 235, RUN 2 `eventsSummary` +5 → 240). CI groen. Hard floors — niet regresseren.
 
 **Fundament:** IBM Plex Sans (400/500/600) + Mono (500/600), self-hosted via `@fontsource`,
 offline-precached (`main.tsx`). Het UI-kader ligt vast in **`apps/web/docs/UI-KADER.md`**:
