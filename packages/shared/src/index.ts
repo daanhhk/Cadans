@@ -19,6 +19,11 @@ export type {
 } from "./powercurve";
 export type { RpeEntry } from "./rpe";
 export type { SettingsInput } from "./settings";
-export type { EventItem, PlannerDay, PlannerDayInput } from "./weekgen";
+export type {
+  EventInput,
+  EventItem,
+  PlannerDay,
+  PlannerDayInput,
+} from "./weekgen";
 export type { WeekplanEntries, WeekplanPutBody } from "./weekplan";
 export type { WellnessInput } from "./wellness";

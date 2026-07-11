@@ -12,6 +12,7 @@
 import { gatherWeekplanEntries_ } from "@cadans/engine";
 import type {
   CheckinInput,
+  EventInput,
   EventItem,
   PlannerDay,
   PlannerDayInput,
@@ -385,6 +386,35 @@ export async function readEvents(db: Db, userId: number): Promise<EventItem[]> {
     klimType: r.klimType,
     notitie: r.notitie,
   }));
+}
+
+/** FULL-REPLACE alle events van de user: delete-voor-user + batch-insert, atomisch via
+ * db.batch. Lege lijst → wist alles. Events kennen geen (user,datum)-unique → delete+insert
+ * (i.t.t. writePlannerDays' upsert). datum verbatim TEXT (geen dates.ts-conversie). */
+export async function writeEvents(
+  db: Db,
+  userId: number,
+  rows: EventInput[],
+): Promise<void> {
+  const del = db.delete(events).where(eq(events.userId, userId));
+  if (rows.length === 0) {
+    await del;
+    return;
+  }
+  const inserts = rows.map((r) =>
+    db.insert(events).values({
+      userId,
+      datum: r.datum,
+      naam: r.naam,
+      type: r.type,
+      prioriteit: r.prioriteit,
+      afstandKm: r.afstandKm ?? null,
+      hoogtemeters: r.hoogtemeters ?? null,
+      klimType: r.klimType ?? null,
+      notitie: r.notitie ?? null,
+    }),
+  );
+  await db.batch([del, ...inserts]);
 }
 
 /** RPE-registraties van de user, oudste-eerst (datum RAUW; spiegelt readWellness). */

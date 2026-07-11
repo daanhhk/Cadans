@@ -47,3 +47,16 @@ export interface EventItem {
   klimType: string | null;
   notitie: string | null;
 }
+
+/** Write-DTO voor PUT /api/events (FULL-REPLACE). Verplichte velden expliciet
+ * (i.t.t. het all-nullable read-DTO EventItem). */
+export interface EventInput {
+  datum: string; // yyyy-MM-dd
+  naam: string;
+  type: "trip" | "race";
+  prioriteit: "A" | "B" | "C";
+  afstandKm?: number | null;
+  hoogtemeters?: number | null;
+  klimType?: "lang" | "kort" | "gemengd" | "vlak" | null;
+  notitie?: string | null;
+}

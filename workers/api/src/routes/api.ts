@@ -7,7 +7,7 @@
  * pre-deploy). athleteId komt uit c.env.INTERVALS_ATHLETE_ID (niet geëxposed).
  * User = CURRENT_USER_ID (vervalt in de auth-fase).
  */
-import type { PlannerDayInput } from "@cadans/shared";
+import type { EventInput, PlannerDayInput } from "@cadans/shared";
 import { type Context, Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { CURRENT_USER_ID, makeDb } from "../db/client";
@@ -26,6 +26,7 @@ import {
   readWellness,
   type WellnessRecord,
   writeCheckin,
+  writeEvents,
   writePlannerDays,
   writeSettings,
   writeWeekplan,
@@ -226,6 +227,107 @@ api.get("/events", async (c) => {
   const db = makeDb(c.env.DB);
   const rows = await readEvents(db, CURRENT_USER_ID);
   return c.json(rows);
+});
+
+// PUT /events — FULL-REPLACE de events-lijst van de user. body = { events: EventInput[] }.
+// Atomisch: valideer ÁLLE rijen (throw op de eerste ongeldige → geen write), dan vervang.
+// Response = de verse events (bare EventItem[], symmetrisch met GET). Lege lijst = wist alles.
+const KLIM_TYPES = new Set(["lang", "kort", "gemengd", "vlak"]);
+api.put("/events", async (c) => {
+  const db = makeDb(c.env.DB);
+  const body = await readJsonObject(c);
+  const raw = body.events;
+  if (!Array.isArray(raw)) {
+    throw new HTTPException(400, { message: "body.events must be an array" });
+  }
+  const rows: EventInput[] = raw.map((item, i) => {
+    const o = (item ?? {}) as Record<string, unknown>;
+    if (
+      typeof o.datum !== "string" ||
+      !isIsoDate(o.datum) ||
+      Number.isNaN(Date.parse(o.datum))
+    ) {
+      throw new HTTPException(400, {
+        message: `event ${i}: datum must be yyyy-MM-dd`,
+      });
+    }
+    if (
+      typeof o.naam !== "string" ||
+      o.naam.trim().length < 1 ||
+      o.naam.trim().length > 60
+    ) {
+      throw new HTTPException(400, {
+        message: `event ${i}: naam required (1..60 chars)`,
+      });
+    }
+    if (o.type !== "trip" && o.type !== "race") {
+      throw new HTTPException(400, {
+        message: `event ${i}: type must be trip|race`,
+      });
+    }
+    if (o.prioriteit !== "A" && o.prioriteit !== "B" && o.prioriteit !== "C") {
+      throw new HTTPException(400, {
+        message: `event ${i}: prioriteit must be A|B|C`,
+      });
+    }
+    let afstandKm: number | null = null;
+    if (o.afstandKm != null) {
+      if (
+        typeof o.afstandKm !== "number" ||
+        !Number.isFinite(o.afstandKm) ||
+        o.afstandKm < 0
+      ) {
+        throw new HTTPException(400, {
+          message: `event ${i}: afstandKm must be a number >= 0`,
+        });
+      }
+      afstandKm = o.afstandKm;
+    }
+    let hoogtemeters: number | null = null;
+    if (o.hoogtemeters != null) {
+      if (
+        typeof o.hoogtemeters !== "number" ||
+        !Number.isInteger(o.hoogtemeters) ||
+        o.hoogtemeters < 0
+      ) {
+        throw new HTTPException(400, {
+          message: `event ${i}: hoogtemeters must be an integer >= 0`,
+        });
+      }
+      hoogtemeters = o.hoogtemeters;
+    }
+    let klimType: EventInput["klimType"] = null;
+    if (o.klimType != null) {
+      if (typeof o.klimType !== "string" || !KLIM_TYPES.has(o.klimType)) {
+        throw new HTTPException(400, {
+          message: `event ${i}: klimType must be lang|kort|gemengd|vlak`,
+        });
+      }
+      klimType = o.klimType as EventInput["klimType"];
+    }
+    let notitie: string | null = null;
+    if (o.notitie != null) {
+      if (typeof o.notitie !== "string" || o.notitie.length > 200) {
+        throw new HTTPException(400, {
+          message: `event ${i}: notitie must be a string <= 200 chars`,
+        });
+      }
+      notitie = o.notitie;
+    }
+    return {
+      datum: o.datum,
+      naam: o.naam.trim(),
+      type: o.type as "trip" | "race",
+      prioriteit: o.prioriteit as "A" | "B" | "C",
+      afstandKm,
+      hoogtemeters,
+      klimType,
+      notitie,
+    };
+  });
+  await writeEvents(db, CURRENT_USER_ID, rows);
+  const fresh = await readEvents(db, CURRENT_USER_ID);
+  return c.json(fresh);
 });
 
 api.get("/rpe", async (c) => {
