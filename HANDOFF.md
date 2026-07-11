@@ -11,11 +11,11 @@ live tot cutover.
 
 ## Stand
 
-**FASE 1 + FASE 2 (§5b + 4b + brok 2) — deze reeks chats.** Meetlat = `docs/VORMGEVING-SPEC.md` (BEVROREN);
-geverifieerd via de dev-`/preview`-loop.
+**FASE 1 + FASE 2 (§5b + 4b + brok 2 + brok 3) — deze reeks chats.** Meetlat = `docs/VORMGEVING-SPEC.md`
+(BEVROREN); geverifieerd via de dev-`/preview`-loop. Brok 3 = de EERSTE prod-aanraking (remote-D1 + deploy).
 
 **VLOEREN** (mogen niet regresseren; NIET in prompts hardcoden): engine-selftest-assert-count **957** ·
-vitest-totaal **221**.
+vitest-totaal **231**.
 
 **FASE 1 (schema-flow zuivere vormgeving):** VOLLEDIG AF + visueel geverifieerd in `/preview`.
 
@@ -37,10 +37,18 @@ vitest-totaal **221**.
   kop-regel + FASE-stat + fase-balk keyen nu ALLE op `view.fase` (`macroFaseLabel("Taper")`→"Taper"); was
   GAS-non-conform. VORMGEVING-SPEC §2 gecorrigeerd (pill = plan-mode niet macro-fase; effectieve-fase-regel
   toegevoegd; stale "Volume 4-7u"→"7u").
+- **brok 3 header coachNaam + naam AF** (`fd397a2`; **EERSTE prod-deploy**): full-stack. D1-migratie `0002`
+  (`coach_naam` + `naam`, nullable) + `SettingsInput` (OPTIONELE niet-engine velden, zoals `profielPreset`;
+  engine leest ze niet) + GET/PUT `/api/settings` (per-veld-whitelist + 24-char-cap) + web-render. Header:
+  woordmerk = `displayCoach(coachNaam)` UPPERCASE, avatar = `initials(naam)` (oranje ring; leeg → inline
+  User-glyph, GEEN lucide-dep), "Week N" via `isoWeekNumber` (GAS-`isoWeek_`-port in `lib/dates.ts`).
+  Settings-form: Naam-veld + sectie "Jouw coach" (coachNaam + preset-chips Coach·Daan·Merckx·Sven·Anna).
+  Coach-box-kop = `displayCoach(coachNaam)` (was hardcoded "Coach"). Nieuwe helpers `lib/coach.ts`
+  (`displayCoach`/`initials`). LOKAAL + **REMOTE D1 gemigreerd** (`0002 --remote`) + **GEDEPLOYD**
+  (`cadans-api.dtkorteweg.workers.dev`, Version `c9729e45`). Prod-API = Basic-Auth-gated (user "daan" +
+  `BASIC_AUTH_PASSWORD`) → live key-verificatie + round-trip alléén in-browser door Daan.
 
 **RESTEREND FASE 2:**
-- **brok 3 header coachNaam** — ENIGE full-stack: D1-migratie (nieuw `coachNaam`-veld) + shared-DTO +
-  api-endpoint + web-render, plus avatar-initialen (uit `coachNaam`) + ISO-week in de header. NOG NIET gestart.
 - **brok 4a events-editor** — model `EventItem.prioriteit` bestaat al; `PUT /events`-endpoint + editor-UI ontbreken.
 - **brok 5 zones 3→5** — PRODUCTKEUZE VOOR DE BOUW: GAS toont de done-kant óók in ~3 zones, dus Cadans staat al
   op GAS-parity; "3→5" is een enhancement die van GAS DIVERGEERT (zoals 4b), geen parity-herstel.
@@ -52,14 +60,20 @@ vitest-totaal **221**.
   zone-TOTALEN, niet het silhouet.)
 - eventDriven-synthese-naad: de web-wrapper synthetiseert `eventDriven = (macro != null)` omdat de engine
   `eventFase_` het niet emit; lichte tech-debt (drift als de engine event-driven ooit anders zou bepalen).
+- coachNaam-threading via `ProposalWeek`→`view`→`SchemaView` (proposal.ts/schema.ts/SchemaView.tsx) puur voor de
+  §6 coach-box-kop — lichte tech-debt (settings-string door de week-proposal-laag; spiegelt `profielPreset`).
+- header-refetch loopt via AppShell-REMOUNT (`useEffect` deps `[]`, `getSettings`), GÉÉN settings-invalidatie —
+  werkt omdat `/instellingen` BUITEN het AppShell-route-blok staat (return → remount → refetch). Lichte tech-debt
+  als `/instellingen` ooit BINNEN het AppShell-blok komt (dan stale tot hard reload).
+- **Dev-note:** start de dev-server LAN-breed voor mobiele verificatie: `wrangler dev --ip 0.0.0.0 --port 8787`
+  (vanuit workers/api) → bereikbaar op `http://<PC-LAN-IP>:8787` vanaf de telefoon (i.p.v. alleen 127.0.0.1).
 
 **RECON-DOCS** (gepind, referentie): `FASE2-BRON-RECON.md` (`398a9e9`) · `FASE2-5B-RECON.md` (`6d2c18e`) ·
 `FASE2-5B-DATA-RECON.md` (`2c7b4dc`). Het 4b- en het brok-2-recon waren rapport-only (geen doc).
 
-**FOCUS VOLGENDE CHAT:** brok 3 — header coachNaam (de enige full-stack brok). Recon-first → migratie/DTO-proposal
-ter review (durable artefact = D1-schema + shared-DTO, dus vóór de bouw gereviewd) → bouw. Daarna brok 4a
-(events-editor: `PUT /events` + editor-UI), dan brok 5 (zones 3→5, PRODUCTKEUZE eerst). Kleine follow-ups van de
-close-out-lijst kunnen tussendoor.
+**FOCUS VOLGENDE CHAT:** brok 4a — events-editor (`PUT /events`-endpoint + editor-UI; model
+`EventItem.prioriteit` bestaat al) → hierna het echte A-event Amstel Gold Race invoeren. Daarna brok 5 (zones
+3→5, PRODUCTKEUZE eerst). Kleine follow-ups van de close-out-lijst kunnen tussendoor.
 
 **ISSUE 2 (dagkaart-VOLTOOID) Fase 2a+2b + DATA-OPSCHOON Fase 1 — DONE + LIVE (deze reeks chats).**
 - **2a rit-weergave** (`44ecb65` → Version `3246abc6`): `DoneEntry` uitgebreid (type/naam/zoneMinutes); een
@@ -158,8 +172,9 @@ heeft → vervanging sloeg stil over).
 
 **Gate-vloeren (nooit onder; bron van waarheid — NOOIT hardcoden in een prompt):**
 engine-selftest `toBe(957)` (`packages/engine/src/selftest.test.ts:3668`, ongewijzigd) · vitest-totaal
-**221** (gegroeid: §5b `silhouetSegments` +5 → 214, 4b `presetHoursLabel` +3 → 217, brok 2 `planModusLabel`
-+4 → 221; de oude "209" was stale). CI groen. Hard floors — niet regresseren.
+**231** (gegroeid: §5b `silhouetSegments` +5 → 214, 4b `presetHoursLabel` +3 → 217, brok 2 `planModusLabel`
++4 → 221, brok 3 RUN 1 settings-round-trip +2 → 223, RUN 2 `isoWeekNumber`+`displayCoach`/`initials` +8 → 231).
+CI groen. Hard floors — niet regresseren.
 
 **Fundament:** IBM Plex Sans (400/500/600) + Mono (500/600), self-hosted via `@fontsource`,
 offline-precached (`main.tsx`). Het UI-kader ligt vast in **`apps/web/docs/UI-KADER.md`**:
