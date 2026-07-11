@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
 import { ComingSoon } from "./pages/ComingSoon";
+import { Events } from "./pages/Events";
 import { Instellingen } from "./pages/Instellingen";
 import { Niveau } from "./pages/Niveau";
 import { Schema } from "./pages/Schema";
@@ -47,6 +48,9 @@ export default function App() {
         {/* Weekplanner-editor = full-screen; bereikbaar via het kalender-icoon op de
             Schema-tab (WeekLoad). Sibling van de shell-layout. */}
         <Route path="/weekplanner" element={<Weekplanner />} />
+        {/* Events-editor = full-screen; bereikbaar via de "Doelen & events"-sectie in
+            Instellingen. Sibling van de shell-layout. */}
+        <Route path="/events" element={<Events />} />
       </Routes>
     </BrowserRouter>
   );

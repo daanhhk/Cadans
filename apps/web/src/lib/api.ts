@@ -8,6 +8,7 @@ import type {
   ActivitiesResponse,
   ApiError,
   CheckinInput,
+  EventInput,
   EventItem,
   PlannerDay,
   PlannerDayInput,
@@ -98,6 +99,23 @@ export async function putPlanner(
 /** GET /api/events — alle events, oudste-eerst. */
 export function getEvents(): Promise<EventItem[]> {
   return apiGet<EventItem[]>("/api/events");
+}
+
+/**
+ * PUT /api/events — FULL-REPLACE de events-lijst. Response = de verse lijst
+ * (`EventItem[]`, symmetrisch met GET). Non-2xx → throw met de server-foutreden.
+ */
+export async function putEvents(events: EventInput[]): Promise<EventItem[]> {
+  const resp = await fetch("/api/events", {
+    method: "PUT",
+    headers: { "content-type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ events }),
+  });
+  if (!resp.ok) {
+    const parsed = await parseBody(resp);
+    throw new Error(errMessage(parsed, resp.status));
+  }
+  return (await resp.json()) as EventItem[];
 }
 
 /** GET /api/rpe — RPE-registraties, oudste-eerst. */

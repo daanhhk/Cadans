@@ -1,7 +1,9 @@
+import type { EventItem } from "@cadans/shared";
 import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getSettings, putSettings } from "../lib/api";
+import { getEvents, getSettings, putSettings } from "../lib/api";
+import { eventsSummary } from "../lib/events";
 import {
   DOEL_OPTIONS,
   EMPTY_FORM,
@@ -317,6 +319,23 @@ export function Instellingen() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  // Aparte, van de settings-form losstaande events-summary (§10-ingang "Doelen & events").
+  // Ververst vanzelf bij terug-navigeren (component remount).
+  const [events, setEvents] = useState<EventItem[]>([]);
+
+  useEffect(() => {
+    let alive = true;
+    getEvents()
+      .then((e) => {
+        if (alive) setEvents(e);
+      })
+      .catch(() => {
+        /* summary valt terug op de lege staat */
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: nonce is een bewuste re-fetch-trigger (na opslaan) — geen echte data-afhankelijkheid.
   useEffect(() => {
@@ -588,6 +607,47 @@ export function Instellingen() {
                   unit="wk"
                 />
               </Row>
+            </Section>
+
+            <Section title="Doelen & events">
+              <div
+                style={{
+                  padding: "var(--s-3) var(--s-4)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "var(--s-3)",
+                }}
+              >
+                <span
+                  style={{
+                    minWidth: 0,
+                    fontFamily: "var(--font-sans)",
+                    fontSize: "var(--fs-label)",
+                    color: "var(--text-secondary)",
+                  }}
+                >
+                  {eventsSummary(events)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => navigate("/events")}
+                  style={{
+                    flexShrink: 0,
+                    padding: "5px 14px",
+                    borderRadius: "var(--r-pill)",
+                    cursor: "pointer",
+                    background: "var(--accent-soft)",
+                    border: "1px solid var(--accent)",
+                    color: "var(--accent)",
+                    fontFamily: "var(--font-sans)",
+                    fontSize: "var(--fs-label)",
+                    fontWeight: 600,
+                  }}
+                >
+                  Beheren
+                </button>
+              </div>
             </Section>
 
             <Section title="Geavanceerd · hartslag">
