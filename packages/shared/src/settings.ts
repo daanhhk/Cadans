@@ -19,6 +19,11 @@ export interface SettingsInput {
   doelDuur: number | null;
   fase: string | null;
   profielPreset: string | null;
+  /** Presentatie-only (header-wordmark), GEEN engine-input. Optioneel → laat engine +
+   * bestaande fixtures ongemoeid. */
+  coachNaam?: string | null;
+  /** Presentatie-only (user-naam → avatar-initialen), GEEN engine-input. Optioneel. */
+  naam?: string | null;
   pendelDuurMin: number | null;
   pendelAantal: number | null;
 }

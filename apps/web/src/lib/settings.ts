@@ -24,6 +24,8 @@ const STR_KEYS = [
   "doel",
   "fase",
   "profielPreset",
+  "coachNaam",
+  "naam",
 ] as const satisfies readonly (keyof SettingsInput)[];
 
 export const EMPTY_FORM: SettingsForm = {
@@ -37,6 +39,8 @@ export const EMPTY_FORM: SettingsForm = {
   doelDuur: "",
   fase: "",
   profielPreset: "",
+  coachNaam: "",
+  naam: "",
   pendelDuurMin: "",
   pendelAantal: "",
 };
@@ -56,6 +60,8 @@ export function settingsToForm(s: SettingsInput | null): SettingsForm {
     doelDuur: v(s?.doelDuur),
     fase: v(s?.fase),
     profielPreset: v(s?.profielPreset),
+    coachNaam: v(s?.coachNaam),
+    naam: v(s?.naam),
     pendelDuurMin: v(s?.pendelDuurMin),
     pendelAantal: v(s?.pendelAantal),
   };

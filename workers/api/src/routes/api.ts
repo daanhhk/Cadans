@@ -328,6 +328,13 @@ api.put("/settings", async (c) => {
   if ("profielPreset" in body) {
     patch.profielPreset = strField(body.profielPreset, "profielPreset");
   }
+  // Presentatie-velden (geen engine-input): cap op 24 tekens (GAS-parity, WebApp.gs:1529).
+  if ("coachNaam" in body) {
+    patch.coachNaam = strField(body.coachNaam, "coachNaam").slice(0, 24);
+  }
+  if ("naam" in body) {
+    patch.naam = strField(body.naam, "naam").slice(0, 24);
+  }
   if ("doelStart" in body) {
     if (typeof body.doelStart !== "string" || !isIsoDate(body.doelStart)) {
       throw new HTTPException(400, { message: "doelStart must be yyyy-MM-dd" });

@@ -62,6 +62,8 @@ export async function writeSettings(
     doelDuur: s.doelDuur ?? null,
     fase: s.fase ?? null,
     profielPreset: s.profielPreset ?? null,
+    coachNaam: s.coachNaam ?? null,
+    naam: s.naam ?? null,
     pendelDuurMin: s.pendelDuurMin ?? null,
     pendelAantal: s.pendelAantal ?? null,
   };
@@ -92,6 +94,8 @@ export async function readSettings(
     doelDuur: r.doelDuur,
     fase: r.fase,
     profielPreset: r.profielPreset,
+    coachNaam: r.coachNaam,
+    naam: r.naam,
     pendelDuurMin: r.pendelDuurMin,
     pendelAantal: r.pendelAantal,
   };
