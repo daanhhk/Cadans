@@ -50,8 +50,10 @@ export function SchemaView({
   );
   const [selected, setSelected] = useState(todayISO);
   const day = view.days.find((d) => d.datum === selected) ?? view.days[0];
+  // dag >= vandaag: het knoppen-blok toont alleen op vandaag/toekomst (verleden kun je niet meer plannen).
+  const dayFuture = !!day && day.datum >= todayISO;
   // plannbaar (GAS trnPlannable_): dag >= vandaag en niet voltooid -> "Andere training kiezen" mag.
-  const dayPlannable = !!day && day.datum >= todayISO && !day.done;
+  const dayPlannable = dayFuture && !!day && !day.done;
 
   return (
     <div
@@ -186,9 +188,9 @@ export function SchemaView({
               ))}
             </div>
           )}
-          {/* Gedeeld knoppen-blok (§5e) onder elke dagkaart-state (GAS Script.html:1103-1106):
-              "Andere training" alleen plannbaar, "Beschikbaarheid aanpassen" altijd. */}
-          <ActionButtons plannable={dayPlannable} />
+          {/* Gedeeld knoppen-blok (§5e), alleen op vandaag/toekomst (dayFuture): op een verleden
+              dag kun je beschikbaarheid niet meer aanpassen. "Andere training" alleen plannbaar. */}
+          {dayFuture && <ActionButtons plannable={dayPlannable} />}
         </Card>
       )}
       {/* Tab-niveau "Push naar Garmin" (GAS Index.html:37, act-row): EEN keer onderaan de
