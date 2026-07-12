@@ -190,7 +190,9 @@ export function SchemaView({
           )}
           {/* Gedeeld knoppen-blok (§5e), alleen op vandaag/toekomst (dayFuture): op een verleden
               dag kun je beschikbaarheid niet meer aanpassen. "Andere training" alleen plannbaar. */}
-          {dayFuture && <ActionButtons plannable={dayPlannable} />}
+          {dayFuture && (
+            <ActionButtons plannable={dayPlannable} datum={day.datum} />
+          )}
         </Card>
       )}
       {/* Tab-niveau "Push naar Garmin" (GAS Index.html:37, act-row): EEN keer onderaan de

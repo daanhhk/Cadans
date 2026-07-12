@@ -1,8 +1,8 @@
 import type { CSSProperties } from "react";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { getPlanner, putPlanner } from "../lib/api";
-import { weekMondayIso } from "../lib/dates";
+import { todayIso, weekMondayIso } from "../lib/dates";
 import {
   buildWeekForm,
   type DayForm,
@@ -10,7 +10,6 @@ import {
   formToInputs,
   isoAddDays,
   weekdayLabel,
-  weekRangeLabel,
 } from "../lib/planner";
 import { bumpPlannerVersion } from "../lib/plannerSignal";
 
@@ -189,10 +188,22 @@ function DayCard({
   );
 }
 
+const SCOPES: { key: "dag" | "week" | "volgende"; label: string }[] = [
+  { key: "dag", label: "Alleen deze dag" },
+  { key: "week", label: "Deze week" },
+  { key: "volgende", label: "Volgende week" },
+];
+
 export function Weekplanner() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const thisMonday = weekMondayIso();
-  const [monday, setMonday] = useState(thisMonday);
+  const nextMonday = isoAddDays(thisMonday, 7);
+  // Geselecteerde dag uit ?dag=<datum> (vanuit de dagkaart-knop); fallback = vandaag.
+  const selectedDatum = searchParams.get("dag") || todayIso();
+  // 3 scopes (GAS availScope): "dag" toont alleen de geselecteerde dag; "week"/"volgende" de hele week.
+  const [scope, setScope] = useState<"dag" | "week" | "volgende">("dag");
+  const monday = scope === "volgende" ? nextMonday : thisMonday;
   const [form, setForm] = useState<DayForm[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -250,7 +261,13 @@ export function Weekplanner() {
     }
   }
 
-  const isThisWeek = monday === thisMonday;
+  // Zichtbare dagen (met echte form-index voor patchDay): scope "dag" -> alleen de geselecteerde dag;
+  // anders alle 7. In ELK geval slaat save de HELE (afgeleide) week op (GAS: alleen die dag gewijzigd).
+  const rows = form.map((day, i) => ({ day, i }));
+  const visible =
+    scope === "dag"
+      ? rows.filter(({ day }) => day.datum === selectedDatum)
+      : rows;
 
   return (
     <div style={{ minHeight: "100dvh", background: "var(--bg-app)" }}>
@@ -316,56 +333,42 @@ export function Weekplanner() {
       </div>
 
       <div style={{ padding: "var(--s-4) var(--s-4) 48px" }}>
-        {/* week-navigatie */}
+        {/* scope-tabs (GAS av-seg): alleen deze dag / deze week / volgende week — geen vrije navigatie */}
         <div
           style={{
             display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "var(--s-2)",
+            gap: "var(--s-1)",
             marginBottom: "var(--s-4)",
+            background: "var(--bg-sunken)",
+            borderRadius: "var(--r-pill)",
+            padding: 3,
           }}
         >
-          <button
-            type="button"
-            onClick={() => setMonday((m) => isoAddDays(m, -7))}
-            aria-label="Vorige week"
-            style={navBtnStyle}
-          >
-            ‹
-          </button>
-          <div style={{ textAlign: "center", minWidth: 0 }}>
-            <div
-              style={{
-                fontFamily: "var(--font-sans)",
-                fontSize: "var(--fs-label)",
-                fontWeight: 600,
-                color: "var(--text-primary)",
-              }}
-            >
-              {weekRangeLabel(monday)}
-            </div>
-            {isThisWeek && (
-              <div
+          {SCOPES.map((s) => {
+            const on = scope === s.key;
+            return (
+              <button
+                key={s.key}
+                type="button"
+                onClick={() => setScope(s.key)}
+                aria-pressed={on}
                 style={{
+                  flex: 1,
+                  padding: "8px 4px",
+                  borderRadius: "var(--r-pill)",
+                  border: "none",
+                  cursor: "pointer",
+                  background: on ? "var(--accent-soft)" : "transparent",
+                  color: on ? "var(--accent)" : "var(--text-secondary)",
                   fontFamily: "var(--font-sans)",
                   fontSize: "var(--fs-caption)",
-                  color: "var(--accent)",
                   fontWeight: 600,
                 }}
               >
-                deze week
-              </div>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={() => setMonday((m) => isoAddDays(m, 7))}
-            aria-label="Volgende week"
-            style={navBtnStyle}
-          >
-            ›
-          </button>
+                {s.label}
+              </button>
+            );
+          })}
         </div>
 
         {loading ? (
@@ -383,7 +386,7 @@ export function Weekplanner() {
                 gap: "var(--s-2)",
               }}
             >
-              {form.map((day, i) => (
+              {visible.map(({ day, i }) => (
                 <DayCard key={day.datum} day={day} onChange={patchDay(i)} />
               ))}
             </div>
@@ -435,19 +438,6 @@ export function Weekplanner() {
     </div>
   );
 }
-
-const navBtnStyle: CSSProperties = {
-  width: 40,
-  height: 40,
-  flexShrink: 0,
-  borderRadius: "var(--r-pill)",
-  background: "var(--bg-elevated)",
-  border: "1px solid var(--border-strong)",
-  color: "var(--text-secondary)",
-  fontFamily: "var(--font-sans)",
-  fontSize: 20,
-  cursor: "pointer",
-};
 
 const loadingStyle: CSSProperties = {
   padding: "40px 8px",

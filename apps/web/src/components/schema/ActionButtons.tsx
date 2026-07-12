@@ -49,7 +49,13 @@ export function SoonButton({ label }: { label: string }) {
 }
 
 // Per-dag knoppen-blok. `plannable` (GAS trnPlannable_) bepaalt of "Andere training kiezen" toont.
-export function ActionButtons({ plannable }: { plannable: boolean }) {
+export function ActionButtons({
+  plannable,
+  datum,
+}: {
+  plannable: boolean;
+  datum: string;
+}) {
   return (
     <div
       style={{
@@ -60,7 +66,10 @@ export function ActionButtons({ plannable }: { plannable: boolean }) {
       }}
     >
       {plannable && <SoonButton label="Andere training kiezen" />}
-      <Link to="/weekplanner" style={{ ...baseBtn, cursor: "pointer" }}>
+      <Link
+        to={`/weekplanner?dag=${datum}`}
+        style={{ ...baseBtn, cursor: "pointer" }}
+      >
         Beschikbaarheid aanpassen
       </Link>
     </div>
