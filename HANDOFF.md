@@ -16,7 +16,7 @@ live tot cutover.
 (remote-D1 + deploy).
 
 **VLOEREN** (mogen niet regresseren; NIET in prompts hardcoden): engine-selftest-assert-count **957** ·
-vitest-totaal **243**.
+vitest-totaal **247**.
 
 ### BRONHIERARCHIE VOOR PARITY (werkwijze — vast)
 - **daanhhk/training is PUBLIC + BEVROREN op `3e8090a`.** De chat leest de GAS-bron DIRECT via
@@ -30,6 +30,13 @@ vitest-totaal **243**.
   3-bucket in de ENGINE-laag (`Algorithm.gs:364`, load/debt) NAAST 5-bucket in de WEB-APP-laag (`WebApp.gs:728`,
   display). De juiste meetlat was de web-app-fn → de fix werd CLIENT-ONLY i.p.v. engine-rakend.
 - **Grens:** puur-VISUELE GAS-rendering (spacing/pixels) → screenshot of eigen oog; de LEVENDE Cadans-repo → CC.
+
+### PROMPT-VORM (werkwijze — deze sessie)
+CC-prompts zijn nu **SPEC-GEDREVEN by default**: architectuur + exact gedrag + sleutel-logica + gate; CC schrijft de
+code, vindt de call-sites zelf en past aan de ECHTE staat aan (i.p.v. letterlijke str_replace-blokken). EXACTE code
+alleen als ANKER bij FRAGIELE edits (byte-getrouwe GAS-mirrors, TZ-grens-logica, formules/zone-mappings). CC meldt
+in elk rapport de kern-implementatiekeuzes (gekozen conditie, plaatsing) zodat review tegen de spec kan zonder de
+volledige diff.
 
 **FASE 1 (schema-flow zuivere vormgeving):** VOLLEDIG AF + visueel geverifieerd in `/preview`.
 
@@ -100,6 +107,29 @@ vitest-totaal **243**.
 **FASE 2 = COMPLEET** (§5b · 4b · brok 2 · brok 3 · brok 4a · brok 5 alle AF). Resteert los: 2d ritdetails +
 close-out-follow-ups; het echte A-event **Amstel Gold Race** nog via de prod-editor in te voeren.
 
+**FASE A voortgang (deze sessie) — UI/parity-fixes op de Schema-tab + RPE-persistentie.** Alle commits op main +
+CI-groen, maar **NIET gedeployd** (prod draait nog Version `52a51ae9` van brok 5) → de volgende deploy bundelt ze.
+- **A1 gedeeld knoppen-blok GAS-conform** (`298f3d9`): `ActionButtons` rendert onder ELKE dagkaart-state
+  (§5c/§5a/gepland), niet alleen rustdag/voltooid; "Andere training kiezen" alleen op een plannbare dag
+  (`dayPlannable` = dag ≥ vandaag én niet voltooid); "Push naar Garmin" van per-dag → tab-niveau
+  (`GarminPushButton`, GAS Index.html:37).
+- **zone-vergelijking altijd Z1-Z5** (`d1e3d5c`): `ZoneCompare` toont alle 5 zones incl. onaangeroerde (lege zone =
+  gedempt "0′ · —") — **BEWUSTE afwijking** van GAS `coachZonesHtml_` (dat lege zones weglaat), zodat in één
+  oogopslag zichtbaar is welke zones leeg bleven.
+- **dagkaart-knoppen alleen op vandaag/toekomst** (`ae04c77`): het knoppen-blok is `dayFuture`-gated — een verleden
+  dag toont GEEN beschikbaarheid-knop (niet meer te plannen); bewuste afwijking.
+- **B1 beschikbaarheid-editor GAS-conform** (`8d5f892`): de vrije ‹/›-week-navigatie vervangen door 3 scope-tabs
+  (Alleen deze dag / Deze week / Volgende week), afgeleide maandag; scope "dag" toont enkel de via `?dag=<datum>`
+  (uit de dagkaart-knop) geselecteerde dag; save bewaart ALTIJD de hele afgeleide week.
+- **A3 RPE-persistentie** — laag-1 backend (`1ab970c`): `PUT /api/rpe/:date` (RPE 1-10, `writeRpe` upsert op
+  (user,datum), spiegelt checkin) + 4 round-trip-tests. laag-2 UI (`f5b3b29`): nieuwe `RpeRating` (1-10-strip op de
+  done-kaart, optimistische highlight + rollback, `bumpPlannerVersion` na write); `rpeByDate` gethreaded via
+  `loadSchemaWeek` → Schema → SchemaView → DoneCompareCard. De engine leest de rpe-rijen al (`readiness.ts`
+  `rpeSignal_`); ENGINE ONGEMOEID.
+- **FASE A RESTEREND:** **A2 disposition** ("Niet gedaan? → Geen tijd / Bewust gerust / Iets anders";
+  `day_state.disposition`-kolom bestaat al → geen migratie; engine niet geraakt) · **A4 gemist-dagkaart** (aparte
+  state; GAS `gemistKaart_`/`gemistDetailHtml_`).
+
 **CLOSE-OUT-LIJST / kleine follow-ups** (geen zichtbare bug op default-view):
 - Twee hand-geschreven fixtures met silhouet-drift-risico: Za "Lange duurrit" (`2026-07-11`) + Wo-8
   `plannedForDone` "Drempel 3x10" (`2026-07-08`); de 3x10 zou 3 pieken tonen. Overweeg engine-gedreven te maken
@@ -127,9 +157,26 @@ close-out-follow-ups; het echte A-event **Amstel Gold Race** nog via de prod-edi
 `FASE2-5-ZONES-RECON.md` (`6028cfd`, GECORRIGEERD → (a) CLIENT-ONLY — zie BRONHIERARCHIE). Het 4b- en het
 brok-2-recon waren rapport-only (geen doc).
 
-**FOCUS VOLGENDE CHAT:** FASE 2 is COMPLEET. Openstaand: **2d ritdetails** (fase-lijst) + de losse follow-ups van de
-close-out-lijst. Nog in te voeren: het echte A-event **Amstel Gold Race** op prod via de events-editor. Op de
-horizon: de read-only **eind-audit** van de geporte engine-fns + Garmin-workout-push.
+**FOCUS VOLGENDE CHAT:** FASE 2 + FASE A (deze sessie) COMPLEET → zie FASE A-voortgang + PARITY-FASERING. Direct
+openstaand: **A2 disposition** + **A4 gemist-dagkaart** (FASE A-rest) · **2d ritdetails** · **FASE B** (recon-first)
++ de losse close-out-follow-ups. Nog in te voeren: het echte A-event **Amstel Gold Race** op prod via de
+events-editor. NB: FASE A staat op main + CI-groen maar is nog NIET gedeployd (prod = Version `52a51ae9`).
+
+### PARITY-FASERING (compact — vervangt een apart audit-doc; de volledige matrix is via de GAS-bron te reconen)
+- **FASE B (recon-first, deels engine + sign-off):** **B2 Trainingen-tab** (nu `<ComingSoon>`; GAS = volledige
+  workout-bibliotheek categorie→variant→detail-slider→inplannen; deelt de override-machinerie) · **B3 "Andere
+  training kiezen"/day-override** (nu `SoonButton`; write-pad niet geport, raakt de planner) · **B4 coach-adaptatie
+  "Verlicht vandaag"** (readiness-gedreven sessie-verlichting, raakt engine-adaptatie). **Beschikbaarheid-editor =
+  DONE (B1).**
+- **Ritdetails-drill-down (2d):** "Bekijk ritdetails ›" is nog een `SoonButton`; te bouwen = route (intervals
+  activiteit-detail: 7-zone-TIZ + metrics + intervallen) + overlay-sheet. GEEN engine.
+- **FASE C:** Garmin-push (extern device-traject).
+- **EIND-AUDIT geporte engine-fns:** sluitstuk NA UI-completie (bewust uitgesteld).
+
+### OPEN OBSERVATIE (verse chat)
+Daan meldde "dag-wisselen nog niet hetzelfde als GAS" — DEELS geadresseerd via B1 (scope-tabs) + A1 (knoppen onder
+elke state); de rest is onbekend → een verse chat moet SPECIFICEREN (welke dag-state / welk aspect) en het tegen de
+GAS-bron leggen (`raw.githubusercontent.com/daanhhk/training/3e8090a/...`, zie BRONHIERARCHIE).
 
 **ISSUE 2 (dagkaart-VOLTOOID) Fase 2a+2b + DATA-OPSCHOON Fase 1 — DONE + LIVE (deze reeks chats).**
 - **2a rit-weergave** (`44ecb65` → Version `3246abc6`): `DoneEntry` uitgebreid (type/naam/zoneMinutes); een
@@ -228,10 +275,10 @@ heeft → vervanging sloeg stil over).
 
 **Gate-vloeren (nooit onder; bron van waarheid — NOOIT hardcoden in een prompt):**
 engine-selftest `toBe(957)` (`packages/engine/src/selftest.test.ts:3668`, ongewijzigd) · vitest-totaal
-**243** (gegroeid: §5b `silhouetSegments` +5 → 214, 4b `presetHoursLabel` +3 → 217, brok 2 `planModusLabel`
+**247** (gegroeid: §5b `silhouetSegments` +5 → 214, 4b `presetHoursLabel` +3 → 217, brok 2 `planModusLabel`
 +4 → 221, brok 3 RUN 1 settings-round-trip +2 → 223, RUN 2 `isoWeekNumber`+`displayCoach`/`initials` +8 → 231,
-brok 4a RUN 1 events-write-tests +4 → 235, RUN 2 `eventsSummary` +5 → 240, brok 5 `actualZone5_` +3 → 243). CI groen.
-Hard floors — niet regresseren.
+brok 4a RUN 1 events-write-tests +4 → 235, RUN 2 `eventsSummary` +5 → 240, brok 5 `actualZone5_` +3 → 243,
+A3 RUN 1 rpe-write-tests +4 → 247). CI groen. Hard floors — niet regresseren.
 
 **Fundament:** IBM Plex Sans (400/500/600) + Mono (500/600), self-hosted via `@fontsource`,
 offline-precached (`main.tsx`). Het UI-kader ligt vast in **`apps/web/docs/UI-KADER.md`**:

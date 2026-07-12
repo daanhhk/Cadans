@@ -14,8 +14,10 @@ import {
 import { bumpPlannerVersion } from "../lib/plannerSignal";
 
 // Weekplanner-editor: losse per-week beschikbaarheid → PUT /api/planner/:monday
-// (FULL-REPLACE). Full-screen met eigen terug-knop (geen bottom-nav). Week-navigatie
-// vrij vooruit/achteruit; elke week apart geladen via getPlanner (leeg = alles uit).
+// (FULL-REPLACE). Full-screen met eigen terug-knop (geen bottom-nav). GEEN vrije week-navigatie:
+// 3 scope-tabs (alleen deze dag / deze week / volgende week). Scope "dag" toont enkel de via ?dag=
+// geselecteerde dag; save bewaart ALTIJD de hele afgeleide week. Elke (afgeleide) week apart geladen
+// via getPlanner (leeg = alles uit).
 
 const fieldStyle: CSSProperties = {
   height: "var(--field-height)",
