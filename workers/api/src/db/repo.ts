@@ -12,6 +12,8 @@
 import { gatherWeekplanEntries_ } from "@cadans/engine";
 import type {
   CheckinInput,
+  DispositionEntry,
+  DispositionReason,
   EventInput,
   EventItem,
   PlannerDay,
@@ -20,12 +22,13 @@ import type {
   SettingsInput,
   WellnessInput,
 } from "@cadans/shared";
-import { and, asc, eq, gte, lte } from "drizzle-orm";
+import { and, asc, eq, gte, isNotNull, lte } from "drizzle-orm";
 import type { Db } from "./client";
 import { fromD1, toD1Date, toD1DateTime } from "./dates";
 import {
   activities,
   checkins,
+  dayState,
   events,
   plannerDays,
   powerCurveCache,
@@ -440,6 +443,41 @@ export async function writeRpe(
     .onConflictDoUpdate({
       target: [rpe.userId, rpe.datum],
       set: { rpe: value },
+    });
+}
+
+// ── disposition (day_state.disposition — "waarom niet gedaan?"; GAS saveDisposition,
+// WebApp.gs:1634) — deelt de (user_id, datum)-rij met override_json. De engine leest dit NIET.
+/** Dagen mét een disposition, oudste-eerst (dagen met enkel override_json vallen weg). */
+export async function readDispositions(
+  db: Db,
+  userId: number,
+): Promise<DispositionEntry[]> {
+  const rows = await db
+    .select()
+    .from(dayState)
+    .where(and(eq(dayState.userId, userId), isNotNull(dayState.disposition)))
+    .orderBy(asc(dayState.datum));
+  return rows.map((r) => ({
+    datum: r.datum,
+    reason: r.disposition as DispositionReason,
+  }));
+}
+
+/** Disposition-write (reason ∈ set OF null=wis). Upsert op (user_id, datum); de conflict-branch
+ * zet ALLEEN de disposition-kolom → een bestaand override_json blijft INTACT (non-clobber). */
+export async function writeDisposition(
+  db: Db,
+  userId: number,
+  date: string,
+  reason: DispositionReason | null,
+): Promise<void> {
+  await db
+    .insert(dayState)
+    .values({ userId, datum: date, disposition: reason })
+    .onConflictDoUpdate({
+      target: [dayState.userId, dayState.datum],
+      set: { disposition: reason },
     });
 }
 

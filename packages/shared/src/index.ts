@@ -9,6 +9,7 @@ export type {
   ActivityRow,
 } from "./activities";
 export type { CheckinInput } from "./checkin";
+export type { DispositionEntry, DispositionReason } from "./disposition";
 export type { ApiError, ApiOk } from "./http";
 export type {
   PowerCurveEmpty,

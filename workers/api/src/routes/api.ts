@@ -7,7 +7,11 @@
  * pre-deploy). athleteId komt uit c.env.INTERVALS_ATHLETE_ID (niet geëxposed).
  * User = CURRENT_USER_ID (vervalt in de auth-fase).
  */
-import type { EventInput, PlannerDayInput } from "@cadans/shared";
+import type {
+  DispositionReason,
+  EventInput,
+  PlannerDayInput,
+} from "@cadans/shared";
 import { type Context, Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { CURRENT_USER_ID, makeDb } from "../db/client";
@@ -17,6 +21,7 @@ import {
   type EngineSettings,
   readActivities,
   readCheckin,
+  readDispositions,
   readEvents,
   readPlannerDays,
   readRecentWeekplans,
@@ -26,6 +31,7 @@ import {
   readWellness,
   type WellnessRecord,
   writeCheckin,
+  writeDisposition,
   writeEvents,
   writePlannerDays,
   writeRpe,
@@ -360,6 +366,49 @@ api.put("/rpe/:date", async (c) => {
     });
   }
   await writeRpe(db, CURRENT_USER_ID, date, value);
+  return c.json({ ok: true });
+});
+
+const DISPOSITION_REASONS = [
+  "geen_tijd",
+  "bewust_gerust",
+  "iets_anders",
+] as const;
+
+api.get("/dispositions", async (c) => {
+  const db = makeDb(c.env.DB);
+  const rows = await readDispositions(db, CURRENT_USER_ID);
+  return c.json(rows);
+});
+
+// PUT /api/disposition/:date — reason ∈ set OF null (=wis). GEEN proposal-herberekening
+// (de engine leest disposition niet; GAS saveDisposition doet ook geen generateProposal).
+// Non-clobber: writeDisposition raakt override_json niet aan. Spiegelt PUT /rpe/:date.
+api.put("/disposition/:date", async (c) => {
+  const db = makeDb(c.env.DB);
+  const date = c.req.param("date");
+  if (!isIsoDate(date)) {
+    throw new HTTPException(400, {
+      message: "invalid date, expected yyyy-MM-dd",
+    });
+  }
+  const body = await readJsonObject(c);
+  const reason = body.reason;
+  if (
+    reason !== null &&
+    !(DISPOSITION_REASONS as readonly string[]).includes(reason as string)
+  ) {
+    throw new HTTPException(400, {
+      message:
+        "invalid reason, expected geen_tijd|bewust_gerust|iets_anders or null",
+    });
+  }
+  await writeDisposition(
+    db,
+    CURRENT_USER_ID,
+    date,
+    reason as DispositionReason | null,
+  );
   return c.json({ ok: true });
 });
 
