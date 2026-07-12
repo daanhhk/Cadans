@@ -32,6 +32,7 @@ export function SchemaView({
   readiness,
   doneByDate,
   todayISO,
+  rpeByDate,
   onRegen,
   regenerating,
   syncNote,
@@ -40,6 +41,7 @@ export function SchemaView({
   readiness: ReadinessResult;
   doneByDate: Record<string, DoneEntry>;
   todayISO: string;
+  rpeByDate: Record<string, number>;
   onRegen: () => void;
   regenerating: boolean;
   syncNote: { text: string; error: boolean } | null;
@@ -136,6 +138,8 @@ export function SchemaView({
               <DoneCompareCard
                 card={day.doneCompare}
                 coachNaam={view.coachNaam}
+                date={day.datum}
+                rpe={rpeByDate[day.datum] ?? null}
               />
             ) : (
               // §5d voltooid-verleden (gereduceerde kaart-inhoud, bewust geparkeerd).

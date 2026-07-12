@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import { displayCoach } from "../../lib/coach";
 import type { DoneCompare } from "../../lib/schema";
 import { SoonButton } from "./ActionButtons";
+import { RpeRating } from "./RpeRating";
 import { ZoneCompare } from "./ZoneCompare";
 import { ZonePill } from "./ZonePill";
 
@@ -291,9 +292,13 @@ function CoachImpact({
 export function DoneCompareCard({
   card,
   coachNaam,
+  date,
+  rpe,
 }: {
   card: DoneCompare;
   coachNaam: string | null;
+  date: string;
+  rpe: number | null;
 }) {
   return (
     <div style={{ marginTop: "var(--s-3)" }}>
@@ -330,6 +335,9 @@ export function DoneCompareCard({
       >
         <SoonButton label="Bekijk ritdetails ›" />
       </div>
+      {/* RPE-rating (1-10) op de voltooide rit — GAS rpeRatingHtml_. key={date} herinitialiseert
+          de highlight bij dag-wissel. */}
+      <RpeRating key={date} date={date} initial={rpe} />
       {card.narrative && (
         <CoachImpact
           narrative={card.narrative}

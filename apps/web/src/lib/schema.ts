@@ -713,6 +713,7 @@ export async function loadSchemaWeek(): Promise<{
   doneByDate: Record<string, DoneEntry>;
   readiness: ReadinessResult;
   todayISO: string;
+  rpeByDate: Record<string, number>;
 }> {
   const monday = weekMondayIso();
   const todayISO = todayIso();
@@ -761,5 +762,11 @@ export async function loadSchemaWeek(): Promise<{
   }
 
   const readiness = deriveReadiness(wellness, checkin);
-  return { proposalWeek, doneByDate, readiness, todayISO };
+  // rpe-per-datum voor de done-kaart-highlight (de engine leest de rpe-rijen apart via buildWeekProposal).
+  const rpeByDate: Record<string, number> = {};
+  for (const r of rpe) {
+    if (r.rpe != null) rpeByDate[r.datum] = r.rpe;
+  }
+
+  return { proposalWeek, doneByDate, readiness, todayISO, rpeByDate };
 }

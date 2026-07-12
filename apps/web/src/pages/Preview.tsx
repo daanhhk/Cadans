@@ -317,6 +317,7 @@ export function Preview() {
         readiness={f.readiness}
         doneByDate={f.doneByDate}
         todayISO={f.todayISO}
+        rpeByDate={{ "2026-07-08": 7 }}
         onRegen={() => {}}
         regenerating={false}
         syncNote={null}

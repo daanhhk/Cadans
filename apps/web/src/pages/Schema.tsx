@@ -11,6 +11,7 @@ interface SchemaData {
   doneByDate: Record<string, DoneEntry>;
   readiness: ReadinessResult;
   todayISO: string;
+  rpeByDate: Record<string, number>;
 }
 
 // Live container voor de Schema-tab: laadt de doelweek (loadSchemaWeek → getPlanner/
@@ -162,6 +163,7 @@ export function Schema() {
       readiness={data.readiness}
       doneByDate={data.doneByDate}
       todayISO={data.todayISO}
+      rpeByDate={data.rpeByDate}
       onRegen={handleSync}
       regenerating={syncing || regenerating}
       syncNote={syncNote}

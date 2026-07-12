@@ -162,6 +162,19 @@ export async function putCheckin(
   }
 }
 
+/** PUT /api/rpe/:date — RPE 1-10; 2xx = ok, non-2xx → throw. Spiegelt putCheckin. */
+export async function putRpe(date: string, rpe: number): Promise<void> {
+  const resp = await fetch(`/api/rpe/${date}`, {
+    method: "PUT",
+    headers: { "content-type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ rpe }),
+  });
+  if (!resp.ok) {
+    const parsed = await parseBody(resp);
+    throw new Error(errMessage(parsed, resp.status));
+  }
+}
+
 /** Sync-respons van de intervals.icu-pull-routes. */
 export interface SyncResult {
   fetched: number;
