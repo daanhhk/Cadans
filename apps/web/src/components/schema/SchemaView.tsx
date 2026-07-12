@@ -7,7 +7,7 @@ import {
   deriveSchemaView,
 } from "../../lib/schema";
 import { Card, Overline } from "../ui";
-import { ActionButtons } from "./ActionButtons";
+import { ActionButtons, GarminPushButton } from "./ActionButtons";
 import { AlignChip } from "./AlignChip";
 import { CoachReadinessBanner } from "./CoachReadinessBanner";
 import { DayStrip } from "./DayStrip";
@@ -50,6 +50,8 @@ export function SchemaView({
   );
   const [selected, setSelected] = useState(todayISO);
   const day = view.days.find((d) => d.datum === selected) ?? view.days[0];
+  // plannbaar (GAS trnPlannable_): dag >= vandaag en niet voltooid -> "Andere training kiezen" mag.
+  const dayPlannable = !!day && day.datum >= todayISO && !day.done;
 
   return (
     <div
@@ -127,36 +129,30 @@ export function SchemaView({
 
           {day.done ? (
             day.doneCompare ? (
-              // §5c voltooid-volle → volle kaart (incl. ritdetails-link + impact-box) + gedeeld
-              // knoppen-blok. §5a (rustdag) rendert exact hetzelfde ActionButtons-blok (ongewijzigd).
-              <>
-                <DoneCompareCard
-                  card={day.doneCompare}
-                  coachNaam={view.coachNaam}
-                />
-                <ActionButtons />
-              </>
+              // §5c voltooid-volle → volle kaart (incl. ritdetails-link + impact-box). Het gedeelde
+              // knoppen-blok volgt NA de state-conditional (een keer, onder elke state).
+              <DoneCompareCard
+                card={day.doneCompare}
+                coachNaam={view.coachNaam}
+              />
             ) : (
-              // §5d voltooid-verleden (gereduceerd, geparkeerd) → GEEN knoppen-blok.
+              // §5d voltooid-verleden (gereduceerde kaart-inhoud, bewust geparkeerd).
               <DoneDetail done={day.done} />
             )
           ) : day.sessions.length === 0 ? (
-            // §5a rustdag → lege-staat-copy + gedeeld knoppen-blok (zonder ritdetails).
-            <>
-              <div
-                style={{
-                  fontFamily: "var(--font-sans)",
-                  fontSize: "var(--fs-label)",
-                  color: "var(--text-muted)",
-                  textAlign: "center",
-                  padding: "var(--s-5) var(--s-2) var(--s-2)",
-                  lineHeight: "var(--lh-body)",
-                }}
-              >
-                Rustdag — van herstel word je beter.
-              </div>
-              <ActionButtons />
-            </>
+            // §5a rustdag → lege-staat-copy. Knoppen-blok volgt NA de state-conditional.
+            <div
+              style={{
+                fontFamily: "var(--font-sans)",
+                fontSize: "var(--fs-label)",
+                color: "var(--text-muted)",
+                textAlign: "center",
+                padding: "var(--s-5) var(--s-2) var(--s-2)",
+                lineHeight: "var(--lh-body)",
+              }}
+            >
+              Rustdag — van herstel word je beter.
+            </div>
           ) : (
             <div
               style={{
@@ -190,8 +186,14 @@ export function SchemaView({
               ))}
             </div>
           )}
+          {/* Gedeeld knoppen-blok (§5e) onder elke dagkaart-state (GAS Script.html:1103-1106):
+              "Andere training" alleen plannbaar, "Beschikbaarheid aanpassen" altijd. */}
+          <ActionButtons plannable={dayPlannable} />
         </Card>
       )}
+      {/* Tab-niveau "Push naar Garmin" (GAS Index.html:37, act-row): EEN keer onderaan de
+          Schema-tab, NIET per-dag. Blijft "binnenkort" tot de Garmin-integratie er is. */}
+      <GarminPushButton />
     </div>
   );
 }

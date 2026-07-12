@@ -1,11 +1,12 @@
 import type { CSSProperties } from "react";
 import { Link } from "react-router-dom";
 
-// Gedeeld knoppen-blok (§5e) onder de rustdag- (§5a) ÉN voltooid-volle-kaart (§5c). Vaste UI-labels
-// (UI-chrome, geen data). "Beschikbaarheid aanpassen" → de bestaande /weekplanner-route (actief).
-// De overige acties hebben nog geen scherm/backend → expliciete "binnenkort"-staat (disabled),
-// GEEN dode knop / nep-flow. §5d (verleden, geparkeerd) krijgt dit blok NIET. De §5c-"Bekijk
-// ritdetails ›" leeft in DoneCompareCard (boven de coach-impact-box), niet hier.
+// Gedeeld knoppen-blok (§5e) onder ELKE dagkaart-state. GAS (Script.html:1103-1106) zet de knoppen
+// na de dag-detail onder elke plannbare dag — niet alleen rustdag/voltooid. Vaste UI-labels (chrome,
+// geen data). "Andere training kiezen" toont alleen op een plannbare dag (GAS trnPlannable_: dag >=
+// vandaag en niet voltooid); "Beschikbaarheid aanpassen" staat er altijd (-> /weekplanner, actief).
+// "Push naar Garmin" is GEEN per-dag-knop meer -> tab-niveau (GarminPushButton, GAS Index.html:37).
+// De §5c-"Bekijk ritdetails ›" leeft in DoneCompareCard, niet hier.
 
 const baseBtn: CSSProperties = {
   height: "var(--btn-height)",
@@ -23,8 +24,7 @@ const baseBtn: CSSProperties = {
   textDecoration: "none",
 };
 
-// "Binnenkort"-knop (disabled, geen dode flow). Gedeeld: ook de §5c-"Bekijk ritdetails ›" (in
-// DoneCompareCard, boven de coach-impact-box) hergebruikt deze stijl.
+// "Binnenkort"-knop (disabled, geen dode flow). Ook de §5c-"Bekijk ritdetails ›" hergebruikt deze stijl.
 export function SoonButton({ label }: { label: string }) {
   return (
     <button
@@ -48,7 +48,8 @@ export function SoonButton({ label }: { label: string }) {
   );
 }
 
-export function ActionButtons() {
+// Per-dag knoppen-blok. `plannable` (GAS trnPlannable_) bepaalt of "Andere training kiezen" toont.
+export function ActionButtons({ plannable }: { plannable: boolean }) {
   return (
     <div
       style={{
@@ -58,11 +59,16 @@ export function ActionButtons() {
         marginTop: "var(--s-4)",
       }}
     >
-      <SoonButton label="Andere training kiezen" />
+      {plannable && <SoonButton label="Andere training kiezen" />}
       <Link to="/weekplanner" style={{ ...baseBtn, cursor: "pointer" }}>
         Beschikbaarheid aanpassen
       </Link>
-      <SoonButton label="Push naar Garmin" />
     </div>
   );
+}
+
+// Tab-niveau "Push naar Garmin" — GAS zet deze knop EEN keer onderaan de hele Schema-tab
+// (Index.html:37, act-row), NIET per-dag. Blijft "binnenkort" tot de Garmin-integratie er is.
+export function GarminPushButton() {
+  return <SoonButton label="Push naar Garmin" />;
 }
