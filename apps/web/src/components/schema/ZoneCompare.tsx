@@ -19,6 +19,7 @@ function CompareRow({ r, scale }: { r: DoneCompareZone; scale: number }) {
   const donePct = (r.done / scale) * 100;
   const unplanned = r.plan === 0 && r.done > 0;
   const skipped = r.plan > 0 && r.done === 0;
+  const empty = r.plan === 0 && r.done === 0;
   return (
     <div
       style={{
@@ -113,7 +114,11 @@ function CompareRow({ r, scale }: { r: DoneCompareZone; scale: number }) {
               fontVariantNumeric: "tabular-nums",
               fontSize: "var(--fs-label)",
               fontWeight: 600,
-              color: skipped ? "var(--zcompare-tag-skipped)" : zc,
+              color: empty
+                ? "var(--text-muted)"
+                : skipped
+                  ? "var(--zcompare-tag-skipped)"
+                  : zc,
             }}
           >
             {r.done}
@@ -135,18 +140,22 @@ function CompareRow({ r, scale }: { r: DoneCompareZone; scale: number }) {
             fontWeight: 600,
             marginTop: 1,
             lineHeight: 1.2,
-            color: unplanned
-              ? "var(--zcompare-tag-unplanned)"
-              : skipped
-                ? "var(--zcompare-tag-skipped)"
-                : "var(--reading-planned)",
+            color: empty
+              ? "var(--text-muted)"
+              : unplanned
+                ? "var(--zcompare-tag-unplanned)"
+                : skipped
+                  ? "var(--zcompare-tag-skipped)"
+                  : "var(--reading-planned)",
           }}
         >
-          {unplanned
-            ? "niet gepland"
-            : skipped
-              ? "niet gereden"
-              : `gepland ${r.plan}′`}
+          {empty
+            ? "—"
+            : unplanned
+              ? "niet gepland"
+              : skipped
+                ? "niet gereden"
+                : `gepland ${r.plan}′`}
         </div>
       </div>
     </div>
@@ -154,7 +163,9 @@ function CompareRow({ r, scale }: { r: DoneCompareZone; scale: number }) {
 }
 
 export function ZoneCompare({ zones }: { zones: DoneCompareZone[] }) {
-  const rows = zones.filter((z) => z.plan > 0 || z.done > 0);
+  // Altijd alle 5 zones (Z1-Z5) tonen — bewuste afwijking van GAS (dat lege zones weglaat, zie
+  // coachZonesHtml_), zodat in een oogopslag zichtbaar is welke zones onaangeroerd bleven (0').
+  const rows = zones;
   if (rows.length === 0) return null;
   const scale = Math.max(1, ...rows.map((r) => Math.max(r.plan, r.done)));
   return (
