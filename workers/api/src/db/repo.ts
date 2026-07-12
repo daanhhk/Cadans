@@ -427,6 +427,22 @@ export async function readRpe(db: Db, userId: number): Promise<RpeEntry[]> {
   return rows.map((r) => ({ datum: r.datum, rpe: r.rpe }));
 }
 
+/** RPE-write (rpe_<date> = enkel getal) — spiegelt writeCheckin; upsert op (user_id, datum). */
+export async function writeRpe(
+  db: Db,
+  userId: number,
+  date: string,
+  value: number,
+): Promise<void> {
+  await db
+    .insert(rpe)
+    .values({ userId, datum: date, rpe: value })
+    .onConflictDoUpdate({
+      target: [rpe.userId, rpe.datum],
+      set: { rpe: value },
+    });
+}
+
 // ── wellness (WELL_HEADERS 12-kol) — DTO = WellnessInput (@cadans/shared) ─
 // WellnessInput = de WIRE-vorm (datum als ISO-string); de repo-vorm heeft datum
 // als Date. vorm = ctl−atl (bij sync).

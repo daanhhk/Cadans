@@ -20,6 +20,24 @@ async function get(path: string): Promise<{ status: number; body: any }> {
   return { status: resp.status, body };
 }
 
+async function put(
+  path: string,
+  body: unknown,
+): Promise<{ status: number; body: any }> {
+  const resp = await SELF.fetch(BASE + path, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  let b: any = null;
+  try {
+    b = await resp.json();
+  } catch {
+    b = null;
+  }
+  return { status: resp.status, body: b };
+}
+
 // Schone lei per test; users 1 én 2 (FK user_id → users.id voor de U2-rij).
 beforeEach(async () => {
   await db.delete(rpe).where(eq(rpe.userId, U));
@@ -64,5 +82,34 @@ describe("Fase 5.3d-i — rpe D1-read", () => {
     const { status, body } = await get("/api/rpe");
     expect(status).toBe(200);
     expect(body).toEqual([]);
+  });
+});
+
+describe("Fase A3 — rpe D1-write (PUT /api/rpe/:date, round-trip)", () => {
+  it("PUT → 200 {ok:true}; GET geeft de waarde terug", async () => {
+    const r = await put("/api/rpe/2026-03-10", { rpe: 7 });
+    expect(r.status).toBe(200);
+    expect(r.body).toEqual({ ok: true });
+    const g = await get("/api/rpe");
+    expect(g.status).toBe(200);
+    expect(g.body).toHaveLength(1);
+    expect(g.body[0]).toEqual({ datum: "2026-03-10", rpe: 7 });
+  });
+
+  it("PUT is idempotent-upsert: tweede write overschrijft dezelfde (user,datum)", async () => {
+    await put("/api/rpe/2026-03-10", { rpe: 4 });
+    await put("/api/rpe/2026-03-10", { rpe: 9 });
+    const g = await get("/api/rpe");
+    expect(g.body).toHaveLength(1);
+    expect(g.body[0].rpe).toBe(9);
+  });
+
+  it("PUT → 400 bij rpe buiten 1-10", async () => {
+    expect((await put("/api/rpe/2026-03-10", { rpe: 11 })).status).toBe(400);
+    expect((await put("/api/rpe/2026-03-10", { rpe: 0 })).status).toBe(400);
+  });
+
+  it("PUT → 400 bij ongeldige datum", async () => {
+    expect((await put("/api/rpe/nope", { rpe: 5 })).status).toBe(400);
   });
 });

@@ -28,6 +28,7 @@ import {
   writeCheckin,
   writeEvents,
   writePlannerDays,
+  writeRpe,
   writeSettings,
   writeWeekplan,
 } from "../db/repo";
@@ -334,6 +335,32 @@ api.get("/rpe", async (c) => {
   const db = makeDb(c.env.DB);
   const rows = await readRpe(db, CURRENT_USER_ID);
   return c.json(rows);
+});
+
+// PUT /api/rpe/:date — RPE 1-10 voor een dag (spiegelt PUT /checkin/:date). De engine leest de
+// rpe-rijen al (readiness.ts rpeSignal_); deze route persisteert ze, GEEN proposal-herberekening.
+api.put("/rpe/:date", async (c) => {
+  const db = makeDb(c.env.DB);
+  const date = c.req.param("date");
+  if (!isIsoDate(date)) {
+    throw new HTTPException(400, {
+      message: "invalid date, expected yyyy-MM-dd",
+    });
+  }
+  const body = await readJsonObject(c);
+  const value = body.rpe;
+  if (
+    typeof value !== "number" ||
+    !Number.isInteger(value) ||
+    value < 1 ||
+    value > 10
+  ) {
+    throw new HTTPException(400, {
+      message: "invalid rpe, expected integer 1-10",
+    });
+  }
+  await writeRpe(db, CURRENT_USER_ID, date, value);
+  return c.json({ ok: true });
 });
 
 // ── Fase 4b — intervals-SYNC (POST) + power-curve-READ (GET) ──────────
