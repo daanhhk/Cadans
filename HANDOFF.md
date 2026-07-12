@@ -16,7 +16,7 @@ live tot cutover.
 (remote-D1 + deploy).
 
 **VLOEREN** (mogen niet regresseren; NIET in prompts hardcoden): engine-selftest-assert-count **957** ·
-vitest-totaal **247**.
+vitest-totaal **254**.
 
 ### BRONHIERARCHIE VOOR PARITY (werkwijze — vast)
 - **daanhhk/training is PUBLIC + BEVROREN op `3e8090a`.** De chat leest de GAS-bron DIRECT via
@@ -37,6 +37,22 @@ code, vindt de call-sites zelf en past aan de ECHTE staat aan (i.p.v. letterlijk
 alleen als ANKER bij FRAGIELE edits (byte-getrouwe GAS-mirrors, TZ-grens-logica, formules/zone-mappings). CC meldt
 in elk rapport de kern-implementatiekeuzes (gekozen conditie, plaatsing) zodat review tegen de spec kan zonder de
 volledige diff.
+
+**FASE A code-compleet (A1-A4 + B1) op main + CI-groen — NIET GEDEPLOYD (prod = Version
+`52a51ae9`).** A2/A4 laatste: disposition-backend `6929741`, disposition-UI + gemist-kaart
+`d8c70e4`. De volgende deploy (approval-gated) bundelt A1/B1/A3/A2/A4 live.
+- **OPENSTAAND — A2/A4 visuele check (mensenwerk, LAN-dev-server):** (1) een geplande dag
+  ≤ vandaag zonder rit toont "Niet gedaan?" + 3 knoppen; (2) een reden tikken → kaart wordt
+  "Gemist · <reden>" + Terug, affordance weg; (3) Terug → terug naar voorstel + affordance;
+  (4) voltooide dag = geen affordance; (5) toekomstige dag = geen affordance.
+- **A4 = SIMPELE gemist-kaart (bewust).** De rijke frame-10 (`gemistDetailHtml_`: planregel +
+  reden-herkiezer + coach-box) = DOEL, gebouwd IN/NA B4 (deelt B4's coach-adaptatie + de
+  plan-only missed-`coachFeedback_`). De A2-plumbing (disposition-map → deriveSchemaView →
+  "gemist"-state → SchemaDay.dispositie → affordance) is frame-10-klaar; de upgrade is een
+  body-swap.
+- **FASE B recon-doc:** `docs/FASE-B-OVERRIDE-ADAPTATIE-RECON.md` — override + picker + B4-
+  adaptatie in kaart. KERN: de engine-kern is al geport; ontbreekt = client-orkestratie + UI;
+  de override-backend is de gedeelde B3/B4-fundering. Bevat de port-correctheid-caveat.
 
 **FASE 1 (schema-flow zuivere vormgeving):** VOLLEDIG AF + visueel geverifieerd in `/preview`.
 
@@ -126,9 +142,9 @@ CI-groen, maar **NIET gedeployd** (prod draait nog Version `52a51ae9` van brok 5
   done-kaart, optimistische highlight + rollback, `bumpPlannerVersion` na write); `rpeByDate` gethreaded via
   `loadSchemaWeek` → Schema → SchemaView → DoneCompareCard. De engine leest de rpe-rijen al (`readiness.ts`
   `rpeSignal_`); ENGINE ONGEMOEID.
-- **FASE A RESTEREND:** **A2 disposition** ("Niet gedaan? → Geen tijd / Bewust gerust / Iets anders";
-  `day_state.disposition`-kolom bestaat al → geen migratie; engine niet geraakt) · **A4 gemist-dagkaart** (aparte
-  state; GAS `gemistKaart_`/`gemistDetailHtml_`).
+- **FASE A RESTEREND — NU AF:** **A2 disposition** (backend `6929741` + UI `d8c70e4`) · **A4 gemist-kaart**
+  (`d8c70e4`, SIMPELE versie; de rijke frame-10 `gemistDetailHtml_` volgt in/na B4). Zie het FASE A
+  code-compleet-blok bovenaan Stand.
 
 **CLOSE-OUT-LIJST / kleine follow-ups** (geen zichtbare bug op default-view):
 - Twee hand-geschreven fixtures met silhouet-drift-risico: Za "Lange duurrit" (`2026-07-11`) + Wo-8
@@ -157,10 +173,12 @@ CI-groen, maar **NIET gedeployd** (prod draait nog Version `52a51ae9` van brok 5
 `FASE2-5-ZONES-RECON.md` (`6028cfd`, GECORRIGEERD → (a) CLIENT-ONLY — zie BRONHIERARCHIE). Het 4b- en het
 brok-2-recon waren rapport-only (geen doc).
 
-**FOCUS VOLGENDE CHAT:** FASE 2 + FASE A (deze sessie) COMPLEET → zie FASE A-voortgang + PARITY-FASERING. Direct
-openstaand: **A2 disposition** + **A4 gemist-dagkaart** (FASE A-rest) · **2d ritdetails** · **FASE B** (recon-first)
-+ de losse close-out-follow-ups. Nog in te voeren: het echte A-event **Amstel Gold Race** op prod via de
-events-editor. NB: FASE A staat op main + CI-groen maar is nog NIET gedeployd (prod = Version `52a51ae9`).
+**FOCUS VOLGENDE CHAT:** FASE A (A1-A4 + B1) = code-compleet. Volgorde: (1) **A2/A4 visuele check** op de
+LAN-dev-server (zie de 5-punts-checklist in het FASE A code-compleet-blok bovenaan Stand) → (2) **FASE-A
+prod-deploy** (approval-gated; bundelt A1/B1/A3/A2/A4 live) → (3) **FASE B bouwen**: override-backend **laag-1
+EERST** (mirror A2), dán B4-orkestratie + UI + **frame-10** (rijke gemist-kaart) — zie
+`docs/FASE-B-OVERRIDE-ADAPTATIE-RECON.md`. Start de B4-bouw met de gerichte **port-spot-check** (caveat in het
+recon-doc). Nog in te voeren: het echte A-event **Amstel Gold Race** op prod via de events-editor.
 
 ### PARITY-FASERING (compact — vervangt een apart audit-doc; de volledige matrix is via de GAS-bron te reconen)
 - **FASE B (recon-first, deels engine + sign-off):** **B2 Trainingen-tab** (nu `<ComingSoon>`; GAS = volledige
@@ -275,10 +293,11 @@ heeft → vervanging sloeg stil over).
 
 **Gate-vloeren (nooit onder; bron van waarheid — NOOIT hardcoden in een prompt):**
 engine-selftest `toBe(957)` (`packages/engine/src/selftest.test.ts:3668`, ongewijzigd) · vitest-totaal
-**247** (gegroeid: §5b `silhouetSegments` +5 → 214, 4b `presetHoursLabel` +3 → 217, brok 2 `planModusLabel`
+**254** (gegroeid: §5b `silhouetSegments` +5 → 214, 4b `presetHoursLabel` +3 → 217, brok 2 `planModusLabel`
 +4 → 221, brok 3 RUN 1 settings-round-trip +2 → 223, RUN 2 `isoWeekNumber`+`displayCoach`/`initials` +8 → 231,
 brok 4a RUN 1 events-write-tests +4 → 235, RUN 2 `eventsSummary` +5 → 240, brok 5 `actualZone5_` +3 → 243,
-A3 RUN 1 rpe-write-tests +4 → 247). CI groen. Hard floors — niet regresseren.
+A3 RUN 1 rpe-write-tests +4 → 247, A2 laag-1 disposition-write-tests +5 → 252, A2/A4 laag-2 gemist-precedentie
++2 → 254). CI groen. Hard floors — niet regresseren.
 
 **Fundament:** IBM Plex Sans (400/500/600) + Mono (500/600), self-hosted via `@fontsource`,
 offline-precached (`main.tsx`). Het UI-kader ligt vast in **`apps/web/docs/UI-KADER.md`**:
