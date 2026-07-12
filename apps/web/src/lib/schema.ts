@@ -5,11 +5,12 @@ import {
   stripTime_,
   zoneTimesFromCell_,
 } from "@cadans/engine";
-import type { SettingsInput } from "@cadans/shared";
+import type { DispositionReason, SettingsInput } from "@cadans/shared";
 import { type ActValuesRow, parseActivityRows } from "./activities";
 import {
   getActivities,
   getCheckin,
+  getDispositions,
   getEvents,
   getPlanner,
   getRpe,
@@ -165,7 +166,14 @@ export interface SchemaSession {
   eindopmerking: string | null;
 }
 
-export type DayState = "today" | "done" | "planned" | "rest";
+export type DayState = "today" | "done" | "planned" | "rest" | "gemist";
+
+// Disposition-labels (byte-exact GAS DISP_LABEL, Script.html:447) — "waarom niet gedaan?".
+export const DISPOSITION_LABELS: Record<DispositionReason, string> = {
+  geen_tijd: "Geen tijd",
+  bewust_gerust: "Bewust gerust",
+  iets_anders: "Iets anders gedaan",
+};
 
 export interface SchemaDay {
   datum: string;
@@ -184,6 +192,8 @@ export interface SchemaDay {
   done: DoneEntry | null;
   /** Plan-vs-gedaan-vergelijking als er een geplande sessie was; null → gereduceerde kaart (2b-2). */
   doneCompare: DoneCompare | null;
+  /** Dag-dispositie ("waarom niet gedaan?", A2) — voedt de gemist-state + GemistCard. */
+  dispositie: DispositionReason | null;
 }
 
 export interface LoadStat {
@@ -600,6 +610,7 @@ export function deriveSchemaView(
   proposalWeek: ProposalWeek,
   doneByDate: Record<string, DoneEntry>,
   todayISO: string,
+  dispositionByDate: Record<string, DispositionReason>,
 ): SchemaView {
   const tss: LoadStat = { gepland: 0, gedaan: 0 };
   const minuten: LoadStat = { gepland: 0, gedaan: 0 };
@@ -613,16 +624,21 @@ export function deriveSchemaView(
     const hasSessions = sessions.length > 0;
     const isToday = d.datum === todayISO;
     const isDone = doneTss > 0;
+    const dispositie = dispositionByDate[d.datum] ?? null;
     // STAP 1 (same-day-flip): een VOLTOOIDE activity wint van 'vandaag' → done-kaart, ook
     // vandaag (zoals GAS: readiness vervalt zodra er gereden is). isToday blijft apart voor
     // de dag-strip-markering. Vandaag zónder rit → 'today' (readiness + geplande workout).
+    // 'gemist' (A2/A4): gedisponeerde dag mét voorstel en GEEN rit — NÁ done, VÓÓR today
+    // (byte-exact GAS WebApp.gs:1143: disp && voorstel && !actual overschrijft, behalve done).
     const state: DayState = isDone
       ? "done"
-      : isToday
-        ? "today"
-        : hasSessions
-          ? "planned"
-          : "rest";
+      : dispositie && hasSessions
+        ? "gemist"
+        : isToday
+          ? "today"
+          : hasSessions
+            ? "planned"
+            : "rest";
 
     for (const s of sessions) {
       tss.gepland += s.tss;
@@ -665,6 +681,7 @@ export function deriveSchemaView(
       doneTss,
       done: done ?? null,
       doneCompare,
+      dispositie,
     };
   });
 
@@ -714,6 +731,7 @@ export async function loadSchemaWeek(): Promise<{
   readiness: ReadinessResult;
   todayISO: string;
   rpeByDate: Record<string, number>;
+  dispositionByDate: Record<string, DispositionReason>;
 }> {
   const monday = weekMondayIso();
   const todayISO = todayIso();
@@ -725,6 +743,7 @@ export async function loadSchemaWeek(): Promise<{
     weekplans,
     wellness,
     rpe,
+    dispositions,
     checkin,
   ] = await Promise.all([
     getSettings(),
@@ -734,6 +753,7 @@ export async function loadSchemaWeek(): Promise<{
     getWeekplans(monday),
     getWellness(),
     getRpe(),
+    getDispositions(),
     getCheckin(todayISO),
   ]);
 
@@ -767,6 +787,18 @@ export async function loadSchemaWeek(): Promise<{
   for (const r of rpe) {
     if (r.rpe != null) rpeByDate[r.datum] = r.rpe;
   }
+  // disposition-per-datum (A2) voor de gemist-state-afleiding + GemistCard.
+  const dispositionByDate: Record<string, DispositionReason> = {};
+  for (const d of dispositions) {
+    dispositionByDate[d.datum] = d.reason;
+  }
 
-  return { proposalWeek, doneByDate, readiness, todayISO, rpeByDate };
+  return {
+    proposalWeek,
+    doneByDate,
+    readiness,
+    todayISO,
+    rpeByDate,
+    dispositionByDate,
+  };
 }

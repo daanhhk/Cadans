@@ -8,6 +8,8 @@ import type {
   ActivitiesResponse,
   ApiError,
   CheckinInput,
+  DispositionEntry,
+  DispositionReason,
   EventInput,
   EventItem,
   PlannerDay,
@@ -123,6 +125,11 @@ export function getRpe(): Promise<RpeEntry[]> {
   return apiGet<RpeEntry[]>("/api/rpe");
 }
 
+/** GET /api/dispositions — dagen mét een disposition, oudste-eerst. */
+export function getDispositions(): Promise<DispositionEntry[]> {
+  return apiGet<DispositionEntry[]>("/api/dispositions");
+}
+
 /** GET /api/weekplans/recent?monday= — recente weekplan-entries (opaque JSON-blob). */
 export function getWeekplans(mondayISO: string): Promise<WeekplanEntries> {
   return apiGet<WeekplanEntries>(`/api/weekplans/recent?monday=${mondayISO}`);
@@ -168,6 +175,23 @@ export async function putRpe(date: string, rpe: number): Promise<void> {
     method: "PUT",
     headers: { "content-type": "application/json", Accept: "application/json" },
     body: JSON.stringify({ rpe }),
+  });
+  if (!resp.ok) {
+    const parsed = await parseBody(resp);
+    throw new Error(errMessage(parsed, resp.status));
+  }
+}
+
+/** PUT /api/disposition/:date — reason ∈ set OF null (=wis). KRITIEK: wissen stuurt JSON
+ * null ({ reason: null }), NOOIT "" (laag-1 wist alleen op null; "" → 400). Spiegelt putRpe. */
+export async function putDisposition(
+  date: string,
+  reason: DispositionReason | null,
+): Promise<void> {
+  const resp = await fetch(`/api/disposition/${date}`, {
+    method: "PUT",
+    headers: { "content-type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ reason }),
   });
   if (!resp.ok) {
     const parsed = await parseBody(resp);

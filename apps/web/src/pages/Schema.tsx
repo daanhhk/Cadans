@@ -1,3 +1,4 @@
+import type { DispositionReason } from "@cadans/shared";
 import { useEffect, useState } from "react";
 import { SchemaView } from "../components/schema/SchemaView";
 import { postSyncActivities, postSyncWellness } from "../lib/api";
@@ -12,6 +13,7 @@ interface SchemaData {
   readiness: ReadinessResult;
   todayISO: string;
   rpeByDate: Record<string, number>;
+  dispositionByDate: Record<string, DispositionReason>;
 }
 
 // Live container voor de Schema-tab: laadt de doelweek (loadSchemaWeek → getPlanner/
@@ -164,6 +166,7 @@ export function Schema() {
       doneByDate={data.doneByDate}
       todayISO={data.todayISO}
       rpeByDate={data.rpeByDate}
+      dispositionByDate={data.dispositionByDate}
       onRegen={handleSync}
       regenerating={syncing || regenerating}
       syncNote={syncNote}

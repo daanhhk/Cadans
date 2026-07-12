@@ -437,12 +437,13 @@ describe("deriveSchemaView dispatch (flip + doneCompare)", () => {
       pweek([pday(TODAY)]),
       { [TODAY]: de({ tss: 70 }) },
       TODAY,
+      {},
     );
     expect(v.days[0].state).toBe("done");
     expect(v.days[0].isToday).toBe(true);
   });
   it("vandaag zonder rit → state 'today'", () => {
-    const v = deriveSchemaView(pweek([pday(TODAY)]), {}, TODAY);
+    const v = deriveSchemaView(pweek([pday(TODAY)]), {}, TODAY, {});
     expect(v.days[0].state).toBe("today");
     expect(v.days[0].isToday).toBe(true);
   });
@@ -451,6 +452,7 @@ describe("deriveSchemaView dispatch (flip + doneCompare)", () => {
       pweek([pday("2026-03-09")]),
       { "2026-03-09": de({ tss: 70 }) },
       TODAY,
+      {},
     );
     expect(v.days[0].state).toBe("done");
     expect(v.days[0].isToday).toBe(false);
@@ -460,6 +462,7 @@ describe("deriveSchemaView dispatch (flip + doneCompare)", () => {
       pweek([pday("2026-03-09")]),
       { "2026-03-09": de({ tss: 70 }) },
       TODAY,
+      {},
     );
     expect(zonder.days[0].doneCompare).toBeNull();
 
@@ -472,6 +475,7 @@ describe("deriveSchemaView dispatch (flip + doneCompare)", () => {
       ]),
       { "2026-03-09": doneSS },
       TODAY,
+      {},
     );
     expect(met.days[0].doneCompare).not.toBeNull();
     expect(met.days[0].doneCompare?.planType).toBe("Sweet Spot");
@@ -485,10 +489,34 @@ describe("deriveSchemaView dispatch (flip + doneCompare)", () => {
       sessions: [plannedSS],
       plannedForDone: null,
     });
-    const v = deriveSchemaView(pweek([day]), { [TODAY]: doneSS }, TODAY);
+    const v = deriveSchemaView(pweek([day]), { [TODAY]: doneSS }, TODAY, {});
     expect(v.days[0].state).toBe("done");
     expect(v.days[0].doneCompare).not.toBeNull();
     expect(v.days[0].doneCompare?.planType).toBe("Sweet Spot");
+  });
+  it("gemist-precedentie (a): sessions + disposition + niet-done → state 'gemist' + dispositie gezet", () => {
+    const day = pday("2026-03-09", {
+      voorgesteldType: "sweet_spot",
+      sessions: [plannedSS],
+    });
+    const v = deriveSchemaView(pweek([day]), {}, TODAY, {
+      "2026-03-09": "geen_tijd",
+    });
+    expect(v.days[0].state).toBe("gemist");
+    expect(v.days[0].dispositie).toBe("geen_tijd");
+  });
+  it("gemist-precedentie (b): done + disposition → state 'done' (isDone wint van gemist)", () => {
+    const day = pday("2026-03-09", {
+      voorgesteldType: "sweet_spot",
+      sessions: [plannedSS],
+    });
+    const v = deriveSchemaView(
+      pweek([day]),
+      { "2026-03-09": de({ tss: 70 }) },
+      TODAY,
+      { "2026-03-09": "bewust_gerust" },
+    );
+    expect(v.days[0].state).toBe("done");
   });
 });
 

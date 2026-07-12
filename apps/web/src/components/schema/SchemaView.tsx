@@ -1,3 +1,4 @@
+import type { DispositionReason } from "@cadans/shared";
 import { useMemo, useState } from "react";
 import type { ProposalWeek } from "../../lib/proposal";
 import type { ReadinessResult } from "../../lib/readiness";
@@ -11,8 +12,10 @@ import { ActionButtons, GarminPushButton } from "./ActionButtons";
 import { AlignChip } from "./AlignChip";
 import { CoachReadinessBanner } from "./CoachReadinessBanner";
 import { DayStrip } from "./DayStrip";
+import { DispositionAffordance } from "./DispositionAffordance";
 import { DoneCompareCard } from "./DoneCompareCard";
 import { DoneDetail } from "./DoneDetail";
+import { GemistCard } from "./GemistCard";
 import { PeriodTimeline } from "./PeriodTimeline";
 import { WeekLoad } from "./WeekLoad";
 import { WorkoutDetail } from "./WorkoutDetail";
@@ -22,6 +25,7 @@ const STATE_LABEL: Record<DayState, string> = {
   done: "Voltooid",
   planned: "Voorstel",
   rest: "Rustdag",
+  gemist: "Niet gereden",
 };
 
 // PURE Schema-presentatie op het view-model. Interne state = geselecteerde datum
@@ -33,6 +37,7 @@ export function SchemaView({
   doneByDate,
   todayISO,
   rpeByDate,
+  dispositionByDate,
   onRegen,
   regenerating,
   syncNote,
@@ -42,13 +47,15 @@ export function SchemaView({
   doneByDate: Record<string, DoneEntry>;
   todayISO: string;
   rpeByDate: Record<string, number>;
+  dispositionByDate: Record<string, DispositionReason>;
   onRegen: () => void;
   regenerating: boolean;
   syncNote: { text: string; error: boolean } | null;
 }) {
   const view = useMemo(
-    () => deriveSchemaView(proposalWeek, doneByDate, todayISO),
-    [proposalWeek, doneByDate, todayISO],
+    () =>
+      deriveSchemaView(proposalWeek, doneByDate, todayISO, dispositionByDate),
+    [proposalWeek, doneByDate, todayISO, dispositionByDate],
   );
   const [selected, setSelected] = useState(todayISO);
   const day = view.days.find((d) => d.datum === selected) ?? view.days[0];
@@ -56,6 +63,14 @@ export function SchemaView({
   const dayFuture = !!day && day.datum >= todayISO;
   // plannbaar (GAS trnPlannable_): dag >= vandaag en niet voltooid -> "Andere training kiezen" mag.
   const dayPlannable = dayFuture && !!day && !day.done;
+  // canDispose (GAS canDispose_, Script.html:448): een dag met voorstel, niet voltooid, nog niet
+  // gedisponeerd, en datum <= vandaag → toon de "Niet gedaan?"-affordance.
+  const canDispose =
+    !!day &&
+    day.sessions.length > 0 &&
+    !day.done &&
+    !day.dispositie &&
+    day.datum <= todayISO;
 
   return (
     <div
@@ -145,6 +160,9 @@ export function SchemaView({
               // §5d voltooid-verleden (gereduceerde kaart-inhoud, bewust geparkeerd).
               <DoneDetail done={day.done} />
             )
+          ) : day.state === "gemist" ? (
+            // gemist (A4): gedisponeerde dag mét voorstel, niet gereden → GemistCard + "Terug".
+            <GemistCard reason={day.dispositie} date={day.datum} />
           ) : day.sessions.length === 0 ? (
             // §5a rustdag → lege-staat-copy. Knoppen-blok volgt NA de state-conditional.
             <div
@@ -192,6 +210,9 @@ export function SchemaView({
               ))}
             </div>
           )}
+          {/* Disposition-affordance (A2, GAS canDispose_): "Niet gedaan?" onder een plannbare,
+              niet-gedisponeerde dag ≤ vandaag → flipt de dag naar 'gemist'. */}
+          {canDispose && <DispositionAffordance date={day.datum} />}
           {/* Gedeeld knoppen-blok (§5e), alleen op vandaag/toekomst (dayFuture): op een verleden
               dag kun je beschikbaarheid niet meer aanpassen. "Andere training" alleen plannbaar. */}
           {dayFuture && (
