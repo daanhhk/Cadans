@@ -1,4 +1,5 @@
 import { buildWorkout } from "@cadans/engine";
+import type { SettingsInput } from "@cadans/shared";
 import { useState } from "react";
 import { SchemaView } from "../components/schema/SchemaView";
 import type {
@@ -65,6 +66,21 @@ const done = (o: Partial<DoneEntry>): DoneEntry => ({
 // slot 0 → variant ss_2x20 → per-rep blokken (twee tempo-pieken), GAS-conform. Naam/min/TSS/
 // blokken/structuur komen ALLE uit de engine — niet meer met de hand. doelStart:null → weekIndex 0.
 const PREVIEW_FTP = 250;
+// Volledige SettingsInput voor de SchemaView-settings-prop (getTrainingLibrary_ = make-up-variant-bron).
+const PREVIEW_SETTINGS: SettingsInput = {
+  ftp: PREVIEW_FTP,
+  lthr: 160,
+  gewicht: 72,
+  doel: null,
+  doelStart: null,
+  hrMax: 185,
+  hrRest: 45,
+  doelDuur: null,
+  fase: null,
+  profielPreset: null,
+  pendelDuurMin: null,
+  pendelAantal: null,
+};
 const PREVIEW_PLANNED_SESSION = buildWorkout(
   "sweet_spot",
   90, // beschikbare minuten (Base sweet-spot dag)
@@ -319,6 +335,8 @@ export function Preview() {
         todayISO={f.todayISO}
         rpeByDate={{ "2026-07-08": 7 }}
         dispositionByDate={{}}
+        overrides={[]}
+        settings={PREVIEW_SETTINGS}
         onRegen={() => {}}
         regenerating={false}
         syncNote={null}

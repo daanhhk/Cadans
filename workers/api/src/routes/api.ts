@@ -434,6 +434,10 @@ function isValidOverride(o: unknown): o is DayOverride {
   const dur = ov.durMin;
   if (typeof dur !== "number" || !Number.isFinite(dur) || dur < 20 || dur > 360)
     return false;
+  // Idempotentie/display-metadata (from/src/label) — accepteer los; de engine leest ze niet.
+  if (ov.from != null && typeof ov.from !== "string") return false;
+  if (ov.src != null && ov.src !== "readiness") return false;
+  if (ov.label != null && typeof ov.label !== "string") return false;
   if (ov.type === "library") {
     if (
       !(OVERRIDE_WORKOUT_TYPES as readonly string[]).includes(

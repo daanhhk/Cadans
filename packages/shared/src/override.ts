@@ -16,13 +16,25 @@ export type OverrideWorkoutType =
 export type OverrideRitType = "vrij" | "groep";
 export type OverrideIntensiteit = "rustig" | "tempo" | "stevig";
 
-export interface LibraryOverride {
+/** Idempotentie/display-metadata die in override_json round-trippen. De engine
+ * (buildOverrideWorkout_/buildFreeRideWorkout_) LEEST deze NIET; ze sturen alleen de
+ * make-up-idempotentie (from = brondag) + display (src='readiness' = Verlicht; label). */
+interface OverrideMeta {
+  /** make-up-brondag (yyyy-MM-dd) — koppelt de override aan de gemiste/afgeweken dag (idempotent). */
+  from?: string | null;
+  /** 'readiness' = via de Verlicht-vandaag-flow gezet (anders afwezig). */
+  src?: "readiness" | null;
+  /** display-label (bv. coachAdaptatie_-label "Ingekorte …"). */
+  label?: string | null;
+}
+
+export interface LibraryOverride extends OverrideMeta {
   type: "library";
   workoutType: OverrideWorkoutType;
   variantId?: string | null;
   durMin: number;
 }
-export interface FreeOverride {
+export interface FreeOverride extends OverrideMeta {
   type: "free";
   ritType: OverrideRitType;
   intensiteit: OverrideIntensiteit;

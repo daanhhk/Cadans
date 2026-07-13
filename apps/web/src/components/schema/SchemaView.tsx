@@ -1,4 +1,8 @@
-import type { DispositionReason } from "@cadans/shared";
+import type {
+  DispositionReason,
+  OverrideEntry,
+  SettingsInput,
+} from "@cadans/shared";
 import { useMemo, useState } from "react";
 import type { ProposalWeek } from "../../lib/proposal";
 import type { ReadinessResult } from "../../lib/readiness";
@@ -38,6 +42,8 @@ export function SchemaView({
   todayISO,
   rpeByDate,
   dispositionByDate,
+  overrides,
+  settings,
   onRegen,
   regenerating,
   syncNote,
@@ -48,14 +54,32 @@ export function SchemaView({
   todayISO: string;
   rpeByDate: Record<string, number>;
   dispositionByDate: Record<string, DispositionReason>;
+  overrides: OverrideEntry[];
+  settings: SettingsInput;
   onRegen: () => void;
   regenerating: boolean;
   syncNote: { text: string; error: boolean } | null;
 }) {
   const view = useMemo(
     () =>
-      deriveSchemaView(proposalWeek, doneByDate, todayISO, dispositionByDate),
-    [proposalWeek, doneByDate, todayISO, dispositionByDate],
+      deriveSchemaView(
+        proposalWeek,
+        doneByDate,
+        todayISO,
+        dispositionByDate,
+        overrides,
+        readiness,
+        settings,
+      ),
+    [
+      proposalWeek,
+      doneByDate,
+      todayISO,
+      dispositionByDate,
+      overrides,
+      readiness,
+      settings,
+    ],
   );
   const [selected, setSelected] = useState(todayISO);
   const day = view.days.find((d) => d.datum === selected) ?? view.days[0];

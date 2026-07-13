@@ -1,11 +1,18 @@
 import {
   actualZoneMinutes_,
+  coachAdaptatie_,
   coachFeedback_,
   formatDate,
+  getTrainingLibrary_,
   stripTime_,
   zoneTimesFromCell_,
 } from "@cadans/engine";
-import type { DispositionReason, SettingsInput } from "@cadans/shared";
+import type {
+  DayOverride,
+  DispositionReason,
+  OverrideEntry,
+  SettingsInput,
+} from "@cadans/shared";
 import { type ActValuesRow, parseActivityRows } from "./activities";
 import {
   getActivities,
@@ -176,6 +183,21 @@ export const DISPOSITION_LABELS: Record<DispositionReason, string> = {
   iets_anders: "Iets anders gedaan",
 };
 
+/** Rauwe per-dag coach-feedback (2a): de coachFeedback_-velden op dagniveau. `state` is de RAUWE
+ * engine-state ('on-plan'|'deviated'|'different'|'missed'), NIET de AlignKind-mapping. `planned` =
+ * het coach.planned-blok (voer voor coachAdaptatie_). Voedt de make-up-post-pass + later frame-10. */
+export interface SchemaDayCoach {
+  state: string;
+  adapt: string | null;
+  planned: unknown;
+  narrative: string | null;
+}
+/** Make-up-payload (B4): de coachAdaptatie_-override (library + dISO/from/label) OF — als er al een
+ * override met from=deze-dag bestaat — een reeds-ingeplande-verwijzing {planned:true, dISO}. */
+export type MakeupAdaptatie =
+  | (DayOverride & { dISO: string })
+  | { planned: true; dISO: string };
+
 export interface SchemaDay {
   datum: string;
   dagIdx: number;
@@ -195,6 +217,10 @@ export interface SchemaDay {
   doneCompare: DoneCompare | null;
   /** Dag-dispositie ("waarom niet gedaan?", A2) — voedt de gemist-state + GemistCard. */
   dispositie: DispositionReason | null;
+  /** Rauwe per-dag coach-feedback (2a): done → coachFeedback_-fb; gemist → missed-fb; anders null. */
+  coach: SchemaDayCoach | null;
+  /** Make-up-adaptatie (B4-post-pass) op de bron-dag; null = geen geldige target / geen adaptatie. */
+  makeupAdaptatie: MakeupAdaptatie | null;
 }
 
 export interface LoadStat {
@@ -487,22 +513,35 @@ export function doneBadge(
  * VOLTOOID-vergelijk-view-model. Geen geplande workout (bv. wedstrijd zonder voorstel) of
  * geen intent → null → de aanroeper valt terug op de gereduceerde kaart (2b-2 STAP 2).
  */
-export function buildDoneCompare(
+/** Coach-planned-arg — gedeeld door de done- + missed-fb (byte-getrouwe planned-constructie). */
+function coachPlannedArg_(
+  plannedWo: ProposalWorkout,
+  voorgesteldType: string,
+  plannedSession: SchemaSession,
+) {
+  return {
+    type: voorgesteldType,
+    titel: plannedWo.naam,
+    duurMin: plannedSession.totaalMin,
+    tss: plannedSession.tss,
+    segmenten: null,
+  };
+}
+
+/**
+ * coachFeedback_ (engine, PUUR) → { compare, coach }: het VOLLE VOLTOOID-vergelijk-view-model
+ * PLUS de rauwe coach-velden (2a). Eén coachFeedback_-aanroep. Geen geplande workout/intent → null.
+ */
+function buildDoneCompareFull(
   done: DoneEntry,
   plannedWo: ProposalWorkout | null,
   voorgesteldType: string | null,
   macroFase: string,
-): DoneCompare | null {
+): { compare: DoneCompare; coach: SchemaDayCoach } | null {
   if (!plannedWo || !voorgesteldType) return null;
   const plannedSession = toSession(plannedWo);
   const fb = coachFeedback_(
-    {
-      type: voorgesteldType,
-      titel: plannedWo.naam,
-      duurMin: plannedSession.totaalMin,
-      tss: plannedSession.tss,
-      segmenten: null,
-    },
+    coachPlannedArg_(plannedWo, voorgesteldType, plannedSession),
     {
       naam: done.naam,
       duurMin: done.minuten,
@@ -514,7 +553,7 @@ export function buildDoneCompare(
     false,
   );
   if (!fb?.done) return null;
-  return {
+  const compare: DoneCompare = {
     // P2 (GAS coachTitle_, Script.html:581): `planned.naam` bij on-plan/afgeweken; alleen bij
     // 'different' de "<doneType>-rit · <duur>"-vorm.
     titel:
@@ -540,6 +579,56 @@ export function buildDoneCompare(
     ],
     zones: zoneCompareRows(plannedSession.blokken, done.zoneMin5),
     // §6/2c: het coach-proza uit coachFeedback_ (niet meer weggegooid); leeg → box weglaten.
+    narrative:
+      typeof fb.narrative === "string" && fb.narrative.trim()
+        ? fb.narrative
+        : null,
+  };
+  const coach: SchemaDayCoach = {
+    state: fb.state,
+    adapt: fb.adapt ?? null,
+    planned: fb.planned,
+    narrative:
+      typeof fb.narrative === "string" && fb.narrative.trim()
+        ? fb.narrative
+        : null,
+  };
+  return { compare, coach };
+}
+
+/** VOLLE VOLTOOID-vergelijking (2b-2) — dunne wrapper (behoudt de publieke signatuur voor de tests). */
+export function buildDoneCompare(
+  done: DoneEntry,
+  plannedWo: ProposalWorkout | null,
+  voorgesteldType: string | null,
+  macroFase: string,
+): DoneCompare | null {
+  return (
+    buildDoneCompareFull(done, plannedWo, voorgesteldType, macroFase)
+      ?.compare ?? null
+  );
+}
+
+/** Gemist-dag coach-feedback (2a): coachFeedback_ met actual=null + isMissed=true → missed-fb.
+ * Spiegelt exact de planned-constructie van buildDoneCompareFull. */
+function missedCoach_(
+  plannedWo: ProposalWorkout | null,
+  voorgesteldType: string | null,
+  macroFase: string,
+): SchemaDayCoach | null {
+  if (!plannedWo || !voorgesteldType) return null;
+  const plannedSession = toSession(plannedWo);
+  const fb = coachFeedback_(
+    coachPlannedArg_(plannedWo, voorgesteldType, plannedSession),
+    null,
+    { fase: macroFase },
+    true,
+  );
+  if (!fb) return null;
+  return {
+    state: fb.state,
+    adapt: fb.adapt ?? null,
+    planned: fb.planned,
     narrative:
       typeof fb.narrative === "string" && fb.narrative.trim()
         ? fb.narrative
@@ -607,12 +696,97 @@ function toSession(w: ProposalWorkout): SchemaSession {
 }
 
 /** ProposalWeek + gedane-belasting-per-datum → het Schema-view-model (puur). */
+const EMPTY_SETTINGS: SettingsInput = {
+  ftp: null,
+  lthr: null,
+  gewicht: null,
+  doel: null,
+  doelStart: null,
+  hrMax: null,
+  hrRest: null,
+  doelDuur: null,
+  fase: null,
+  profielPreset: null,
+  pendelDuurMin: null,
+  pendelAantal: null,
+};
+
+/**
+ * Make-up-post-pass (B4, byte-getrouwe spiegel van GAS WebApp.gs:1165-1185). Zet per BRON-dag
+ * (coach.adapt truthy + state 'different'/'missed') een makeupAdaptatie: de coachAdaptatie_-payload
+ * op de EERSTVOLGENDE plannbare target-dag (strikt ná bron én ná vandaag; geen override/rit; status
+ * planned/rest/today; niet dubbel-geclaimd), OF {planned:true} als er al een override met from=bron
+ * bestaat (idempotent), OF null (geen geldige target / geen adaptatie). Muteert `days`.
+ */
+function applyMakeupAdaptations(
+  days: SchemaDay[],
+  ctx: {
+    overridesByDate: Map<string, DayOverride>;
+    library: unknown;
+    todayISO: string;
+  },
+): void {
+  const { overridesByDate, library, todayISO } = ctx;
+  const madeFrom: Record<string, string> = {};
+  for (const [datum, ov] of overridesByDate) {
+    if (ov?.from) madeFrom[ov.from] = datum;
+  }
+  const claimedTarget = new Set<string>();
+  for (const d of days) {
+    if (!d.coach?.adapt) continue;
+    if (d.coach.state !== "different" && d.coach.state !== "missed") continue;
+    const already = madeFrom[d.datum];
+    if (already) {
+      d.makeupAdaptatie = { planned: true, dISO: already };
+      continue;
+    }
+    let target: SchemaDay | null = null;
+    for (const t of days) {
+      // strikt ná de bron-dag én ná vandaag (yyyy-MM-dd lexicaal = chronologisch).
+      if (t.datum <= d.datum || t.datum <= todayISO) continue;
+      if (
+        claimedTarget.has(t.datum) ||
+        overridesByDate.has(t.datum) ||
+        t.done != null
+      )
+        continue;
+      // plannbaar (spiegelt GAS {gepland,rust,vandaag}).
+      if (t.state !== "planned" && t.state !== "rest" && t.state !== "today")
+        continue;
+      target = t; // eerste geldige = deterministisch
+      break;
+    }
+    if (!target) {
+      d.makeupAdaptatie = null;
+      continue;
+    }
+    claimedTarget.add(target.datum);
+    d.makeupAdaptatie = coachAdaptatie_(
+      d.coach.planned,
+      library,
+      target.datum,
+      `${target.weekday} ${target.dayNum}`,
+      d.datum,
+    );
+  }
+}
+
+/** ProposalWeek + gedane-belasting-per-datum → het Schema-view-model (puur). Extra (2a): overrides
+ * (idempotentie + override-context), readiness (voor 2b — nu meebedraden) + settings (client-directe
+ * getTrainingLibrary_ = de make-up-variant-bron, ontwerpkeuze D1). */
 export function deriveSchemaView(
   proposalWeek: ProposalWeek,
   doneByDate: Record<string, DoneEntry>,
   todayISO: string,
   dispositionByDate: Record<string, DispositionReason>,
+  overrides: OverrideEntry[] = [],
+  _readiness: ReadinessResult | null = null,
+  settings: SettingsInput = EMPTY_SETTINGS,
 ): SchemaView {
+  const overridesByDate = new Map<string, DayOverride>(
+    overrides.map((o) => [o.datum, o.override]),
+  );
+  const library = getTrainingLibrary_(settings);
   const tss: LoadStat = { gepland: 0, gedaan: 0 };
   const minuten: LoadStat = { gepland: 0, gedaan: 0 };
   const dagen: LoadStat = { gepland: 0, gedaan: 0 };
@@ -659,15 +833,27 @@ export function deriveSchemaView(
     // (WebApp.gs:1152), los van de gedaan-vlag. Beide zijn dezelfde ProposalWorkout-shape.
     const plannedForCompare =
       d.plannedForDone ?? d.sessions[d.sessions.length - 1] ?? null;
-    const doneCompare =
-      isDone && done
-        ? buildDoneCompare(
-            done,
-            plannedForCompare,
-            d.voorgesteldType,
-            proposalWeek.macroFase,
-          )
-        : null;
+    // Per-dag coach-feedback (2a): done → hergebruik de fb die de compare al berekent (ÉÉN
+    // coachFeedback_-aanroep via buildDoneCompareFull); gemist → een missed-fb (actual=null,
+    // isMissed=true). Anders null. Voedt de make-up-post-pass.
+    let doneCompare: DoneCompare | null = null;
+    let coach: SchemaDayCoach | null = null;
+    if (state === "done" && done) {
+      const full = buildDoneCompareFull(
+        done,
+        plannedForCompare,
+        d.voorgesteldType,
+        proposalWeek.macroFase,
+      );
+      doneCompare = full?.compare ?? null;
+      coach = full?.coach ?? null;
+    } else if (state === "gemist") {
+      coach = missedCoach_(
+        plannedForCompare,
+        d.voorgesteldType,
+        proposalWeek.macroFase,
+      );
+    }
 
     return {
       datum: d.datum,
@@ -683,8 +869,12 @@ export function deriveSchemaView(
       done: done ?? null,
       doneCompare,
       dispositie,
+      coach,
+      makeupAdaptatie: null,
     };
   });
+
+  applyMakeupAdaptations(days, { overridesByDate, library, todayISO });
 
   return {
     weekMonday: proposalWeek.weekMonday,
@@ -704,21 +894,6 @@ export function deriveSchemaView(
   };
 }
 
-const EMPTY_SETTINGS: SettingsInput = {
-  ftp: null,
-  lthr: null,
-  gewicht: null,
-  doel: null,
-  doelStart: null,
-  hrMax: null,
-  hrRest: null,
-  doelDuur: null,
-  fase: null,
-  profielPreset: null,
-  pendelDuurMin: null,
-  pendelAantal: null,
-};
-
 /**
  * loadSchemaWeek — haalt de doelweek-data PARALLEL op, assembleert de
  * BuildProposalInput en draait buildWeekProposal + deriveReadiness client-side.
@@ -733,6 +908,8 @@ export async function loadSchemaWeek(): Promise<{
   todayISO: string;
   rpeByDate: Record<string, number>;
   dispositionByDate: Record<string, DispositionReason>;
+  overrides: OverrideEntry[];
+  settings: SettingsInput;
 }> {
   const monday = weekMondayIso();
   const todayISO = todayIso();
@@ -807,5 +984,7 @@ export async function loadSchemaWeek(): Promise<{
     todayISO,
     rpeByDate,
     dispositionByDate,
+    overrides,
+    settings: settings ?? EMPTY_SETTINGS,
   };
 }

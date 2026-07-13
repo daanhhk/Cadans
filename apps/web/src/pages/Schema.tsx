@@ -1,4 +1,8 @@
-import type { DispositionReason } from "@cadans/shared";
+import type {
+  DispositionReason,
+  OverrideEntry,
+  SettingsInput,
+} from "@cadans/shared";
 import { useEffect, useState } from "react";
 import { SchemaView } from "../components/schema/SchemaView";
 import { postSyncActivities, postSyncWellness } from "../lib/api";
@@ -14,6 +18,8 @@ interface SchemaData {
   todayISO: string;
   rpeByDate: Record<string, number>;
   dispositionByDate: Record<string, DispositionReason>;
+  overrides: OverrideEntry[];
+  settings: SettingsInput;
 }
 
 // Live container voor de Schema-tab: laadt de doelweek (loadSchemaWeek → getPlanner/
@@ -167,6 +173,8 @@ export function Schema() {
       todayISO={data.todayISO}
       rpeByDate={data.rpeByDate}
       dispositionByDate={data.dispositionByDate}
+      overrides={data.overrides}
+      settings={data.settings}
       onRegen={handleSync}
       regenerating={syncing || regenerating}
       syncNote={syncNote}
