@@ -761,6 +761,9 @@ export async function loadSchemaWeek(): Promise<{
   ]);
 
   const activities = parseActivityRows(activitiesRes);
+  // deriveReadiness is puur → veilig vóór buildWeekProposal berekenen; de holistische band stuurt
+  // het plan-signaal (band-gedreven demote). Hergebruikt voor de return (niet 2× berekend).
+  const readiness = deriveReadiness(wellness, checkin);
   const proposalWeek = buildWeekProposal({
     settings: settings ?? EMPTY_SETTINGS,
     plannerDays,
@@ -770,6 +773,7 @@ export async function loadSchemaWeek(): Promise<{
     wellness,
     rpe,
     overrides,
+    readinessBand: readiness.band,
     todayISO,
   });
 
@@ -785,7 +789,6 @@ export async function loadSchemaWeek(): Promise<{
     doneByDate[key] = prev ? mergeDone(prev, de) : de;
   }
 
-  const readiness = deriveReadiness(wellness, checkin);
   // rpe-per-datum voor de done-kaart-highlight (de engine leest de rpe-rijen apart via buildWeekProposal).
   const rpeByDate: Record<string, number> = {};
   for (const r of rpe) {

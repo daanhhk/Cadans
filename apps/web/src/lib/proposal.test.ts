@@ -251,14 +251,15 @@ describe("buildWeekProposal", () => {
     expect(r.days[3].reden).toBe("Herstel — wellness laag");
   });
 
-  it("single bad night: recovery downgrade't naar demote (niet de hele week naar recovery)", () => {
-    // sleepLastNight 3u<5 → wellnessSignal_ 'recovery' (GAS-getrouw); MAAR sleepAvg3 ≈6.3>=5 en HRV op
-    // baseline → Cadans-divergentie downgrade't naar 'demote' (één stap lichter i.p.v. recovery).
+  it("band 'ready' ondanks een slechte nacht → GEEN demote (normaal plan)", () => {
+    // WELL_SINGLE_NIGHT geeft onder de botte vlag 'recovery' (slaap 3u); de holistische band 'ready'
+    // overschrijft → normal → geen down-regulatie. De echte case: fris ondanks één slechte nacht.
     const control = buildWeekProposal({
       settings: settings(),
       plannerDays: WEEK,
       events: EV_FAR,
       wellness: WELL_OK,
+      readinessBand: "ready",
       ...base,
     });
     const r = buildWeekProposal({
@@ -266,9 +267,35 @@ describe("buildWeekProposal", () => {
       plannerDays: WEEK,
       events: EV_FAR,
       wellness: WELL_SINGLE_NIGHT,
+      readinessBand: "ready",
       ...base,
     });
-    // Downgrade vuurt: demote-reden aanwezig, recovery-reden AFWEZIG (niet de hele week naar recovery).
+    expect(r.days.some((d) => (d.reden ?? "").includes("wellness laag"))).toBe(
+      false,
+    );
+    // Harde dagen houden hun oorspronkelijke type (identiek aan de neutrale control).
+    expect(r.days.map((d) => d.voorgesteldType)).toEqual(
+      control.days.map((d) => d.voorgesteldType),
+    );
+  });
+
+  it("band 'caution' → demote (één stap lichter)", () => {
+    const control = buildWeekProposal({
+      settings: settings(),
+      plannerDays: WEEK,
+      events: EV_FAR,
+      wellness: WELL_OK,
+      readinessBand: "ready",
+      ...base,
+    });
+    const r = buildWeekProposal({
+      settings: settings(),
+      plannerDays: WEEK,
+      events: EV_FAR,
+      wellness: WELL_OK,
+      readinessBand: "caution",
+      ...base,
+    });
     expect(
       r.days.some((d) => d.reden === "Lichter gehouden — wellness laag"),
     ).toBe(true);
@@ -285,17 +312,64 @@ describe("buildWeekProposal", () => {
     }
   });
 
-  it("aanhoudend lage slaap (sleepAvg3<5): recovery BLIJFT (downgrade vuurt niet)", () => {
+  it("band 'rest' → recovery", () => {
     const r = buildWeekProposal({
+      settings: settings(),
+      plannerDays: WEEK,
+      events: EV_FAR,
+      wellness: WELL_OK,
+      readinessBand: "rest",
+      ...base,
+    });
+    expect(r.days.some((d) => d.reden === "Herstel — wellness laag")).toBe(
+      true,
+    );
+    expect(r.days[3].voorgesteldType).toBe("recovery"); // 03-12
+  });
+
+  it("band weggelaten (null) → val terug op de botte wSig-vlag", () => {
+    // Aanhoudend lage slaap (sleepAvg3<5) zónder band → de wSig-vlag 'recovery' blijft leidend.
+    const rest = buildWeekProposal({
       settings: settings(),
       plannerDays: WEEK,
       events: EV_FAR,
       wellness: WELL_SUSTAINED_LOW,
       ...base,
     });
-    // sleepAvg3 = 4u < 5 → de downgrade-conditie faalt → recovery blijft staan.
-    expect(r.days[3].voorgesteldType).toBe("recovery"); // 03-12
-    expect(r.days[3].reden).toBe("Herstel — wellness laag");
+    expect(rest.days[3].voorgesteldType).toBe("recovery"); // 03-12
+    expect(rest.days[3].reden).toBe("Herstel — wellness laag");
+    // Normale wellness zónder band → geen demote.
+    const ok = buildWeekProposal({
+      settings: settings(),
+      plannerDays: WEEK,
+      events: EV_FAR,
+      wellness: WELL_OK,
+      ...base,
+    });
+    expect(ok.days.some((d) => (d.reden ?? "").includes("wellness laag"))).toBe(
+      false,
+    );
+  });
+
+  it("band 'ready' + zware RPE → toch demote (RPE telt mee via combineSignals_)", () => {
+    // bandSignal 'normal' + rSig 'demote' (zware RPE) → combineSignals_ neemt de zwaarste = demote.
+    const r = buildWeekProposal({
+      settings: settings(),
+      plannerDays: WEEK,
+      events: EV_FAR,
+      wellness: WELL_OK,
+      readinessBand: "ready",
+      activities: ACTS,
+      weekplans: WEEKPLANS,
+      rpe: [
+        { datum: "2026-03-09", rpe: 9 },
+        { datum: "2026-03-10", rpe: 6 },
+      ],
+      todayISO: TODAY,
+    });
+    expect(
+      r.days.some((d) => d.reden === "Lichter gehouden — wellness laag"),
+    ).toBe(true);
   });
 
   it("taper: nabij A-event → lichtere sessies vs controle zonder nabij event", () => {

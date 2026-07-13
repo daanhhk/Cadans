@@ -31,7 +31,7 @@ import type {
 } from "@cadans/shared";
 import type { ActValuesRow } from "./activities";
 import { parseLocalDate } from "./dates";
-import { deriveWellnessSignalResult } from "./readiness";
+import { deriveWellnessSignalResult, type ReadinessBand } from "./readiness";
 
 // ≥15 werkelijke minuten in een bucket (deze week, voltooide dag) = gedekt.
 // Spiegelt Algorithm.gs DEKKING_MIN_MIN (de dekking-assembly :108-126).
@@ -96,6 +96,9 @@ export interface BuildProposalInput {
   /** Dag-overrides (D2): plannbare dagen worden via buildOverrideWorkout_ geswapt.
    * Optioneel + default [] → bestaande fixtures/callers ongewijzigd. */
   overrides?: OverrideEntry[];
+  /** Holistische readiness-band (getReadinessScore_-afgeleid) → stuurt het plan-signaal
+   * (ready→normal · caution→demote · rest→recovery). null/undefined → val terug op de wSig-vlag. */
+  readinessBand?: ReadinessBand | null;
   todayISO?: string;
 }
 
@@ -301,20 +304,27 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
   }
   const wSig = deriveWellnessSignalResult(wellness || []);
   const rSig = rpeSignal_(rpe || [], plannedTypeByDate, todayLocalISO);
-  let signal = combineSignals_(wSig, rSig).signal;
-  // Cadans-divergentie t.o.v. GAS (bewust): een ENKELE slechte nacht mag niet de hele week naar
-  // recovery duwen. wellnessSignal_ zet 'recovery' al bij sleepLastNight<5 (GAS-getrouw, ONGEMOEID);
-  // hier downgraden we dat naar 'demote' (één stap lichter) ALS de aanhoudende slaap oké is
-  // (sleepAvg3>=5) én de HRV+slaap-combo niet zelf recovery rechtvaardigt. Aanhoudend laag
-  // (sleepAvg3<5) of de HRV+slaap-combo → recovery blijft staan.
-  if (
-    signal === "recovery" &&
-    wSig.sleepAvg3 != null &&
-    wSig.sleepAvg3 >= 5 &&
-    !(wSig.hrvDeficit != null && wSig.hrvDeficit < -10 && wSig.sleepAvg3 < 6)
-  ) {
-    signal = "demote";
-  }
+  // Cadans-divergentie t.o.v. GAS (bewust, CLIENT-ONLY): het week-plan-signaal leunt op de
+  // HOLISTISCHE readiness-band (getReadinessScore_ weegt vorm/HRV/slaap/check-in) i.p.v. de botte
+  // wellnessSignal_-vlag. Zo stuurt dezelfde readiness die de banner toont ook het plan, en werkt
+  // de ochtend-check-in als hendel. band ready→normal · caution→demote · rest→recovery. RPE blijft
+  // meetellen (combineSignals_, zwaarste wint). band null (te weinig data) → val terug op de botte
+  // wSig-vlag. VERVANGT de b8b7ef9 single-bad-night-patch (met de band overbodig).
+  const bandSignal =
+    input.readinessBand === "ready"
+      ? "normal"
+      : input.readinessBand === "caution"
+        ? "demote"
+        : input.readinessBand === "rest"
+          ? "recovery"
+          : null;
+  // cast: bandSignal ("normal"|"demote"|"recovery") is een geldige subset van wSig.signal
+  // (WellnessSignalState); de nested ternary widet naar string → expliciet terug-casten (type-only).
+  const baseWSig =
+    bandSignal != null
+      ? { ...wSig, signal: bandSignal as typeof wSig.signal }
+      : wSig;
+  const signal = combineSignals_(baseWSig, rSig).signal;
 
   // 7. tePlannen = train, niet-gedaan, vandaag/toekomst → assignWorkouts muteert ze.
   const todayT = today.getTime();
