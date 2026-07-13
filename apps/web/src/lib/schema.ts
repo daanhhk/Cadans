@@ -12,6 +12,7 @@ import {
   getCheckin,
   getDispositions,
   getEvents,
+  getOverrides,
   getPlanner,
   getRpe,
   getSettings,
@@ -744,6 +745,7 @@ export async function loadSchemaWeek(): Promise<{
     wellness,
     rpe,
     dispositions,
+    overrides,
     checkin,
   ] = await Promise.all([
     getSettings(),
@@ -754,6 +756,7 @@ export async function loadSchemaWeek(): Promise<{
     getWellness(),
     getRpe(),
     getDispositions(),
+    getOverrides(),
     getCheckin(todayISO),
   ]);
 
@@ -766,6 +769,7 @@ export async function loadSchemaWeek(): Promise<{
     weekplans,
     wellness,
     rpe,
+    overrides,
     todayISO,
   });
 

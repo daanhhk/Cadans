@@ -12,10 +12,12 @@
 import { gatherWeekplanEntries_ } from "@cadans/engine";
 import type {
   CheckinInput,
+  DayOverride,
   DispositionEntry,
   DispositionReason,
   EventInput,
   EventItem,
+  OverrideEntry,
   PlannerDay,
   PlannerDayInput,
   RpeEntry,
@@ -478,6 +480,51 @@ export async function writeDisposition(
     .onConflictDoUpdate({
       target: [dayState.userId, dayState.datum],
       set: { disposition: reason },
+    });
+}
+
+// ── override (day_state.override_json — "kies een andere training"; GAS saveDayOverride,
+// WebApp.gs:1663) — deelt de (user_id, datum)-rij met disposition. De engine LEEST dit (D2).
+/** Dagen mét een override, oudste-eerst. Corrupte override_json per rij → overgeslagen (geen throw). */
+export async function readOverrides(
+  db: Db,
+  userId: number,
+): Promise<OverrideEntry[]> {
+  const rows = await db
+    .select()
+    .from(dayState)
+    .where(and(eq(dayState.userId, userId), isNotNull(dayState.overrideJson)))
+    .orderBy(asc(dayState.datum));
+  const out: OverrideEntry[] = [];
+  for (const r of rows) {
+    if (!r.overrideJson) continue;
+    try {
+      out.push({
+        datum: r.datum,
+        override: JSON.parse(r.overrideJson) as DayOverride,
+      });
+    } catch {
+      // corrupte override_json → sla de rij over (geen throw).
+    }
+  }
+  return out;
+}
+
+/** Override-write (override ∈ union OF null=wis). Upsert op (user_id, datum); de conflict-branch
+ * zet ALLEEN de override_json-kolom → een bestaande disposition op dezelfde rij blijft INTACT. */
+export async function writeOverride(
+  db: Db,
+  userId: number,
+  date: string,
+  override: DayOverride | null,
+): Promise<void> {
+  const overrideJson = override ? JSON.stringify(override) : null;
+  await db
+    .insert(dayState)
+    .values({ userId, datum: date, overrideJson })
+    .onConflictDoUpdate({
+      target: [dayState.userId, dayState.datum],
+      set: { overrideJson },
     });
 }
 

@@ -12,6 +12,15 @@ export type { CheckinInput } from "./checkin";
 export type { DispositionEntry, DispositionReason } from "./disposition";
 export type { ApiError, ApiOk } from "./http";
 export type {
+  DayOverride,
+  FreeOverride,
+  LibraryOverride,
+  OverrideEntry,
+  OverrideIntensiteit,
+  OverrideRitType,
+  OverrideWorkoutType,
+} from "./override";
+export type {
   PowerCurveEmpty,
   PowerCurveMarker,
   PowerCurvePoint,

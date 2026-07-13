@@ -8,6 +8,7 @@
  * User = CURRENT_USER_ID (vervalt in de auth-fase).
  */
 import type {
+  DayOverride,
   DispositionReason,
   EventInput,
   PlannerDayInput,
@@ -23,6 +24,7 @@ import {
   readCheckin,
   readDispositions,
   readEvents,
+  readOverrides,
   readPlannerDays,
   readRecentWeekplans,
   readRpe,
@@ -33,6 +35,7 @@ import {
   writeCheckin,
   writeDisposition,
   writeEvents,
+  writeOverride,
   writePlannerDays,
   writeRpe,
   writeSettings,
@@ -408,6 +411,80 @@ api.put("/disposition/:date", async (c) => {
     CURRENT_USER_ID,
     date,
     reason as DispositionReason | null,
+  );
+  return c.json({ ok: true });
+});
+
+const OVERRIDE_WORKOUT_TYPES = [
+  "recovery",
+  "long_z2",
+  "tempo",
+  "sweet_spot",
+  "threshold",
+  "vo2max",
+] as const;
+const OVERRIDE_RIT_TYPES = ["vrij", "groep"] as const;
+const OVERRIDE_INTENSITEITEN = ["rustig", "tempo", "stevig"] as const;
+
+// Valideer de DayOverride-union (byte-getrouw aan @cadans/shared): library {type,workoutType,
+// variantId?,durMin} | free {type,ritType,intensiteit,durMin}; durMin ∈ [20,360].
+function isValidOverride(o: unknown): o is DayOverride {
+  if (typeof o !== "object" || o === null) return false;
+  const ov = o as Record<string, unknown>;
+  const dur = ov.durMin;
+  if (typeof dur !== "number" || !Number.isFinite(dur) || dur < 20 || dur > 360)
+    return false;
+  if (ov.type === "library") {
+    if (
+      !(OVERRIDE_WORKOUT_TYPES as readonly string[]).includes(
+        ov.workoutType as string,
+      )
+    )
+      return false;
+    return ov.variantId == null || typeof ov.variantId === "string";
+  }
+  if (ov.type === "free") {
+    return (
+      (OVERRIDE_RIT_TYPES as readonly string[]).includes(
+        ov.ritType as string,
+      ) &&
+      (OVERRIDE_INTENSITEITEN as readonly string[]).includes(
+        ov.intensiteit as string,
+      )
+    );
+  }
+  return false;
+}
+
+api.get("/overrides", async (c) => {
+  const db = makeDb(c.env.DB);
+  const rows = await readOverrides(db, CURRENT_USER_ID);
+  return c.json(rows);
+});
+
+// PUT /api/override/:date — override ∈ union OF null (=wis). Non-clobber: writeOverride raakt
+// disposition niet aan. De engine LEEST de override (D2, buildOverrideWorkout_). Spiegelt PUT /disposition/:date.
+api.put("/override/:date", async (c) => {
+  const db = makeDb(c.env.DB);
+  const date = c.req.param("date");
+  if (!isIsoDate(date)) {
+    throw new HTTPException(400, {
+      message: "invalid date, expected yyyy-MM-dd",
+    });
+  }
+  const body = await readJsonObject(c);
+  const override = body.override;
+  if (override !== null && !isValidOverride(override)) {
+    throw new HTTPException(400, {
+      message:
+        "invalid override, expected {type:library,workoutType,durMin} | {type:free,ritType,intensiteit,durMin} | null (durMin 20-360)",
+    });
+  }
+  await writeOverride(
+    db,
+    CURRENT_USER_ID,
+    date,
+    override as DayOverride | null,
   );
   return c.json({ ok: true });
 });

@@ -8,10 +8,12 @@ import type {
   ActivitiesResponse,
   ApiError,
   CheckinInput,
+  DayOverride,
   DispositionEntry,
   DispositionReason,
   EventInput,
   EventItem,
+  OverrideEntry,
   PlannerDay,
   PlannerDayInput,
   PowerCurveResponse,
@@ -130,6 +132,11 @@ export function getDispositions(): Promise<DispositionEntry[]> {
   return apiGet<DispositionEntry[]>("/api/dispositions");
 }
 
+/** GET /api/overrides — dagen mét een day-override, oudste-eerst. */
+export function getOverrides(): Promise<OverrideEntry[]> {
+  return apiGet<OverrideEntry[]>("/api/overrides");
+}
+
 /** GET /api/weekplans/recent?monday= — recente weekplan-entries (opaque JSON-blob). */
 export function getWeekplans(mondayISO: string): Promise<WeekplanEntries> {
   return apiGet<WeekplanEntries>(`/api/weekplans/recent?monday=${mondayISO}`);
@@ -192,6 +199,23 @@ export async function putDisposition(
     method: "PUT",
     headers: { "content-type": "application/json", Accept: "application/json" },
     body: JSON.stringify({ reason }),
+  });
+  if (!resp.ok) {
+    const parsed = await parseBody(resp);
+    throw new Error(errMessage(parsed, resp.status));
+  }
+}
+
+/** PUT /api/override/:date — override ∈ union OF null (=wis). KRITIEK: wissen stuurt JSON null
+ * ({ override: null }), NOOIT "". Spiegelt putDisposition. */
+export async function putOverride(
+  date: string,
+  override: DayOverride | null,
+): Promise<void> {
+  const resp = await fetch(`/api/override/${date}`, {
+    method: "PUT",
+    headers: { "content-type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ override }),
   });
   if (!resp.ok) {
     const parsed = await parseBody(resp);

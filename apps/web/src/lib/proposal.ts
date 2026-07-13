@@ -2,6 +2,7 @@ import type { IntentByDate, ZoneBuckets } from "@cadans/engine";
 import {
   actualZoneMinutes_,
   assignWorkouts,
+  buildOverrideWorkout_,
   buildWorkout,
   combineSignals_,
   computeMacroPhase,
@@ -20,7 +21,9 @@ import {
   zoneDebt_,
 } from "@cadans/engine";
 import type {
+  DayOverride,
   EventItem,
+  OverrideEntry,
   PlannerDay,
   RpeEntry,
   SettingsInput,
@@ -90,6 +93,9 @@ export interface BuildProposalInput {
   weekplans: unknown[];
   wellness: WellnessInput[];
   rpe: RpeEntry[];
+  /** Dag-overrides (D2): plannbare dagen worden via buildOverrideWorkout_ geswapt.
+   * Optioneel + default [] → bestaande fixtures/callers ongewijzigd. */
+  overrides?: OverrideEntry[];
   todayISO?: string;
 }
 
@@ -144,9 +150,10 @@ export function planModusLabel(
  * generateProposal, plan-gekoppeld). PUUR: rekent op reeds-gehaalde /api-data, doet
  * zelf GEEN fetch en persisteert NIETS. Ambient Amsterdam-TZ (browser) = correct.
  *
- * Bewuste vereenvoudigingen t.o.v. de GAS (gemeld): geen day-overrides/freeze, geen
- * loadCarry, en eventCtx = undefined (eventContextFrom_ niet geport → long_z2 zonder
- * event-scaling). Pendel-multisession (5.3c-i.b) + RPE-combine (5.3d-iii) WEL ondersteund.
+ * Bewuste vereenvoudigingen t.o.v. de GAS (gemeld): geen freeze, geen loadCarry, en eventCtx =
+ * undefined (eventContextFrom_ niet geport → long_z2 zonder event-scaling). Day-overrides (D2, FASE B):
+ * een override op een plannbare dag wordt via buildOverrideWorkout_ geswapt → telt mee in de week-load.
+ * Pendel-multisession (5.3c-i.b) + RPE-combine (5.3d-iii) WEL ondersteund.
  */
 export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
   const {
@@ -158,6 +165,11 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
     wellness,
     rpe,
   } = input;
+
+  // D2: dag-override-lookup (plannbare dag → buildOverrideWorkout_ i.p.v. het coach-voorstel).
+  const overridesByDate = new Map<string, DayOverride>();
+  for (const o of input.overrides ?? [])
+    overridesByDate.set(o.datum, o.override);
 
   // 1. Datums (lokale middernacht; nooit UTC).
   const today = stripTime_(
@@ -321,7 +333,22 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
   //   (d.voorgesteldType + d.archetypeId). Niet-pendel = 1 sessie. voltooid/rust → [].
   const days: ProposalDay[] = grid.map((d) => {
     const sessions: ProposalWorkout[] = [];
-    if (tePlannenSet.has(d.dagIdx) && d.voorgesteldType) {
+    // D2: een override op een plannbare dag (niet-gedaan, ≥ vandaag; GEEN d.train-eis — een override
+    // mag een rustdag activeren) heeft VOORRANG op het coach-voorstel → precies één sessie.
+    const ovDISO = formatDate(stripTime_(d.datum), "yyyy-MM-dd");
+    const ov = overridesByDate.get(ovDISO);
+    const dayPlannable = !d.gedaan && stripTime_(d.datum).getTime() >= todayT;
+    if (ov && dayPlannable) {
+      const woOv = buildOverrideWorkout_(
+        ov,
+        settingsE,
+        mesoWeek,
+        macroFase,
+        undefined,
+        d.dagIdx,
+      ) as ProposalWorkout | null;
+      if (woOv) sessions.push(woOv);
+    } else if (tePlannenSet.has(d.dagIdx) && d.voorgesteldType) {
       const isPendel = d.type === "pendel";
       const sessieCount = isPendel
         ? Math.max(1, Math.round(settings.pendelAantal ?? 0) || 1)
