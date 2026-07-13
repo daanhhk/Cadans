@@ -38,13 +38,14 @@ alleen als ANKER bij FRAGIELE edits (byte-getrouwe GAS-mirrors, TZ-grens-logica,
 in elk rapport de kern-implementatiekeuzes (gekozen conditie, plaatsing) zodat review tegen de spec kan zonder de
 volledige diff.
 
-**FASE A code-compleet (A1-A4 + B1) op main + CI-groen — NIET GEDEPLOYD (prod = Version
-`52a51ae9`).** A2/A4 laatste: disposition-backend `6929741`, disposition-UI + gemist-kaart
-`d8c70e4`. De volgende deploy (approval-gated) bundelt A1/B1/A3/A2/A4 live.
-- **OPENSTAAND — A2/A4 visuele check (mensenwerk, LAN-dev-server):** (1) een geplande dag
-  ≤ vandaag zonder rit toont "Niet gedaan?" + 3 knoppen; (2) een reden tikken → kaart wordt
-  "Gemist · <reden>" + Terug, affordance weg; (3) Terug → terug naar voorstel + affordance;
-  (4) voltooide dag = geen affordance; (5) toekomstige dag = geen affordance.
+**FASE A GEDEPLOYD (A1-A4 + B1) — LIVE op prod, Version `171f79fc`** (was `52a51ae9`; de deploy bundelde
+A1/B1/A3/A2/A4). A2/A4 laatste: disposition-backend `6929741`, disposition-UI + gemist-kaart `d8c70e4`. Prod =
+Basic-Auth-gated (`/api/health` → 401 + `WWW-Authenticate: Basic`); functionele round-trip in-browser door Daan.
+- **A2/A4 visuele check — DOORGESCHOVEN naar de live-aankomende-week:** de affordance verschijnt vanzelf op een
+  doordeweekse vandaag-zonder-rit (geen LAN-dev-server-checklist meer nodig). **ARCHITECTUUR-NOOT:** "Niet gedaan?"
+  toont ALLEEN op vandaag/toekomst — verleden dagen missen een voorstel (`proposal.ts:294` assignt alleen ≥ vandaag;
+  GAS bewaart weekplan-snapshots, Cadans niet). Bewezen GAS-conform (`canDispose` spiegelt `Script.html:448`).
+  Verleden-dispositie deelt de weekplan-persistentie-fundering (aanpak-B) met de DayStrip-venster-feature.
 - **A4 = SIMPELE gemist-kaart (bewust).** De rijke frame-10 (`gemistDetailHtml_`: planregel +
   reden-herkiezer + coach-box) = DOEL, gebouwd IN/NA B4 (deelt B4's coach-adaptatie + de
   plan-only missed-`coachFeedback_`). De A2-plumbing (disposition-map → deriveSchemaView →
@@ -121,10 +122,11 @@ volledige diff.
   Daan te verifiëren.
 
 **FASE 2 = COMPLEET** (§5b · 4b · brok 2 · brok 3 · brok 4a · brok 5 alle AF). Resteert los: 2d ritdetails +
-close-out-follow-ups; het echte A-event **Amstel Gold Race** nog via de prod-editor in te voeren.
+close-out-follow-ups. Het echte A-event **Amstel Gold Race** = INGEVOERD op prod (geverifieerd in-browser;
+PeriodTimeline leest 'm, ~40 wkn tot AGR).
 
 **FASE A voortgang (deze sessie) — UI/parity-fixes op de Schema-tab + RPE-persistentie.** Alle commits op main +
-CI-groen, maar **NIET gedeployd** (prod draait nog Version `52a51ae9` van brok 5) → de volgende deploy bundelt ze.
+CI-groen, en **GEDEPLOYD** (prod Version `171f79fc`; zie het FASE A GEDEPLOYD-blok bovenaan Stand).
 - **A1 gedeeld knoppen-blok GAS-conform** (`298f3d9`): `ActionButtons` rendert onder ELKE dagkaart-state
   (§5c/§5a/gepland), niet alleen rustdag/voltooid; "Andere training kiezen" alleen op een plannbare dag
   (`dayPlannable` = dag ≥ vandaag én niet voltooid); "Push naar Garmin" van per-dag → tab-niveau
@@ -144,7 +146,7 @@ CI-groen, maar **NIET gedeployd** (prod draait nog Version `52a51ae9` van brok 5
   `rpeSignal_`); ENGINE ONGEMOEID.
 - **FASE A RESTEREND — NU AF:** **A2 disposition** (backend `6929741` + UI `d8c70e4`) · **A4 gemist-kaart**
   (`d8c70e4`, SIMPELE versie; de rijke frame-10 `gemistDetailHtml_` volgt in/na B4). Zie het FASE A
-  code-compleet-blok bovenaan Stand.
+  GEDEPLOYD-blok bovenaan Stand.
 
 **CLOSE-OUT-LIJST / kleine follow-ups** (geen zichtbare bug op default-view):
 - Twee hand-geschreven fixtures met silhouet-drift-risico: Za "Lange duurrit" (`2026-07-11`) + Wo-8
@@ -173,12 +175,12 @@ CI-groen, maar **NIET gedeployd** (prod draait nog Version `52a51ae9` van brok 5
 `FASE2-5-ZONES-RECON.md` (`6028cfd`, GECORRIGEERD → (a) CLIENT-ONLY — zie BRONHIERARCHIE). Het 4b- en het
 brok-2-recon waren rapport-only (geen doc).
 
-**FOCUS VOLGENDE CHAT:** FASE A (A1-A4 + B1) = code-compleet. Volgorde: (1) **A2/A4 visuele check** op de
-LAN-dev-server (zie de 5-punts-checklist in het FASE A code-compleet-blok bovenaan Stand) → (2) **FASE-A
-prod-deploy** (approval-gated; bundelt A1/B1/A3/A2/A4 live) → (3) **FASE B bouwen**: override-backend **laag-1
-EERST** (mirror A2), dán B4-orkestratie + UI + **frame-10** (rijke gemist-kaart) — zie
+**FOCUS VOLGENDE CHAT:** FASE A (A1-A4 + B1) = **GEDEPLOYD & LIVE** (prod Version `171f79fc`). (1) ~~A2/A4 visuele
+check~~ → DOORGESCHOVEN naar de live-aankomende-week (verschijnt vanzelf op een vandaag-zonder-rit; zie het FASE A
+GEDEPLOYD-blok). (2) ~~FASE-A prod-deploy~~ = GEDAAN. → **(3) FASE B bouwen**: override-backend **laag-1 EERST**
+(mirror A2), dán B4-orkestratie + UI + **frame-10** (rijke gemist-kaart) — zie
 `docs/FASE-B-OVERRIDE-ADAPTATIE-RECON.md`. Start de B4-bouw met de gerichte **port-spot-check** (caveat in het
-recon-doc). Nog in te voeren: het echte A-event **Amstel Gold Race** op prod via de events-editor.
+recon-doc). Het echte A-event **Amstel Gold Race** = INGEVOERD op prod (geverifieerd in-browser).
 
 ### PARITY-FASERING (compact — vervangt een apart audit-doc; de volledige matrix is via de GAS-bron te reconen)
 - **FASE B (recon-first, deels engine + sign-off):** **B2 Trainingen-tab** (nu `<ComingSoon>`; GAS = volledige
@@ -190,6 +192,12 @@ recon-doc). Nog in te voeren: het echte A-event **Amstel Gold Race** op prod via
   activiteit-detail: 7-zone-TIZ + metrics + intervallen) + overlay-sheet. GEEN engine.
 - **FASE C:** Garmin-push (extern device-traject).
 - **EIND-AUDIT geporte engine-fns:** sluitstuk NA UI-completie (bewust uitgesteld).
+- **DayStrip-venster (GAS-parity, recon af, NIET gebouwd):** venster **[-28d..+7d]** i.p.v. de huidige 1-week
+  (`WebApp.gs:1103`); volgende week = preview-marker (`previewMin` uit Weekplanner+1, GEEN uitgewerkt voorstel);
+  verleden = `DoneDetail` (geen gepland-vs-gedaan tenzij aanpak-B). Raakt data-window + proposal-per-dag-assembler +
+  UI-scroll. Deelt de weekplan-persistentie-fundering met verleden-dispositie.
+- **Watch-note — Settings-race (eenmalig waargenomen):** gelijktijdig een event aanmaken + settings opslaan liet de
+  settings-write missen op prod; ná elkaar = goed. FULL-REPLACE-writes; in de gaten houden, geen fix nu.
 
 ### OPEN OBSERVATIE (verse chat)
 Daan meldde "dag-wisselen nog niet hetzelfde als GAS" — DEELS geadresseerd via B1 (scope-tabs) + A1 (knoppen onder
@@ -229,8 +237,8 @@ GAS-bron leggen (`raw.githubusercontent.com/daanhhk/training/3e8090a/...`, zie B
 - **DATA-OPSCHOON Fase 1 (D1-data, GEEN repo/code):** REMOTE D1 (`cadans`, `aa302c17…`) `settings.doel` user 1
   **VO2max → 'FTP'** (`doel_start`/`doel_duur`/`ftp` onveranderd) — verhelpt de girona-fallback in Niveau.
   LOKALE dev-D1: test-event-rij "Ardennen-trip" (id 1) VERWIJDERD — verhelpt de event-fasekaart in Schema.
-  GEEN nieuw event geseed (het echte A-event **Amstel Gold Race 2027-04-18** komt later via de events-editor +
-  activeringsdrempel; nu bewust niet).
+  GEEN nieuw event geseed (het echte A-event **Amstel Gold Race 2027-04-18** = INGEVOERD op prod via de
+  events-editor; geverifieerd in-browser, PeriodTimeline leest 'm).
 - **Correctie op eerdere aanname:** de "Ardennen-trip"-vervuiling zat UITSLUITEND op de LOKALE dev-D1; de
   REMOTE was al leeg. "Girona" is een 1-op-1 uit GAS geporte constant (`niveau.ts:573`,
   `GOAL_PROFILES_.ftp`/`girona`), getriggerd door een niet-FTP-doel — GEEN CC-verzinsel. Provenance-audit:
@@ -400,8 +408,8 @@ DONE deze reeks: ~~design-diff-recon + 2b-2-render-bug-diagnose~~ (`docs/DAGKAAR
 ~~3 header coachNaam~~ · ~~4a events-editor~~ · ~~5 zones 3→5~~ (alle AF; brok 5 = CLIENT-ONLY parity-herstel via
 `coachActualZoneMin_`-port, GEEN divergentie) · **2d ritdetails** (resteert). Losstaand blijven:
 **event-activeringsdrempel** (A-event slaapt tot ~8-12 wkn; recon-first, raakt deels de engine → sign-off) ·
-**weekdoel-consistentie** (stabiliteit bij dag-selecties; gat naar GAS 254). Nog invoeren: **Amstel Gold Race**
-via de prod-editor.
+**weekdoel-consistentie** (stabiliteit bij dag-selecties; gat naar GAS 254). **Amstel Gold Race** = INGEVOERD op
+prod (geverifieerd in-browser).
 - **Op de horizon:** Garmin-workout-push (externe device-integratie, apart traject); en de read-only
   **eind-audit** van alle geporte engine-fns (sluitstuk vóór cutover — adresseert de engine/parity-debts
   hierboven). (Beschikbaarheid/weekplanning-bewerken = GEDAAN deze sessie.)
