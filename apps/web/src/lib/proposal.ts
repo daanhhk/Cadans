@@ -301,7 +301,20 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
   }
   const wSig = deriveWellnessSignalResult(wellness || []);
   const rSig = rpeSignal_(rpe || [], plannedTypeByDate, todayLocalISO);
-  const signal = combineSignals_(wSig, rSig).signal;
+  let signal = combineSignals_(wSig, rSig).signal;
+  // Cadans-divergentie t.o.v. GAS (bewust): een ENKELE slechte nacht mag niet de hele week naar
+  // recovery duwen. wellnessSignal_ zet 'recovery' al bij sleepLastNight<5 (GAS-getrouw, ONGEMOEID);
+  // hier downgraden we dat naar 'demote' (één stap lichter) ALS de aanhoudende slaap oké is
+  // (sleepAvg3>=5) én de HRV+slaap-combo niet zelf recovery rechtvaardigt. Aanhoudend laag
+  // (sleepAvg3<5) of de HRV+slaap-combo → recovery blijft staan.
+  if (
+    signal === "recovery" &&
+    wSig.sleepAvg3 != null &&
+    wSig.sleepAvg3 >= 5 &&
+    !(wSig.hrvDeficit != null && wSig.hrvDeficit < -10 && wSig.sleepAvg3 < 6)
+  ) {
+    signal = "demote";
+  }
 
   // 7. tePlannen = train, niet-gedaan, vandaag/toekomst → assignWorkouts muteert ze.
   const todayT = today.getTime();

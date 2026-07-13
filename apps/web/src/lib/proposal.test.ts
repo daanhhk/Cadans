@@ -1,3 +1,4 @@
+import { demoteType_ } from "@cadans/engine";
 import type {
   EventItem,
   PlannerDay,
@@ -127,6 +128,23 @@ const WELL_RECOVERY: WellnessInput[] = [
   wl("2026-03-10", 40, 4.5),
   wl("2026-03-11", 40, 4.5),
 ];
+// Single slechte nacht: laatste nacht 3u (<5 → wellnessSignal_ 'recovery' via de single-night-tak),
+// maar sleepAvg3 = (8+8+3)/3 ≈ 6.3 (>=5) én HRV op baseline (deficit 0). Cadans downgrade't → 'demote'.
+const WELL_SINGLE_NIGHT: WellnessInput[] = [
+  wl("2026-03-07", 65, 7.5),
+  wl("2026-03-08", 65, 7.5),
+  wl("2026-03-09", 65, 8),
+  wl("2026-03-10", 65, 8),
+  wl("2026-03-11", 65, 3),
+];
+// Aanhoudend lage slaap: laatste 3 nachten 4u → sleepAvg3 = 4 (<5) → recovery BLIJFT (downgrade vuurt NIET).
+const WELL_SUSTAINED_LOW: WellnessInput[] = [
+  wl("2026-03-07", 65, 7.5),
+  wl("2026-03-08", 65, 7.5),
+  wl("2026-03-09", 65, 4),
+  wl("2026-03-10", 65, 4),
+  wl("2026-03-11", 65, 4),
+];
 
 // Ver A-race → macroFase Base, geen taper (deterministisch op TODAY).
 const EV_FAR: EventItem[] = [
@@ -229,6 +247,53 @@ describe("buildWeekProposal", () => {
       wellness: WELL_RECOVERY,
       ...base,
     });
+    expect(r.days[3].voorgesteldType).toBe("recovery"); // 03-12
+    expect(r.days[3].reden).toBe("Herstel — wellness laag");
+  });
+
+  it("single bad night: recovery downgrade't naar demote (niet de hele week naar recovery)", () => {
+    // sleepLastNight 3u<5 → wellnessSignal_ 'recovery' (GAS-getrouw); MAAR sleepAvg3 ≈6.3>=5 en HRV op
+    // baseline → Cadans-divergentie downgrade't naar 'demote' (één stap lichter i.p.v. recovery).
+    const control = buildWeekProposal({
+      settings: settings(),
+      plannerDays: WEEK,
+      events: EV_FAR,
+      wellness: WELL_OK,
+      ...base,
+    });
+    const r = buildWeekProposal({
+      settings: settings(),
+      plannerDays: WEEK,
+      events: EV_FAR,
+      wellness: WELL_SINGLE_NIGHT,
+      ...base,
+    });
+    // Downgrade vuurt: demote-reden aanwezig, recovery-reden AFWEZIG (niet de hele week naar recovery).
+    expect(
+      r.days.some((d) => d.reden === "Lichter gehouden — wellness laag"),
+    ).toBe(true);
+    expect(r.days.some((d) => d.reden === "Herstel — wellness laag")).toBe(
+      false,
+    );
+    // Elke gedemote dag = exact één stap lichter: demoteType_ van zijn controle-origineel.
+    for (let i = 0; i < r.days.length; i++) {
+      if (r.days[i].reden === "Lichter gehouden — wellness laag") {
+        expect(r.days[i].voorgesteldType).toBe(
+          demoteType_(control.days[i].voorgesteldType),
+        );
+      }
+    }
+  });
+
+  it("aanhoudend lage slaap (sleepAvg3<5): recovery BLIJFT (downgrade vuurt niet)", () => {
+    const r = buildWeekProposal({
+      settings: settings(),
+      plannerDays: WEEK,
+      events: EV_FAR,
+      wellness: WELL_SUSTAINED_LOW,
+      ...base,
+    });
+    // sleepAvg3 = 4u < 5 → de downgrade-conditie faalt → recovery blijft staan.
     expect(r.days[3].voorgesteldType).toBe("recovery"); // 03-12
     expect(r.days[3].reden).toBe("Herstel — wellness laag");
   });
