@@ -67,7 +67,7 @@ const done = (o: Partial<DoneEntry>): DoneEntry => ({
 // slot 0 → variant ss_2x20 → per-rep blokken (twee tempo-pieken), GAS-conform. Naam/min/TSS/
 // blokken/structuur komen ALLE uit de engine — niet meer met de hand. doelStart:null → weekIndex 0.
 const PREVIEW_FTP = 250;
-// Volledige SettingsInput voor de SchemaView-settings-prop (getTrainingLibrary_ = make-up-variant-bron).
+// Volledige SettingsInput voor de SchemaView-settings-prop (presentatie-only in de view).
 const PREVIEW_SETTINGS: SettingsInput = {
   ftp: PREVIEW_FTP,
   lthr: 160,

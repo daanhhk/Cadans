@@ -1,14 +1,11 @@
 import {
   actualZoneMinutes_,
-  coachAdaptatie_,
   coachFeedback_,
   formatDate,
-  getTrainingLibrary_,
   stripTime_,
   zoneTimesFromCell_,
 } from "@cadans/engine";
 import type {
-  DayOverride,
   DispositionReason,
   OverrideEntry,
   SettingsInput,
@@ -184,19 +181,15 @@ export const DISPOSITION_LABELS: Record<DispositionReason, string> = {
 };
 
 /** Rauwe per-dag coach-feedback (2a): de coachFeedback_-velden op dagniveau. `state` is de RAUWE
- * engine-state ('on-plan'|'deviated'|'different'|'missed'), NIET de AlignKind-mapping. `planned` =
- * het coach.planned-blok (voer voor coachAdaptatie_). Voedt de make-up-post-pass + later frame-10. */
+ * engine-state ('on-plan'|'deviated'|'different'|'missed'), NIET de AlignKind-mapping. `narrative` =
+ * de coach-proza-string (done → DoneCompareCard-box, gemist → GemistCard). `planned`/`adapt` blijven
+ * beschikbaar voor 2c/3b (feiten-gedreven coach-copy resp. de override-picker). */
 export interface SchemaDayCoach {
   state: string;
   adapt: string | null;
   planned: unknown;
   narrative: string | null;
 }
-/** Make-up-payload (B4): de coachAdaptatie_-override (library + dISO/from/label) OF — als er al een
- * override met from=deze-dag bestaat — een reeds-ingeplande-verwijzing {planned:true, dISO}. */
-export type MakeupAdaptatie =
-  | (DayOverride & { dISO: string })
-  | { planned: true; dISO: string };
 
 export interface SchemaDay {
   datum: string;
@@ -219,10 +212,9 @@ export interface SchemaDay {
   doneCompare: DoneCompare | null;
   /** Dag-dispositie ("waarom niet gedaan?", A2) — voedt de gemist-state + GemistCard. */
   dispositie: DispositionReason | null;
-  /** Rauwe per-dag coach-feedback (2a): done → coachFeedback_-fb; gemist → missed-fb; anders null. */
+  /** Rauwe per-dag coach-feedback (2a): done → coachFeedback_-fb (→ DoneCompareCard-box); gemist →
+   * missed-fb (→ GemistCard); anders null. */
   coach: SchemaDayCoach | null;
-  /** Make-up-adaptatie (B4-post-pass) op de bron-dag; null = geen geldige target / geen adaptatie. */
-  makeupAdaptatie: MakeupAdaptatie | null;
 }
 
 export interface LoadStat {
@@ -713,82 +705,18 @@ const EMPTY_SETTINGS: SettingsInput = {
   pendelAantal: null,
 };
 
-/**
- * Make-up-post-pass (B4, byte-getrouwe spiegel van GAS WebApp.gs:1165-1185). Zet per BRON-dag
- * (coach.adapt truthy + state 'different'/'missed') een makeupAdaptatie: de coachAdaptatie_-payload
- * op de EERSTVOLGENDE plannbare target-dag (strikt ná bron én ná vandaag; geen override/rit; status
- * planned/rest/today; niet dubbel-geclaimd), OF {planned:true} als er al een override met from=bron
- * bestaat (idempotent), OF null (geen geldige target / geen adaptatie). Muteert `days`.
- */
-function applyMakeupAdaptations(
-  days: SchemaDay[],
-  ctx: {
-    overridesByDate: Map<string, DayOverride>;
-    library: unknown;
-    todayISO: string;
-  },
-): void {
-  const { overridesByDate, library, todayISO } = ctx;
-  const madeFrom: Record<string, string> = {};
-  for (const [datum, ov] of overridesByDate) {
-    if (ov?.from) madeFrom[ov.from] = datum;
-  }
-  const claimedTarget = new Set<string>();
-  for (const d of days) {
-    if (!d.coach?.adapt) continue;
-    if (d.coach.state !== "different" && d.coach.state !== "missed") continue;
-    const already = madeFrom[d.datum];
-    if (already) {
-      d.makeupAdaptatie = { planned: true, dISO: already };
-      continue;
-    }
-    let target: SchemaDay | null = null;
-    for (const t of days) {
-      // strikt ná de bron-dag én ná vandaag (yyyy-MM-dd lexicaal = chronologisch).
-      if (t.datum <= d.datum || t.datum <= todayISO) continue;
-      if (
-        claimedTarget.has(t.datum) ||
-        overridesByDate.has(t.datum) ||
-        t.done != null
-      )
-        continue;
-      // plannbaar (spiegelt GAS {gepland,rust,vandaag}).
-      if (t.state !== "planned" && t.state !== "rest" && t.state !== "today")
-        continue;
-      target = t; // eerste geldige = deterministisch
-      break;
-    }
-    if (!target) {
-      d.makeupAdaptatie = null;
-      continue;
-    }
-    claimedTarget.add(target.datum);
-    d.makeupAdaptatie = coachAdaptatie_(
-      d.coach.planned,
-      library,
-      target.datum,
-      `${target.weekday} ${target.dayNum}`,
-      d.datum,
-    );
-  }
-}
-
-/** ProposalWeek + gedane-belasting-per-datum → het Schema-view-model (puur). Extra (2a): overrides
- * (idempotentie + override-context), readiness (voor 2b — nu meebedraden) + settings (client-directe
- * getTrainingLibrary_ = de make-up-variant-bron, ontwerpkeuze D1). */
+/** ProposalWeek + gedane-belasting-per-datum → het Schema-view-model (puur). `_overrides`/`_settings`
+ * zijn (voorlopig) ongebruikt — de signatuur blijft positioneel zodat de call-site niet wijzigt en
+ * laag-3b (override-picker) ze weer aankan; `_readiness` idem voor een geparkeerde fase. */
 export function deriveSchemaView(
   proposalWeek: ProposalWeek,
   doneByDate: Record<string, DoneEntry>,
   todayISO: string,
   dispositionByDate: Record<string, DispositionReason>,
-  overrides: OverrideEntry[] = [],
+  _overrides: OverrideEntry[] = [],
   _readiness: ReadinessResult | null = null,
-  settings: SettingsInput = EMPTY_SETTINGS,
+  _settings: SettingsInput = EMPTY_SETTINGS,
 ): SchemaView {
-  const overridesByDate = new Map<string, DayOverride>(
-    overrides.map((o) => [o.datum, o.override]),
-  );
-  const library = getTrainingLibrary_(settings);
   const tss: LoadStat = { gepland: 0, gedaan: 0 };
   const minuten: LoadStat = { gepland: 0, gedaan: 0 };
   const dagen: LoadStat = { gepland: 0, gedaan: 0 };
@@ -837,7 +765,7 @@ export function deriveSchemaView(
       d.plannedForDone ?? d.sessions[d.sessions.length - 1] ?? null;
     // Per-dag coach-feedback (2a): done → hergebruik de fb die de compare al berekent (ÉÉN
     // coachFeedback_-aanroep via buildDoneCompareFull); gemist → een missed-fb (actual=null,
-    // isMissed=true). Anders null. Voedt de make-up-post-pass.
+    // isMissed=true). Anders null. Voedt de coach-box (done) / GemistCard (gemist).
     let doneCompare: DoneCompare | null = null;
     let coach: SchemaDayCoach | null = null;
     if (state === "done" && done) {
@@ -873,11 +801,8 @@ export function deriveSchemaView(
       doneCompare,
       dispositie,
       coach,
-      makeupAdaptatie: null,
     };
   });
-
-  applyMakeupAdaptations(days, { overridesByDate, library, todayISO });
 
   return {
     weekMonday: proposalWeek.weekMonday,

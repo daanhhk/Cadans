@@ -5,7 +5,7 @@ export function BlockList({ structuur }: { structuur: string[][] }) {
     <div
       style={{ display: "flex", flexDirection: "column", gap: "var(--s-2)" }}
     >
-      {structuur.map((row) => {
+      {structuur.map((row, i) => {
         const label = row[0] ?? "";
         const dur = row[1] ?? "";
         const meta = [row[2], row[3], row[4]]
@@ -13,7 +13,8 @@ export function BlockList({ structuur }: { structuur: string[][] }) {
           .join(" · ");
         return (
           <div
-            key={row.join("~")}
+            // biome-ignore lint/suspicious/noArrayIndexKey: statische read-only lijst per render (geen reorder) → index-key is veilig en voorkomt de duplicate-key-warning bij herhaalde identieke blokken
+            key={i}
             style={{
               display: "flex",
               flexDirection: "column",
