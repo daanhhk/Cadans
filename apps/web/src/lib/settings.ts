@@ -25,6 +25,7 @@ const STR_KEYS = [
   "fase",
   "profielPreset",
   "coachNaam",
+  "coachPersona",
   "naam",
 ] as const satisfies readonly (keyof SettingsInput)[];
 
@@ -40,6 +41,7 @@ export const EMPTY_FORM: SettingsForm = {
   fase: "",
   profielPreset: "",
   coachNaam: "",
+  coachPersona: "", // leeg = default warm (de kiezer highlight + de render-guard vullen 'm in)
   naam: "",
   pendelDuurMin: "",
   pendelAantal: "",
@@ -61,6 +63,9 @@ export function settingsToForm(s: SettingsInput | null): SettingsForm {
     fase: v(s?.fase),
     profielPreset: v(s?.profielPreset),
     coachNaam: v(s?.coachNaam),
+    // Leeg-tolerant (zoals coachNaam): null → "" → FULL-REPLACE laat 'm weg. Het "warm"-default
+    // leeft in de kiezer-highlight (CoachPersonaChips) + de render-guard (normalizeCoachPersona).
+    coachPersona: v(s?.coachPersona),
     naam: v(s?.naam),
     pendelDuurMin: v(s?.pendelDuurMin),
     pendelAantal: v(s?.pendelAantal),
@@ -125,6 +130,35 @@ export function presetHoursLabel(profielPreset: string | null): string | null {
   const m = opt?.sub.match(/\d+u\+?/);
   return m ? m[0] : null;
 }
+
+// coachPersona: presentatie-only (coach-narrative-stijl). Alleen "warm" is nu selecteerbaar;
+// gedisciplineerd/statistisch zijn zichtbaar maar disabled ("binnenkort") — de warm-pool is de
+// enige gevulde pool (coachNarrative valt sowieso terug op warm). value = de opgeslagen persona-key.
+export const COACH_PERSONA_OPTIONS: {
+  value: string;
+  label: string;
+  sub: string;
+  disabled: boolean;
+}[] = [
+  {
+    value: "warm",
+    label: "Warm",
+    sub: "Positief en ondersteunend",
+    disabled: false,
+  },
+  {
+    value: "disciplined",
+    label: "Gedisciplineerd",
+    sub: "Strak en direct",
+    disabled: true,
+  },
+  {
+    value: "statistical",
+    label: "Statistisch",
+    sub: "Cijfergericht en neutraal",
+    disabled: true,
+  },
+];
 
 // fase: de engine leest alléén "maintain" (planModeLabel_, phase.ts) → een
 // override; leeg = automatisch (weggelaten uit de body → null).

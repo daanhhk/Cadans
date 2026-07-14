@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { getEvents, getSettings, putSettings } from "../lib/api";
 import { eventsSummary } from "../lib/events";
 import {
+  COACH_PERSONA_OPTIONS,
   DOEL_OPTIONS,
   EMPTY_FORM,
   FASE_OPTIONS,
@@ -206,6 +207,90 @@ function CoachPresetChips({
             }}
           >
             {p}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// Coach-stijl-kiezer (presentatie-only). Model = CoachPresetChips, maar label + sub + een
+// "binnenkort"-tag op disabled-opties. Alleen "warm" is selecteerbaar; de andere twee zijn
+// zichtbaar-maar-gedempt tot de pools gevuld zijn.
+function CoachPersonaChips({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div
+      style={{ display: "flex", flexDirection: "column", gap: "var(--s-2)" }}
+    >
+      {COACH_PERSONA_OPTIONS.map((o) => {
+        // Leeg (nog niets gekozen / verse user) → warm geldt als de default-selectie.
+        const on =
+          value.trim() === o.value ||
+          (value.trim() === "" && o.value === "warm");
+        return (
+          <button
+            key={o.value}
+            type="button"
+            disabled={o.disabled}
+            aria-pressed={on}
+            onClick={o.disabled ? undefined : () => onChange(o.value)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "var(--s-2)",
+              textAlign: "left",
+              padding: "var(--s-2) var(--s-3)",
+              borderRadius: "var(--r-md)",
+              cursor: o.disabled ? "not-allowed" : "pointer",
+              opacity: o.disabled ? 0.5 : 1,
+              background: on ? "var(--accent-soft)" : "var(--bg-sunken)",
+              border: `1px solid ${on ? "var(--accent)" : "var(--border-strong)"}`,
+            }}
+          >
+            <span style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <span
+                style={{
+                  fontFamily: "var(--font-sans)",
+                  fontSize: "var(--fs-label)",
+                  fontWeight: 600,
+                  color: on ? "var(--accent)" : "var(--text-primary)",
+                }}
+              >
+                {o.label}
+              </span>
+              <span
+                style={{
+                  fontFamily: "var(--font-sans)",
+                  fontSize: "var(--fs-caption)",
+                  color: "var(--text-muted)",
+                }}
+              >
+                {o.sub}
+              </span>
+            </span>
+            {o.disabled && (
+              <span
+                style={{
+                  fontFamily: "var(--font-sans)",
+                  fontSize: "var(--fs-caption)",
+                  fontWeight: 600,
+                  color: "var(--text-muted)",
+                  border: "1px solid var(--border-strong)",
+                  borderRadius: "var(--r-pill)",
+                  padding: "2px 8px",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                binnenkort
+              </span>
+            )}
           </button>
         );
       })}
@@ -565,6 +650,25 @@ export function Instellingen() {
                     onChange={set("coachNaam")}
                   />
                 </div>
+                <div
+                  style={{
+                    marginTop: "var(--s-4)",
+                    fontFamily: "var(--font-sans)",
+                    fontSize: "var(--fs-label)",
+                    fontWeight: 600,
+                    color: "var(--text-primary)",
+                    marginBottom: "var(--s-2)",
+                  }}
+                >
+                  Coach-stijl{" "}
+                  <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>
+                    · toon van de dag-uitleg
+                  </span>
+                </div>
+                <CoachPersonaChips
+                  value={form.coachPersona}
+                  onChange={set("coachPersona")}
+                />
               </div>
             </Section>
 

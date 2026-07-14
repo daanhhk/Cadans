@@ -591,6 +591,12 @@ api.put("/settings", async (c) => {
   if ("coachNaam" in body) {
     patch.coachNaam = strField(body.coachNaam, "coachNaam").slice(0, 24);
   }
+  if ("coachPersona" in body) {
+    patch.coachPersona = strField(body.coachPersona, "coachPersona").slice(
+      0,
+      24,
+    );
+  }
   if ("naam" in body) {
     patch.naam = strField(body.naam, "naam").slice(0, 24);
   }

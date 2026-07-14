@@ -22,6 +22,9 @@ export interface SettingsInput {
   /** Presentatie-only (header-wordmark), GEEN engine-input. Optioneel → laat engine +
    * bestaande fixtures ongemoeid. */
   coachNaam?: string | null;
+  /** Presentatie-only (coach-narrative-stijl: "warm"|"disciplined"|"statistical"), GEEN
+   * engine-input. Optioneel. */
+  coachPersona?: string | null;
   /** Presentatie-only (user-naam → avatar-initialen), GEEN engine-input. Optioneel. */
   naam?: string | null;
   pendelDuurMin: number | null;

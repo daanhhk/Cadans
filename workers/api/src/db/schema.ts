@@ -55,6 +55,7 @@ export const settings = sqliteTable("settings", {
   gewicht: real("gewicht"),
   profielPreset: text("profiel_preset"),
   coachNaam: text("coach_naam"), // presentatie: header-wordmark (geen engine-input)
+  coachPersona: text("coach_persona"), // presentatie: coach-narrative-stijl (geen engine-input)
   naam: text("naam"), // presentatie: user-naam → avatar-initialen (geen engine-input)
   pendelDuurMin: integer("pendel_duur_min"),
   pendelAantal: integer("pendel_aantal"),

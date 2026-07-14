@@ -4,7 +4,10 @@ import type {
   SettingsInput,
 } from "@cadans/shared";
 import { useMemo, useState } from "react";
-import { coachNarrative } from "../../lib/coachNarrative";
+import {
+  coachNarrative,
+  normalizeCoachPersona,
+} from "../../lib/coachNarrative";
 import type { ProposalWeek } from "../../lib/proposal";
 import type { ReadinessResult } from "../../lib/readiness";
 import {
@@ -154,9 +157,15 @@ export function SchemaView({
                 marginTop: "var(--s-3)",
               }}
             >
-              {/* 2a: warme coach-stem via de redenCode; valt terug op de droge reden of null
-                  (persona "warm" hardcoded — de settings-kiezer volgt in een aparte brok). */}
-              {coachNarrative(day.redenCode, day.reden, day.datum, "warm")}
+              {/* 2b: coach-stem via de redenCode; persona uit settings (guard → "warm" bij een
+                  onbekende/lege waarde). Disciplined/statistical vallen sowieso op warm-copy terug
+                  (lege pools) — de disabled-kiezer voorkomt de keuze proactief. */}
+              {coachNarrative(
+                day.redenCode,
+                day.reden,
+                day.datum,
+                normalizeCoachPersona(settings.coachPersona),
+              )}
             </div>
           )}
 

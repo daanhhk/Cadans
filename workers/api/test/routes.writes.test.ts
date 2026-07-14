@@ -85,6 +85,14 @@ describe("Fase 4c — D1-write-routes (PUT, SELF.fetch)", () => {
     expect(g.body.coachNaam).toBe("A".repeat(24));
   });
 
+  it("ROUND-TRIP coachPersona (presentatie-veld) → GET geeft 'm exact terug", async () => {
+    const r = await put("/api/settings", { coachPersona: "warm" });
+    expect(r.status).toBe(200);
+    const g = await call("/api/settings");
+    expect(g.status).toBe(200);
+    expect(g.body.coachPersona).toBe("warm");
+  });
+
   it("PUT /api/settings doelStart '2026-13-99' → 400", async () => {
     const r = await put("/api/settings", { doelStart: "2026-13-99" });
     expect(r.status).toBe(400);

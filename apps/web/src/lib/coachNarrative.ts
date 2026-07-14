@@ -8,6 +8,15 @@
 
 export type CoachPersona = "warm" | "disciplined" | "statistical";
 
+/** Guard: een willekeurige (settings-)waarde → een geldige CoachPersona; onbekend → "warm". */
+export function normalizeCoachPersona(
+  v: string | null | undefined,
+): CoachPersona {
+  return v === "disciplined" || v === "statistical" || v === "warm"
+    ? v
+    : "warm";
+}
+
 type Pools = Record<string, Partial<Record<CoachPersona, string[]>>>;
 
 const POOLS: Pools = {
