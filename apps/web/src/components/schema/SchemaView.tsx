@@ -4,6 +4,7 @@ import type {
   SettingsInput,
 } from "@cadans/shared";
 import { useMemo, useState } from "react";
+import { coachNarrative } from "../../lib/coachNarrative";
 import type { ProposalWeek } from "../../lib/proposal";
 import type { ReadinessResult } from "../../lib/readiness";
 import {
@@ -153,7 +154,9 @@ export function SchemaView({
                 marginTop: "var(--s-3)",
               }}
             >
-              {day.reden}
+              {/* 2a: warme coach-stem via de redenCode; valt terug op de droge reden of null
+                  (persona "warm" hardcoded — de settings-kiezer volgt in een aparte brok). */}
+              {coachNarrative(day.redenCode, day.reden, day.datum, "warm")}
             </div>
           )}
 

@@ -209,6 +209,8 @@ export interface SchemaDay {
   isToday: boolean;
   voorgesteldType: string | null;
   reden: string | null;
+  /** Machineleesbare reden-code (2a) → voedt de coach-narrative-laag; null = droge reden/geen. */
+  redenCode: string | null;
   sessions: SchemaSession[];
   doneTss: number;
   /** De gereden rit van die dag (of null) — voedt de VOLTOOID-kaart (fase 2a). */
@@ -864,6 +866,7 @@ export function deriveSchemaView(
       isToday,
       voorgesteldType: d.voorgesteldType,
       reden: d.reden,
+      redenCode: d.redenCode,
       sessions,
       doneTss,
       done: done ?? null,

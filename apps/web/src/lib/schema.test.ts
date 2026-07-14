@@ -407,6 +407,7 @@ describe("deriveSchemaView dispatch (flip + doneCompare)", () => {
     dagIdx: 0,
     voorgesteldType: null,
     reden: null,
+    redenCode: null,
     archetypeId: null,
     sessions: [],
     plannedForDone: null,

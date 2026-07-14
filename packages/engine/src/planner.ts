@@ -555,6 +555,7 @@ export function assignWorkouts(
   days.forEach((d: any) => {
     let type: any;
     let reden = ""; // v2c: primaire reden bij het FINALE type
+    let redenCode: string | null = null; // 2a: machineleesbare reden-code NAAST de string (additief)
     let debtForced = false; // debt-geforceerde compensatie → exempt van avoid-consecutive-hard
     let archetypeId: any = null; // 2b.2: door goalWorkout_ gekozen archetype (alleen vrij-keyIntensity-dagen)
 
@@ -578,6 +579,7 @@ export function assignWorkouts(
       // Recovery-week na A-race: alles easy Z2.
       type = "recovery";
       reden = "Herstel — herstelweek na A-race";
+      redenCode = "recovery_post_race";
     } else if (dayTapers) {
       if (taperCtx.isTrip) {
         // Tour-taper: meerdaagse rittenreis vraagt durability, geen race-snap.
@@ -587,15 +589,18 @@ export function assignWorkouts(
         reden = isLaatste2
           ? "Korte taper-rit — vers worden voor de trip"
           : "Taper-duurrit — durability vasthouden";
+        redenCode = isLaatste2 ? "taper_trip_short" : "taper_trip_endurance";
       } else {
         // Race-taper: één korte openers-sessie, rest korte Z2.
         if (!openersGedaan && (d.type === "vrij" || d.type === "weekend")) {
           type = "taper_openers";
           openersGedaan = true;
           reden = "Openers — kort en scherp voor de wedstrijd";
+          redenCode = "taper_openers";
         } else {
           type = "taper_z2_kort";
           reden = "Korte taper-rit — vers worden";
+          redenCode = "taper_race_short";
         }
       }
     } else if (isRecovery) {
@@ -604,6 +609,7 @@ export function assignWorkouts(
       else if (d.type === "weekend") type = "long_z2";
       else type = "recovery";
       reden = "Herstel — herstelweek";
+      redenCode = "recovery_week";
     } else if (
       isTestWeek &&
       !testGedaan &&
@@ -612,6 +618,7 @@ export function assignWorkouts(
       type = "test";
       testGedaan = true;
       reden = "Test — FTP/conditie bepalen";
+      redenCode = "test";
     } else if (allocActive && quotaPlan[d.dagIdx]) {
       // C4: week-allocator-plaatsing (quality/longride/endurance) — overrulet de per-dag-takken.
       const qp = quotaPlan[d.dagIdx];
@@ -629,12 +636,16 @@ export function assignWorkouts(
             : qp.role === "longride"
               ? "Lange duurrit — week-plaatsing"
               : "Duurrit — week-plaatsing";
+      // Alleen de quality-plaatsing ("Sleutelsessie · …") heeft een code; de longride/
+      // endurance-week-plaatsing-varianten blijven (bewust) codeloos → droge reden-fallback.
+      redenCode = qp.role === "quality" ? "key_session" : null;
     } else if (d.type === "pendel") {
       type =
         isTripEvent && (macroFase === "Build" || macroFase === "Peak")
           ? "pendel_trip_intervals" // tocht-pendel → sweet-spot/tempo (zie genericPendelIntervals)
           : "pendel_" + doelKey(doel) + "_intervals";
       reden = "Pendelrit — vaste woon-werkrit";
+      redenCode = "commute";
     } else if (d.type === "weekend") {
       // Debt-aware: groot high/anaerobic tekort → forceer combo met
       // expliciete high-blokken (i.p.v. alleen long_z2 + klim-sim).
@@ -643,20 +654,25 @@ export function assignWorkouts(
         debtWerk.high = 0; // gecompenseerd
         debtForced = true;
         reden = "Inhaalsessie — " + redenZoneLabel_("high") + " tekort";
+        redenCode = "catchup_high";
       } else if (debtActief && debtWerk.anaerobic > DEBT_FORCE_ANAER_MIN) {
         type = "combo_long_with_efforts";
         debtWerk.anaerobic = 0;
         debtForced = true;
         reden = "Inhaalsessie — " + redenZoneLabel_("anaerobic") + " tekort";
+        redenCode = "catchup_anaerobic";
       } else if (!dekking.low) {
         type = "long_z2";
         reden = "Lange duurrit — weekend";
+        redenCode = "long_weekend";
       } else if (!dekking.high && macroFase !== "Base") {
         type = "combo_long_with_efforts";
         reden = "Lange rit met blokken — intensiteit aanvullen";
+        redenCode = "long_with_efforts";
       } else {
         type = "long_z2";
         reden = "Lange duurrit — weekend";
+        redenCode = "long_weekend";
       }
     } else if (d.type === "vrij") {
       // Debt-weging: prioriteer grootste positieve tekort-bucket.
@@ -668,6 +684,7 @@ export function assignWorkouts(
         const dpBucket = typeBucket_(dp, doel);
         debtWerk[dpBucket] = 0; // verbruikt → volgende dag andere bucket
         reden = "Inhaalsessie — " + redenZoneLabel_(dpBucket) + " tekort";
+        redenCode = "catchup_" + dpBucket; // catchup_low|catchup_high|catchup_anaerobic
       } else {
         const kiOut: any = {};
         type = keyIntensity(doel, macroFase, dekking, klimType, isTripEvent, {
@@ -678,13 +695,16 @@ export function assignWorkouts(
         });
         archetypeId = kiOut.archetypeId || null;
         reden = "Sleutelsessie · " + doel + " — fase " + macroFase;
+        redenCode = "key_session";
       }
     } else if (d.type === "recovery") {
       type = "recovery";
       reden = "Herstel — ingeroosterd";
+      redenCode = "recovery_scheduled";
     } else {
       type = "recovery";
       reden = "Rustige dag — geen sleutelprikkel nodig";
+      redenCode = "easy_no_key";
     }
 
     // Avoid-consecutive-hard: als de vorige kalenderdag een harde dag was
@@ -702,11 +722,13 @@ export function assignWorkouts(
         isHard = false;
         archetypeId = null; // 2b.2: type gedowngraded → archetype-keuze vervalt
         reden = "Rustige duurrit — dag na een zware dag"; // load-context wint
+        redenCode = "demote_recent_hard";
       }
     }
 
     d.voorgesteldType = type;
     d.reden = reden;
+    d.redenCode = redenCode; // 2a: additief, reist mee met de reden-string
     d.archetypeId = archetypeId; // 2b.2: reist mee naar de build-loop (engine-sessie)
     if (archetypeId)
       qualityRecency.push({
@@ -731,6 +753,7 @@ export function assignWorkouts(
         d.voorgesteldType = "recovery";
         d.archetypeId = null; // 2b.2: type gewijzigd → archetype vervalt
         d.reden = "Herstel — wellness laag";
+        d.redenCode = "demote_wellness_rest"; // 2a: overschrijft de dag-code net als reden
       } else {
         const gedemoot =
           d.type === "pendel" ? "pendel_z2" : demoteType_(d.voorgesteldType); // C4: pendel-aware demote
@@ -738,6 +761,7 @@ export function assignWorkouts(
           d.voorgesteldType = gedemoot;
           d.archetypeId = null; // 2b.2: gedemoot → archetype vervalt
           d.reden = "Lichter gehouden — wellness laag";
+          d.redenCode = "demote_wellness_light";
         }
       }
     });

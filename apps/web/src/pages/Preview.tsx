@@ -44,6 +44,7 @@ const day = (
   dagIdx,
   voorgesteldType: null,
   reden: null,
+  redenCode: null,
   archetypeId: null,
   sessions: [],
   plannedForDone: null,

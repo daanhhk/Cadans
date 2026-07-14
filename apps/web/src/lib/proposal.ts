@@ -50,6 +50,8 @@ export interface ProposalDay {
   dagIdx: number;
   voorgesteldType: string | null;
   reden: string | null;
+  /** Machineleesbare reden-code (2a, additief NAAST `reden`); null als geen toewijzing/mapping. */
+  redenCode: string | null;
   archetypeId: string | null;
   // Realisatie: rustdag → []; normale dag → 1 sessie; pendel-dag → pendelAantal
   // sessies (vroege = steady pendel_z2, laatste = de dag-intent). Dag-niveau
@@ -114,6 +116,7 @@ interface GridDay {
   type: string | null;
   voorgesteldType: string | null;
   reden: string | null;
+  redenCode: string | null;
   archetypeId: string | null;
 }
 
@@ -236,6 +239,7 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
     type: pd.dagtype,
     voorgesteldType: pd.voorgesteldType,
     reden: null,
+    redenCode: null,
     archetypeId: null,
   }));
 
@@ -423,6 +427,7 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
       dagIdx: d.dagIdx,
       voorgesteldType: d.voorgesteldType,
       reden: d.reden,
+      redenCode: d.redenCode,
       archetypeId: d.archetypeId,
       sessions,
       plannedForDone,
