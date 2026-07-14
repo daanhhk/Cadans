@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import type { LoadStat } from "../../lib/schema";
+import { formatSyncTime, getLastSyncTs } from "../../lib/syncStatus";
 import { Card, Num, Overline } from "../ui";
 
 function hhmm(min: number): string {
@@ -55,25 +56,23 @@ function Stat({
   );
 }
 
-// "Deze week · gepland vs gedaan": TSS/Uren/Dagen (gedaan/gepland) + voortgangsbalk +
-// regenereer-knop. GEPLAND uit het voorstel, GEDAAN uit doneTssByDate.
+// "Deze week · gepland vs gedaan": TSS/Uren/Dagen (gedaan/gepland) + voortgangsbalk.
+// GEPLAND uit het voorstel, GEDAAN uit doneTssByDate. De sync is niet langer een knop: hij
+// draait automatisch bij mount (Schema.tsx) → hier alleen een subtiele "Laatst gesynct"-regel.
 export function WeekLoad({
   tss,
   minuten,
   dagen,
-  onRegen,
-  regenerating = false,
-  syncNote = null,
 }: {
   tss: LoadStat;
   minuten: LoadStat;
   dagen: LoadStat;
-  onRegen: () => void;
-  regenerating?: boolean;
-  syncNote?: { text: string; error: boolean } | null;
 }) {
   const pct =
     tss.gepland > 0 ? Math.round((tss.gedaan / tss.gepland) * 100) : 0;
+  // Sessie-tijdstip van de laatste geslaagde auto-sync (module-helper); bij render gelezen zodat
+  // een geforceerde re-render (na een sync) de tijd bijwerkt. null → nog niet gesynct → regel weg.
+  const lastSync = getLastSyncTs();
   return (
     <Card>
       <div
@@ -84,104 +83,57 @@ export function WeekLoad({
         }}
       >
         <Overline>Deze week · gepland vs gedaan</Overline>
-        <div
-          style={{ display: "flex", alignItems: "center", gap: "var(--s-2)" }}
+        <Link
+          to="/weekplanner"
+          aria-label="Weekplanner"
+          title="Beschikbaarheid plannen"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 32,
+            height: 32,
+            borderRadius: "var(--r-pill)",
+            border: "1px solid var(--border-strong)",
+            background: "var(--bg-elevated)",
+            color: "var(--accent)",
+          }}
         >
-          <Link
-            to="/weekplanner"
-            aria-label="Weekplanner"
-            title="Beschikbaarheid plannen"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: 32,
-              height: 32,
-              borderRadius: "var(--r-pill)",
-              border: "1px solid var(--border-strong)",
-              background: "var(--bg-elevated)",
-              color: "var(--accent)",
-            }}
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 16 16"
+            fill="none"
+            aria-hidden="true"
           >
-            <svg
-              width="15"
-              height="15"
-              viewBox="0 0 16 16"
-              fill="none"
-              aria-hidden="true"
-            >
-              <rect
-                x="2.5"
-                y="3.5"
-                width="11"
-                height="10"
-                rx="2"
-                stroke="var(--accent)"
-                strokeWidth="1.4"
-              />
-              <path
-                d="M2.5 6.5h11M5.5 2v3M10.5 2v3"
-                stroke="var(--accent)"
-                strokeWidth="1.4"
-                strokeLinecap="round"
-              />
-            </svg>
-          </Link>
-          <button
-            type="button"
-            onClick={onRegen}
-            disabled={regenerating}
-            aria-label="Werk week bij"
-            title="Werk week bij"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: 32, // vaste icoonknop (grafisch)
-              height: 32,
-              padding: 0,
-              borderRadius: "var(--r-pill)",
-              border: "1px solid var(--border-strong)",
-              background: "var(--bg-elevated)",
-              cursor: regenerating ? "default" : "pointer",
-              opacity: regenerating ? 0.5 : 1,
-              color: "var(--accent)",
-            }}
-          >
-            <svg
-              width="15"
-              height="15"
-              viewBox="0 0 14 14"
-              fill="none"
-              aria-hidden="true"
-            >
-              <path
-                d="M12 7a5 5 0 11-1.5-3.6"
-                stroke="var(--accent)"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-              <path
-                d="M12 1.5V4.2H9.3"
-                stroke="var(--accent)"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
-        </div>
+            <rect
+              x="2.5"
+              y="3.5"
+              width="11"
+              height="10"
+              rx="2"
+              stroke="var(--accent)"
+              strokeWidth="1.4"
+            />
+            <path
+              d="M2.5 6.5h11M5.5 2v3M10.5 2v3"
+              stroke="var(--accent)"
+              strokeWidth="1.4"
+              strokeLinecap="round"
+            />
+          </svg>
+        </Link>
       </div>
-      {syncNote && (
+      {lastSync != null && (
         <div
           style={{
             marginTop: "var(--s-2)",
             fontFamily: "var(--font-sans)",
             fontSize: "var(--fs-caption)",
-            color: syncNote.error ? "var(--danger)" : "var(--text-secondary)",
+            color: "var(--text-secondary)",
           }}
         >
-          {syncNote.text}
+          {`Laatst gesynct · ${formatSyncTime(lastSync)}`}
         </div>
       )}
       <div style={{ display: "flex", marginTop: "var(--s-3)" }}>

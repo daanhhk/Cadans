@@ -44,9 +44,6 @@ export function SchemaView({
   dispositionByDate,
   overrides,
   settings,
-  onRegen,
-  regenerating,
-  syncNote,
 }: {
   proposalWeek: ProposalWeek;
   readiness: ReadinessResult;
@@ -56,9 +53,6 @@ export function SchemaView({
   dispositionByDate: Record<string, DispositionReason>;
   overrides: OverrideEntry[];
   settings: SettingsInput;
-  onRegen: () => void;
-  regenerating: boolean;
-  syncNote: { text: string; error: boolean } | null;
 }) {
   const view = useMemo(
     () =>
@@ -114,14 +108,7 @@ export function SchemaView({
         volumeUren={view.volumeUren}
       />
 
-      <WeekLoad
-        tss={view.tss}
-        minuten={view.minuten}
-        dagen={view.dagen}
-        onRegen={onRegen}
-        regenerating={regenerating}
-        syncNote={syncNote}
-      />
+      <WeekLoad tss={view.tss} minuten={view.minuten} dagen={view.dagen} />
 
       <DayStrip
         days={view.days}

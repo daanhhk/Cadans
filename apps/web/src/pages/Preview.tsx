@@ -337,9 +337,6 @@ export function Preview() {
         dispositionByDate={{}}
         overrides={[]}
         settings={PREVIEW_SETTINGS}
-        onRegen={() => {}}
-        regenerating={false}
-        syncNote={null}
       />
     </div>
   );
