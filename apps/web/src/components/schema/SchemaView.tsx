@@ -18,6 +18,7 @@ import {
 import { Card, Overline } from "../ui";
 import { ActionButtons, GarminPushButton } from "./ActionButtons";
 import { AlignChip } from "./AlignChip";
+import { CoachCallout } from "./CoachCallout";
 import { CoachReadinessBanner } from "./CoachReadinessBanner";
 import { DayStrip } from "./DayStrip";
 import { DispositionAffordance } from "./DispositionAffordance";
@@ -94,6 +95,17 @@ export function SchemaView({
     !day.dispositie &&
     day.datum <= todayISO;
 
+  // 2b: per-dag coach-narrative (boven de training). Alleen op een dag mét een reden (plan-dagen;
+  // done/gemist-dagen hebben geen redenCode → geen dubbel coach-blok). null/leeg → niks renderen.
+  const coachText = day?.reden
+    ? coachNarrative(
+        day.redenCode,
+        day.reden,
+        day.datum,
+        normalizeCoachPersona(settings.coachPersona),
+      )
+    : null;
+
   return (
     <div
       style={{
@@ -148,24 +160,12 @@ export function SchemaView({
             </div>
           )}
 
-          {day.reden && (
-            <div
-              style={{
-                fontFamily: "var(--font-sans)",
-                fontSize: "var(--fs-label)",
-                color: "var(--text-secondary)",
-                marginTop: "var(--s-3)",
-              }}
-            >
-              {/* 2b: coach-stem via de redenCode; persona uit settings (guard → "warm" bij een
-                  onbekende/lege waarde). Disciplined/statistical vallen sowieso op warm-copy terug
-                  (lege pools) — de disabled-kiezer voorkomt de keuze proactief. */}
-              {coachNarrative(
-                day.redenCode,
-                day.reden,
-                day.datum,
-                normalizeCoachPersona(settings.coachPersona),
-              )}
+          {/* 2b: de per-dag coach-stem in het gedeelde coach-blok-formaat (bubble-glyph + coachnaam-
+              kop + tekst), EXACT hier (boven de training, na de today-readiness-banner). Persona uit
+              settings (guard → "warm"). impact=false (default). */}
+          {coachText && (
+            <div style={{ marginTop: "var(--s-3)" }}>
+              <CoachCallout narrative={coachText} coachNaam={view.coachNaam} />
             </div>
           )}
 
