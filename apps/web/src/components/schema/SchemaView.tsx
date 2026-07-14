@@ -184,8 +184,14 @@ export function SchemaView({
               <DoneDetail done={day.done} />
             )
           ) : day.state === "gemist" ? (
-            // gemist (A4): gedisponeerde dag mét voorstel, niet gereden → GemistCard + "Terug".
-            <GemistCard reason={day.dispositie} date={day.datum} />
+            // gemist (A4): gedisponeerde dag mét voorstel, niet gereden → GemistCard + "Terug" +
+            // de gemist-coach-narrative (missedCoach_) in de gedeelde CoachCallout.
+            <GemistCard
+              reason={day.dispositie}
+              date={day.datum}
+              narrative={day.coach?.narrative ?? null}
+              coachNaam={view.coachNaam}
+            />
           ) : day.sessions.length === 0 ? (
             // §5a rustdag → lege-staat-copy. Knoppen-blok volgt NA de state-conditional.
             <div
