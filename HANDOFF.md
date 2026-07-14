@@ -16,7 +16,7 @@ live tot cutover.
 (remote-D1 + deploy).
 
 **VLOEREN** (mogen niet regresseren; NIET in prompts hardcoden): engine-selftest-assert-count **957** ·
-vitest-totaal **268**.
+vitest-totaal **304**.
 
 ### BRONHIERARCHIE VOOR PARITY (werkwijze — vast)
 - **daanhhk/training is PUBLIC + BEVROREN op `3e8090a`.** De chat leest de GAS-bron DIRECT via
@@ -55,11 +55,29 @@ Basic-Auth-gated (`/api/health` → 401 + `WWW-Authenticate: Basic`); functionel
   adaptatie in kaart. KERN: de engine-kern is al geport; ontbreekt = client-orkestratie + UI;
   de override-backend is de gedeelde B3/B4-fundering. Bevat de port-correctheid-caveat.
 
-**FASE B — laag-1 + readiness-koers GEDEPLOYD; laag-2a op main (niet gedeployd).** Prod Worker Version is nu
-`a4f57c19-d4fc-4b08-99ea-f70b7bcf63fd` (was `171f79fc`); de gedeployde inhoud = main t/m `ae00730` (bundelt
-`bbb9767` + `ae00730`). GEEN D1-migratie (`day_state.override_json` bestond al remote). **LET OP — prod ≠ main HEAD:**
-`b23bdd7` (laag-2a) staat op main + CI-groen, maar is NIET gedeployd (produceert alleen data/makeupAdaptatie, geen
-UI → geen zichtbaar effect tot laag-3).
+**FASE B + coach-narrative-reeks GEDEPLOYD — prod == main HEAD.** Prod Worker Version is nu
+`43ab5f03-d59e-4147-8833-fdb82dc3a893` (was `a4f57c19`); de gedeployde inhoud = **main t/m `c800d47`** → prod ==
+main HEAD (de eerdere "prod ≠ main HEAD"-noot VERVALT). Remote D1 gemigreerd t/m `0003_wise_sunset_bain.sql`
+(`coach_persona`-kolom, nullable, presentatie-only; backward-compatible → veilig vóór de deploy). Basic-Auth-gate
+actief (`/api/health` → 401 + `WWW-Authenticate: Basic`); functionele round-trip in-browser door Daan.
+
+**NIEUW GEBOUWD & LIVE deze reeks** (samengevat, niet elke commit; canonieke copy-/persona-bron =
+`apps/web/src/lib/coachNarrative.ts`):
+- **Auto-sync bij app-open** (`155b655`): fire-and-forget intervals-sync bij mount (spiegelt GAS
+  onState → refreshActivities → idempotente her-render), ↻-knop VERWIJDERD, "Laatst gesynct"-regel, in-memory
+  staleness-guard (`lib/syncStatus.ts`). Selectie-behoud bij de re-derive = by-construction + in-browser bevestigd.
+- **Model-2 bevestiging** (read-only test `d74e257`): de weekgen stuurt de dagen ≥ vandaag al bij op basis van
+  gereden actuals (dekking/`zoneDebt_`/`recentHardDate_`) + avoid-consecutive-hard (`planner.ts`) mét
+  debt-exceptie. Dit VERVANGT het override-make-up-model als PRIMAIR (zie §Geparkeerde debts).
+- **Engine `redenCode`** (`83f3740` + `f498163` allocator-takken): additief veld op ProposalDay/GridDay NAAST de
+  byte-identieke reden-strings (957 ongemoeid) → **client coach-narrative-laag** (`lib/coachNarrative.ts`): warme,
+  gevarieerde per-dag coach-copy met deterministische seed (`datum|code|persona`), persona-gedimensioneerd.
+- **coachPersona-instelling** (`36a0b7b`, migratie 0003): settings-kolom + kiezer-UI (warm actief;
+  disciplined/statistical "binnenkort", lege pools → fallback warm).
+- **Gedeelde `CoachCallout`** (`c800d47`): de per-dag-narrative staat nu in het coach-blok (glyph + coachnaam) boven
+  de training i.p.v. een kale regel; byte-identiek met de voltooid-kaart-coach-box.
+
+**FASE B laag-1 + readiness-koers (onder) blijven live; laag-2a is VERLATEN (zie §Geparkeerde debts).**
 - **laag-1 (override-backend + D2) — KLAAR + gedeployd** (`bbb9767`): day-override-backend
   (`writeOverride`/`readOverrides` + GET/PUT `/api/overrides`, spiegelt de A2-disposition-backend; non-clobber = zet
   alleen `override_json`) + override-DTO (`packages/shared/src/override.ts`: `DayOverride =
@@ -74,8 +92,9 @@ UI → geen zichtbaar effect tot laag-3).
   (te weinig data) → val terug op de botte wSig-vlag. VERVANGT de `b8b7ef9`-patch (single-bad-night
   demote-verzachting, uit de code verwijderd; commit blijft in historie). Reden: banner-band en plan draaiden op
   overlappende data maar verschillende logica; nu stuurt dezelfde readiness beide, en de ochtend-check-in is de hendel.
-- **laag-2a (make-up-post-pass + per-dag coach + DTO-idempotentie) — KLAAR op main** (`b23bdd7`), CI-groen, **NIET
-  gedeployd** (geen UI → geen zichtbaar effect tot laag-3): make-up-adaptatie-post-pass (`applyMakeupAdaptations`,
+- **laag-2a (make-up-post-pass + per-dag coach + DTO-idempotentie) — VERLATEN** (`b23bdd7`): draait latent mee
+  maar is verlaten t.g.v. het auto-herplannings-model (Model 2); op te ruimen in "Brok 3" (zie §Geparkeerde debts).
+  Historische inhoud: make-up-adaptatie-post-pass (`applyMakeupAdaptations`,
   byte-getrouwe spiegel van `WebApp.gs:1165-1185`, idempotent via `override.from`/`madeFrom`/`claimedTarget`; target =
   strikt ná bron+vandaag, geen override/rit, state planned/rest/today, eerste-match) + per-dag coach-feedback voor
   done ÉN gemist (`buildDoneCompare` gesplitst in `buildDoneCompareFull` + wrapper; `missedCoach_` voor gemist via
@@ -86,13 +105,11 @@ UI → geen zichtbaar effect tot laag-3).
   vandaag al; `readinessAdjust_` op de al-verzachte dag hit z'n eigen "toType===type → keep"-guard → de overlay vuurt
   nooit). Als later een BEWUSTE today-hendel gewenst is, is dat de uitgestelde blast-radius-herziening (week-demote
   vandaag NIET auto-raken, Verlicht als user-keuze) — zie §Geparkeerde debts.
-- **laag-3 (make-up-UI) — VOLGENDE, gesplitst:**
-  - **laag-3a:** frame-10 rijke gemist-kaart (`GemistDetail`, spiegel `gemistDetailHtml_` `Script.html:591`) + de
-    make-up-knop "Plan deze aanpassing"/"✓ ingepland" (op missed ÉN done-afgeweken, spiegel
-    `coachAdaptBtn_`/`planAdaptatie_`) + `chipLabel` toevoegen aan de 2a-coach-exposure. Maakt de make-up zichtbaar +
-    schrijfbaar (target toont de workout via D2, bron toont "✓ ingepland"). NOG NIET omkeerbaar.
+- **laag-3 (make-up-UI):**
+  - **laag-3a — GESCHRAPT** (frame-10 rijke gemist-kaart + make-up-knop): overbodig door Model 2 (de weekgen
+    herplant al automatisch); niet meer gebouwd.
   - **laag-3b:** `OverriddenDetail` + "Terug naar voorstel" op override-dagen (spiegel `overrideKaart_`) →
-    omkeerbaarheid + de gedeelde fundering voor de B3-picker.
+    omkeerbaarheid + de gedeelde fundering voor de B3-picker. Blijft relevant als de override-picker later komt.
 
 **FASE 1 (schema-flow zuivere vormgeving):** VOLLEDIG AF + visueel geverifieerd in `/preview`.
 
@@ -214,14 +231,14 @@ CI-groen, en **GEDEPLOYD** (prod Version `171f79fc`; zie het FASE A GEDEPLOYD-bl
 `FASE2-5-ZONES-RECON.md` (`6028cfd`, GECORRIGEERD → (a) CLIENT-ONLY — zie BRONHIERARCHIE). Het 4b- en het
 brok-2-recon waren rapport-only (geen doc).
 
-**FOCUS VOLGENDE CHAT:** FASE A = **GEDEPLOYD & LIVE**; FASE B **laag-1 + readiness-koers GEDEPLOYD** (prod Version
-`a4f57c19`), **laag-2a KLAAR op main** (niet gedeployd). (1) ~~A2/A4 visuele check~~ → DOORGESCHOVEN naar de
-live-aankomende-week (verschijnt vanzelf op een vandaag-zonder-rit). (2) ~~FASE-A prod-deploy~~ = GEDAAN.
-(3) ~~FASE B laag-1 override-backend (mirror A2) + readiness-band-koers~~ = GEDAAN + gedeployd. → **(4) FASE B laag-3
-bouwen** (make-up-UI, gesplitst 3a/3b — zie het FASE B-blok bovenaan Stand): 3a = frame-10 rijke gemist-kaart +
-make-up-knop (maakt de laag-2a make-up zichtbaar + schrijfbaar), dán 3b = `OverriddenDetail` + "Terug naar voorstel"
-(omkeerbaarheid + B3-picker-fundering) — zie `docs/FASE-B-OVERRIDE-ADAPTATIE-RECON.md`. Het echte A-event **Amstel
-Gold Race** = INGEVOERD op prod (geverifieerd in-browser).
+**FOCUS VOLGENDE CHAT:** alles t/m de coach-narrative-reeks is **GEDEPLOYD & LIVE** (prod == main HEAD `c800d47`,
+Version `43ab5f03`; zie het FASE B-blok bovenaan Stand). (1-3) ~~FASE A~~ · ~~FASE B laag-1 + readiness~~ ·
+~~auto-sync + redenCode/coach-narrative + coachPersona + CoachCallout~~ = GEDAAN + gedeployd. → **(4) "Brok 3":
+opruimen + doorbouwen** — het VERLATEN override-make-up-model (laag-2a post-pass + `makeupAdaptatie`-exposure) uit de
+code halen (Model 2 is primair), de BlockList-duplicate-key fixen (key op blok-index), en **2c** bouwen: de
+voltooid/gemist-coach-narrative óók client-side in de warme `CoachCallout`-stem (feiten-gedreven, dezelfde catalogus).
+Later los: persona-pools disciplined/statistical vullen (copy-werk). Zie §Geparkeerde debts. Het echte A-event
+**Amstel Gold Race** = INGEVOERD op prod (geverifieerd in-browser).
 
 ### PARITY-FASERING (compact — vervangt een apart audit-doc; de volledige matrix is via de GAS-bron te reconen)
 - **FASE B (recon-first, deels engine + sign-off):** **B2 Trainingen-tab** (nu `<ComingSoon>`; GAS = volledige
@@ -344,12 +361,10 @@ heeft → vervanging sloeg stil over).
 
 **Gate-vloeren (nooit onder; bron van waarheid — NOOIT hardcoden in een prompt):**
 engine-selftest `toBe(957)` (`packages/engine/src/selftest.test.ts:3668`, ongewijzigd) · vitest-totaal
-**268** (gegroeid: §5b `silhouetSegments` +5 → 214, 4b `presetHoursLabel` +3 → 217, brok 2 `planModusLabel`
-+4 → 221, brok 3 RUN 1 settings-round-trip +2 → 223, RUN 2 `isoWeekNumber`+`displayCoach`/`initials` +8 → 231,
-brok 4a RUN 1 events-write-tests +4 → 235, RUN 2 `eventsSummary` +5 → 240, brok 5 `actualZone5_` +3 → 243,
-A3 RUN 1 rpe-write-tests +4 → 247, A2 laag-1 disposition-write-tests +5 → 252, A2/A4 laag-2 gemist-precedentie
-+2 → 254; FASE B laag-1 override-backend + readiness-band-koers + laag-2a make-up/coach +14 → 268). CI groen.
-Hard floors — niet regresseren.
+**304** (gegroeid t/m FASE B laag-1/readiness/laag-2a → 268; daarna: Model-2 avoid-consecutive-hard-verificatie
++2 → 270, syncStatus-units +8 → 278, redenCode-borging + coach-narrative +23 → 301, allocator-redenCode-borging
++2 → 303, coachPersona round-trip +1 → 304). Engine niet aangeraakt door de coach-narrative-reeks (957 vast).
+CI groen. Hard floors — niet regresseren.
 
 **Fundament:** IBM Plex Sans (400/500/600) + Mono (500/600), self-hosted via `@fontsource`,
 offline-precached (`main.tsx`). Het UI-kader ligt vast in **`apps/web/docs/UI-KADER.md`**:
@@ -394,6 +409,17 @@ consumeren UITSLUITEND `--s-*/--fs-*/--lh-*/--r-*` (kleur was al gedisciplineerd
   (Algorithm.gs:662, Monday-based; NIET trailing-7). Lege week → "—".
 
 ### Geparkeerde debts (bewust, niet nu)
+- **Override-make-up-model VERLATEN — opruimen in "Brok 3":** de laag-2a `applyMakeupAdaptations`-post-pass +
+  `makeupAdaptatie`-exposure draaien nog latent maar zijn VERLATEN t.g.v. het auto-herplannings-model (Model 2, de
+  weekgen herplant dagen ≥ vandaag al op gereden actuals). De eerder geplande laag-3a make-up-UI is GESCHRAPT. Op te
+  ruimen: de post-pass + exposure uit de code halen. Zie het FASE B-blok bovenaan Stand.
+- **2c — voltooid/gemist-coach-narrative naar de warme stem (nog te bouwen):** de done/gemist-coach-copy komt nu uit
+  de engine (`coachFeedback_`); breng die óók client-side in de warme `CoachCallout`-stem, feiten-gedreven — dezelfde
+  catalogus-aanpak als de per-dag-narrative (`lib/coachNarrative.ts`).
+- **Persona-pools disciplined/statistical LEEG** (fallback → warm): copy-werk voor later; de toon-ijk-voorbeelden +
+  de structuur staan al in `lib/coachNarrative.ts`. De kiezer-UI toont ze als "binnenkort" (disabled).
+- **BlockList duplicate-React-key** (pre-existing, low prio): de key = blok-inhoud → botst bij herhaalde identieke
+  blokken → console-warning. Fix = key op de blok-index. Mee te nemen in "Brok 3".
 - **Blast-radius-herziening (FASE B — benoemde kandidaat voor de "komende weken"-evaluatie):** de band-gedreven
   week-demote raakt vandaag automatisch mee; een BEWUSTE today-hendel ("Verlicht vandaag" als user-keuze) vereist dat
   de week-demote vandaag NIET auto-raakt (anders hit `readinessAdjust_` z'n "toType===type → keep"-guard en vuurt de
