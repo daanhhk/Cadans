@@ -133,3 +133,18 @@ export function weekTss(
   }
   return seen ? Math.round(sum) : null;
 }
+
+/**
+ * Richting van de fitheid-projectie tussen nu en de testdag (voor de mensentaal-readout in
+ * test-modus). PUUR. `null` als een van beide CTL-waarden ontbreekt. Drempel = 1 CTL: onder 1
+ * verschil = "flat" (vasthouden), ≥ +1 = "up" (opbouw), ≤ −1 = "down" (zakken).
+ */
+export function projectionDirection(
+  currentCtl: number | null,
+  ctlAtTest: number | null,
+): "up" | "flat" | "down" | null {
+  if (currentCtl == null || ctlAtTest == null) return null;
+  const delta = ctlAtTest - currentCtl;
+  if (Math.abs(delta) < 1) return "flat";
+  return delta >= 1 ? "up" : "down";
+}

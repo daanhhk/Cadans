@@ -10,6 +10,7 @@ import {
   niveauProgressie_,
   setGewichtProvider,
   tssPerHourRecent_,
+  weeklyHoursRecent_,
 } from "@cadans/engine";
 import type {
   ActivitiesResponse,
@@ -149,6 +150,9 @@ export function Niveau() {
         settings?.doelDuur ?? null,
         todayIso(),
       ) as number | null,
+      // Slider-default = echt recent weekvolume (zelfde 42d-venster als tssPerHour); GAS-parity
+      // Script.html:1672-1675 (weeklyHoursRecent). null → de component valt terug op 8.
+      weeklyHoursDefault: weeklyHoursRecent_(rows, 42) as number | null,
     };
 
     return { serie, eftp, wkg: snap.wkg, projectie };

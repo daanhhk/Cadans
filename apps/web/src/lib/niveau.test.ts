@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { ActValuesRow } from "./activities";
-import { maandLabel, tierProgress, weekTss, wkgSince } from "./niveau";
+import {
+  maandLabel,
+  projectionDirection,
+  tierProgress,
+  weekTss,
+  wkgSince,
+} from "./niveau";
 
 function act(dateISO: string, tss: number): ActValuesRow {
   const [y, m, d] = dateISO.split("-").map(Number);
@@ -85,5 +91,28 @@ describe("maandLabel", () => {
   it("yyyy-MM → mmm 'yy", () => {
     expect(maandLabel("2024-06")).toBe("jun '24");
     expect(maandLabel("2026-12")).toBe("dec '26");
+  });
+});
+
+describe("projectionDirection", () => {
+  it("ctlAtTest ruim boven nu (≥ +1) → 'up'", () => {
+    expect(projectionDirection(50, 55)).toBe("up");
+    expect(projectionDirection(50, 51)).toBe("up"); // exact +1 telt als up
+  });
+  it("delta 0 → 'flat'", () => {
+    expect(projectionDirection(50, 50)).toBe("flat");
+  });
+  it("delta net onder 1 → 'flat'", () => {
+    expect(projectionDirection(50, 50.9)).toBe("flat");
+    expect(projectionDirection(50, 49.2)).toBe("flat");
+  });
+  it("ctlAtTest ruim onder nu (≤ −1) → 'down'", () => {
+    expect(projectionDirection(50, 45)).toBe("down");
+    expect(projectionDirection(50, 49)).toBe("down"); // exact −1 telt als down
+  });
+  it("een van beide null → null", () => {
+    expect(projectionDirection(null, 55)).toBeNull();
+    expect(projectionDirection(50, null)).toBeNull();
+    expect(projectionDirection(null, null)).toBeNull();
   });
 });

@@ -6,6 +6,7 @@ import {
 } from "@cadans/engine";
 import { useId, useMemo, useState } from "react";
 import { nlDec1, nlInt } from "../../lib/format";
+import { projectionDirection } from "../../lib/niveau";
 import { Card, Num, Overline } from "../ui";
 
 // DoelProjectie [Fase 2 · Visie] — natgetrokken uit design/src/niveau.jsx DoelProjectie.
@@ -36,6 +37,8 @@ export interface DoelProjectieProps {
   currentFtp: number | null;
   gewicht: number | null;
   testWeken: number | null;
+  /** Recent weekvolume (uren) → slider-default; null → val terug op 8. GAS-parity. */
+  weeklyHoursDefault: number | null;
 }
 
 type FtpBand = {
@@ -172,17 +175,25 @@ function ProjectionChart({
   plateau,
   targetCtl,
   weeks,
+  isTest,
+  testWeken,
 }: {
   currentCtl: number;
   plateau: number;
   targetCtl: number;
   weeks: number | null;
+  isTest: boolean;
+  testWeken: number | null;
 }) {
   const padT = 12;
   const padB = 24;
   const padL = 4;
   const padR = 6;
-  const levels = [currentCtl, plateau, targetCtl];
+  // y-schaal: in test-modus telt het duurdoel NIET mee (GAS Script.html:1568-1596) — de schaal
+  // loopt tussen huidig CTL en het plateau, niet naar een (mogelijk onbereikbaar) duurdoel.
+  const levels = isTest
+    ? [currentCtl, plateau]
+    : [currentCtl, plateau, targetCtl];
   const lo = Math.max(0, Math.min(...levels) - 4);
   const hi = Math.max(...levels) + 4;
   const X = (t: number) => padL + (t / WEEKS) * (CW - padL - padR);
@@ -199,7 +210,15 @@ function ProjectionChart({
   const area = ramp.length
     ? `${line} L${X(WEEKS).toFixed(1)} ${(CH - padB).toFixed(1)} L${X(0).toFixed(1)} ${(CH - padB).toFixed(1)} Z`
     : "";
-  const readyX = weeks != null && weeks <= WEEKS ? X(weeks) : null;
+  const readyX = !isTest && weeks != null && weeks <= WEEKS ? X(weeks) : null;
+  // test-modus: markeer de testdag (x = testWeken, alleen als ≤ 16 wkn in beeld) op de ramp.
+  const testCtl =
+    isTest && testWeken != null && testWeken <= WEEKS
+      ? (ctlAtWeek_(currentCtl, plateau, testWeken) as number | null)
+      : null;
+  const testX =
+    isTest && testWeken != null && testWeken <= WEEKS ? X(testWeken) : null;
+  const testY = testCtl != null ? Y(testCtl) : null;
   return (
     <svg
       viewBox={`0 0 ${CW} ${CH}`}
@@ -217,26 +236,30 @@ function ProjectionChart({
           <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
         </linearGradient>
       </defs>
-      {/* doel-lijn */}
-      <line
-        x1={padL}
-        x2={CW - padR}
-        y1={Y(targetCtl)}
-        y2={Y(targetCtl)}
-        stroke="var(--goal-target-line)"
-        strokeWidth="1.5"
-        strokeDasharray="5 4"
-      />
-      <text
-        x={CW - padR}
-        y={Y(targetCtl) - 5}
-        textAnchor="end"
-        fill="var(--text-secondary)"
-        fontSize="10"
-        fontFamily="var(--font-num)"
-      >
-        duurdoel {nlInt(targetCtl)}
-      </text>
+      {/* doel-lijn + label — NIET in test-modus (GAS toont daar geen duurdoel). */}
+      {!isTest && (
+        <>
+          <line
+            x1={padL}
+            x2={CW - padR}
+            y1={Y(targetCtl)}
+            y2={Y(targetCtl)}
+            stroke="var(--goal-target-line)"
+            strokeWidth="1.5"
+            strokeDasharray="5 4"
+          />
+          <text
+            x={CW - padR}
+            y={Y(targetCtl) - 5}
+            textAnchor="end"
+            fill="var(--text-secondary)"
+            fontSize="10"
+            fontFamily="var(--font-num)"
+          >
+            duurdoel {nlInt(targetCtl)}
+          </text>
+        </>
+      )}
       {/* plafond (plateau) */}
       <line
         x1={padL}
@@ -270,6 +293,7 @@ function ProjectionChart({
         />
       )}
       <circle cx={X(0)} cy={Y(currentCtl)} r="3.5" fill="var(--text-primary)" />
+      {/* ready-marker (duurdoel bereikt) — NIET in test-modus. */}
       {readyX != null && (
         <g>
           <line
@@ -288,6 +312,38 @@ function ProjectionChart({
             stroke="var(--bg-surface)"
             strokeWidth="2"
           />
+        </g>
+      )}
+      {/* testdag-marker — alleen in test-modus (verticale streep + dot op de ramp + label). */}
+      {testX != null && testY != null && (
+        <g>
+          <line
+            x1={testX}
+            x2={testX}
+            y1={padT}
+            y2={CH - padB}
+            stroke="var(--accent)"
+            strokeWidth="1.5"
+            strokeDasharray="3 3"
+          />
+          <circle
+            cx={testX}
+            cy={testY}
+            r="5"
+            fill="var(--accent)"
+            stroke="var(--bg-surface)"
+            strokeWidth="2"
+          />
+          <text
+            x={Math.min(CW - padR - 2, testX + 6)}
+            y={padT + 8}
+            textAnchor="start"
+            fill="var(--accent)"
+            fontSize="9.5"
+            fontFamily="var(--font-num)"
+          >
+            testdag
+          </text>
         </g>
       )}
       {[0, 4, 8, 12, 16].map((t) => (
@@ -318,10 +374,25 @@ export function DoelProjectie({
   currentFtp,
   gewicht,
   testWeken,
+  weeklyHoursDefault,
 }: DoelProjectieProps) {
-  const [hours, setHours] = useState(8);
+  // Slider-default = echt recent weekvolume (afgerond), geclampt op de slider-range 4..14; GAS-parity
+  // Script.html:1673-1675. null → val terug op 8.
+  const [hours, setHours] = useState(() =>
+    Math.min(
+      14,
+      Math.max(
+        4,
+        weeklyHoursDefault != null ? Math.round(weeklyHoursDefault) : 8,
+      ),
+    ),
+  );
   const [assumOpen, setAssumOpen] = useState(false);
   const assumId = useId();
+
+  // Test-modus: doel = een FTP-test (projectieMode 'test') mét een bekende testdatum (testWeken).
+  // GAS Script.html:1562 + :1617.
+  const isTest = projectieMode === "test" && testWeken != null;
 
   const proj = useMemo(() => {
     if (currentCtl == null || targetCtl == null || !tssPerHour) return null;
@@ -338,14 +409,33 @@ export function DoelProjectie({
       weeks != null && weeksPlus2 != null
         ? Math.max(0, Math.round(weeks - weeksPlus2))
         : null;
+    // Test-modus: het CTL op de testdag (GAS ctlAtWeek_) + een band die daar op is verankerd
+    // (i.p.v. op het plateau). Buiten test-modus is ctlAtTest null en telt de plateau-band.
+    const ctlAtTest = isTest
+      ? (ctlAtWeek_(currentCtl, plateau, testWeken) as number | null)
+      : null;
     const band = ftpBandFromProjection_(
       currentFtp,
       currentCtl,
-      plateau,
+      isTest ? ctlAtTest : plateau,
       gewicht,
     ) as FtpBand;
-    return { plateau, weeks, sooner, band };
-  }, [hours, currentCtl, targetCtl, tssPerHour, currentFtp, gewicht]);
+    return { plateau, weeks, sooner, band, ctlAtTest };
+  }, [
+    hours,
+    currentCtl,
+    targetCtl,
+    tssPerHour,
+    currentFtp,
+    gewicht,
+    isTest,
+    testWeken,
+  ]);
+
+  // Mensentaal-richting (test-modus): bouwt de gebruiker fitheid op / vast / af richting de test?
+  const direction = proj
+    ? projectionDirection(currentCtl, proj.ctlAtTest)
+    : null;
 
   const horizonLabel =
     projectieMode === "test" && testWeken != null
@@ -379,21 +469,24 @@ export function DoelProjectie({
         <SoonTag>Visie</SoonTag>
       </div>
 
-      {/* doel-gap */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "var(--s-3)",
-          marginTop: "var(--s-4)",
-        }}
-      >
-        {dims.map((d) => (
-          <GapRow key={d.key} dim={d} />
-        ))}
-      </div>
+      {/* doel-gap — GAS onderdrukt de gap-rijen + callout in test-modus (Script.html:1700-1702):
+          een FTP-test is een meetmoment, geen doel-met-tekorten. */}
+      {!isTest && (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "var(--s-3)",
+            marginTop: "var(--s-4)",
+          }}
+        >
+          {dims.map((d) => (
+            <GapRow key={d.key} dim={d} />
+          ))}
+        </div>
+      )}
 
-      {dims.length > 0 && (
+      {!isTest && dims.length > 0 && (
         <div
           style={{
             marginTop: "var(--s-4)",
@@ -534,79 +627,126 @@ export function DoelProjectie({
                   plateau={proj.plateau}
                   targetCtl={targetCtl}
                   weeks={proj.weeks}
+                  isTest={isTest}
+                  testWeken={testWeken}
                 />
               )}
             </div>
 
-            {/* readout */}
+            {/* readout — in test-modus mensentaal (BEWUSTE CLIENT-ONLY DIVERGENTIE t.o.v. GAS, dat
+                "Verwachte fitheid op de testdag: ~X CTL" + een warn toont): CTL is jargon en de
+                RICHTING (opbouwen/vasthouden/afbouwen) is de kernvraag. Geen CTL-getal in de copy.
+                "down" → warn-styling; "up"/"flat" → neutrale styling. */}
             <div
               style={{
                 marginTop: "var(--s-3)",
-                background:
-                  proj.weeks != null ? "var(--bg-sunken)" : "var(--warn-soft)",
-                border: `1px solid ${proj.weeks != null ? "var(--border-subtle)" : "color-mix(in srgb, var(--warn) 35%, transparent)"}`,
+                background: (isTest ? direction === "down" : proj.weeks == null)
+                  ? "var(--warn-soft)"
+                  : "var(--bg-sunken)",
+                border: `1px solid ${
+                  (isTest ? direction === "down" : proj.weeks == null)
+                    ? "color-mix(in srgb, var(--warn) 35%, transparent)"
+                    : "var(--border-subtle)"
+                }`,
                 borderRadius: "var(--r-md)",
                 padding: "11px 13px",
               }}
             >
-              {proj.weeks != null ? (
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "baseline",
-                    gap: "var(--s-2)",
-                  }}
-                >
-                  <span
+              {isTest ? (
+                <>
+                  <div
                     style={{
                       fontFamily: "var(--font-sans)",
                       fontSize: "var(--fs-label)",
-                      color: "var(--text-secondary)",
+                      fontWeight: 600,
+                      color: "var(--text-primary)",
                     }}
                   >
-                    Duurdoel bereikt over
-                  </span>
-                  <Num size="var(--fs-num-sm)" color="var(--good)">
-                    ~{Math.round(proj.weeks)}
-                  </Num>
-                  <span
-                    style={{
-                      fontFamily: "var(--font-sans)",
-                      fontSize: "var(--fs-label)",
-                      color: "var(--text-secondary)",
-                    }}
-                  >
-                    weken
-                  </span>
-                </div>
+                    FTP-test over ~{testWeken}{" "}
+                    {testWeken === 1 ? "week" : "weken"}
+                  </div>
+                  {direction && (
+                    <div
+                      style={{
+                        fontFamily: "var(--font-sans)",
+                        fontSize: "var(--fs-label)",
+                        color: "var(--text-secondary)",
+                        lineHeight: "var(--lh-body)",
+                        marginTop: "var(--s-2)",
+                      }}
+                    >
+                      {direction === "up"
+                        ? `Bij ${hours}u/week bouw je fitheid op richting de test.`
+                        : direction === "flat"
+                          ? `Bij ${hours}u/week houd je je fitheid vast — je gaat de test in op je huidige niveau.`
+                          : `Bij ${hours}u/week zakt je fitheid richting de test — je gaat de test in onder je huidige niveau.`}
+                    </div>
+                  )}
+                </>
               ) : (
-                <span
-                  style={{
-                    fontFamily: "var(--font-sans)",
-                    fontSize: "var(--fs-label)",
-                    color: "var(--text-secondary)",
-                    lineHeight: "var(--lh-body)",
-                  }}
-                >
-                  Bij {hours}u/week blijft je fitheid-plafond onder je duurdoel
-                  — zo niet haalbaar. Verhoog het volume.
-                </span>
-              )}
-              {proj.weeks != null && proj.sooner != null && proj.sooner > 0 && (
-                <div
-                  style={{
-                    fontFamily: "var(--font-sans)",
-                    fontSize: "var(--fs-caption)",
-                    color: "var(--text-muted)",
-                    marginTop: "var(--s-2)",
-                  }}
-                >
-                  +2u/week ≈{" "}
-                  <strong style={{ color: "var(--accent)" }}>
-                    {proj.sooner} {proj.sooner === 1 ? "week" : "weken"}
-                  </strong>{" "}
-                  eerder klaar.
-                </div>
+                <>
+                  {proj.weeks != null ? (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "baseline",
+                        gap: "var(--s-2)",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontFamily: "var(--font-sans)",
+                          fontSize: "var(--fs-label)",
+                          color: "var(--text-secondary)",
+                        }}
+                      >
+                        Duurdoel bereikt over
+                      </span>
+                      <Num size="var(--fs-num-sm)" color="var(--good)">
+                        ~{Math.round(proj.weeks)}
+                      </Num>
+                      <span
+                        style={{
+                          fontFamily: "var(--font-sans)",
+                          fontSize: "var(--fs-label)",
+                          color: "var(--text-secondary)",
+                        }}
+                      >
+                        weken
+                      </span>
+                    </div>
+                  ) : (
+                    <span
+                      style={{
+                        fontFamily: "var(--font-sans)",
+                        fontSize: "var(--fs-label)",
+                        color: "var(--text-secondary)",
+                        lineHeight: "var(--lh-body)",
+                      }}
+                    >
+                      Bij {hours}u/week blijft je fitheid-plafond onder je
+                      duurdoel — zo niet haalbaar. Verhoog het volume.
+                    </span>
+                  )}
+                  {proj.weeks != null &&
+                    proj.sooner != null &&
+                    proj.sooner > 0 && (
+                      <div
+                        style={{
+                          fontFamily: "var(--font-sans)",
+                          fontSize: "var(--fs-caption)",
+                          color: "var(--text-muted)",
+                          marginTop: "var(--s-2)",
+                        }}
+                      >
+                        +2u/week ≈{" "}
+                        <strong style={{ color: "var(--accent)" }}>
+                          {proj.sooner} {proj.sooner === 1 ? "week" : "weken"}
+                        </strong>{" "}
+                        eerder klaar.
+                      </div>
+                    )}
+                </>
               )}
             </div>
 
@@ -636,7 +776,9 @@ export function DoelProjectie({
                       color: "var(--text-secondary)",
                     }}
                   >
-                    Geschat FTP-effect
+                    {isTest
+                      ? "Verwachte FTP op de testdag"
+                      : "Geschat FTP-effect"}
                   </span>
                   <span
                     style={{
@@ -679,18 +821,23 @@ export function DoelProjectie({
                     <Num size="var(--fs-num-sm)" color="var(--info)">
                       {proj.band.lowW}
                     </Num>
-                    <span
-                      style={{
-                        fontFamily: "var(--font-sans)",
-                        fontSize: "var(--fs-caption)",
-                        color: "var(--info)",
-                      }}
-                    >
-                      –
-                    </span>
-                    <Num size="var(--fs-num-sm)" color="var(--info)">
-                      {proj.band.highW}
-                    </Num>
+                    {/* collapse "N–N W" → "N W" bij een puntschatting (low === high). */}
+                    {proj.band.lowW !== proj.band.highW && (
+                      <>
+                        <span
+                          style={{
+                            fontFamily: "var(--font-sans)",
+                            fontSize: "var(--fs-caption)",
+                            color: "var(--info)",
+                          }}
+                        >
+                          –
+                        </span>
+                        <Num size="var(--fs-num-sm)" color="var(--info)">
+                          {proj.band.highW}
+                        </Num>
+                      </>
+                    )}
                     <span
                       style={{
                         fontFamily: "var(--font-sans)",
