@@ -242,3 +242,66 @@ describe("assignWorkouts redenCode ↔ reden-string koppeling (per tak)", () => 
     expect(x.redenCode).toBe("demote_wellness_light");
   });
 });
+
+// 2a.1: de vier WEEK-ALLOCATOR-takken (quality/longride/longride_efforts/endurance) vereisen de
+// allocator ACTIEF — anders dan de inerte-datum-units hierboven. Trigger: macroFase ∈ Base/Build/Peak
+// + eligible dagen (allocateQualityWeek_'s eligible_ eist datum ≥ ambient `new Date()`). Daarom
+// VER-toekomstige datums (2035) → altijd eligible, ongeacht wanneer CI draait → deterministisch.
+// Dag 0 is strikt de langste → krijgt de lange-rit-rol en wordt als eerste verwerkt (lastHardDate
+// nog null → geen avoid-consecutive-hard-downgrade op die dag).
+describe("assignWorkouts redenCode ↔ reden (week-allocator ACTIEF)", () => {
+  // 6 vrij-dagen; dag 0 = 240 min (langste → lange rit), rest 60 min.
+  function allocWeek(): GDay[] {
+    return [
+      d("2035-03-05", "vrij", 0, 240),
+      d("2035-03-06", "vrij", 1, 60),
+      d("2035-03-07", "vrij", 2, 60),
+      d("2035-03-08", "vrij", 3, 60),
+      d("2035-03-09", "vrij", 4, 60),
+      d("2035-03-10", "vrij", 5, 60),
+    ];
+  }
+
+  it("FTP/Base plaatst long_ride + endurance + key_session (quality via debt-preclaim)", () => {
+    // debt high forceert een quality-pre-claim (sweet_spot) → deterministische key_session-plaatsing;
+    // FTP heeft effortsInLangeRit:false → de lange rit = rol 'longride' (long_ride).
+    const days = allocWeek();
+    run(days, { macroFase: "Base", debt: { low: 0, high: 40, anaerobic: 0 } });
+
+    expect(
+      days.some(
+        (x) =>
+          x.reden === "Lange duurrit — week-plaatsing" &&
+          x.redenCode === "long_ride",
+      ),
+    ).toBe(true);
+    expect(
+      days.some(
+        (x) =>
+          x.reden === "Duurrit — week-plaatsing" && x.redenCode === "endurance",
+      ),
+    ).toBe(true);
+    expect(
+      days.some(
+        (x) =>
+          x.reden === "Sleutelsessie · FTP — fase Base (week-plaatsing)" &&
+          x.redenCode === "key_session",
+      ),
+    ).toBe(true);
+  });
+
+  it("Beklimmingen/Build plaatst long_with_efforts (lange rit met efforts)", () => {
+    // Beklimmingen-profiel heeft effortsInLangeRit:true → in Build wordt de lange rit rol
+    // 'longride_efforts' (combo_long_with_efforts) → reden "Lange rit met efforts — week-plaatsing".
+    const days = allocWeek();
+    run(days, { doel: "Beklimmingen", macroFase: "Build" });
+
+    expect(
+      days.some(
+        (x) =>
+          x.reden === "Lange rit met efforts — week-plaatsing" &&
+          x.redenCode === "long_with_efforts",
+      ),
+    ).toBe(true);
+  });
+});

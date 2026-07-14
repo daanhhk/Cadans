@@ -636,9 +636,16 @@ export function assignWorkouts(
             : qp.role === "longride"
               ? "Lange duurrit — week-plaatsing"
               : "Duurrit — week-plaatsing";
-      // Alleen de quality-plaatsing ("Sleutelsessie · …") heeft een code; de longride/
-      // endurance-week-plaatsing-varianten blijven (bewust) codeloos → droge reden-fallback.
-      redenCode = qp.role === "quality" ? "key_session" : null;
+      // 2a.1: elke week-allocator-rol krijgt een coach-narrative-code (hergebruik key_session/
+      // long_with_efforts; long_ride/endurance nieuw) → geen droge reden meer op plaatsing-dagen.
+      redenCode =
+        qp.role === "quality"
+          ? "key_session"
+          : qp.role === "longride_efforts"
+            ? "long_with_efforts"
+            : qp.role === "longride"
+              ? "long_ride"
+              : "endurance";
     } else if (d.type === "pendel") {
       type =
         isTripEvent && (macroFase === "Build" || macroFase === "Peak")

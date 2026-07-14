@@ -74,6 +74,20 @@ const POOLS: Pools = {
       "Lange rit met blokken: je pakt je volume én houdt de intensiteit erin. Slim gecombineerd.",
     ],
   },
+  long_ride: {
+    warm: [
+      "Je lange duurrit van de week. Rustig tempo, veel kilometers — dit is de basis waarop al je vorm rust.",
+      "Vandaag pak je de lange rit. Ontspannen doorrijden; deze uren bouwen je aerobe motor.",
+      "Tijd voor volume. Een lange, rustige rit die je uithoudingsvermogen echt vooruit helpt.",
+    ],
+  },
+  endurance: {
+    warm: [
+      "Een rustige duurrit vandaag — de aerobe basis waar alles op voortbouwt. Lekker doorrollen op tempo.",
+      "Vandaag draait het om duurvolume. Rustig aan, gewoon kilometers maken; dit is de motor onder je conditie.",
+      "Duurrit op het programma. Ontspannen tempo, grote winst op de lange termijn — de basis van je fitheid.",
+    ],
+  },
   easy_no_key: {
     warm: [
       "Een rustige dag zonder zware prikkel — precies goed. Niet elke rit hoeft te knallen.",
