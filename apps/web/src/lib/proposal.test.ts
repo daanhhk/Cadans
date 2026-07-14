@@ -553,6 +553,107 @@ describe("buildWeekProposal", () => {
   });
 });
 
+describe("weekgen — actual-gedreven avoid-consecutive-hard + debt-exceptie", () => {
+  // READ-ONLY VERIFICATIE (test-only): bewijst dat een GEREDEN afwijking (harde actual,
+  // idx7-IF ≥ 0,85) via recentHardDate_ de eerstvolgende harde plandag verlaagt (A), en dat
+  // debt-geforceerde compensatie (debtForced) daarvan is uitgezonderd (B). Beide end-to-end via
+  // buildWeekProposal: dat roept recentHardDate_ + zoneDebt_ + assignWorkouts intern aan, dus de
+  // hele actual→recentHardDate_→guard-keten wordt geoefend. Fixture-datums liggen in het verleden
+  // (2026-03) → de ambient-gedateerde week-allocator (allocateQualityWeek_) is inert, zodat de
+  // per-dag-takken deterministisch sturen (zelfde regime als de bestaande tests).
+
+  // Gedeelde debt-bron: een voltooide in-week dag met groot high-INTENT en geen actual →
+  // zoneDebt_ high ≈ 60 (> DEBT_FORCE_HIGH_MIN 30). Stuurt de vrij-dag naar sweet_spot (HARD, NIET
+  // debtForced) én forceert op de weekend-dag combo_long_with_efforts (debtForced).
+  const DEBT_PLANS = [
+    { datum: "2026-03-09", intent: { low: 0, high: 60, anaerobic: 0 } },
+  ];
+  // Harde actual: IF 0,90 (≥ 0,85) met enkel low-zones (Z1) → telt als "hard" via idx7, zonder de
+  // high-debt af te trekken.
+  const hardZ1 = JSON.stringify([{ id: "Z1", secs: 3000 }]);
+
+  it("A — harde ACTUAL de dag ervoor → eerstvolgende (anders harde) dag gedowngraded naar long_z2", () => {
+    // ma 03-09 = debt-bron (gedaan). di 03-10 = harde ACTUAL. wo 03-11 = TODAY, vrij → zou via de
+    // high-debt sweet_spot (HARD) krijgen, maar 03-10 was hard → downgrade naar long_z2.
+    const week: PlannerDay[] = [
+      pday("2026-03-09", { dag: "ma", gedaan: true }),
+      pday("2026-03-10", { dag: "di", gedaan: true }),
+      pday("2026-03-11", { dag: "wo", dagtype: "vrij" }),
+      pday("2026-03-12", {
+        dag: "do",
+        train: false,
+        dagtype: "recovery",
+        minuten: null,
+      }),
+    ];
+
+    // Controle: identieke week, maar de 03-10 actual is NIET hard (IF 0,60) → recentHardDate null →
+    // geen downgrade → 03-11 blijft de harde debt-keuze sweet_spot. Bewijst dat de harde ACTUAL de
+    // oorzaak van de downgrade is (niet een andere tak).
+    const control = buildWeekProposal({
+      settings: settings(),
+      plannerDays: week,
+      events: EV_FAR,
+      wellness: WELL_OK,
+      activities: [act("2026-03-10", 0.6, hardZ1)],
+      weekplans: DEBT_PLANS,
+      rpe: [],
+      todayISO: "2026-03-11",
+    });
+    expect(control.days[2].datum).toBe("2026-03-11");
+    expect(control.days[2].voorgesteldType).toBe("sweet_spot");
+    expect(control.days[2].reden ?? "").not.toContain("dag na een zware dag");
+
+    const r = buildWeekProposal({
+      settings: settings(),
+      plannerDays: week,
+      events: EV_FAR,
+      wellness: WELL_OK,
+      activities: [act("2026-03-10", 0.9, hardZ1)],
+      weekplans: DEBT_PLANS,
+      rpe: [],
+      todayISO: "2026-03-11",
+    });
+    expect(r.days[2].datum).toBe("2026-03-11");
+    expect(r.days[2].voorgesteldType).toBe("long_z2");
+    expect(r.days[2].reden ?? "").toContain("dag na een zware dag");
+  });
+
+  it("B — debt-geforceerde compensatie mag TOCH hard blijven de dag na een harde dag (exceptie)", () => {
+    // ma 03-09 = debt-bron (gedaan). vr 03-13 = harde ACTUAL. za 03-14 = TODAY, weekend → high-debt
+    // > 30 forceert combo_long_with_efforts (debtForced) → guard OVERGESLAGEN ondanks 03-13 hard.
+    const week: PlannerDay[] = [
+      pday("2026-03-09", { dag: "ma", gedaan: true }),
+      pday("2026-03-13", { dag: "vr", gedaan: true }),
+      pday("2026-03-14", { dag: "za", dagtype: "weekend", minuten: 120 }),
+      pday("2026-03-15", {
+        dag: "zo",
+        train: false,
+        dagtype: "recovery",
+        minuten: null,
+      }),
+    ];
+    const r = buildWeekProposal({
+      settings: settings(),
+      plannerDays: week,
+      events: EV_FAR,
+      wellness: WELL_OK,
+      activities: [act("2026-03-13", 0.9, hardZ1)],
+      weekplans: DEBT_PLANS,
+      rpe: [],
+      todayISO: "2026-03-14",
+    });
+    // za 03-14 = index 2. Zelfde prev-dag-hard-conditie als A (recentHardDate 03-13), maar:
+    expect(r.days[2].datum).toBe("2026-03-14");
+    // (1) tóch een HARDE type (combo_long_with_efforts, zones incl. high), NIET long_z2;
+    expect(r.days[2].voorgesteldType).toBe("combo_long_with_efforts");
+    expect(r.days[2].sessions[0]?.zones.includes("high")).toBe(true);
+    // (2) reden = debt-inhaalsessie, NIET de downgrade-reden → 2 harde dagen op rij toegestaan.
+    expect(r.days[2].reden ?? "").toContain("Inhaalsessie");
+    expect(r.days[2].reden ?? "").not.toContain("dag na een zware dag");
+  });
+});
+
 describe("planModusLabel (plan-mode-pill, planModeLabel_-mirror)", () => {
   it("doel 'Onderhoud' → 'Onderhoud' (wint, ook event-driven)", () => {
     expect(planModusLabel(settings({ doel: "Onderhoud" }), false)).toBe(
