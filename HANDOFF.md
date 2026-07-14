@@ -16,7 +16,7 @@ live tot cutover.
 (remote-D1 + deploy).
 
 **VLOEREN** (mogen niet regresseren; NIET in prompts hardcoden): engine-selftest-assert-count **957** ·
-vitest-totaal **254**.
+vitest-totaal **268**.
 
 ### BRONHIERARCHIE VOOR PARITY (werkwijze — vast)
 - **daanhhk/training is PUBLIC + BEVROREN op `3e8090a`.** De chat leest de GAS-bron DIRECT via
@@ -54,6 +54,45 @@ Basic-Auth-gated (`/api/health` → 401 + `WWW-Authenticate: Basic`); functionel
 - **FASE B recon-doc:** `docs/FASE-B-OVERRIDE-ADAPTATIE-RECON.md` — override + picker + B4-
   adaptatie in kaart. KERN: de engine-kern is al geport; ontbreekt = client-orkestratie + UI;
   de override-backend is de gedeelde B3/B4-fundering. Bevat de port-correctheid-caveat.
+
+**FASE B — laag-1 + readiness-koers GEDEPLOYD; laag-2a op main (niet gedeployd).** Prod Worker Version is nu
+`a4f57c19-d4fc-4b08-99ea-f70b7bcf63fd` (was `171f79fc`); de gedeployde inhoud = main t/m `ae00730` (bundelt
+`bbb9767` + `ae00730`). GEEN D1-migratie (`day_state.override_json` bestond al remote). **LET OP — prod ≠ main HEAD:**
+`b23bdd7` (laag-2a) staat op main + CI-groen, maar is NIET gedeployd (produceert alleen data/makeupAdaptatie, geen
+UI → geen zichtbaar effect tot laag-3).
+- **laag-1 (override-backend + D2) — KLAAR + gedeployd** (`bbb9767`): day-override-backend
+  (`writeOverride`/`readOverrides` + GET/PUT `/api/overrides`, spiegelt de A2-disposition-backend; non-clobber = zet
+  alleen `override_json`) + override-DTO (`packages/shared/src/override.ts`: `DayOverride =
+  LibraryOverride|FreeOverride`, `OverrideEntry`) + D2 `buildWeekProposal`-wiring (plannbare dag mét override →
+  `buildOverrideWorkout_` i.p.v. de coach-tak → telt mee in de WeekLoad). `day_state.override_json` bestond al, geen
+  migratie.
+- **Readiness-koers (band-gedreven week-demote) — KLAAR + gedeployd** (`ae00730`): het week-plan-demote-signaal leunt
+  nu op de HOLISTISCHE readiness-band (`getReadinessScore_` — weegt vorm/HRV/slaap/check-in) i.p.v. de botte
+  `wellnessSignal_`-vlag. **BEWUSTE GAS-DIVERGENTIE, CLIENT-ONLY** (`buildWeekProposal` + `loadSchemaWeek`); engine
+  (`wellnessSignal_`/`getReadinessScore_`/`combineSignals_`/`assignWorkouts`) + de 957-selftest byte-parity. Mapping:
+  band ready→normal · caution→demote · rest→recovery; RPE telt nog mee (`combineSignals_`, zwaarste wint); band null
+  (te weinig data) → val terug op de botte wSig-vlag. VERVANGT de `b8b7ef9`-patch (single-bad-night
+  demote-verzachting, uit de code verwijderd; commit blijft in historie). Reden: banner-band en plan draaiden op
+  overlappende data maar verschillende logica; nu stuurt dezelfde readiness beide, en de ochtend-check-in is de hendel.
+- **laag-2a (make-up-post-pass + per-dag coach + DTO-idempotentie) — KLAAR op main** (`b23bdd7`), CI-groen, **NIET
+  gedeployd** (geen UI → geen zichtbaar effect tot laag-3): make-up-adaptatie-post-pass (`applyMakeupAdaptations`,
+  byte-getrouwe spiegel van `WebApp.gs:1165-1185`, idempotent via `override.from`/`madeFrom`/`claimedTarget`; target =
+  strikt ná bron+vandaag, geen override/rit, state planned/rest/today, eerste-match) + per-dag coach-feedback voor
+  done ÉN gemist (`buildDoneCompare` gesplitst in `buildDoneCompareFull` + wrapper; `missedCoach_` voor gemist via
+  `coachFeedback_` actual=null/isMissed=true) + override-DTO-idempotentie-velden (`from?`/`src?`/`label?` —
+  engine-genegeerd, round-trippen in `override_json`) + bedrading (`deriveSchemaView` krijgt
+  overrides/readiness/settings; `getTrainingLibrary_(settings)` client-direct, ontwerpkeuze D1).
+- **laag-2b (today-Verlicht-overlay) — GESCHRAPT:** gesubsumeerd door de band-gedreven week-demote (die verzacht
+  vandaag al; `readinessAdjust_` op de al-verzachte dag hit z'n eigen "toType===type → keep"-guard → de overlay vuurt
+  nooit). Als later een BEWUSTE today-hendel gewenst is, is dat de uitgestelde blast-radius-herziening (week-demote
+  vandaag NIET auto-raken, Verlicht als user-keuze) — zie §Geparkeerde debts.
+- **laag-3 (make-up-UI) — VOLGENDE, gesplitst:**
+  - **laag-3a:** frame-10 rijke gemist-kaart (`GemistDetail`, spiegel `gemistDetailHtml_` `Script.html:591`) + de
+    make-up-knop "Plan deze aanpassing"/"✓ ingepland" (op missed ÉN done-afgeweken, spiegel
+    `coachAdaptBtn_`/`planAdaptatie_`) + `chipLabel` toevoegen aan de 2a-coach-exposure. Maakt de make-up zichtbaar +
+    schrijfbaar (target toont de workout via D2, bron toont "✓ ingepland"). NOG NIET omkeerbaar.
+  - **laag-3b:** `OverriddenDetail` + "Terug naar voorstel" op override-dagen (spiegel `overrideKaart_`) →
+    omkeerbaarheid + de gedeelde fundering voor de B3-picker.
 
 **FASE 1 (schema-flow zuivere vormgeving):** VOLLEDIG AF + visueel geverifieerd in `/preview`.
 
@@ -175,19 +214,23 @@ CI-groen, en **GEDEPLOYD** (prod Version `171f79fc`; zie het FASE A GEDEPLOYD-bl
 `FASE2-5-ZONES-RECON.md` (`6028cfd`, GECORRIGEERD → (a) CLIENT-ONLY — zie BRONHIERARCHIE). Het 4b- en het
 brok-2-recon waren rapport-only (geen doc).
 
-**FOCUS VOLGENDE CHAT:** FASE A (A1-A4 + B1) = **GEDEPLOYD & LIVE** (prod Version `171f79fc`). (1) ~~A2/A4 visuele
-check~~ → DOORGESCHOVEN naar de live-aankomende-week (verschijnt vanzelf op een vandaag-zonder-rit; zie het FASE A
-GEDEPLOYD-blok). (2) ~~FASE-A prod-deploy~~ = GEDAAN. → **(3) FASE B bouwen**: override-backend **laag-1 EERST**
-(mirror A2), dán B4-orkestratie + UI + **frame-10** (rijke gemist-kaart) — zie
-`docs/FASE-B-OVERRIDE-ADAPTATIE-RECON.md`. Start de B4-bouw met de gerichte **port-spot-check** (caveat in het
-recon-doc). Het echte A-event **Amstel Gold Race** = INGEVOERD op prod (geverifieerd in-browser).
+**FOCUS VOLGENDE CHAT:** FASE A = **GEDEPLOYD & LIVE**; FASE B **laag-1 + readiness-koers GEDEPLOYD** (prod Version
+`a4f57c19`), **laag-2a KLAAR op main** (niet gedeployd). (1) ~~A2/A4 visuele check~~ → DOORGESCHOVEN naar de
+live-aankomende-week (verschijnt vanzelf op een vandaag-zonder-rit). (2) ~~FASE-A prod-deploy~~ = GEDAAN.
+(3) ~~FASE B laag-1 override-backend (mirror A2) + readiness-band-koers~~ = GEDAAN + gedeployd. → **(4) FASE B laag-3
+bouwen** (make-up-UI, gesplitst 3a/3b — zie het FASE B-blok bovenaan Stand): 3a = frame-10 rijke gemist-kaart +
+make-up-knop (maakt de laag-2a make-up zichtbaar + schrijfbaar), dán 3b = `OverriddenDetail` + "Terug naar voorstel"
+(omkeerbaarheid + B3-picker-fundering) — zie `docs/FASE-B-OVERRIDE-ADAPTATIE-RECON.md`. Het echte A-event **Amstel
+Gold Race** = INGEVOERD op prod (geverifieerd in-browser).
 
 ### PARITY-FASERING (compact — vervangt een apart audit-doc; de volledige matrix is via de GAS-bron te reconen)
 - **FASE B (recon-first, deels engine + sign-off):** **B2 Trainingen-tab** (nu `<ComingSoon>`; GAS = volledige
   workout-bibliotheek categorie→variant→detail-slider→inplannen; deelt de override-machinerie) · **B3 "Andere
-  training kiezen"/day-override** (nu `SoonButton`; write-pad niet geport, raakt de planner) · **B4 coach-adaptatie
-  "Verlicht vandaag"** (readiness-gedreven sessie-verlichting, raakt engine-adaptatie). **Beschikbaarheid-editor =
-  DONE (B1).**
+  training kiezen"/day-override** (write-pad = de override-backend, nu **KLAAR + gedeployd** laag-1 `bbb9767`; de
+  UI-picker volgt op de laag-3b-fundering) · **B4 coach-adaptatie / make-up** (engine-post-pass + per-dag coach =
+  **KLAAR op main** laag-2a `b23bdd7`, nog niet gedeployd; de "Verlicht vandaag"-today-overlay is GESCHRAPT —
+  gesubsumeerd door de band-gedreven week-demote; make-up-UI = laag-3). **Beschikbaarheid-editor = DONE (B1).**
+  Werkende laag-indeling (laag-1/readiness/2a/2b/3) + status: zie het FASE B-blok bovenaan Stand.
 - **Ritdetails-drill-down (2d):** "Bekijk ritdetails ›" is nog een `SoonButton`; te bouwen = route (intervals
   activiteit-detail: 7-zone-TIZ + metrics + intervallen) + overlay-sheet. GEEN engine.
 - **FASE C:** Garmin-push (extern device-traject).
@@ -301,11 +344,12 @@ heeft → vervanging sloeg stil over).
 
 **Gate-vloeren (nooit onder; bron van waarheid — NOOIT hardcoden in een prompt):**
 engine-selftest `toBe(957)` (`packages/engine/src/selftest.test.ts:3668`, ongewijzigd) · vitest-totaal
-**254** (gegroeid: §5b `silhouetSegments` +5 → 214, 4b `presetHoursLabel` +3 → 217, brok 2 `planModusLabel`
+**268** (gegroeid: §5b `silhouetSegments` +5 → 214, 4b `presetHoursLabel` +3 → 217, brok 2 `planModusLabel`
 +4 → 221, brok 3 RUN 1 settings-round-trip +2 → 223, RUN 2 `isoWeekNumber`+`displayCoach`/`initials` +8 → 231,
 brok 4a RUN 1 events-write-tests +4 → 235, RUN 2 `eventsSummary` +5 → 240, brok 5 `actualZone5_` +3 → 243,
 A3 RUN 1 rpe-write-tests +4 → 247, A2 laag-1 disposition-write-tests +5 → 252, A2/A4 laag-2 gemist-precedentie
-+2 → 254). CI groen. Hard floors — niet regresseren.
++2 → 254; FASE B laag-1 override-backend + readiness-band-koers + laag-2a make-up/coach +14 → 268). CI groen.
+Hard floors — niet regresseren.
 
 **Fundament:** IBM Plex Sans (400/500/600) + Mono (500/600), self-hosted via `@fontsource`,
 offline-precached (`main.tsx`). Het UI-kader ligt vast in **`apps/web/docs/UI-KADER.md`**:
@@ -350,6 +394,10 @@ consumeren UITSLUITEND `--s-*/--fs-*/--lh-*/--r-*` (kleur was al gedisciplineerd
   (Algorithm.gs:662, Monday-based; NIET trailing-7). Lege week → "—".
 
 ### Geparkeerde debts (bewust, niet nu)
+- **Blast-radius-herziening (FASE B — benoemde kandidaat voor de "komende weken"-evaluatie):** de band-gedreven
+  week-demote raakt vandaag automatisch mee; een BEWUSTE today-hendel ("Verlicht vandaag" als user-keuze) vereist dat
+  de week-demote vandaag NIET auto-raakt (anders hit `readinessAdjust_` z'n "toType===type → keep"-guard en vuurt de
+  overlay nooit). Dit is waar de geschrapte laag-2b heropgevat zou worden. Zie het FASE B-blok bovenaan Stand.
 - **PeriodTimeline**: proportionele fase-breedtes + you-are-here-marker ontbreken (per-fase-weekduur
   zit niet in de engine-output); event-tags B/A; Volume-stat (geen CTL-/volume-target in de keten).
   Vereisen extra engine-threading.
@@ -593,6 +641,10 @@ Open schulden die bewust naar een latere fase zijn geschoven:
   **Gecorrigeerd (5.3c-ii):** de in `d8492b7` als "debt n / naamlek" gevlagde "[object Object]" was
   GÉÉN engine-residu — het was de apps/web `computeMacroPhase`-object-fallback in `proposal.ts` (moest
   `.fase`), gefixt in `34d10fe` + regressie-getest. Geen engine-debt.
+  **FASE B — BEWUSTE GAS-DIVERGENTIES (gelogd):** (1) band-gedreven week-plan-demote (`ae00730`) — CLIENT-ONLY, engine
+  + 957-selftest ongemoeid (het plan leunt op de holistische readiness-band i.p.v. de botte `wellnessSignal_`-vlag;
+  zie het FASE B-blok bovenaan Stand). (2) override-DTO draagt `from`/`src`/`label`-metadata (engine-genegeerd) voor
+  make-up-idempotentie + display; round-trippt in `override_json`.
 - **(o) 5.3c-ii live-Schema-cosmetica — OPGELOST (seed + focus-prettify).** De drie leaks op de live
   /dev-Schema zijn weg: (1) ~~"· null"~~ → `settings.doel='Ardennen-trip'` geseed; (2) ~~"0-0 bpm"~~ →
   `settings.lthr=178` geseed (watts klopten al, FTP 280); (3) ~~rauwe focus-bucket "low"/"high"/"anaerobic"~~
