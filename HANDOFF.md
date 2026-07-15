@@ -16,13 +16,21 @@ live tot cutover.
 (remote-D1 + deploy).
 
 **VLOEREN** (mogen niet regresseren; NIET in prompts hardcoden): engine-selftest-assert-count **957** ·
-vitest-totaal **310** (FASE 3a −4 dode make-up-tests → 300; Niveau test-modus +5 → 305; laag-3b override +5 → 310).
-_(Vorige stand: was 304 → daling naar 300 in FASE 3a, `schema.test.ts` 45 → 41; GEEN regressie.)_
+vitest-totaal **329** (groeipad na 310: B3 RUN 1 bibliotheek-laag +7 → 317; B3 RUN 2 `pickerState` +6 → 323; B2
+RUN 1 plannable-predicaten +6 → 329; B2 RUN 2 Trainingen-tab +0). Engine-selftest-assert-count **957 ONGEWIJZIGD**
+(engine niet aangeraakt in FASE B B3/B2). **De vloer-eenheid is het monorepo-brede `pnpm test`-totaal** (root
+`vitest run`) — NIET een per-package-slice; "web 186 / api 78" zijn slices bínnen die 329, geen vloer.
+_(Vorige stand: 304 → 300 in FASE 3a, `schema.test.ts` 45 → 41; GEEN regressie.)_
 
 ### BRONHIERARCHIE VOOR PARITY (werkwijze — vast)
 - **daanhhk/training is PUBLIC + BEVROREN op `3e8090a`.** De chat leest de GAS-bron DIRECT via
   `raw.githubusercontent.com/daanhhk/training/3e8090a/<pad>` — dat is de EERSTE reflex bij ELKE parity-vraag, niet
   een samenvatting.
+- **Claude Code leest de bevroren GAS-bron van SCHIJF — NOOIT via WebFetch.** De bevroren repo staat lokaal:
+  `C:\Users\daan\Projects\training`, HEAD `3e8090a`, READ-ONLY (identiek aan de gepinde raw-URL). Lees 'm met
+  `sed`/`grep`/Read van schijf. WebFetch geeft een LOSSY PARAFRASE terug en veroorzaakte deze reeks TWEE misreads
+  (slider "30-180" i.p.v. de echte `45`/`240`/`15`; een niet-bestaande view-naam `"cat"`). Beide zijn opgevangen,
+  maar de regel is nu vast.
 - De regel "de chat kan de repo niet lezen" geldt ALLEEN voor de LEVENDE lokale Cadans-repo (ongecommit werk → via
   Claude Code), NIET voor de bevroren GAS-bron.
 - **VORMGEVING-SPEC + HANDOFF = gepinde SAMENVATTING, geen vervanging.** Verifieer elke parity-claim tegen de bron;
@@ -56,12 +64,41 @@ Basic-Auth-gated (`/api/health` → 401 + `WWW-Authenticate: Basic`); functionel
   adaptatie in kaart. KERN: de engine-kern is al geport; ontbreekt = client-orkestratie + UI;
   de override-backend is de gedeelde B3/B4-fundering. Bevat de port-correctheid-caveat.
 
-**PROD LOOPT ACHTER OP MAIN.** main HEAD = `7060bfd` (FASE B **laag-3b**); prod draait nog Version
-`02b6abb9-fe02-4a00-bac0-db8253950b4b` = **main t/m `aeafcc9`** (de Niveau-fixes). **laag-3b (`7060bfd`) is NIET
-gedeployd** → deploy kan mee met B3 of los. Version-log deze reeks: `43ab5f03` (coach-narrative-reeks) → `479403a9`
-(FASE 3a+3b) → `02b6abb9` (Niveau test-modus + FTP-band). Remote D1 ONGEWIJZIGD t/m `0003_wise_sunset_bain.sql`
-(geen nieuwe migratie deze reeks). Basic-Auth-gate actief (`/api/health` → 401 + `WWW-Authenticate: Basic`);
-functionele round-trip in-browser door Daan.
+**PROD ACTUEEL — FASE B B3-picker + B2 Trainingen-tab DONE + GEDEPLOYD.** main HEAD = `7ead6b8`; prod draait
+Version `3e7a3189-7061-4ae6-9b0a-1ada0c5bcece` = **main t/m `7ead6b8`** (deze deploy bundelde laag-3b + de
+B3-picker + de B2 Trainingen-tab; prod liep tevoren achter op Version `02b6abb9` = main t/m `aeafcc9`). Version-log
+deze reeks: `43ab5f03` (coach-narrative-reeks) → `479403a9` (FASE 3a+3b) → `02b6abb9` (Niveau test-modus + FTP-band)
+→ `3e7a3189` (FASE B B3+B2). Remote D1 ONGEWIJZIGD t/m `0003_wise_sunset_bain.sql` (`d1 migrations list --remote`
+→ "No migrations to apply!"; B3/B2 raakten het schema niet). Basic-Auth-gate actief (`/api/health` → 401 +
+`WWW-Authenticate: Basic`); functionele round-trip op prod in-browser (hard refresh / incognito i.v.m. SW-cache)
+door Daan — OPENSTAAND.
+
+**FASE B — B3-picker + B2 Trainingen-tab (DONE + GEDEPLOYD in Version `3e7a3189`, prod = main t/m `7ead6b8`; gate +
+CI groen, telefoon-geverifieerd op de Vite-dev-server).**
+- **Commits:** `03804eb` (bibliotheek-laag + engine-preview), `0fac374` (picker-sheet + `pickerState`), `f48ed6b`
+  (gedeelde views + GAS-conform plannable-predicaat), `7ead6b8` (Trainingen-pagina).
+- **Architectuur:** `lib/library.ts` (getypeerde bibliotheek-index om de engine-`any` heen + `libraryOverride`/
+  `freeOverride` + `previewOverrideSession` + `isDayPlannable`/`nextPlannableDate`/`weekPlannedTypes` + `DUR_*`) ·
+  `lib/pickerState.ts` (gedeelde view-reducer, superset: B2 gebruikt `home`/`free` NIET, start-view `cats`) ·
+  `components/library/` (`BackHeader`/`DurationSlider`/`CategoryList`/`VariantRow`) · `components/schema/
+  WorkoutPickerSheet.tsx` (Schema-picker, componeert de views) · `pages/Trainingen.tsx` (de tab). **`ComingSoon.tsx`
+  VERWIJDERD** (dode code; enige consumer was de /trainingen-route). `ProposalWeek.mesoWeek` additief; `toSession`
+  geëxporteerd.
+- **HARDE SPEC-EIS (blijft):** de picker stuurt ALTIJD `variantId` mee (zie de CORRECTIE hieronder voor het waarom —
+  nu twee redenen).
+- **CORRECTIE op een eerdere HANDOFF-claim (deze reeks kostte 'm een ronde — daarom zichtbaar gemarkeerd):**
+  - _OUD (FOUT):_ "Alleen `long_z2` + `combo_long_with_efforts` schalen echt (`SCALABLE_TYPES`, `Algorithm.gs:156`);
+    een 75-min-fixture leverde een 90-min template."
+  - _JUIST:_ `SCALABLE_TYPES` wordt UITSLUITEND gebruikt op `Algorithm.gs:207`, voor een LOG-regel — het is een
+    diagnostiek-drempel, GEEN schaal-schakelaar. `buildWorkout` (`:2499`) doet voor pool-types (threshold/tempo/
+    sweet_spot/vo2max/long_z2) `selectVariant_` → `renderVariant_(…, mins)` en honoreert de duur dus WÉL. Zonder
+    `variantId` krijg je daardoor de ROTATIE-variant: juiste duur, VERKEERDE workout — je keuze wordt stil vervangen.
+    `recovery` zit NIET in `getPool_` en valt door naar `genericRecovery`, die `mins` clampt op `max(30, min(60,
+    mins))` → een 120-min-verzoek wordt 60. Empirisch gepind in `lib/library.test.ts` (`recovery`/`rec_licht`, 120 →
+    120 mét `variantId`, 60 zonder). `variantId` blijft dus verplicht om TWEE redenen i.p.v. één.
+- **PARITY-HERSTEL (geen divergentie):** `SchemaView`'s `dayPlannable` leunt nu op het gedeelde `isDayPlannable`
+  (GAS `trnPlannable_`, `Script.html:1069` = dezelfde fn als de Trainingen-tab). Gevolg: een GEMISTE dag biedt geen
+  "Andere training kiezen" meer (de `GemistCard` heeft "Terug" om 'm te heropenen).
 
 **NIEUW GEBOUWD & LIVE deze reeks** (samengevat, niet elke commit; canonieke copy-/persona-bron =
 `apps/web/src/lib/coachNarrative.ts`):
@@ -118,8 +155,8 @@ GEDEPLOYD in Version `479403a9`):
   6u, 280–298 W bij 8u (low vast op 280); kop "FTP-test over ~11 weken" blijft bij slider-beweging; geen "+16w"-tick.
 
 **FASE B laag-3b — OverriddenDetail + "Terug naar voorstel" — DONE** (`7060bfd`, CLIENT-ONLY, engine ongemoeid;
-CI https://github.com/daanhhk/Cadans/actions/runs/29391197247, telefoon-geverifieerd incl. omkeerbaarheid; **NIET
-gedeployd**):
+CI https://github.com/daanhhk/Cadans/actions/runs/29391197247, telefoon-geverifieerd incl. omkeerbaarheid; **GEDEPLOYD
+in Version `3e7a3189`** — meegebundeld met B3+B2):
 - **PORT-OMISSIE HERSTELD:** de D2-swap (`bbb9767`) zette alleen `sessions`; voorgesteldType/reden/redenCode/
   archetypeId bleven van de VERWORPEN coach-workout. De tak spiegelt nu `overrideWeekplanEntry_` (`Algorithm.gs:2427`):
   voorgesteldType = `"free" | workoutType`, reden `"Handmatig gekozen"`, redenCode/archetypeId null, plus het nieuwe
@@ -302,30 +339,23 @@ CI-groen, en **GEDEPLOYD** (prod Version `171f79fc`; zie het FASE A GEDEPLOYD-bl
 `FASE2-5-ZONES-RECON.md` (`6028cfd`, GECORRIGEERD → (a) CLIENT-ONLY — zie BRONHIERARCHIE). Het 4b- en het
 brok-2-recon waren rapport-only (geen doc).
 
-**FOCUS VOLGENDE CHAT:** **laag-3b is DONE** (`7060bfd`, nog niet gedeployd; prod loopt achter — zie Stand-top). Doel
-van de reeks = **FUNCTIONEEL COMPLEET** (elke tab doet íéts), NIET cutover-klaar. Volgorde:
-1. **B3-picker (grootste B-brok)** — "Andere training kiezen" (nu `SoonButton`; write-pad = de override-backend, al
-   gedeployd; UI-fundering = laag-3b). **HARDE SPEC-EIS (bewezen deze chat):** de picker MOET `variantId` meesturen.
-   Zonder `variantId` valt `buildOverrideWorkout_` (`Algorithm.gs:2413`) door naar `buildWorkout(type, dur)` en NEGEERT
-   de duur-slider — een 75-min-fixture leverde een 90-min template ("(ingekort)"). Alleen `long_z2` +
-   `combo_long_with_efforts` schalen echt (`SCALABLE_TYPES`, `Algorithm.gs:156`); GAS logt de afwijking >30 min. GAS'
-   `trnInplannen` stuurt `cat.type + v.variantId + dur`. Picker-bron: `Script.html:2065-2140` (openPicker →
-   home/cats/category/workout/free; `pkSliderHtml_` 45-240 step 15; `pkPickLibrary`/`pkPickFree` → `saveDayOverride`).
-2. **B2 Trainingen-tab** (nu `<ComingSoon>`; GAS = bibliotheek categorie→variant→detail-slider→inplannen; deelt de
-   override-machinerie).
-Deploy van laag-3b kan mee met B3 of los. Daarna pas: **2d ritdetails** + het **DayStrip-venster**. NIET in deze reeks
-(cutover-sluitstukken, geen review-blockers): engine end-audit + port-correctheid-audit + data-migratie. Losse
-dev-DX-optie (geen scope nu): een root `pnpm dev` via `concurrently` (Vite + `wrangler dev` samen; nu twee losse
-processen). Het echte A-event **Amstel Gold Race** = INGEVOERD op prod (geverifieerd in-browser).
+**FOCUS VOLGENDE CHAT:** **B3-picker + B2 Trainingen-tab zijn DONE + GEDEPLOYD** (Version `3e7a3189`, prod = main t/m
+`7ead6b8`; zie het FASE B-blok bovenaan Stand). De UI is nu **FUNCTIONEEL COMPLEET** op **2d ritdetails** + het
+**DayStrip-venster** na. Volgende ijkpunt (Daan): **de totale review** — engine end-audit + port-correctheid-audit van
+de FASE-B-fns. **De coach-stem bij een override komt DAARNA** (ONTWORPEN, niet gebouwd; zie §Geparkeerde debts).
+**Data-migratie blijft het cutover-sluitstuk.** Losse dev-DX-optie (geen scope nu): een root `pnpm dev` via
+`concurrently` (Vite + `wrangler dev` samen; nu twee losse processen). Het echte A-event **Amstel Gold Race** =
+INGEVOERD op prod (geverifieerd in-browser).
 
 ### PARITY-FASERING (compact — vervangt een apart audit-doc; de volledige matrix is via de GAS-bron te reconen)
-- **FASE B (recon-first, deels engine + sign-off):** **B2 Trainingen-tab** (nu `<ComingSoon>`; GAS = volledige
-  workout-bibliotheek categorie→variant→detail-slider→inplannen; deelt de override-machinerie) · **B3 "Andere
-  training kiezen"/day-override** (write-pad = de override-backend, nu **KLAAR + gedeployd** laag-1 `bbb9767`; de
-  UI-picker volgt op de laag-3b-fundering) · **B4 coach-adaptatie / make-up** (engine-post-pass + per-dag coach =
-  **KLAAR op main** laag-2a `b23bdd7`, nog niet gedeployd; de "Verlicht vandaag"-today-overlay is GESCHRAPT —
-  gesubsumeerd door de band-gedreven week-demote; make-up-UI = laag-3). **Beschikbaarheid-editor = DONE (B1).**
-  Werkende laag-indeling (laag-1/readiness/2a/2b/3) + status: zie het FASE B-blok bovenaan Stand.
+- **FASE B (recon-first, deels engine + sign-off):** **B2 Trainingen-tab = DONE + GEDEPLOYD** (`7ead6b8`,
+  `pages/Trainingen.tsx`; bibliotheek categorie→variant→detail-slider→inplannen op de gedeelde override-machinerie) ·
+  **B3 "Andere training kiezen"/day-override = DONE + GEDEPLOYD** (picker-sheet `0fac374` + gedeelde views `f48ed6b`
+  op de laag-1-override-backend `bbb9767` + laag-3b-fundering) · **B4 coach-adaptatie / make-up** (engine-post-pass +
+  per-dag coach = **KLAAR op main** laag-2a `b23bdd7`, VERLATEN t.g.v. Model 2; de "Verlicht vandaag"-today-overlay is
+  GESCHRAPT — gesubsumeerd door de band-gedreven week-demote; de coach-stem bij een override is ONTWORPEN maar NIET
+  gebouwd, zie §Geparkeerde debts). **Beschikbaarheid-editor = DONE (B1).** Werkende laag-indeling
+  (laag-1/readiness/2a/2b/3) + status: zie het FASE B-blok bovenaan Stand.
 - **Ritdetails-drill-down (2d):** "Bekijk ritdetails ›" is nog een `SoonButton`; te bouwen = route (intervals
   activiteit-detail: 7-zone-TIZ + metrics + intervallen) + overlay-sheet. GEEN engine.
 - **FASE C:** Garmin-push (extern device-traject).
@@ -439,10 +469,12 @@ heeft → vervanging sloeg stil over).
 
 **Gate-vloeren (nooit onder; bron van waarheid — NOOIT hardcoden in een prompt):**
 engine-selftest `toBe(957)` (`packages/engine/src/selftest.test.ts:3668`, ongewijzigd) · vitest-totaal
-**300** (gegroeid t/m FASE B laag-1/readiness/laag-2a → 268; daarna: Model-2 avoid-consecutive-hard-verificatie
-+2 → 270, syncStatus-units +8 → 278, redenCode-borging + coach-narrative +23 → 301, allocator-redenCode-borging
-+2 → 303, coachPersona round-trip +1 → 304; FASE 3a −4 dode make-up-tests → **300**). Engine niet aangeraakt door de
-coach-narrative-reeks NOCH FASE 3 (957 vast). CI groen. Hard floors — niet regresseren.
+**329** = het monorepo-brede `pnpm test`-totaal (root `vitest run`), NIET een per-package-slice (gegroeid t/m FASE B
+laag-1/readiness/laag-2a → 268; daarna: Model-2 avoid-consecutive-hard-verificatie +2 → 270, syncStatus-units +8 →
+278, redenCode-borging + coach-narrative +23 → 301, allocator-redenCode-borging +2 → 303, coachPersona round-trip +1
+→ 304; FASE 3a −4 dode make-up-tests → 300; Niveau test-modus +5 → 305; laag-3b override +5 → 310; FASE B B3 RUN 1
+bibliotheek +7 → 317, B3 RUN 2 `pickerState` +6 → 323, B2 RUN 1 predicaten +6 → **329**, B2 RUN 2 +0). Engine niet
+aangeraakt door de coach-narrative-reeks NOCH FASE 3 NOCH FASE B (957 vast). CI groen. Hard floors — niet regresseren.
 
 **Fundament:** IBM Plex Sans (400/500/600) + Mono (500/600), self-hosted via `@fontsource`,
 offline-precached (`main.tsx`). Het UI-kader ligt vast in **`apps/web/docs/UI-KADER.md`**:
@@ -520,9 +552,10 @@ consumeren UITSLUITEND `--s-*/--fs-*/--lh-*/--r-*` (kleur was al gedisciplineerd
   weken" / "Verwachte FTP op de testdag" / "over ~11 wkn tot testdag"). Verzamelen voor een vormgeving-pass; Cadans'
   design-standaard is GAS, dus een herontwerp = bewuste divergentie + een eigen tab-overstijgende fase, NÁ de
   inhoudelijke ronde.
-- **Dag-detail-overline "VOORSTEL" boven de override-pin "Handmatig gekozen" = tegenspraak (laag-3b, klein):** op een
-  override-dag zou `STATE_LABEL[day.state]` een eigen label moeten geven (bv. "Gekozen"). GAS heeft GÉÉN state-label in
-  de dag-kop (`Script.html:1050` = alleen weekdag + kort) — het label is een Cadans-toevoeging. Kan mee in B3.
+- **Dag-detail-overline op een override-dag = "Gekozen" — INGELOST (FASE B, `7ead6b8`/laag-3b):** de override-dag
+  toont nu "Gekozen" i.p.v. "VOORSTEL" via de gedeelde conditie `isOverrideCard` (state-ladder done > gemist > today
+  laat een specifieker feit al winnen; een override is zo'n feit). GAS heeft GÉÉN state-label in de dag-kop
+  (`Script.html:1050`) — dit blijft een bewuste Cadans-toevoeging. Zie divergentie (6) onderaan.
 - **VOLLEDIG-SYNC-PAD ONTBREEKT (oorzaak, niet symptoom) — GEPARKEERD:** GAS heeft TWEE paden: `refreshActivities()` =
   `syncActivitiesIncremental_(7)` (top-up bij app-open, GEEN `last_sync`-stempel, `WebApp.gs:1592`) én `syncAll()` =
   volledige sync + `last_sync`-stempel, achter ↻/`regenerateWeb` (`WebApp.gs:1579-1582`) én in `generateProposal`
@@ -535,13 +568,30 @@ consumeren UITSLUITEND `--s-*/--fs-*/--lh-*/--r-*` (kleur was al gedisciplineerd
   (`Script.html:1302`), aangeroepen in `onState` INITIAL-ONLY (`:56`); guard `checkinAutoOpened`, conditie
   `readiness.checkinDone === false`, `setTimeout(openCheckin, 400)`, dismissbaar. Cadans opent de CheckinSheet alleen
   via de ReadinessCard-knop. De conditie is triviaal (`getCheckin(todayISO) === null`); de klus is dat sheet + state in
-  `pages/Vorm.tsx` leven terwijl je op Schema landt → vereist verhuizing naar een gedeelde laag (AppShell).
-- **Coach-stem bij een override die een readiness-demote terugdraait — OPEN VRAAG (evalueren NÁ B3):** GAS zwijgt bij
-  een handmatige override (`WebApp.gs:1211` `return null`) en geeft alleen een committed-coach bij `override.src ===
-  'readiness'` (`:1207`). Maar GAS kent Daans geval niet: daar is verlichten een AANBOD, in Cadans gebeurt de demote
-  automatisch (band-gedreven) → tegen een automatisch advies ingaan verdient mogelijk wél een coach-regel. Het veld
-  `src?: "readiness"` staat al in `packages/shared/src/override.ts`. Hangt samen met de blast-radius-herziening. Niet
-  bouwen vóór B3 — de situatie is nu onbereikbaar (geen picker).
+  `pages/Vorm.tsx` leven terwijl je op Schema landt → vereist verhuizing naar een gedeelde laag (AppShell). **VERSTERKT
+  (FASE B):** de `CheckinSheet` heeft nu een TWEEDE call-site (`pages/Trainingen.tsx` naast `pages/Vorm.tsx`) → een
+  gedeelde AppShell-laag zou beide + het niet-geporte `maybeAutoOpenCheckin` dekken.
+- **`nextPlannableDate` belooft `| null` maar levert dat nooit — GEPARKEERD (FASE B):** de GAS-getrouwe fallback geeft
+  ALTIJD `todayISO` terug (GAS' "Geen plan-dag beschikbaar."-tak is daardoor dode code). De echte beslissing leeft nu
+  op de call-site: `pages/Trainingen.tsx` guard't op `view.days.some(isDayPlannable)` vóór de write — anders zou een
+  Inplannen-write stil op een afgeronde vandaag landen, waar de D2-tak 'm negeert (`!d.gedaan`). Later: de signatuur en
+  de call-site-guard verenigen (fn geeft echt `null` terug → guard verhuist naar de fn).
+- **Coach-stem bij een day-override — ONTWORPEN, NIET GEBOUWD (uitgesteld tot NÁ de totale review).** VERVANGT de
+  oude open vraag "evalueren NÁ B3" (die is nu beantwoord: stilte is FOUT, want in GAS is verlichten een AANBOD terwijl
+  Cadans automatisch demote't). Vastgelegd ontwerp: **CLIENT-ONLY, engine puur aangeroepen.** Verdict-keten =
+  `workoutZones(type, doel)` → `isHard`; `readinessAdjust_({type, isHard}, band, macroFase)` → action `keep|demote` +
+  code `caution_key`/`rest_key` + `toType`; `readinessEaseNaam_(toType)` → NL-alternatief. Warme copy in
+  `lib/coachNarrative.ts` met een EIGEN code-namespace (botsing met plan-`redenCode`s vermijden). Surface = de
+  bestaande `CoachCallout` op de dagkaart (de 3b-onderdrukking wordt daar opgeheven via `isOverrideCard`); NIET de
+  picker (aparte bericht-vorm; de override is omkeerbaar via "Terug naar voorstel", dus advies achteraf is een gesloten
+  lus). **GRENZEN:** alleen als de override-dag VANDAAG is (de band is de gereedheid van vandaag; GAS' `rdyCoach` is om
+  dezelfde reden today-only — een toekomstige dag krijgt hooguit een neutrale regel zonder oordeel); alleen bij HARDE
+  keuzes (tempo/sweet_spot/threshold/vo2max) op band caution/rest en buiten Taper/Recovery — een lange Z2 op band rest
+  blijft stil want `readinessAdjust_` bewaakt intensiteit, geen volume (GAS-identiek); vrije rit stil (GAS slaat 'free'
+  expliciet over; "op gevoel" is zelf al de keuze). **VALKUIL:** `readinessRegel_` NIET hergebruiken — die copy claimt
+  "Ik heb je X verlicht naar Y", bij een override onwaar. **NOOT:** de override wordt NA `assignWorkouts` geswapt, dus
+  de rest van de week past zich er NIET op aan (GAS net zo) — beloof dat niet in copy. Het veld `src?: "readiness"`
+  staat al in `packages/shared/src/override.ts`. Hangt samen met de blast-radius-herziening.
 - **Persona-pools disciplined/statistical LEEG** (fallback → warm): copy-werk voor later; de toon-ijk-voorbeelden +
   de structuur staan al in `lib/coachNarrative.ts`. De kiezer-UI toont ze als "binnenkort" (disabled).
 - **Blast-radius-herziening (FASE B — benoemde kandidaat voor de "komende weken"-evaluatie):** de band-gedreven
@@ -797,7 +847,21 @@ Open schulden die bewust naar een latere fase zijn geschoven:
   **FASE B — BEWUSTE GAS-DIVERGENTIES (gelogd):** (1) band-gedreven week-plan-demote (`ae00730`) — CLIENT-ONLY, engine
   + 957-selftest ongemoeid (het plan leunt op de holistische readiness-band i.p.v. de botte `wellnessSignal_`-vlag;
   zie het FASE B-blok bovenaan Stand). (2) override-DTO draagt `from`/`src`/`label`-metadata (engine-genegeerd) voor
-  make-up-idempotentie + display; round-trippt in `override_json`.
+  make-up-idempotentie + display; round-trippt in `override_json`. (3) **Picker-preview draait op de ENGINE**
+  (`previewOverrideSession` → `buildOverrideWorkout_` met de dag-context `mesoWeek`/`macroFase`, `eventCtx`
+  undefined) i.p.v. een port van GAS' client-side `trnScale_`. Reden: Cadans regenereert elke render, dus de dagkaart
+  toont de echte engine-workout; `trnScale_` zou de preview zichtbaar laten afwijken van de kaart een tik later.
+  Gevolg: GAS' bewuste bloklijst-DEGRADATIE (`zoneBlock_` met `fromSegs=true` → `blokLijstSegs_`, zone-naam +
+  minuten i.p.v. de echte structuur-rijen) komt NIET mee — Cadans toont de volle structuur via het gedeelde
+  `WorkoutDetail`. `trnScale_`/`overrideDotZone_` blijven ONGEPORT. (4) **Trainingen-tab toont de `ReadinessCard`,
+  NIET GAS' 2-slide status/level-swipe-deck:** readiness informeert de keuze op die tab, de `LevelCard` niet (die
+  stond er om de deck te vullen = layout-motief). Consistent met de al geschrapte Vorm-swipe-deck. Bijvangst: de tab
+  heeft aan `loadSchemaWeek` genoeg (geen tweede activities-fetch) en kreeg de check-in gratis. (5) **"Ingepland"-
+  bevestiging gebruikt `{weekday} {dayNum}`** i.p.v. GAS' 2-teken-afkorting (`trnDayKort_`) — Cadans-interne
+  consistentie met de dag-detail-overline. (6) **Overline op een override-dag = "Gekozen", ook op vandaag** — de
+  state-ladder done > gemist > today laat een specifieker feit al winnen van "Vandaag"; een override is zo'n feit.
+  Eén gedeelde conditie `isOverrideCard` voedt zowel het label als de `OverriddenDetail`-dispatch. Hiermee is debt
+  (a) "dag-detail-overline VOORSTEL boven de override-pin = tegenspraak" INGELOST.
 - **(o) 5.3c-ii live-Schema-cosmetica — OPGELOST (seed + focus-prettify).** De drie leaks op de live
   /dev-Schema zijn weg: (1) ~~"· null"~~ → `settings.doel='Ardennen-trip'` geseed; (2) ~~"0-0 bpm"~~ →
   `settings.lthr=178` geseed (watts klopten al, FTP 280); (3) ~~rauwe focus-bucket "low"/"high"/"anaerobic"~~
