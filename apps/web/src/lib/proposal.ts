@@ -53,6 +53,10 @@ export interface ProposalDay {
   /** Machineleesbare reden-code (2a, additief NAAST `reden`); null als geen toewijzing/mapping. */
   redenCode: string | null;
   archetypeId: string | null;
+  /** Dag-override (3b) — gezet ALLEEN als de D2-swap daadwerkelijk plaatsvond (buildOverrideWorkout_
+   * leverde een workout); spiegelt GAS `override: true` op de weekplan-entry (overrideWeekplanEntry_).
+   * Bij een override zijn voorgesteldType/reden/redenCode/archetypeId van de override, niet de coach-tak. */
+  override: DayOverride | null;
   // Realisatie: rustdag → []; normale dag → 1 sessie; pendel-dag → pendelAantal
   // sessies (vroege = steady pendel_z2, laatste = de dag-intent). Dag-niveau
   // voorgesteldType/reden/archetypeId beschrijven de intent, sessions de realisatie.
@@ -365,6 +369,9 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
     const ovDISO = formatDate(stripTime_(d.datum), "yyyy-MM-dd");
     const ov = overridesByDate.get(ovDISO);
     const dayPlannable = !d.gedaan && stripTime_(d.datum).getTime() >= todayT;
+    // 3b: gezet ALLEEN als de swap echt gebeurde (buildOverrideWorkout_ → workout); stuurt de
+    // dag-velden hieronder (spiegelt overrideWeekplanEntry_).
+    let appliedOverride: DayOverride | null = null;
     if (ov && dayPlannable) {
       const woOv = buildOverrideWorkout_(
         ov,
@@ -374,7 +381,10 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
         undefined,
         d.dagIdx,
       ) as ProposalWorkout | null;
-      if (woOv) sessions.push(woOv);
+      if (woOv) {
+        sessions.push(woOv);
+        appliedOverride = ov;
+      }
     } else if (tePlannenSet.has(d.dagIdx) && d.voorgesteldType) {
       const isPendel = d.type === "pendel";
       const sessieCount = isPendel
@@ -425,10 +435,17 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
     return {
       datum: formatDate(stripTime_(d.datum), "yyyy-MM-dd"),
       dagIdx: d.dagIdx,
-      voorgesteldType: d.voorgesteldType,
-      reden: d.reden,
-      redenCode: d.redenCode,
-      archetypeId: d.archetypeId,
+      // 3b: bij een toegepaste override komen deze dag-velden van de override i.p.v. de VERWORPEN
+      // coach-tak (byte-getrouw aan overrideWeekplanEntry_, Algorithm.gs:2427/2439).
+      voorgesteldType: appliedOverride
+        ? appliedOverride.type === "free"
+          ? "free"
+          : appliedOverride.workoutType
+        : d.voorgesteldType,
+      reden: appliedOverride ? "Handmatig gekozen" : d.reden,
+      redenCode: appliedOverride ? null : d.redenCode,
+      archetypeId: appliedOverride ? null : d.archetypeId,
+      override: appliedOverride,
       sessions,
       plannedForDone,
     };

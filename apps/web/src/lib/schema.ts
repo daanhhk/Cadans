@@ -6,8 +6,8 @@ import {
   zoneTimesFromCell_,
 } from "@cadans/engine";
 import type {
+  DayOverride,
   DispositionReason,
-  OverrideEntry,
   SettingsInput,
 } from "@cadans/shared";
 import { type ActValuesRow, parseActivityRows } from "./activities";
@@ -215,6 +215,9 @@ export interface SchemaDay {
   /** Rauwe per-dag coach-feedback (2a): done → coachFeedback_-fb (→ DoneCompareCard-box); gemist →
    * missed-fb (→ GemistCard); anders null. */
   coach: SchemaDayCoach | null;
+  /** Dag-override (3b): 1-op-1 uit ProposalDay.override; niet-null → OverriddenDetail + "Terug naar
+   * voorstel". GEEN eigen conditie (een herberekening zou de dayPlannable-render-bug dupliceren). */
+  override: DayOverride | null;
 }
 
 export interface LoadStat {
@@ -705,15 +708,25 @@ const EMPTY_SETTINGS: SettingsInput = {
   pendelAantal: null,
 };
 
-/** ProposalWeek + gedane-belasting-per-datum → het Schema-view-model (puur). `_overrides`/`_settings`
- * zijn (voorlopig) ongebruikt — de signatuur blijft positioneel zodat de call-site niet wijzigt en
- * laag-3b (override-picker) ze weer aankan; `_readiness` idem voor een geparkeerde fase. */
+/**
+ * Duur-label (byte-getrouwe port van GAS `trnDurLabel_`, Script.html:1907). Minuten → "1u 30" / "1u"
+ * / "1u 05" / "45 min". Minuten < 60 → "N min"; ≥ 60 → "Hu" + (rest ? " MM" met nul-pad < 10).
+ */
+export function durLabel(mins: number): string {
+  const t = Math.round(mins);
+  const h = Math.floor(t / 60);
+  const m = t % 60;
+  return h > 0 ? `${h}u${m ? ` ${m < 10 ? `0${m}` : m}` : ""}` : `${m} min`;
+}
+
+/** ProposalWeek + gedane-belasting-per-datum → het Schema-view-model (puur). De override-data reist
+ * nu via `proposalWeek` (ProposalDay.override, 3b) → geen aparte overrides-param meer. `_readiness`/
+ * `_settings` blijven (voorlopig) ongebruikt maar positioneel behouden voor een geparkeerde fase. */
 export function deriveSchemaView(
   proposalWeek: ProposalWeek,
   doneByDate: Record<string, DoneEntry>,
   todayISO: string,
   dispositionByDate: Record<string, DispositionReason>,
-  _overrides: OverrideEntry[] = [],
   _readiness: ReadinessResult | null = null,
   _settings: SettingsInput = EMPTY_SETTINGS,
 ): SchemaView {
@@ -801,6 +814,7 @@ export function deriveSchemaView(
       doneCompare,
       dispositie,
       coach,
+      override: d.override,
     };
   });
 
@@ -836,7 +850,6 @@ export async function loadSchemaWeek(): Promise<{
   todayISO: string;
   rpeByDate: Record<string, number>;
   dispositionByDate: Record<string, DispositionReason>;
-  overrides: OverrideEntry[];
   settings: SettingsInput;
 }> {
   const monday = weekMondayIso();
@@ -912,7 +925,6 @@ export async function loadSchemaWeek(): Promise<{
     todayISO,
     rpeByDate,
     dispositionByDate,
-    overrides,
     settings: settings ?? EMPTY_SETTINGS,
   };
 }

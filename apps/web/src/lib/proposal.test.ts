@@ -1,5 +1,6 @@
 import { demoteType_ } from "@cadans/engine";
 import type {
+  DayOverride,
   EventItem,
   PlannerDay,
   SettingsInput,
@@ -550,6 +551,81 @@ describe("buildWeekProposal", () => {
     // Geen event + doel "FTP" + fase null → planModeLabel_-tak "Opbouw" (niet meer null:
     // GAS toont de pill altijd).
     expect(noEvent.planModus).toBe("Opbouw");
+  });
+});
+
+describe("buildWeekProposal — dag-override (3b)", () => {
+  // 03-11 (wo) = plannbare vrij-dag (≥ today, !gedaan); 03-09 (ma) = voltooide dag (gedaan).
+  const run = (overrides: { datum: string; override: DayOverride }[]) =>
+    buildWeekProposal({
+      settings: settings(),
+      plannerDays: WEEK,
+      events: EV_FAR,
+      wellness: WELL_OK,
+      ...base,
+      overrides,
+    });
+
+  it("library-override op een plannbare dag → override gezet, dag-velden uit de override", () => {
+    const r = run([
+      {
+        datum: "2026-03-11",
+        override: { type: "library", workoutType: "threshold", durMin: 60 },
+      },
+    ]);
+    const d = r.days[2];
+    expect(d.override).toEqual({
+      type: "library",
+      workoutType: "threshold",
+      durMin: 60,
+    });
+    expect(d.voorgesteldType).toBe("threshold");
+    expect(d.reden).toBe("Handmatig gekozen");
+    expect(d.redenCode).toBeNull();
+    expect(d.archetypeId).toBeNull();
+    expect(d.sessions).toHaveLength(1);
+  });
+
+  it("free-override op een plannbare dag → voorgesteldType 'free'", () => {
+    const r = run([
+      {
+        datum: "2026-03-11",
+        override: {
+          type: "free",
+          ritType: "vrij",
+          intensiteit: "tempo",
+          durMin: 90,
+        },
+      },
+    ]);
+    const d = r.days[2];
+    expect(d.override?.type).toBe("free");
+    expect(d.voorgesteldType).toBe("free");
+    expect(d.reden).toBe("Handmatig gekozen");
+    expect(d.sessions).toHaveLength(1);
+  });
+
+  it("override op een NIET-plannbare (voltooide) dag → GEEN swap; coach-velden lekken niet", () => {
+    const baseline = buildWeekProposal({
+      settings: settings(),
+      plannerDays: WEEK,
+      events: EV_FAR,
+      wellness: WELL_OK,
+      ...base,
+    });
+    const r = run([
+      {
+        datum: "2026-03-09",
+        override: { type: "library", workoutType: "tempo", durMin: 60 },
+      },
+    ]);
+    // 03-09 = gedaan → niet plannbaar → override niet toegepast.
+    expect(r.days[0].override).toBeNull();
+    expect(r.days[0].reden).not.toBe("Handmatig gekozen");
+    // De plannbare dag zonder override houdt zijn coach-reden + redenCode (tak lekt niet).
+    expect(r.days[2].override).toBeNull();
+    expect(r.days[2].reden).toBe(baseline.days[2].reden);
+    expect(r.days[2].redenCode).toBe(baseline.days[2].redenCode);
   });
 });
 

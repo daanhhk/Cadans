@@ -46,6 +46,7 @@ const day = (
   reden: null,
   redenCode: null,
   archetypeId: null,
+  override: null,
   sessions: [],
   plannedForDone: null,
   ...o,
@@ -336,7 +337,6 @@ export function Preview() {
         todayISO={f.todayISO}
         rpeByDate={{ "2026-07-08": 7 }}
         dispositionByDate={{}}
-        overrides={[]}
         settings={PREVIEW_SETTINGS}
       />
     </div>

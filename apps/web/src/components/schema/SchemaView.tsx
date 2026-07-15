@@ -1,8 +1,4 @@
-import type {
-  DispositionReason,
-  OverrideEntry,
-  SettingsInput,
-} from "@cadans/shared";
+import type { DispositionReason, SettingsInput } from "@cadans/shared";
 import { useMemo, useState } from "react";
 import {
   coachNarrative,
@@ -25,6 +21,7 @@ import { DispositionAffordance } from "./DispositionAffordance";
 import { DoneCompareCard } from "./DoneCompareCard";
 import { DoneDetail } from "./DoneDetail";
 import { GemistCard } from "./GemistCard";
+import { OverriddenDetail } from "./OverriddenDetail";
 import { PeriodTimeline } from "./PeriodTimeline";
 import { WeekLoad } from "./WeekLoad";
 import { WorkoutDetail } from "./WorkoutDetail";
@@ -47,7 +44,6 @@ export function SchemaView({
   todayISO,
   rpeByDate,
   dispositionByDate,
-  overrides,
   settings,
 }: {
   proposalWeek: ProposalWeek;
@@ -56,7 +52,6 @@ export function SchemaView({
   todayISO: string;
   rpeByDate: Record<string, number>;
   dispositionByDate: Record<string, DispositionReason>;
-  overrides: OverrideEntry[];
   settings: SettingsInput;
 }) {
   const view = useMemo(
@@ -66,7 +61,6 @@ export function SchemaView({
         doneByDate,
         todayISO,
         dispositionByDate,
-        overrides,
         readiness,
         settings,
       ),
@@ -75,7 +69,6 @@ export function SchemaView({
       doneByDate,
       todayISO,
       dispositionByDate,
-      overrides,
       readiness,
       settings,
     ],
@@ -96,15 +89,17 @@ export function SchemaView({
     day.datum <= todayISO;
 
   // 2b: per-dag coach-narrative (boven de training). Alleen op een dag mét een reden (plan-dagen;
-  // done/gemist-dagen hebben geen redenCode → geen dubbel coach-blok). null/leeg → niks renderen.
-  const coachText = day?.reden
-    ? coachNarrative(
-        day.redenCode,
-        day.reden,
-        day.datum,
-        normalizeCoachPersona(settings.coachPersona),
-      )
-    : null;
+  // done/gemist-dagen hebben geen redenCode → geen dubbel coach-blok). Op een OVERRIDE-dag onderdrukt
+  // (3b, GAS overrideKaart_ toont geen coach-regel — de pin IS de zichtbare reden). null/leeg → niks.
+  const coachText =
+    day?.reden && !day.override
+      ? coachNarrative(
+          day.redenCode,
+          day.reden,
+          day.datum,
+          normalizeCoachPersona(settings.coachPersona),
+        )
+      : null;
 
   return (
     <div
@@ -191,6 +186,15 @@ export function SchemaView({
               date={day.datum}
               narrative={day.coach?.narrative ?? null}
               coachNaam={view.coachNaam}
+            />
+          ) : day.override ? (
+            // 3b: handmatig gekozen training → OverriddenDetail + "Terug naar voorstel". NA done/gemist
+            // (die sluiten voltooid/gereden al uit; GAS zet de override-tak bovenaan via trnPlannable_,
+            // hier done/gemist-first = zelfde uitkomst, robuust tegen de gedaan/activity-drift).
+            <OverriddenDetail
+              override={day.override}
+              session={day.sessions[0] ?? null}
+              date={day.datum}
             />
           ) : day.sessions.length === 0 ? (
             // §5a rustdag → lege-staat-copy. Knoppen-blok volgt NA de state-conditional.

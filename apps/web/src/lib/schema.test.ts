@@ -11,6 +11,7 @@ import {
   deriveSchemaView,
   doneBadge,
   doneLabel,
+  durLabel,
   focusLabel,
   formatDuurU,
   formatIf,
@@ -408,6 +409,7 @@ describe("deriveSchemaView dispatch (flip + doneCompare)", () => {
     reden: null,
     redenCode: null,
     archetypeId: null,
+    override: null,
     sessions: [],
     plannedForDone: null,
     ...o,
@@ -518,6 +520,31 @@ describe("deriveSchemaView dispatch (flip + doneCompare)", () => {
       { "2026-03-09": "bewust_gerust" },
     );
     expect(v.days[0].state).toBe("done");
+  });
+  it("override reist 1-op-1 door van ProposalDay naar SchemaDay (geen eigen conditie)", () => {
+    const ov = {
+      type: "free" as const,
+      ritType: "groep" as const,
+      intensiteit: "stevig" as const,
+      durMin: 75,
+    };
+    const v = deriveSchemaView(
+      pweek([pday(TODAY, { override: ov, voorgesteldType: "free" })]),
+      {},
+      TODAY,
+      {},
+    );
+    expect(v.days[0].override).toBe(ov);
+  });
+});
+
+describe("durLabel (GAS trnDurLabel_-port)", () => {
+  it("mapt minuten → het GAS-duur-format", () => {
+    expect(durLabel(45)).toBe("45 min");
+    expect(durLabel(60)).toBe("1u");
+    expect(durLabel(65)).toBe("1u 05");
+    expect(durLabel(90)).toBe("1u 30");
+    expect(durLabel(240)).toBe("4u");
   });
 });
 
