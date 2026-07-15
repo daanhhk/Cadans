@@ -417,6 +417,7 @@ describe("deriveSchemaView dispatch (flip + doneCompare)", () => {
   const pweek = (days: ProposalDay[]): ProposalWeek => ({
     weekMonday: "2026-03-09",
     macroFase: "Build",
+    mesoWeek: 0,
     fase: "Build",
     eventNaam: null,
     wekenTotEvent: null,

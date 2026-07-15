@@ -72,6 +72,9 @@ export interface ProposalWeek {
   weekMonday: string;
   /** Week-niveau macro-fase (rauwe engine-waarde: Base/Build/Peak/Test/Recovery). */
   macroFase: string;
+  /** Week-index uit settings.doelStart (weekIndexFromStart_). Voedt de override-preview (B3) zodat
+   * die EXACT dezelfde week-context gebruikt als de D2-tak in buildWeekProposal → preview == dagkaart. */
+  mesoWeek: number;
   /** Naam van het A/trip-hoofdevent, of null als er geen komend event is. */
   eventNaam: string | null;
   /** Weken tot het hoofdevent (afgerond), of null zonder event. */
@@ -454,6 +457,7 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
   return {
     weekMonday,
     macroFase,
+    mesoWeek,
     eventNaam,
     wekenTotEvent,
     planModus,

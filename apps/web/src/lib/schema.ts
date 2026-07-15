@@ -657,7 +657,7 @@ export interface SchemaView {
   dagen: LoadStat;
 }
 
-function toSession(w: ProposalWorkout): SchemaSession {
+export function toSession(w: ProposalWorkout): SchemaSession {
   const zones = (Array.isArray(w.zones) ? w.zones : []).filter(
     (z): z is ZoneKey => z === "low" || z === "high" || z === "anaerobic",
   );

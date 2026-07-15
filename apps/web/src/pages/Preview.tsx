@@ -98,6 +98,7 @@ const PREVIEW_PLANNED_SESSION = buildWorkout(
 const FULL_WEEK: ProposalWeek = {
   weekMonday: "2026-07-06",
   macroFase: "Base",
+  mesoWeek: 0,
   fase: "Base", // geen taper → balk-actieve-fase = macroFase (Basis licht op)
   eventNaam: "Amstel Gold Race",
   wekenTotEvent: 40,
@@ -185,6 +186,7 @@ const FULL_READY: ReadinessResult = {
 const EMPTY_WEEK: ProposalWeek = {
   weekMonday: "2026-07-06",
   macroFase: "Base",
+  mesoWeek: 0,
   fase: "Base",
   eventNaam: null,
   wekenTotEvent: null,
@@ -217,6 +219,7 @@ const EMPTY_READY: ReadinessResult = {
 const TAPER_WEEK: ProposalWeek = {
   weekMonday: "2026-07-06",
   macroFase: "Peak",
+  mesoWeek: 0,
   fase: "Taper",
   eventNaam: "Amstel Gold Race",
   wekenTotEvent: 1,
