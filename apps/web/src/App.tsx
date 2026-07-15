@@ -1,11 +1,11 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
-import { ComingSoon } from "./pages/ComingSoon";
 import { Events } from "./pages/Events";
 import { Instellingen } from "./pages/Instellingen";
 import { Niveau } from "./pages/Niveau";
 import { Schema } from "./pages/Schema";
+import { Trainingen } from "./pages/Trainingen";
 import { Vorm } from "./pages/Vorm";
 import { Weekplanner } from "./pages/Weekplanner";
 
@@ -16,9 +16,9 @@ const PreviewPage = import.meta.env.DEV
   ? lazy(() => import("./pages/Preview").then((m) => ({ default: m.Preview })))
   : null;
 
-// App-shell: same-origin mount + react-router + bottom-nav. Schema/Trainingen zijn
-// "binnenkort"-placeholders; Vorm (5.1b, Vorm-lite) en Niveau (5.2, Vermogen-
-// snapshot + Progressie; engine client-side) zijn gevuld uit de /api-routes.
+// App-shell: same-origin mount + react-router + bottom-nav. Alle vier de tabs zijn nu gevuld uit de
+// /api-routes: Schema (weekvoorstel), Vorm (5.1b, Vorm-lite), Trainingen (B2, bibliotheek + inplannen)
+// en Niveau (5.2, Vermogen-snapshot + Progressie; engine client-side).
 export default function App() {
   return (
     <BrowserRouter>
@@ -28,7 +28,7 @@ export default function App() {
           <Route index element={<Navigate to="/schema" replace />} />
           <Route path="/schema" element={<Schema />} />
           <Route path="/vorm" element={<Vorm />} />
-          <Route path="/trainingen" element={<ComingSoon tab="Trainingen" />} />
+          <Route path="/trainingen" element={<Trainingen />} />
           <Route path="/niveau" element={<Niveau />} />
           {import.meta.env.DEV && PreviewPage && (
             <Route
