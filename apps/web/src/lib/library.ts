@@ -39,6 +39,20 @@ export const DUR_MAX = 240;
 export const DUR_STEP = 15;
 export const FREE_DEFAULT_DUR = 90;
 
+// Geldige zone-var-tokens (styles/tokens.css --zone-1..--zone-6). De engine-cat.zoneVar wordt in CSS
+// geïnterpoleerd → harden tegen een onverwachte string; onbekend → --zone-2 (GAS ZONE_VAR-fallback).
+const ZONE_VARS = new Set([
+  "--zone-1",
+  "--zone-2",
+  "--zone-3",
+  "--zone-4",
+  "--zone-5",
+  "--zone-6",
+]);
+export function normalizeZoneVar(zoneVar: string): string {
+  return ZONE_VARS.has(zoneVar) ? zoneVar : "--zone-2";
+}
+
 // Rauwe engine-shape (getTrainingLibrary_) — enkel wat we lezen; de rest is bewust genegeerd.
 interface RawVariant {
   variantId: string;
@@ -66,7 +80,7 @@ export function trainingCategories(settings: SettingsInput): LibraryCategory[] {
   return raw.map((c) => ({
     key: c.key,
     label: c.label,
-    zoneVar: c.zoneVar,
+    zoneVar: normalizeZoneVar(c.zoneVar),
     omschrijving: c.omschrijving,
     defaultDur: c.defaultDur,
     // De 6 cat-types zijn exact het OverrideWorkoutType-domein (TRAINING_CATS_, planner.ts).

@@ -25,6 +25,7 @@ import { OverriddenDetail } from "./OverriddenDetail";
 import { PeriodTimeline } from "./PeriodTimeline";
 import { WeekLoad } from "./WeekLoad";
 import { WorkoutDetail } from "./WorkoutDetail";
+import { WorkoutPickerSheet } from "./WorkoutPickerSheet";
 
 const STATE_LABEL: Record<DayState, string> = {
   today: "Vandaag",
@@ -74,11 +75,16 @@ export function SchemaView({
     ],
   );
   const [selected, setSelected] = useState(todayISO);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const day = view.days.find((d) => d.datum === selected) ?? view.days[0];
   // dag >= vandaag: het knoppen-blok toont alleen op vandaag/toekomst (verleden kun je niet meer plannen).
   const dayFuture = !!day && day.datum >= todayISO;
   // plannbaar (GAS trnPlannable_): dag >= vandaag en niet voltooid -> "Andere training kiezen" mag.
   const dayPlannable = dayFuture && !!day && !day.done;
+  // 3b: ÉÉN bron voor "toont deze dag de override-kaart?" — gebruikt door zowel de overline-label als
+  // de OverriddenDetail-dispatch-tak, zodat ze niet uit elkaar kunnen lopen. Done/gemist winnen (een
+  // gereden/gemiste dag is een specifieker feit dan een hangende override).
+  const isOverrideCard = !!day?.override && !day.done && day.state !== "gemist";
   // canDispose (GAS canDispose_, Script.html:448): een dag met voorstel, niet voltooid, nog niet
   // gedisponeerd, en datum <= vandaag → toon de "Niet gedaan?"-affordance.
   const canDispose =
@@ -91,6 +97,9 @@ export function SchemaView({
   // 2b: per-dag coach-narrative (boven de training). Alleen op een dag mét een reden (plan-dagen;
   // done/gemist-dagen hebben geen redenCode → geen dubbel coach-blok). Op een OVERRIDE-dag onderdrukt
   // (3b, GAS overrideKaart_ toont geen coach-regel — de pin IS de zichtbare reden). null/leeg → niks.
+  // NB: de guard is `!day.override`, BEWUST breder dan `isOverrideCard`: ook op een done-dag waar toch
+  // een override hangt zou "Handmatig gekozen" als coach-regel onzin zijn. NIET "harmoniseren" naar
+  // isOverrideCard.
   const coachText =
     day?.reden && !day.override
       ? coachNarrative(
@@ -139,7 +148,8 @@ export function SchemaView({
             }}
           >
             <Overline>
-              {day.weekday} {day.dayNum} · {STATE_LABEL[day.state]}
+              {day.weekday} {day.dayNum} ·{" "}
+              {isOverrideCard ? "Gekozen" : STATE_LABEL[day.state]}
             </Overline>
             {day.doneCompare && (
               <AlignChip
@@ -187,8 +197,9 @@ export function SchemaView({
               narrative={day.coach?.narrative ?? null}
               coachNaam={view.coachNaam}
             />
-          ) : day.override ? (
-            // 3b: handmatig gekozen training → OverriddenDetail + "Terug naar voorstel". NA done/gemist
+          ) : isOverrideCard && day.override ? (
+            // 3b: handmatig gekozen training → OverriddenDetail + "Terug naar voorstel". `isOverrideCard`
+            // = dezelfde bron als de overline-"Gekozen" (kunnen niet uit elkaar lopen). NA done/gemist
             // (die sluiten voltooid/gereden al uit; GAS zet de override-tak bovenaan via trnPlannable_,
             // hier done/gemist-first = zelfde uitkomst, robuust tegen de gedaan/activity-drift).
             <OverriddenDetail
@@ -249,13 +260,30 @@ export function SchemaView({
           {/* Gedeeld knoppen-blok (§5e), alleen op vandaag/toekomst (dayFuture): op een verleden
               dag kun je beschikbaarheid niet meer aanpassen. "Andere training" alleen plannbaar. */}
           {dayFuture && (
-            <ActionButtons plannable={dayPlannable} datum={day.datum} />
+            <ActionButtons
+              plannable={dayPlannable}
+              datum={day.datum}
+              onPickWorkout={() => setPickerOpen(true)}
+            />
           )}
         </Card>
       )}
       {/* Tab-niveau "Push naar Garmin" (GAS Index.html:37, act-row): EEN keer onderaan de
           Schema-tab, NIET per-dag. Blijft "binnenkort" tot de Garmin-integratie er is. */}
       <GarminPushButton />
+      {/* 3b: workout-picker-sheet (opent via "Andere training kiezen"); voed met de week-context zodat
+          de preview == de dagkaart (WYSIWYG). */}
+      {day && (
+        <WorkoutPickerSheet
+          open={pickerOpen}
+          date={day.datum}
+          dagIdx={day.dagIdx}
+          settings={settings}
+          mesoWeek={proposalWeek.mesoWeek}
+          macroFase={proposalWeek.macroFase}
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
     </div>
   );
 }

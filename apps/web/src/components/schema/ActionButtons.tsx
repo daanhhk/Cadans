@@ -48,13 +48,16 @@ export function SoonButton({ label }: { label: string }) {
   );
 }
 
-// Per-dag knoppen-blok. `plannable` (GAS trnPlannable_) bepaalt of "Andere training kiezen" toont.
+// Per-dag knoppen-blok. `plannable` (GAS trnPlannable_) bepaalt of "Andere training kiezen" toont;
+// die knop opent nu de WorkoutPickerSheet (onPickWorkout). GAS .trn-pick-btn = secondary (Styles.html:185).
 export function ActionButtons({
   plannable,
   datum,
+  onPickWorkout,
 }: {
   plannable: boolean;
   datum: string;
+  onPickWorkout: () => void;
 }) {
   return (
     <div
@@ -65,7 +68,15 @@ export function ActionButtons({
         marginTop: "var(--s-4)",
       }}
     >
-      {plannable && <SoonButton label="Andere training kiezen" />}
+      {plannable && (
+        <button
+          type="button"
+          onClick={onPickWorkout}
+          style={{ ...baseBtn, cursor: "pointer" }}
+        >
+          Andere training kiezen
+        </button>
+      )}
       <Link
         to={`/weekplanner?dag=${datum}`}
         style={{ ...baseBtn, cursor: "pointer" }}

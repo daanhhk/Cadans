@@ -7,7 +7,14 @@ import { type SessionBlok, silhouetSegments } from "../../lib/schema";
 // de blok-lijst. De tekstuele intervallen staan in BlockList (a11y-bron) → bar decoratief.
 // De geometrie leeft in lib/schema.ts `silhouetSegments` (pure, DOM-loos testbaar); hier
 // puur renderen. SVG-maten zijn bewuste grafische dimensies (geen spacing/type-tokens).
-export function ZoneBar({ blokken }: { blokken: SessionBlok[] }) {
+export function ZoneBar({
+  blokken,
+  height = 110,
+}: {
+  blokken: SessionBlok[];
+  // optioneel: de picker-variantrijen gebruiken de GAS-minibar-hoogte (Styles.html:61, .wk-minibar 40px).
+  height?: number;
+}) {
   const segs = silhouetSegments(blokken);
   if (segs.length === 0) return null;
   return (
@@ -15,7 +22,7 @@ export function ZoneBar({ blokken }: { blokken: SessionBlok[] }) {
       viewBox="0 0 100 100"
       preserveAspectRatio="none"
       aria-hidden="true"
-      style={{ display: "block", width: "100%", height: 110 }}
+      style={{ display: "block", width: "100%", height }}
     >
       {segs.map((s) => (
         <rect
