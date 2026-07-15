@@ -143,7 +143,9 @@ export function Niveau() {
       currentCtl,
       targetCtl: prof.dims.find((d) => d.metric === "ctl")?.target ?? null,
       tssPerHour: tssPerHourRecent_(rows, 42) as number | null,
-      currentFtp: eftp ?? settings?.ftp ?? null,
+      // GAS WebApp.gs:1268 gebruikt uitsluitend de INGESTELDE FTP als band-basis (geen eFTP);
+      // eftp blijft de fallback als settings.ftp ontbreekt. VermogenSnapshot toont eftp apart.
+      currentFtp: settings?.ftp ?? eftp ?? null,
       gewicht: settings?.gewicht ?? null,
       testWeken: doelTestWeken_(
         settings?.doelStart ?? null,

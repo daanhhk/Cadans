@@ -196,11 +196,17 @@ function ProjectionChart({
     : [currentCtl, plateau, targetCtl];
   const lo = Math.max(0, Math.min(...levels) - 4);
   const hi = Math.max(...levels) + 4;
-  const X = (t: number) => padL + (t / WEEKS) * (CW - padL - padR);
+  // BEWUSTE DIVERGENTIE t.o.v. GAS (hardcoded WEEKS=16, óók in test-modus): in test-modus ligt de
+  // testdatum vast → alles rechts van de testdag is betekenisloos + suggereert onterecht "langer
+  // doortrainen". Het x-domein stopt daarom op de testdag; ondergrens 4 wkn voorkomt een
+  // degenereerde, extreem smalle grafiek bij een testdag dichtbij. Buiten test-modus: 16, ongewijzigd.
+  const weeksDomain =
+    isTest && testWeken != null ? Math.max(4, testWeken) : WEEKS;
+  const X = (t: number) => padL + (t / weeksDomain) * (CW - padL - padR);
   const Y = (v: number) =>
     padT + (1 - (v - lo) / (hi - lo || 1)) * (CH - padT - padB);
   const ramp: { t: number; v: number }[] = [];
-  for (let t = 0; t <= WEEKS; t++) {
+  for (let t = 0; t <= weeksDomain; t++) {
     const v = ctlAtWeek_(currentCtl, plateau, t) as number | null;
     if (v != null) ramp.push({ t, v });
   }
@@ -208,17 +214,25 @@ function ProjectionChart({
     .map((p, i) => `${i ? "L" : "M"}${X(p.t).toFixed(1)} ${Y(p.v).toFixed(1)}`)
     .join(" ");
   const area = ramp.length
-    ? `${line} L${X(WEEKS).toFixed(1)} ${(CH - padB).toFixed(1)} L${X(0).toFixed(1)} ${(CH - padB).toFixed(1)} Z`
+    ? `${line} L${X(weeksDomain).toFixed(1)} ${(CH - padB).toFixed(1)} L${X(0).toFixed(1)} ${(CH - padB).toFixed(1)} Z`
     : "";
   const readyX = !isTest && weeks != null && weeks <= WEEKS ? X(weeks) : null;
-  // test-modus: markeer de testdag (x = testWeken, alleen als ≤ 16 wkn in beeld) op de ramp.
+  // test-modus: de testdag-marker. Het x-domein dekt de testdag nu per definitie → de eerdere
+  // "testWeken ≤ 16"-guard vervalt hier.
   const testCtl =
-    isTest && testWeken != null && testWeken <= WEEKS
+    isTest && testWeken != null
       ? (ctlAtWeek_(currentCtl, plateau, testWeken) as number | null)
       : null;
-  const testX =
-    isTest && testWeken != null && testWeken <= WEEKS ? X(testWeken) : null;
+  const testX = isTest && testWeken != null ? X(testWeken) : null;
   const testY = testCtl != null ? Y(testCtl) : null;
+  // marker op de rechterrand? (testWeken ≥ 4 → testWeken === weeksDomain) → label links uitlijnen
+  // zodat "testdag" niet buiten de svg valt.
+  const testAtEdge = isTest && testWeken != null && testWeken === weeksDomain;
+  // x-as ticks: "nu" + elke 4 weken zolang tick < weeksDomain. Buiten test-modus houdt het
+  // eindpunt-tick (16) z'n plek; in test-modus draagt de testdag-marker het eindpunt.
+  const ticks: number[] = [0];
+  for (let t = 4; t < weeksDomain; t += 4) ticks.push(t);
+  if (!isTest) ticks.push(WEEKS);
   return (
     <svg
       viewBox={`0 0 ${CW} ${CH}`}
@@ -335,9 +349,9 @@ function ProjectionChart({
             strokeWidth="2"
           />
           <text
-            x={Math.min(CW - padR - 2, testX + 6)}
+            x={testAtEdge ? testX - 6 : Math.min(CW - padR - 2, testX + 6)}
             y={padT + 8}
-            textAnchor="start"
+            textAnchor={testAtEdge ? "end" : "start"}
             fill="var(--accent)"
             fontSize="9.5"
             fontFamily="var(--font-num)"
@@ -346,12 +360,12 @@ function ProjectionChart({
           </text>
         </g>
       )}
-      {[0, 4, 8, 12, 16].map((t) => (
+      {ticks.map((t) => (
         <text
           key={t}
           x={Math.max(padL + 6, Math.min(CW - padR - 6, X(t)))}
           y={CH - 6}
-          textAnchor={t === 0 ? "start" : t === WEEKS ? "end" : "middle"}
+          textAnchor={t === 0 ? "start" : t === weeksDomain ? "end" : "middle"}
           fill="var(--text-muted)"
           fontSize="10"
           fontFamily="var(--font-num)"
