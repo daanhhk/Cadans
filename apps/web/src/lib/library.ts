@@ -9,7 +9,7 @@ import type {
   SettingsInput,
 } from "@cadans/shared";
 import type { ProposalWorkout } from "./proposal";
-import { type SchemaSession, toSession } from "./schema";
+import { type SchemaDay, type SchemaSession, toSession } from "./schema";
 
 // Getypeerde trainings-bibliotheek-laag (puur, DOM-loos). Vangt de engine-`any`-output van
 // getTrainingLibrary_ + buildOverrideWorkout_ af achter één gedeelde, getypeerde grens (mitigeert
@@ -164,4 +164,47 @@ export function previewOverrideSession(
     ctx.dagIdx,
   ) as ProposalWorkout | null;
   return wo ? toSession(wo) : null;
+}
+
+// ── Week-predicaten (voor de B3-picker + de B2 Trainingen-tab) ──────────────────────────────────
+
+/**
+ * GAS trnPlannable_ (Script.html:1998-2004): dag ≥ vandaag én niet voltooid/gemist. De TWEE
+ * GAS-takken die hier wegvallen zijn bewust: 'preview' bestaat niet in Cadans' 1-week-venster, en
+ * 'vandaag mét een rit' is door de same-day-flip al state 'done' → de done-uitsluiting dekt 'm.
+ */
+export function isDayPlannable(day: SchemaDay, todayISO: string): boolean {
+  return (
+    day.datum >= todayISO && day.state !== "done" && day.state !== "gemist"
+  );
+}
+
+/**
+ * GAS trnNextPlannableDate_ (Script.html:2005-2007): de VROEGSTE plannbare dag (oplopende datum), of
+ * — als er geen kandidaat is — todayISO (GAS valt terug op state.vandaag.dateISO). BYTE-GETROUW: die
+ * fallback kan op een gesloten dag mikken; dat is het GAS-gedrag, bewust behouden.
+ */
+export function nextPlannableDate(
+  days: SchemaDay[],
+  todayISO: string,
+): string | null {
+  const cand = days
+    .filter((d) => isDayPlannable(d, todayISO))
+    .sort((a, b) => (a.datum < b.datum ? -1 : 1));
+  const first = cand[0];
+  return first ? first.datum : todayISO;
+}
+
+/**
+ * "In je blok"-badge-bron: de unieke geplande types over de week. GAS merget weekPlannedTypes_ + een
+ * aparte override-merge (WebApp.gs:1389-1397). In Cadans is die merge OVERBODIG: de laag-3b-port zet
+ * ProposalDay.voorgesteldType op de override-waarde ("free" | workoutType), dus de unieke niet-lege
+ * voorgesteldType over de dagen dekt beide takken BY CONSTRUCTION (geverifieerd in proposal.ts).
+ */
+export function weekPlannedTypes(days: SchemaDay[]): Set<string> {
+  const out = new Set<string>();
+  for (const d of days) {
+    if (d.voorgesteldType) out.add(d.voorgesteldType);
+  }
+  return out;
 }

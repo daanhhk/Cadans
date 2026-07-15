@@ -7,9 +7,6 @@ import type {
 import { type CSSProperties, useEffect, useMemo, useState } from "react";
 import { putOverride } from "../../lib/api";
 import {
-  DUR_MAX,
-  DUR_MIN,
-  DUR_STEP,
   findCategory,
   findVariant,
   freeOverride,
@@ -29,81 +26,16 @@ import {
   setFree,
 } from "../../lib/pickerState";
 import { bumpPlannerVersion } from "../../lib/plannerSignal";
-import { durLabel } from "../../lib/schema";
+import { BackHeader } from "../library/BackHeader";
+import { CategoryList } from "../library/CategoryList";
+import { DurationSlider } from "../library/DurationSlider";
+import { VariantRow } from "../library/VariantRow";
 import { WorkoutDetail } from "./WorkoutDetail";
-import { ZoneBar } from "./ZoneBar";
 
 // Bottom-sheet workout-picker (GAS pkHtml_, Script.html:2065-2160). Gemodelleerd op CheckinSheet
 // (fixed inset-0, scrim-button, panel, handle, safe-area, foutregel). Afwijkend: het paneel scrollt
 // (GAS overlay = max-height 90vh + overflow auto, Drawer.html). Preview = ENGINE (previewOverrideSession,
 // WYSIWYG met de dagkaart), GEEN trnScale_-port. DTO's uit libraryOverride/freeOverride → variantId altijd.
-
-function DurSlider({
-  value,
-  onChange,
-}: {
-  value: number;
-  onChange: (v: number) => void;
-}) {
-  return (
-    <div style={{ marginTop: "var(--s-4)" }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "baseline",
-        }}
-      >
-        <span
-          style={{
-            fontFamily: "var(--font-sans)",
-            fontSize: "var(--fs-label)",
-            color: "var(--text-secondary)",
-          }}
-        >
-          Duur · structuur schaalt mee
-        </span>
-        <span
-          style={{
-            fontFamily: "var(--font-num)",
-            fontSize: "var(--fs-label)",
-            fontWeight: 600,
-            color: "var(--accent)",
-          }}
-        >
-          {durLabel(value)}
-        </span>
-      </div>
-      <input
-        type="range"
-        min={DUR_MIN}
-        max={DUR_MAX}
-        step={DUR_STEP}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        aria-label="Duur van de training"
-        style={{
-          width: "100%",
-          marginTop: "var(--s-2)",
-          accentColor: "var(--slider-fill)",
-          cursor: "pointer",
-        }}
-      />
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          fontFamily: "var(--font-num)",
-          fontSize: "var(--fs-caption)",
-          color: "var(--text-muted)",
-        }}
-      >
-        <span>{durLabel(DUR_MIN)}</span>
-        <span>{durLabel(DUR_MAX)}</span>
-      </div>
-    </div>
-  );
-}
 
 function Segmented<T extends string>({
   label,
@@ -334,45 +266,8 @@ export function WorkoutPickerSheet({
           }}
         />
 
-        {/* kop + back (elke view behalve home) */}
-        <div
-          style={{ display: "flex", alignItems: "center", gap: "var(--s-2)" }}
-        >
-          {state.view !== "home" && (
-            <button
-              type="button"
-              aria-label="Terug"
-              onClick={() => setState((s) => back(s))}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: 30,
-                height: 30,
-                flexShrink: 0,
-                border: "none",
-                background: "none",
-                cursor: "pointer",
-                color: "var(--text-secondary)",
-              }}
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 13 14"
-                fill="none"
-                aria-hidden="true"
-              >
-                <path
-                  d="M9 2L4 7l5 5"
-                  stroke="var(--text-secondary)"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-          )}
+        {/* kop: home = kale titel (geen back); overige views = gedeelde BackHeader (zonder sub = pk-gedrag). */}
+        {state.view === "home" ? (
           <div
             style={{
               fontFamily: "var(--font-sans)",
@@ -384,7 +279,9 @@ export function WorkoutPickerSheet({
           >
             {title}
           </div>
-        </div>
+        ) : (
+          <BackHeader title={title} onBack={() => setState((s) => back(s))} />
+        )}
 
         {/* ── HOME ── */}
         {state.view === "home" && (
@@ -472,89 +369,18 @@ export function WorkoutPickerSheet({
 
         {/* ── CATS ── */}
         {state.view === "cats" && (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "var(--s-2)",
-              marginTop: 18,
-            }}
-          >
-            {cats.map((c) => (
-              <button
-                type="button"
-                key={c.key}
-                onClick={() => setState((s) => openCat(s, c.key))}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "var(--s-3)",
-                  textAlign: "left",
-                  cursor: "pointer",
-                  background: "var(--bg-sunken)",
-                  border: "1px solid var(--border-strong)",
-                  borderRadius: "var(--r-md)",
-                  padding: "12px 14px",
-                }}
-              >
-                <span
-                  style={{
-                    width: 4,
-                    alignSelf: "stretch",
-                    borderRadius: "var(--r-pill)",
-                    background: `var(${c.zoneVar})`,
-                    flexShrink: 0,
-                  }}
-                />
-                <span style={{ flex: 1, minWidth: 0 }}>
-                  <span
-                    style={{
-                      display: "block",
-                      fontFamily: "var(--font-sans)",
-                      fontSize: "var(--fs-label)",
-                      fontWeight: 600,
-                      color: `var(${c.zoneVar})`,
-                    }}
-                  >
-                    {c.label}
-                  </span>
-                  <span
-                    style={{
-                      display: "block",
-                      fontFamily: "var(--font-sans)",
-                      fontSize: "var(--fs-caption)",
-                      color: "var(--text-muted)",
-                      marginTop: 1,
-                    }}
-                  >
-                    {c.omschrijving} · {c.variants.length}{" "}
-                    {c.variants.length === 1 ? "variant" : "varianten"}
-                  </span>
-                </span>
-                <svg
-                  width="10"
-                  height="14"
-                  viewBox="0 0 8 14"
-                  fill="none"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M1 1l5 6-5 6"
-                    stroke="var(--text-muted)"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </button>
-            ))}
+          <div style={{ marginTop: 18 }}>
+            <CategoryList
+              cats={cats}
+              onOpen={(key) => setState((s) => openCat(s, key))}
+            />
           </div>
         )}
 
         {/* ── CATEGORY ── */}
         {state.view === "category" && cat && (
           <>
-            <DurSlider
+            <DurationSlider
               value={eff}
               onChange={(v) => setState((s) => setDur(s, v))}
             />
@@ -579,56 +405,12 @@ export function WorkoutPickerSheet({
               }}
             >
               {variantPreviews.map(({ variant: v, session }) => (
-                <button
-                  type="button"
+                <VariantRow
                   key={v.variantId}
-                  onClick={() => setState((s) => openWorkout(s, v.variantId))}
-                  style={{
-                    textAlign: "left",
-                    cursor: "pointer",
-                    background: "var(--bg-sunken)",
-                    border: "1px solid var(--border-strong)",
-                    borderRadius: "var(--r-md)",
-                    padding: "10px 12px",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "baseline",
-                      gap: "var(--s-2)",
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontFamily: "var(--font-sans)",
-                        fontSize: "var(--fs-label)",
-                        fontWeight: 600,
-                        color: "var(--text-primary)",
-                      }}
-                    >
-                      {v.naam}
-                    </span>
-                    {session && (
-                      <span
-                        style={{
-                          fontFamily: "var(--font-num)",
-                          fontSize: "var(--fs-caption)",
-                          color: "var(--text-muted)",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {session.totaalMin} min · TSS {session.tss}
-                      </span>
-                    )}
-                  </div>
-                  {session && (
-                    <div style={{ marginTop: "var(--s-2)" }}>
-                      <ZoneBar blokken={session.blokken} height={40} />
-                    </div>
-                  )}
-                </button>
+                  naam={v.naam}
+                  session={session}
+                  onOpen={() => setState((s) => openWorkout(s, v.variantId))}
+                />
               ))}
             </div>
           </>
@@ -637,7 +419,7 @@ export function WorkoutPickerSheet({
         {/* ── WORKOUT ── */}
         {state.view === "workout" && cat && variant && (
           <>
-            <DurSlider
+            <DurationSlider
               value={eff}
               onChange={(v) => setState((s) => setDur(s, v))}
             />
@@ -689,7 +471,7 @@ export function WorkoutPickerSheet({
               ]}
               onChange={(v) => setState((s) => setFree(s, { intensiteit: v }))}
             />
-            <DurSlider
+            <DurationSlider
               value={eff}
               onChange={(v) => setState((s) => setDur(s, v))}
             />

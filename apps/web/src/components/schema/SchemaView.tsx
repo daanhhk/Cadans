@@ -4,6 +4,7 @@ import {
   coachNarrative,
   normalizeCoachPersona,
 } from "../../lib/coachNarrative";
+import { isDayPlannable } from "../../lib/library";
 import type { ProposalWeek } from "../../lib/proposal";
 import type { ReadinessResult } from "../../lib/readiness";
 import {
@@ -79,8 +80,9 @@ export function SchemaView({
   const day = view.days.find((d) => d.datum === selected) ?? view.days[0];
   // dag >= vandaag: het knoppen-blok toont alleen op vandaag/toekomst (verleden kun je niet meer plannen).
   const dayFuture = !!day && day.datum >= todayISO;
-  // plannbaar (GAS trnPlannable_): dag >= vandaag en niet voltooid -> "Andere training kiezen" mag.
-  const dayPlannable = dayFuture && !!day && !day.done;
+  // plannbaar (GAS trnPlannable_): dag >= vandaag, niet voltooid én niet gemist -> "Andere training
+  // kiezen" mag. Via het gedeelde predicaat: een gemiste dag verliest de knop (GAS-parity).
+  const dayPlannable = !!day && isDayPlannable(day, todayISO);
   // 3b: ÉÉN bron voor "toont deze dag de override-kaart?" — gebruikt door zowel de overline-label als
   // de OverriddenDetail-dispatch-tak, zodat ze niet uit elkaar kunnen lopen. Done/gemist winnen (een
   // gereden/gemiste dag is een specifieker feit dan een hangende override).

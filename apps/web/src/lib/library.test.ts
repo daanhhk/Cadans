@@ -4,11 +4,42 @@ import {
   findCategory,
   findVariant,
   freeOverride,
+  isDayPlannable,
   libraryOverride,
+  nextPlannableDate,
   type OverrideRenderCtx,
   previewOverrideSession,
   trainingCategories,
+  weekPlannedTypes,
 } from "./library";
+import type { DayState, SchemaDay } from "./schema";
+
+// Minimale SchemaDay-fixture (alleen datum/state/voorgesteldType tellen voor de predicaten).
+function sd(
+  datum: string,
+  state: DayState,
+  o: Partial<SchemaDay> = {},
+): SchemaDay {
+  return {
+    datum,
+    dagIdx: 0,
+    weekday: "",
+    dayNum: 0,
+    state,
+    isToday: false,
+    voorgesteldType: null,
+    reden: null,
+    redenCode: null,
+    sessions: [],
+    doneTss: 0,
+    done: null,
+    doneCompare: null,
+    dispositie: null,
+    coach: null,
+    override: null,
+    ...o,
+  };
+}
 
 const SETTINGS: SettingsInput = {
   ftp: 280,
@@ -118,5 +149,54 @@ describe("previewOverrideSession + DTO-builders", () => {
       intensiteit: "rustig",
       durMin: 90,
     });
+  });
+});
+
+const TODAY = "2026-03-11";
+
+describe("isDayPlannable (GAS trnPlannable_)", () => {
+  it("toekomstige plandag → true; done/gemist → false", () => {
+    expect(isDayPlannable(sd("2026-03-12", "planned"), TODAY)).toBe(true);
+    expect(isDayPlannable(sd("2026-03-12", "rest"), TODAY)).toBe(true);
+    expect(isDayPlannable(sd("2026-03-12", "done"), TODAY)).toBe(false);
+    expect(isDayPlannable(sd("2026-03-12", "gemist"), TODAY)).toBe(false);
+  });
+  it("vandaag → true; vandaag-done → false (same-day-flip dekt 'vandaag+rit')", () => {
+    expect(isDayPlannable(sd(TODAY, "today"), TODAY)).toBe(true);
+    expect(isDayPlannable(sd(TODAY, "done"), TODAY)).toBe(false);
+  });
+  it("verleden dag → false (datum < vandaag)", () => {
+    expect(isDayPlannable(sd("2026-03-10", "planned"), TODAY)).toBe(false);
+  });
+});
+
+describe("nextPlannableDate (GAS trnNextPlannableDate_)", () => {
+  it("kiest de VROEGSTE plannbare dag (ongesorteerde input)", () => {
+    const days = [
+      sd("2026-03-13", "planned"),
+      sd("2026-03-11", "done"), // niet plannbaar
+      sd("2026-03-12", "rest"),
+    ];
+    expect(nextPlannableDate(days, TODAY)).toBe("2026-03-12");
+  });
+  it("geen kandidaat → val terug op todayISO (GAS-fallback)", () => {
+    const days = [sd("2026-03-11", "done"), sd("2026-03-10", "planned")];
+    expect(nextPlannableDate(days, TODAY)).toBe(TODAY);
+  });
+});
+
+describe("weekPlannedTypes (In-je-blok-badge-bron)", () => {
+  it("dedupliceert en pakt override-dagen mee (voorgesteldType = override-waarde)", () => {
+    const days = [
+      sd("2026-03-11", "planned", { voorgesteldType: "sweet_spot" }),
+      sd("2026-03-12", "planned", { voorgesteldType: "sweet_spot" }), // dubbel
+      sd("2026-03-13", "planned", { voorgesteldType: "threshold" }),
+      // override-dag: voorgesteldType is al de override-waarde (laag-3b) → geen aparte merge nodig
+      sd("2026-03-14", "planned", { voorgesteldType: "free" }),
+      sd("2026-03-15", "rest", { voorgesteldType: null }), // leeg → genegeerd
+    ];
+    expect(weekPlannedTypes(days)).toEqual(
+      new Set(["sweet_spot", "threshold", "free"]),
+    );
   });
 });
