@@ -16,8 +16,8 @@ live tot cutover.
 (remote-D1 + deploy).
 
 **VLOEREN** (mogen niet regresseren; NIET in prompts hardcoden): engine-selftest-assert-count **957** ·
-vitest-totaal **300** (was 304 → BEWUSTE daling: 4 dode make-up-tests verwijderd in FASE 3a, `schema.test.ts`
-45 → 41; GEEN regressie).
+vitest-totaal **305** (FASE 3a −4 dode make-up-tests → 300; Niveau test-modus +5 `projectionDirection`-units → 305).
+_(Vorige stand: was 304 → daling naar 300 in FASE 3a, `schema.test.ts` 45 → 41; GEEN regressie.)_
 
 ### BRONHIERARCHIE VOOR PARITY (werkwijze — vast)
 - **daanhhk/training is PUBLIC + BEVROREN op `3e8090a`.** De chat leest de GAS-bron DIRECT via
@@ -56,13 +56,11 @@ Basic-Auth-gated (`/api/health` → 401 + `WWW-Authenticate: Basic`); functionel
   adaptatie in kaart. KERN: de engine-kern is al geport; ontbreekt = client-orkestratie + UI;
   de override-backend is de gedeelde B3/B4-fundering. Bevat de port-correctheid-caveat.
 
-**FASE B + coach-narrative-reeks GEDEPLOYD; main loopt nu VÓÓR prod (FASE 3a+3b nog niet gedeployd).** Prod Worker
-Version is `43ab5f03-d59e-4147-8833-fdb82dc3a893` (was `a4f57c19`); de gedeployde inhoud = **main t/m `c800d47`**.
-**LET OP — main > prod:** FASE 3a (`0c954258`) + 3b (`faab52cb`) zijn gemerged (gate + CI groen) maar NOG NIET
-gedeployd → **prod-deploy van 3a+3b is de eerstvolgende approval-gated stap.** Remote D1 gemigreerd t/m
-`0003_wise_sunset_bain.sql` (`coach_persona`-kolom, nullable, presentatie-only; backward-compatible → veilig vóór de
-deploy). Basic-Auth-gate actief (`/api/health` → 401 + `WWW-Authenticate: Basic`); functionele round-trip in-browser
-door Daan.
+**ALLES GEDEPLOYD — prod == main HEAD (`aeafcc9`).** Prod Worker Version is
+`02b6abb9-fe02-4a00-bac0-db8253950b4b`; de gedeployde inhoud = **main t/m `aeafcc9`** (de Niveau-fixes). Version-log
+deze reeks: `43ab5f03` (coach-narrative-reeks) → `479403a9` (FASE 3a+3b) → `02b6abb9` (Niveau test-modus + FTP-band).
+Remote D1 ONGEWIJZIGD t/m `0003_wise_sunset_bain.sql` (geen nieuwe migratie deze reeks). Basic-Auth-gate actief
+(`/api/health` → 401 + `WWW-Authenticate: Basic`); functionele round-trip in-browser door Daan.
 
 **NIEUW GEBOUWD & LIVE deze reeks** (samengevat, niet elke commit; canonieke copy-/persona-bron =
 `apps/web/src/lib/coachNarrative.ts`):
@@ -80,8 +78,8 @@ door Daan.
 - **Gedeelde `CoachCallout`** (`c800d47`): de per-dag-narrative staat nu in het coach-blok (glyph + coachnaam) boven
   de training i.p.v. een kale regel; byte-identiek met de voltooid-kaart-coach-box.
 
-**FASE 3 (Brok 3) — client-only opruim + gemist-narrative zichtbaar** (gate + CI groen, telefoon-geverifieerd; NOG
-NIET gedeployd):
+**FASE 3 (Brok 3) — client-only opruim + gemist-narrative zichtbaar** (gate + CI groen, telefoon-geverifieerd;
+GEDEPLOYD in Version `479403a9`):
 - **3a — verlaten override-make-up-MODEL verwijderd** (`0c954258`): uit `apps/web/src/lib/schema.ts` weg:
   `applyMakeupAdaptations`-post-pass + aanroep, `MakeupAdaptatie`-type, `SchemaDay.makeupAdaptatie`-veld,
   client-imports `coachAdaptatie_`/`getTrainingLibrary_` (+ de dode `DayOverride`-import). De ENGINE-fns
@@ -95,6 +93,28 @@ NIET gedeployd):
   (hoort bij het verwijderde make-up-model). `impact=false`. De done-box (`DoneCompareCard`) bewust NIET aangeraakt.
   CI: https://github.com/daanhhk/Cadans/actions/runs/29355111917 · telefoon-check (Vite dev `192.168.1.201:5173`,
   Schema-tab): een gemist-dag toont de narrative in het CoachCallout-blok onder de gemist-rij — correct.
+
+**NIVEAU doel-projectie — test-modus + FTP-band-fix (2 commits, CLIENT-ONLY, engine ongemoeid; GEDEPLOYD in Version
+`02b6abb9`):**
+- **`7308d660` "honour 'test' projection mode for FTP goal" — PORT-OMISSIE HERSTELD:** `DoelProjectie.tsx` gebruikte
+  `projectieMode` alleen voor een kop-label; de gap-machinerie draaide onvoorwaardelijk. GAS onderdrukt bij een
+  FTP-doel (`GOAL_PROFILES_.ftp`, projectieMode `test`, `WebApp.gs:499`) de HELE gap-tak: geen gap-rijen, geen
+  callout, geen duurdoel-lijn (`Script.html:1700-1702`), en toont de testdag-projectie (`:1616-1634`). Daardoor toonde
+  Cadans "zo niet haalbaar. Verhoog het volume." op een FTP-doel — in GAS ONBEREIKBaar (die zin zit in de NIET-test-tak,
+  `:1633`). Nu: `isTest = projectieMode === "test" && testWeken != null`; band gevoed met `ctlAtTest` (`ctlAtWeek_`).
+  Slider-default: `useState(8)` → `weeklyHoursRecent_(rows,42)` geclampt 4..14 (`WebApp.gs:1268` + `Script.html:1673`);
+  de engine-fn was al geport (`niveau.ts:804`) maar niet gewired. **BEWUSTE CLIENT-ONLY DIVERGENTIES:** (a) readout-copy
+  = richting in mensentaal via de nieuwe pure helper `projectionDirection` (`apps/web/src/lib/niveau.ts`; drempel
+  |delta| < 1 CTL → "flat"), GEEN CTL-getal in de copy — GAS toont "~X CTL" + gebruikt de richting alleen als warn;
+  (b) band-figuur klapt in tot ÉÉN getal bij low === high.
+- **`aeafcc9f` "use configured FTP as band basis and end projection at test day":** BUG — `Niveau.tsx` gaf
+  `currentFtp: eftp ?? settings?.ftp` door → de band startte op eFTP (265) terwijl de kop de ingestelde FTP (280) toont
+  = interne tegenspraak (fitheid stijgt, FTP daalt). GAS gebruikt `settings.ftp` ONLY (`WebApp.gs:1268`). Nu:
+  `settings?.ftp ?? eftp ?? null`. **BEWUSTE DIVERGENTIE:** het x-domein stopt op de testdag in test-modus
+  (`weeksDomain = isTest && testWeken != null ? Math.max(4, testWeken) : 16`). GAS hardcodeert `WEEKS=16` óók in
+  test-modus (`Script.html:1567`) → de curve liep 5 wkn voorbij een VASTE testdag en suggereerde "langer doortrainen",
+  een handeling die niet bestaat. Ticks: nu/+4w/+8w bij domein 11. Geverifieerd (390×844, LAN dev): band 280–283 W bij
+  6u, 280–298 W bij 8u (low vast op 280); kop "FTP-test over ~11 weken" blijft bij slider-beweging; geen "+16w"-tick.
 
 **FASE B laag-1 + readiness-koers (onder) blijven live; laag-2a is VERLATEN (zie §Geparkeerde debts).**
 - **laag-1 (override-backend + D2) — KLAAR + gedeployd** (`bbb9767`): day-override-backend
@@ -250,15 +270,18 @@ CI-groen, en **GEDEPLOYD** (prod Version `171f79fc`; zie het FASE A GEDEPLOYD-bl
 `FASE2-5-ZONES-RECON.md` (`6028cfd`, GECORRIGEERD → (a) CLIENT-ONLY — zie BRONHIERARCHIE). Het 4b- en het
 brok-2-recon waren rapport-only (geen doc).
 
-**FOCUS VOLGENDE CHAT:** t/m de coach-narrative-reeks is GEDEPLOYD & LIVE (prod Version `43ab5f03`, main t/m
-`c800d47`); FASE 3a+3b (`0c954258`+`faab52cb`) staan op main maar zijn NOG NIET gedeployd. → **(1) prod-deploy van
-3a+3b** = de eerstvolgende **approval-gated** stap (remote alleen op go; migraties zijn al t/m 0003). → Daarna open:
-**laag-3b** `OverriddenDetail` + "Terug naar voorstel" (brengt overrides terug in `deriveSchemaView`, waar
-`_overrides` op wacht); **DayStrip-navigatie-uitbreiding**; de geparkeerde **"warme persona op done = ENGINE-fase"**
-+ **"Niveau ↔ Schema doel-gereedheid-consistentie"** (zie §Geparkeerde debts); en de **engine end-audit +
-port-correctheid-audit** vóór cutover. Losse dev-DX-optie (geen scope nu): een root `pnpm dev`-script via
-`concurrently` dat Vite + `wrangler dev` samen start (nu twee losse processen). Het echte A-event **Amstel Gold
-Race** = INGEVOERD op prod (geverifieerd in-browser).
+**FOCUS VOLGENDE CHAT:** alles is GEDEPLOYD & LIVE — **prod == main HEAD `aeafcc9`** (Version `02b6abb9`). Doel van de
+komende reeks = **FUNCTIONEEL COMPLEET** (elke tab doet íéts), NIET cutover-klaar. Ga voor de **B-KETEN in deze
+volgorde** — ze delen de override-machinerie en 3b is de fundering:
+1. **laag-3b** — `OverriddenDetail` + "Terug naar voorstel" op override-dagen (spiegel `overrideKaart_`); brengt
+   `overrides` terug in `deriveSchemaView` (waar `_overrides` op wacht) → omkeerbaarheid + de gedeelde picker-fundering.
+2. **B3-picker** — "Andere training kiezen" (nu `SoonButton`; het write-pad = de override-backend, al gedeployd).
+3. **B2 Trainingen-tab** (nu `<ComingSoon>`; GAS = bibliotheek categorie→variant→detail-slider→inplannen; deelt de
+   override-machinerie).
+Daarna pas: **2d ritdetails** + het **DayStrip-venster**. NIET in deze reeks (cutover-sluitstukken, geen
+review-blockers): engine end-audit + port-correctheid-audit + data-migratie. Losse dev-DX-optie (geen scope nu): een
+root `pnpm dev` via `concurrently` (Vite + `wrangler dev` samen; nu twee losse processen). Het echte A-event **Amstel
+Gold Race** = INGEVOERD op prod (geverifieerd in-browser).
 
 ### PARITY-FASERING (compact — vervangt een apart audit-doc; de volledige matrix is via de GAS-bron te reconen)
 - **FASE B (recon-first, deels engine + sign-off):** **B2 Trainingen-tab** (nu `<ComingSoon>`; GAS = volledige
@@ -448,12 +471,20 @@ consumeren UITSLUITEND `--s-*/--fs-*/--lh-*/--r-*` (kleur was al gedisciplineerd
   fijnkorrelige done-`redenCode` + losse velden (plType/acType/richting/event/isKey), de client herformuleert warm —
   zoals de planned-laag werkt. Aparte fase, engine-sign-off vereist. De symmetrie "done = planned-aanpak" is
   OPPERVLAKKIG: planned-reden is generiek (vervangen = gratis), done-narrative is rijk (vervangen = verlies).
-- **Niveau-tab ↔ Schema-tab doel-gereedheid-consistentie — GEPARKEERD (aparte tab-fase, onderzoek):** de Niveau-tab
-  (DOEL-GEREEDHEID · FTP) meldt dat het duurdoel bij het huidige volume (6u/week) NIET haalbaar is — fitheid-plafond
-  ~49 (CTL) onder duurdoel 65, met expliciete tekst "zo niet haalbaar — verhoog het volume". De Schema-tab wekt
-  tegelijk een "op koers"-indruk (week-voortgang + geruststellende coach-toon). Die twee BOTSEN voor de gebruiker.
-  Onder de loep: hoe de Niveau-tab doel-gereedheid + fitheid-projectie berekent + presenteert (en welk
-  commentaar/coaching daar hoort), én hoe dat consistent wordt met de Schema-tab. Tab-voor-tab; niet nu.
+- **Niveau-tab ↔ Schema-tab doel-gereedheid-consistentie — INGELOST** (`7308d660`): de botsing verdween aan de bron.
+  De Niveau-tab claimt niet langer "zo niet haalbaar" op een FTP-doel — dat was de gap-tak die daar (GAS-conform) nooit
+  had mogen vuren; test-modus onderdrukt 'm nu. Schema is NIET aangeraakt.
+- **FTP-projectiemodel kent geen intensiteit (ENGINE-fase) — GEPARKEERD:** `ftpBandFromProjection_` (`WebApp.gs:544`)
+  hangt FTP-winst UITSLUITEND aan de CTL-delta (`gain = FTP_GAIN_PER_CTL_ 0.004 * max(0, plateau − current)`, cap
+  0.08). Bij ~6u/week zit Daan al bijna op z'n volume-plafond (~47 vs 49) → +3W over 11 wkn, binnen de meetruis van een
+  FTP-test. Twee gerichte sweet-spot-sessies leveren in werkelijkheid meer, maar het model ziet dat niet; de band gaat
+  bovendien NOOIT omlaag (`dCtl` geclampt op ≥ 0) → 4u en 6u tonen dezelfde low. BESLISSING: NIET fixen — GAS heeft
+  dezelfde beperking (geen cutover-regressie), het is een engine-wijziging met sign-off + 957-risico, en pas empirisch
+  te beoordelen na weken data. Evalueren met bewijs, niet nu.
+- **Design-schuld Niveau doel-projectie-card — GEPARKEERD:** de card benoemt de testdag DRIE keer ("FTP-test over ~11
+  weken" / "Verwachte FTP op de testdag" / "over ~11 wkn tot testdag"). Verzamelen voor een vormgeving-pass; Cadans'
+  design-standaard is GAS, dus een herontwerp = bewuste divergentie + een eigen tab-overstijgende fase, NÁ de
+  inhoudelijke ronde.
 - **Persona-pools disciplined/statistical LEEG** (fallback → warm): copy-werk voor later; de toon-ijk-voorbeelden +
   de structuur staan al in `lib/coachNarrative.ts`. De kiezer-UI toont ze als "binnenkort" (disabled).
 - **Blast-radius-herziening (FASE B — benoemde kandidaat voor de "komende weken"-evaluatie):** de band-gedreven
@@ -477,8 +508,11 @@ consumeren UITSLUITEND `--s-*/--fs-*/--lh-*/--r-*` (kleur was al gedisciplineerd
   dag-`vorm.CTL` → de klaar-marker kan ~1 week schuiven; eind-audit.
 - **riderType-proza UI-mapped**: parity-mirror van GAS `nvTypeDuiding_` (3 strings); engine levert enkel
   `{pos,label}` → parity-copy-debt, eind-audit.
-- **Geen geautomatiseerde interactie-tests** (Schema-collapse, DoelProjectie uren-slider, Rijdersprofiel
-  90d|1y-toggle): vereist jsdom + `@testing-library/react` (nieuwe deps + config) = aparte test-harness-klus.
+- **Geen geautomatiseerde interactie-tests + geen reproduceerbare visual-check-harness** (Schema-collapse,
+  DoelProjectie uren-slider, Rijdersprofiel 90d|1y-toggle): vereist jsdom + `@testing-library/react` (nieuwe deps +
+  config) = aparte test-harness-klus. Uitgebreid (Niveau-reeks): de visual-checks liepen ad-hoc via een in-app browser
+  (DOM-tekst + inline-screenshots), niet via een script → geen artefacten op schijf, niet herhaalbaar. Overwogen route
+  = Playwright buiten de repo.
 - **Debt (k) Vorm-lite INGELOST** (`1a8d354`): LevelCard tier-chip/tier-bar/"sinds"-delta + MetricRow Week-TSS
   gebouwd. Resteert onder (k): `/api/activities` server-side typing.
 - **Orchestratie-duplicatie (NIEUW):** `lib/niveau.ts` wrapt dezelfde engine-fn-keten die `Niveau.tsx` inline
