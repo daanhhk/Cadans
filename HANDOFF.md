@@ -11,7 +11,47 @@ live tot cutover.
 
 ## Stand
 
-**R0 MODULE 1 — AST-SORTEERMACHINE KLAAR (juli 2026).** Laatste CODE-commit `a0139bc` (tools/audit, NIET in CI,
+**R0 KLAAR — module 1 (AST-sorteermachine) + 2a (fundering) + 2b (matrix/oracle/entrypoint-map) + 2c (bewaker-fix)
+(juli 2026).** Commits: 2a `8e66ded`, 2b `2093bcd`, 2c `24e7a4f` (+ module 1 `03804eb`/`0fac374`/`f48ed6b`/`7ead6b8`
+en de fix-rondes `25ff64a`/`a0139bc`). `tools/audit/` hangt aan GEEN pnpm-script en staat NIET in CI. **Bakjes NA de
+13 aliassen (4 bestaand + 9 nieuw; grond per koppeling in `alias.mjs`):** 175 naam-matches — identiek 64, equivalent
+76, verschil 35, alleen-in-GAS 473, alleen-in-Cadans 115. (Dit vervangt de module-1-getallen 166/63/76/27 hieronder,
+die van vóór de aliassen zijn.)
+- **VIER HANDOFF-CLAIMS DIE NIET KLOPTEN (nu gecorrigeerd — zodat een volgende chat niet zoekt naar iets dat er niet
+  is):** (a) "harde abort als HEAD ≠ 3e8090a" bestond niet in de code; nu gebouwd in 2a. (b) `VOCAB_FORBIDDEN`
+  (rules.mjs) werd nergens geïmporteerd; nu afgedwongen op de rapport-tekst. (c) "de GAS-UI heeft 12
+  server-entrypoints" → het zijn er 16; zie `entrypoints.mjs`. (d) de push-keten klopte niet — zie het OPENSTAAND-PUSH-
+  blok, gecorrigeerd.
+- **DE MATRIX = de leesvolgorde voor R1/R2, vier groepen (namen voluit):** groep 1 verschil zonder enige test (6):
+  getGewicht, genericPendelIntervals, expectedRpe_, mesoFactor, zwoStepFromRow_, evTodayISO_→todayIso. Groep 2
+  verschil met alleen een Cadans-test (15; gedrag vastgelegd, nooit tegen de herkomst geijkt — o.a. assignWorkouts +
+  de Model-2-keten zoneDebt_/rollingZoneCoverage_/recentHardDate_/wellnessSignal_): dashVormReeks_, assignWorkouts,
+  rpeSignal_, combineSignals_, trnPlannable_→isDayPlannable, trnDurLabel_→durLabel, coachActualZoneMin_→actualZone5_,
+  isoWeek_→isoWeekNumber, rollingZoneCoverage→rollingZoneCoverage_, weekPlannedTypes_→weekPlannedTypes,
+  getWellnessSignal→wellnessSignal_, computeZoneDebt_→zoneDebt_, recentHardDayDate_→recentHardDate_,
+  trnNextPlannableDate_→nextPlannableDate, nlMaandLabel_→maandLabel. Groep 3 verschil, door beide oracles geraakt (10):
+  dashActualsByDate_, dashStatsFromActivities_, dashBeginAnker_, dashNiveauReeks_, gatherWeekplanEntries_, buildWorkout,
+  getReadinessScore_, formatDate, zoneTimesFromCell_, dslBlockFromRow_. Groep 4 architectuurgrens (4; de
+  lib/api.ts-fetchwrappers, geen port): getWellness, getActivities, getEvents, getPowerCurve.
+- **DE ORACLE-AS IS TWEE ASSEN:** "GAS bewees dit ook" (gas-suite-noemt / gas-assert-arg) tegenover "wij hebben dit
+  vastgelegd" (cadans-test-noemt). Transitief oracle-bereik (205 units) is BEWUST in geen cel gebruikt: het bewijst
+  een naamketen, NIET dat de oracle iets vastlegde (getReadinessScore_ en gatherWeekplanEntries_ zijn transitief
+  bereikt en staan in geen assert-argument).
+- **WAT DE MATRIX NIET DOET (structureel, niet met een betere graaf op te lossen):** (1) hij sorteert PORT-risico,
+  niet MODEL-risico — `effectiveMacroFase_` is identiek, bereikbaar én door beide oracles geraakt (de rustigste cel)
+  en tegelijk het zwaarste trainings-defect; R3 komt niet uit deze matrix, en de rustigste cel is niet de veiligste.
+  (2) de 115 alleen-in-Cadans hebben geen GAS-tegenhanger, dus geen verdict — ze draaien wél. (3) alleen TOP-LEVEL
+  units worden vergeleken, geneste helpers niet. (4) de 9 aliassen zijn een OORDEEL, geen bewijs (8/9 kregen verdict
+  "verschil"); de 15 afgewezen kandidaten staan in `tools/audit/out/aliasscan.txt`, afgewezen op laagverschil
+  (RPC-client tegenover Sheet-schrijver) of 1-op-veel-consolidatie. (5) de scope-check is unit-breed (2c).
+- **BEVINDING (client-only, geen engine) — geparkeerde debt:** `maandLabel` bestaat twee keer — `lib/niveau.ts:32`
+  (gedeeld, geëxporteerd) en een eigen kopie in `components/niveau/ProgressieCard.tsx:30` die de gedeelde versie NIET
+  importeert. Ze wijken af op edge-cases (input zonder streepje). De alias koppelt aan de lib-versie, dus de matrix
+  klopt. Later: de kopie vervangen door een import van de gedeelde `maandLabel`.
+- **FOCUS VOLGENDE CHAT:** R1 = FASE-B port-correctheid. Leesvolgorde = matrix-groep 1, dan groep 2. GEEN
+  engine-wijziging in de review; findings → verdicts → aparte bouw-chats.
+
+**R0 MODULE 1 — AST-SORTEERMACHINE (historie, juli 2026).** Laatste CODE-commit `a0139bc` (tools/audit, NIET in CI,
 engine ongemoeid). Leeft in `tools/audit/` (`alias.mjs`, `rules.mjs`, `run.mjs`). Entry: `node tools/audit/run.mjs`.
 GAS-bron via env `GAS_SRC` (default `C:\Users\daan\Projects\training`), read-only; harde abort als HEAD ≠ `3e8090a`.
 Uitvoer naar `tools/audit/out/` (gitignored). **NADRUKKELIJK NIET IN CI** — in CI zou hij de engine voor eeuwig aan
@@ -58,19 +98,8 @@ GAS vastvriezen. Hangt aan geen pnpm-script; bewaakt zichzelf met asserts die de
   `a0139bc` is een kind van `25ff64a`, met een eigen commit-message, en bij `25ff64a` stond identiek nog op 64 met
   het lus-kop-gat open. Het werk is goed, de narratie eromheen was fout. Genoteerd zodat een volgende chat niet zoekt
   naar een herkomst die er niet is.
-- **VOLGENDE:** R0 module 2 = risico-matrix (naam-gebaseerde call-graph: bereik vanaf de echte app-entrypoints ×
-  oracle-bereik vanaf `selftest.test.ts`, gekruist met het AST-verdict) + oracle-inventaris (50 GAS-suites ↔ de
-  gespiegelde suites, statische assert-call-sites per suite). Eerlijkheid vooraf: een naam-gebaseerde call-graph
-  over-approximeert (naamcollisies) én onder-approximeert (`obj[key]()`-dispatch) — het woord "dood" hoort niet in dat
-  rapport. Daarna R1 → R2 → R3 → R4 volgens de route.
-- **R0 module 2 — ENTRYPOINT-MAP (scope-uitbreiding, gevonden tijdens de close-out).** De gap-regel van module 2
-  ("GAS-fn zonder tegenhanger, aangeroepen door een fn die WEL een tegenhanger heeft") vindt blad-gaten, maar GEEN
-  hele ontbrekende features: als de aanroepers zélf ook niet geport zijn, ziet de keten eruit als ruis in de 482
-  alleen-in-GAS. De push-keten is daar het bewijs van. Module 2 krijgt daarom een hand-gemaakte, door Daan te
-  reviewen map van GAS UI-entrypoint → Cadans-route. Een NAAM-check volstaat daar niet: Cadans zette RPC om naar REST,
-  dus naam-afwezig betekent meestal hernoemd, niet weg (`clearDayOverride` ~ `PUT /api/override/:date` met null=wis;
-  `saveRpe` ~ `PUT /api/rpe/:date`). De GAS-UI heeft 12 server-entrypoints; dit is een lijstje van 12 regels, geen
-  analyse.
+- **(module 2 is intussen GEBOUWD — zie het R0-KLAAR-blok bovenaan Stand: matrix + oracle-inventaris +
+  entrypoint-map van 16 regels in `entrypoints.mjs`.)**
 
 **TRAININGSMODEL GESCHREVEN (juli 2026) — commit `fc76af2`, docs-only, engine ongemoeid, niets gedeployd.**
 `docs/TRAININGSMODEL.md` = de NORM voor de trainings-laag; R1-R4 vellen hun verdicts hiertegen
@@ -89,10 +118,13 @@ GAS vastvriezen. Hangt aan geen pnpm-script; bewaakt zichzelf met asserts die de
   service-worker-cache); het A-event op prod staat op `2027-04-18` en moet `2027-04-17` zijn (AGR Toerversie =
   zaterdag; remote-D1-fix, approval-gated).
 - **OPENSTAAND — PUSH NAAR GARMIN — CUTOVER-BLOKKEREND, geen actie nu.** De GAS-app pusht nog en blijft dat doen tot
-  de cutover; dat is de brug. In Cadans is de keten geverifieerd AFWEZIG (niet hernoemd): van de GAS-keten
-  `pushGarmin` (Index.html:37) → `pushWeb` (WebApp.gs:1607) → `pushAllPendingWorkouts`/`pushAllPending_` (Sync.gs) →
-  `pushWorkout`/`pushEvents_` (IntervalsApi.gs) → `buildEventPayload` (IntervalsApi.gs:165) → `buildWorkoutZwo_`
-  (Algorithm.gs:1720) → `zwoStepFromRow_`/`zwoPct_` bestaan alleen de laatste twee (`packages/engine/src/zones.ts`).
+  de cutover; dat is de brug. **CORRECTIE (R0 2c): de eerder genoteerde keten klopte niet — `pushWorkout`
+  (IntervalsApi.gs:222) wordt in de HELE GAS-bron NERGENS aangeroepen; de enige andere vermelding is een commentaar
+  (Sync.gs:475). Wie die volgorde volgt bij FASE C port dode code.** De ECHTE keten: `pushGarmin` (Index.html:37) →
+  `pushWeb` (WebApp.gs:1607) → `pushAllPending_` (Sync.gs:484) → `buildEventPayload` per sessie (Sync.gs:508,
+  sessionIndex/count) → `pushEvents_` (Sync.gs:518, /events/bulk?upsert=true). De ZWO-assembler-tak (`buildWorkoutZwo_`
+  Algorithm.gs:1720) hangt onder `buildEventPayload`; daarvan bestaan in Cadans alleen `zwoStepFromRow_`/`zwoPct_`
+  (`packages/engine/src/zones.ts`), de assemblers niet.
   Verder: `workers/api/src/integrations/intervals.ts` is read-only bij ontwerp, er is geen uitgaande schrijf-call in
   de Worker, en er is geen push/synced-state in D1. Bouwen is een EIGEN FASE, niet tussendoor, en pas na de review.
   Volgorde als hij komt: (1) `zwoStepFromRow_` van de leesstapel lezen — die bepaalt letterlijk wat er op het apparaat
@@ -468,9 +500,10 @@ INGEVOERD op prod (geverifieerd in-browser).
   (laag-1/readiness/2a/2b/3) + status: zie het FASE B-blok bovenaan Stand.
 - **Ritdetails-drill-down (2d):** "Bekijk ritdetails ›" is nog een `SoonButton`; te bouwen = route (intervals
   activiteit-detail: 7-zone-TIZ + metrics + intervallen) + overlay-sheet. GEEN engine.
-- **FASE C:** Garmin-push. **CORRECTIE (review-chat):** dit is GEEN "extern device-traject" — GAS POST naar
-  intervals.icu (`buildEventPayload` IntervalsApi.gs:165 → `pushWorkout` :222 → `pushAllPendingWorkouts`
-  Sync.gs:528), ZWO base64 → intervals.icu maakt de FIT → Garmin. De bouwstenen zijn GEPORT (`zwoStepFromRow_`/
+- **FASE C:** Garmin-push. **CORRECTIE (review-chat + R0 2c):** dit is GEEN "extern device-traject" — GAS POST naar
+  intervals.icu via `pushGarmin` → `pushWeb` (WebApp.gs:1607) → `pushAllPending_` (Sync.gs:484) → `buildEventPayload`
+  per sessie → `pushEvents_` (Sync.gs:518). NB: `pushWorkout` (IntervalsApi.gs:222) is DODE code (nergens aangeroepen,
+  alleen een comment op Sync.gs:475) — niet porten. ZWO base64 → intervals.icu maakt de FIT → Garmin. De bouwstenen zijn GEPORT (`zwoStepFromRow_`/
   `zwoPct_`/`xmlEscape_`/`dsl*` in zones.ts), de ASSEMBLERS niet (`buildWorkoutZwo_`/`buildWorkoutDsl_`/
   `sanitizeFilename_`/`buildWorkoutDescription_`/`buildEventPayload`/`pushWorkout`); knop = `SoonButton`
   (ActionButtons.tsx:93). ZWO-route (primair) is NIET oracle-gedekt. Audit de push-keten vóór bedrading — zie
@@ -740,6 +773,9 @@ consumeren UITSLUITEND `--s-*/--fs-*/--lh-*/--r-*` (kleur was al gedisciplineerd
   gebouwd. Resteert onder (k): `/api/activities` server-side typing.
 - **Orchestratie-duplicatie (NIEUW):** `lib/niveau.ts` wrapt dezelfde engine-fn-keten die `Niveau.tsx` inline
   draait; waarden IDENTIEK (geen bug), maar één bron is netter → `Niveau.tsx` later op de helper laten leunen.
+- **`maandLabel` dubbel (R0 2c-bevinding, client-only):** `lib/niveau.ts:32` (gedeeld, geëxporteerd) én een eigen
+  kopie in `components/niveau/ProgressieCard.tsx:30` die de gedeelde versie NIET importeert; ze wijken af op
+  edge-cases (input zonder streepje). Later: de kopie vervangen door een import. Geen engine.
 - **Token-schaal-gaten (NIEUW, cross-cutting — niet Vorm-specifiek):** er is geen `--fs-num-*`-schaal voor
   20/30/52px, en off-scale font-sizes (17.5/19/14.5/8.5), tight gaps (5/6/10) en chip/knop-padding zijn bewust
   off-scale gelaten (geen tokens verzinnen). Vraagt een aparte schaal-uitbreidings-pass die de hele app raakt.
