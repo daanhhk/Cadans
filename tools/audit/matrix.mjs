@@ -25,6 +25,7 @@ const ts = require("typescript");
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CADANS = join(HERE, "..", "..");
 const OUT = join(HERE, "out");
+const GAS_SRC = process.env.GAS_SRC || "C:/Users/daan/Projects/training";
 
 const parse = (text, name, kind) =>
   ts.createSourceFile(name, text, ts.ScriptTarget.Latest, true, kind);
@@ -163,18 +164,22 @@ function refsInNode(node, local, tel) {
     ts.forEachChild(n, walk);
   };
   walk(node);
-  // lokale bindings schaduwen een unit-naam -> tellen + verwijderen
-  if (tel) for (const nm of out) if (local.has(nm)) tel.shadow(nm);
+  // FILTER: lokale namen worden geen edge (correct). De schaduw-TELLING gebeurt in buildEdges,
+  // waar `valid` bekend is: alleen een lokale binding die een UNIT-naam schaduwt telt.
   const res = new Set();
   for (const nm of out) if (!local.has(nm)) res.add(nm);
   return res;
 }
 
 // edges van een units-map (name->{node}) beperkt tot geldige target-namen
-function buildEdges(units, valid, tel) {
+function buildEdges(units, valid, tel, corpus) {
   const edges = new Map();
   for (const [name, u] of units) {
     const local = localBindings(u.node);
+    // schaduw = een lokale binding waarvan de naam ook een UNIT-naam is (in `valid`), niet de unit zelf
+    if (tel)
+      for (const L of local)
+        if (valid.has(L) && L !== name) tel.shadow(corpus, name, L);
     const refs = refsInNode(u.node.body || u.node, local, tel);
     const e = new Set();
     for (const r of refs) if (valid.has(r) && r !== name) e.add(r);
@@ -317,15 +322,15 @@ function main() {
   // ── bewakers ──
   const tel = {
     prop: new Map(),
-    shadowN: 0,
+    shadows: [],
     dyn: 0,
     handlers: new Set(),
     propName(nm) {
       if (gasUnits.has(nm) || graafUnits.has(nm))
         this.prop.set(nm, (this.prop.get(nm) || 0) + 1);
     },
-    shadow() {
-      this.shadowN++;
+    shadow(corpus, unit, name) {
+      this.shadows.push({ corpus, unit, name });
     },
     dynDispatch() {
       this.dyn++;
@@ -336,8 +341,8 @@ function main() {
   };
   const gasNames = new Set(gasUnits.keys());
   const graafNames = new Set(graafUnits.keys());
-  const gasEdges = buildEdges(gasUnits, gasNames, tel);
-  const graafEdges = buildEdges(graafUnits, graafNames, tel);
+  const gasEdges = buildEdges(gasUnits, gasNames, tel, "gas");
+  const graafEdges = buildEdges(graafUnits, graafNames, tel, "graaf");
   const gasColl = countCollisions(gasSF);
   const graafColl = countCollisions(graafSF);
 
@@ -354,7 +359,33 @@ function main() {
     .filter((u) => u.file === "Code.gs")
     .map((u) => u.name);
   const gasOracleStart = ["runSelfTest"].filter(has);
-  const reachWeb = reach(gasWebStart, gasEdges);
+
+  // gas-web-client: (a) unit-namen in TOP-LEVEL statements die zelf GEEN unit-declaratie zijn
+  // (window.X-toewijzingen, de DOMContentLoaded-listener, de IIFE), PLUS (b) inline handler-namen
+  // uit Index.html (dat gasSources() NIET leest — apart lezen, alleen de handler-namen eruit).
+  const isUnitDecl = (st) =>
+    (ts.isFunctionDeclaration(st) && st.name && st.body) ||
+    (ts.isVariableStatement(st) &&
+      st.declarationList.declarations.every(
+        (d) =>
+          d.initializer &&
+          (ts.isArrowFunction(d.initializer) ||
+            ts.isFunctionExpression(d.initializer)),
+      ));
+  const gasWebClientStart = new Set();
+  for (const sf of gasSF)
+    for (const st of sf.statements) {
+      if (isUnitDecl(st)) continue;
+      for (const r of refsInNode(st, new Set(), null))
+        if (gasNames.has(r)) gasWebClientStart.add(r);
+    }
+  const indexHtml = readFileSync(join(GAS_SRC, "src", "Index.html"), "utf8");
+  for (const h of handlerNames(indexHtml))
+    if (gasNames.has(h)) gasWebClientStart.add(h);
+
+  const reachWebServer = reach(gasWebStart, gasEdges);
+  const reachWebClient = reach([...gasWebClientStart], gasEdges);
+  const reachWeb = new Set([...reachWebServer, ...reachWebClient]);
   const reachTele = reach(gasTeleStart, gasEdges);
   const reachTrig = reach(codeUnits, gasEdges);
   const reachOracle = reach(gasOracleStart, gasEdges);
@@ -461,14 +492,16 @@ function main() {
   for (const u of onlyGas) perFile.set(u.file, (perFile.get(u.file) || 0) + 1);
   const inGroup = (name) => {
     const g = [];
-    if (reachWeb.has(name)) g.push("web-ui");
+    if (reachWebServer.has(name)) g.push("web-server");
+    if (reachWebClient.has(name)) g.push("web-client");
     if (reachTele.has(name)) g.push("telegram");
     if (reachTrig.has(name)) g.push("trigger");
     if (reachOracle.has(name)) g.push("oracle");
     return g;
   };
   const groupTally = {
-    "web-ui": 0,
+    "web-server": 0,
+    "web-client": 0,
     telegram: 0,
     trigger: 0,
     oracle: 0,
@@ -552,7 +585,15 @@ function main() {
   L.push(
     `  naamcollisies: GAS ${gasColl.size} (${[...gasColl].join(", ") || "geen"}) | Cadans-graaf ${graafColl.size} (${[...graafColl].join(", ") || "geen"})`,
   );
-  L.push(`  lokale bindings die een unit-naam schaduwen: ${tel.shadowN}`);
+  const gasShadows = tel.shadows.filter((s) => s.corpus === "gas");
+  const gasShadowNames = new Set(gasShadows.map((s) => s.name));
+  const graafShadowN = tel.shadows.filter((s) => s.corpus === "graaf").length;
+  L.push(
+    `  lokale bindings die een unit-naam schaduwen (GAS-corpus): totaal ${gasShadows.length}, unieke namen ${gasShadowNames.size} -> ${gasShadows.map((s) => `${s.unit}/${s.name}`).join(", ") || "geen"}`,
+  );
+  L.push(
+    `    scope-check is unit-breed (een lokale binding onderdrukt de naam in de HELE unit) -> impact hooguit ${gasShadows.length} edges; Cadans-graaf: ${graafShadowN}`,
+  );
   const propTop = [...tel.prop.entries()]
     .sort((a, b) => b[1] - a[1])
     .slice(0, 6);
@@ -571,7 +612,10 @@ function main() {
     "=== sluitingen (over-approximeren; 'buiten bereik' is sterk, 'binnen bereik' zwak) ===",
   );
   L.push(
-    `  gas-web-ui  : start ${gasWebStart.length} -> bereik ${reachWeb.size}`,
+    `  gas-web-server: start ${gasWebStart.length} -> bereik ${reachWebServer.size}`,
+  );
+  L.push(
+    `  gas-web-client: start ${gasWebClientStart.size} -> bereik ${reachWebClient.size} (onState bereikbaar: ${reachWebClient.has("onState") || reachWebServer.has("onState") ? "ja" : "nee"})`,
   );
   L.push(
     `  gas-telegram: start ${gasTeleStart.length} -> bereik ${reachTele.size}`,
@@ -633,7 +677,7 @@ function main() {
     "=== alleen-in-GAS — doorsnede per entrypoint-groep (een fn kan in meerdere vallen) ===",
   );
   L.push(
-    `  web-ui ${groupTally["web-ui"]} | telegram ${groupTally.telegram} | trigger ${groupTally.trigger} | oracle ${groupTally.oracle} | in geen groep ${groupTally.geen}`,
+    `  web-server ${groupTally["web-server"]} | web-client ${groupTally["web-client"]} | telegram ${groupTally.telegram} | trigger ${groupTally.trigger} | oracle ${groupTally.oracle} | in geen groep ${groupTally.geen}`,
   );
   L.push("");
   L.push(
