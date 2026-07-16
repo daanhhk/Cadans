@@ -11,6 +11,25 @@ live tot cutover.
 
 ## Stand
 
+**REVIEW-CHAT CLOSE-OUT (juli 2026) — NORM-OMSLAG + REVIEW-ROUTE VASTGELEGD.** Bron van waarheid voor de norm =
+**`docs/TRAININGSMODEL-BESLUITEN.md`** (besluiten-log; citeren, niet samenvatten — `docs/TRAININGSMODEL.md` wordt
+daar in een verse chat uit geschreven). Kernpunten:
+- **Norm-omslag (drie normen naast elkaar):** GAS is de REFERENTIE, niet de NORM (altijd de bron lezen, nooit uit
+  geheugen). Front-end/vormgeving → GAS is norm. Infra (parsers, sync, datums, row-mapping, zone-extractie) → parity
+  is norm; drift = bug. Trainings-laag → coaching-deugdelijkheid is norm; GAS is daar herkomst, geen gezag.
+- **Cutover-regel:** poort = GEEN FUNCTIONELE REGRESSIE t.o.v. GAS (bijna alle vondsten zijn GEËRFD, niet
+  geïntroduceerd; de cutover maakt niet slechter, hij maakt fixbaar). Modelfixes NÁ cutover, op het platform waar ze
+  testbaar zijn. TWEEDE AS: urgentie ≠ blokkerend (bv. Onderhoud→Base moet weg vóór de winterdip, ongeacht de
+  cutover-stand).
+- **Optie B akkoord; review-route vastgelegd:** R0 harness → R1 FASE-B port-correctheid → R2 end-audit op de
+  risico-matrix → R3 trainings-review tegen het model → R4 verdict-doc ("cutover-blokkerend ja/nee" per item). GEEN
+  engine-wijziging in de hele review; findings → verdicts → aparte bouw-chats.
+- **STAANDE PRIVACY-REGEL:** GEEN persoonlijke trainingsdata in de publieke repo (daanhhk/Cadans is PUBLIEK).
+  Bevindingen wel, ruwe data niet; analyse-scripts + ruwe uitvoer BUITEN de repo-tree. Committen is onomkeerbaar
+  (git-history/forks/indexering) — bij twijfel niet.
+- De vondsten (o.a. `effectiveMacroFase_` Onderhoud→Base, `long_z2` als restpost, de Garmin-push-keten, readiness
+  van beslisser → informant) staan UITGESCHREVEN in het besluiten-bestand — hier bewust NIET samengevat.
+
 **FASE 1 + FASE 2 (§5b + 4b + brok 2 + brok 3 + brok 4a + brok 5) — deze reeks chats. FASE 2 = COMPLEET.** Meetlat =
 `docs/VORMGEVING-SPEC.md` (BEVROREN); geverifieerd via de dev-`/preview`-loop. Brok 3 = de EERSTE prod-aanraking
 (remote-D1 + deploy).
@@ -358,7 +377,13 @@ INGEVOERD op prod (geverifieerd in-browser).
   (laag-1/readiness/2a/2b/3) + status: zie het FASE B-blok bovenaan Stand.
 - **Ritdetails-drill-down (2d):** "Bekijk ritdetails ›" is nog een `SoonButton`; te bouwen = route (intervals
   activiteit-detail: 7-zone-TIZ + metrics + intervallen) + overlay-sheet. GEEN engine.
-- **FASE C:** Garmin-push (extern device-traject).
+- **FASE C:** Garmin-push. **CORRECTIE (review-chat):** dit is GEEN "extern device-traject" — GAS POST naar
+  intervals.icu (`buildEventPayload` IntervalsApi.gs:165 → `pushWorkout` :222 → `pushAllPendingWorkouts`
+  Sync.gs:528), ZWO base64 → intervals.icu maakt de FIT → Garmin. De bouwstenen zijn GEPORT (`zwoStepFromRow_`/
+  `zwoPct_`/`xmlEscape_`/`dsl*` in zones.ts), de ASSEMBLERS niet (`buildWorkoutZwo_`/`buildWorkoutDsl_`/
+  `sanitizeFilename_`/`buildWorkoutDescription_`/`buildEventPayload`/`pushWorkout`); knop = `SoonButton`
+  (ActionButtons.tsx:93). ZWO-route (primair) is NIET oracle-gedekt. Audit de push-keten vóór bedrading — zie
+  `docs/TRAININGSMODEL-BESLUITEN.md` vondst 4.
 - **EIND-AUDIT geporte engine-fns:** sluitstuk NA UI-completie (bewust uitgesteld).
 - **DayStrip-venster (GAS-parity, recon af, NIET gebouwd):** venster **[-28d..+7d]** i.p.v. de huidige 1-week
   (`WebApp.gs:1103`); volgende week = preview-marker (`previewMin` uit Weekplanner+1, GEEN uitgewerkt voorstel);
