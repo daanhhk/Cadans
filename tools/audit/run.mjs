@@ -4,12 +4,13 @@
 //
 // Run: node tools/audit/run.mjs   (GAS_SRC env overrides the GAS source root)
 
+import { execSync } from "node:child_process";
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { ALIASES } from "./alias.mjs";
-import { RULES } from "./rules.mjs";
+import { RULES, VOCAB_FORBIDDEN } from "./rules.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
@@ -26,9 +27,55 @@ try {
 const GAS_SRC = process.env.GAS_SRC || "C:/Users/daan/Projects/training";
 const CADANS = join(HERE, "..", "..");
 const OUT = join(HERE, "out");
+const GAS_HEAD_PIN = "3e8090af11f146d54bf7116e4d4b4c7d9802ecf2";
 
 // ── zelfcontrole-teller: elk TS-type-fragment dat toch in een canonieke string zou lekken.
 let typeLeaks = 0;
+
+// HEAD-pin-bewaker: de bevroren GAS-bron MOET op de gepinde commit staan; anders is elke
+// canon-vergelijking betekenisloos. Stil doorgaan op een verkeerde/afwezige repo is de faalvorm
+// die we dichten -> ABREEK. Geeft de gelezen HEAD terug voor het rapport-kopblok.
+export function assertGasHead() {
+  let head;
+  try {
+    head = execSync(`git -C "${GAS_SRC}" rev-parse HEAD`, {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch {
+    throw new Error(
+      `STOP: kan de GAS-HEAD niet lezen in ${GAS_SRC} (git ontbreekt of de map is geen repo).`,
+    );
+  }
+  if (head !== GAS_HEAD_PIN) {
+    throw new Error(
+      `STOP: GAS-HEAD is ${head}, verwacht ${GAS_HEAD_PIN}. De bevroren bron staat niet op de pin.`,
+    );
+  }
+  return head;
+}
+
+// vocab-bewaker: de rapport-tekst mag geen verdict-vocabulaire bevatten (VOCAB_FORBIDDEN).
+// Woordgrens-match voor letterwoorden, substring voor symbolen; hoofdletter-ongevoelig.
+function assertVocab(text) {
+  for (const w of VOCAB_FORBIDDEN) {
+    let idx = -1;
+    if (/^[a-z]+$/i.test(w)) {
+      const m = text.match(new RegExp(`\\b${w}\\b`, "i"));
+      if (m) idx = m.index;
+    } else {
+      idx = text.indexOf(w);
+    }
+    if (idx >= 0) {
+      const start = text.lastIndexOf("\n", idx) + 1;
+      let end = text.indexOf("\n", idx);
+      if (end < 0) end = text.length;
+      throw new Error(
+        `STOP: verboden vocabulaire "${w}" in de rapport-tekst -> ${text.slice(start, end).trim()}`,
+      );
+    }
+  }
+}
 
 // ════════════════════════════════════════════════════════════════════
 // Corpora
@@ -828,6 +875,7 @@ function selfTests() {
 // ════════════════════════════════════════════════════════════════════
 function main() {
   mkdirSync(OUT, { recursive: true });
+  const gasHead = assertGasHead();
   const st = selfTests();
 
   const gasUnits = extractUnits(gasSources());
@@ -909,6 +957,7 @@ function main() {
     "R0 module 1 — AST-sorteermachine. Geen rechter: 'identiek' is geen kwaliteitsoordeel, 'verschil' geen bug.",
   );
   L.push(`GAS-bron: ${GAS_SRC}  |  Cadans: ${CADANS}`);
+  L.push(`GAS-HEAD: ${gasHead}`);
   L.push("");
   L.push(`type-lekken: GEEN`);
   L.push(`bewaker-zelftest: ${st.guard}`);
@@ -964,6 +1013,7 @@ function main() {
   L.push(onlyCad.join(", "));
 
   const text = L.join("\n") + "\n";
+  assertVocab(text); // geen verdict-vocabulaire in de uitvoer
   writeFileSync(join(OUT, "report.txt"), text);
   writeFileSync(
     join(OUT, "report.json"),
@@ -994,4 +1044,9 @@ function main() {
   process.stdout.write(text);
 }
 
-main();
+// Herbruikbaar door module 2 (aliasscan.mjs); main() draait alleen als dit HET entry-script is.
+export { cadansSources, canonOf, compare, extractUnits, gasSources };
+
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main();
+}
