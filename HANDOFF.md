@@ -120,10 +120,12 @@ GAS vastvriezen. Hangt aan geen pnpm-script; bewaakt zichzelf met asserts die de
 - **OPENSTAAND — PUSH NAAR GARMIN — CUTOVER-BLOKKEREND, geen actie nu.** De GAS-app pusht nog en blijft dat doen tot
   de cutover; dat is de brug. **CORRECTIE (R0 2c): de eerder genoteerde keten klopte niet — `pushWorkout`
   (IntervalsApi.gs:222) wordt in de HELE GAS-bron NERGENS aangeroepen; de enige andere vermelding is een commentaar
-  (Sync.gs:475). Wie die volgorde volgt bij FASE C port dode code.** De ECHTE keten: `pushGarmin` (Index.html:37) →
-  `pushWeb` (WebApp.gs:1607) → `pushAllPending_` (Sync.gs:484) → `buildEventPayload` per sessie (Sync.gs:508,
-  sessionIndex/count) → `pushEvents_` (Sync.gs:518, /events/bulk?upsert=true). De ZWO-assembler-tak (`buildWorkoutZwo_`
-  Algorithm.gs:1720) hangt onder `buildEventPayload`; daarvan bestaan in Cadans alleen `zwoStepFromRow_`/`zwoPct_`
+  (Sync.gs:475). Wie die volgorde volgt bij FASE C port dode code.** De ECHTE keten (DEFINITIE-locaties; call-sites
+  apart genoemd): `pushGarmin` (Index.html:37) → `pushWeb` (def WebApp.gs:1607) → `pushAllPending_` (def Sync.gs:484)
+  → `buildEventPayload` (def IntervalsApi.gs:165), aangeroepen per sessie op Sync.gs:508 → `pushEvents_` (def
+  IntervalsApi.gs:231), aangeroepen op Sync.gs:518 (/events/bulk?upsert=true). De ZWO-assembler-tak (`buildWorkoutZwo_`
+  def Algorithm.gs:1720, met `sanitizeFilename_` def IntervalsApi.gs:211 en `buildWorkoutDescription_` def
+  IntervalsApi.gs:253) hangt onder `buildEventPayload`; daarvan bestaan in Cadans alleen `zwoStepFromRow_`/`zwoPct_`
   (`packages/engine/src/zones.ts`), de assemblers niet.
   Verder: `workers/api/src/integrations/intervals.ts` is read-only bij ontwerp, er is geen uitgaande schrijf-call in
   de Worker, en er is geen push/synced-state in D1. Bouwen is een EIGEN FASE, niet tussendoor, en pas na de review.
@@ -501,9 +503,10 @@ INGEVOERD op prod (geverifieerd in-browser).
 - **Ritdetails-drill-down (2d):** "Bekijk ritdetails ›" is nog een `SoonButton`; te bouwen = route (intervals
   activiteit-detail: 7-zone-TIZ + metrics + intervallen) + overlay-sheet. GEEN engine.
 - **FASE C:** Garmin-push. **CORRECTIE (review-chat + R0 2c):** dit is GEEN "extern device-traject" — GAS POST naar
-  intervals.icu via `pushGarmin` → `pushWeb` (WebApp.gs:1607) → `pushAllPending_` (Sync.gs:484) → `buildEventPayload`
-  per sessie → `pushEvents_` (Sync.gs:518). NB: `pushWorkout` (IntervalsApi.gs:222) is DODE code (nergens aangeroepen,
-  alleen een comment op Sync.gs:475) — niet porten. ZWO base64 → intervals.icu maakt de FIT → Garmin. De bouwstenen zijn GEPORT (`zwoStepFromRow_`/
+  intervals.icu via `pushGarmin` → `pushWeb` (def WebApp.gs:1607) → `pushAllPending_` (def Sync.gs:484) →
+  `buildEventPayload` (def IntervalsApi.gs:165, aangeroepen per sessie op Sync.gs:508) → `pushEvents_` (def
+  IntervalsApi.gs:231, aangeroepen op Sync.gs:518). NB: `pushWorkout` (def IntervalsApi.gs:222) is DODE code (nergens
+  aangeroepen, alleen een comment op Sync.gs:475) — niet porten. ZWO base64 → intervals.icu maakt de FIT → Garmin. De bouwstenen zijn GEPORT (`zwoStepFromRow_`/
   `zwoPct_`/`xmlEscape_`/`dsl*` in zones.ts), de ASSEMBLERS niet (`buildWorkoutZwo_`/`buildWorkoutDsl_`/
   `sanitizeFilename_`/`buildWorkoutDescription_`/`buildEventPayload`/`pushWorkout`); knop = `SoonButton`
   (ActionButtons.tsx:93). ZWO-route (primair) is NIET oracle-gedekt. Audit de push-keten vóór bedrading — zie
