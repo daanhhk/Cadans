@@ -63,6 +63,14 @@ GAS vastvriezen. Hangt aan geen pnpm-script; bewaakt zichzelf met asserts die de
   gespiegelde suites, statische assert-call-sites per suite). Eerlijkheid vooraf: een naam-gebaseerde call-graph
   over-approximeert (naamcollisies) én onder-approximeert (`obj[key]()`-dispatch) — het woord "dood" hoort niet in dat
   rapport. Daarna R1 → R2 → R3 → R4 volgens de route.
+- **R0 module 2 — ENTRYPOINT-MAP (scope-uitbreiding, gevonden tijdens de close-out).** De gap-regel van module 2
+  ("GAS-fn zonder tegenhanger, aangeroepen door een fn die WEL een tegenhanger heeft") vindt blad-gaten, maar GEEN
+  hele ontbrekende features: als de aanroepers zélf ook niet geport zijn, ziet de keten eruit als ruis in de 482
+  alleen-in-GAS. De push-keten is daar het bewijs van. Module 2 krijgt daarom een hand-gemaakte, door Daan te
+  reviewen map van GAS UI-entrypoint → Cadans-route. Een NAAM-check volstaat daar niet: Cadans zette RPC om naar REST,
+  dus naam-afwezig betekent meestal hernoemd, niet weg (`clearDayOverride` ~ `PUT /api/override/:date` met null=wis;
+  `saveRpe` ~ `PUT /api/rpe/:date`). De GAS-UI heeft 12 server-entrypoints; dit is een lijstje van 12 regels, geen
+  analyse.
 
 **TRAININGSMODEL GESCHREVEN (juli 2026) — commit `fc76af2`, docs-only, engine ongemoeid, niets gedeployd.**
 `docs/TRAININGSMODEL.md` = de NORM voor de trainings-laag; R1-R4 vellen hun verdicts hiertegen
@@ -80,6 +88,19 @@ GAS vastvriezen. Hangt aan geen pnpm-script; bewaakt zichzelf met asserts die de
 - **OPENSTAAND (ongewijzigd):** functionele round-trip op PROD in de browser (hard refresh/incognito i.v.m.
   service-worker-cache); het A-event op prod staat op `2027-04-18` en moet `2027-04-17` zijn (AGR Toerversie =
   zaterdag; remote-D1-fix, approval-gated).
+- **OPENSTAAND — PUSH NAAR GARMIN — CUTOVER-BLOKKEREND, geen actie nu.** De GAS-app pusht nog en blijft dat doen tot
+  de cutover; dat is de brug. In Cadans is de keten geverifieerd AFWEZIG (niet hernoemd): van de GAS-keten
+  `pushGarmin` (Index.html:37) → `pushWeb` (WebApp.gs:1607) → `pushAllPendingWorkouts`/`pushAllPending_` (Sync.gs) →
+  `pushWorkout`/`pushEvents_` (IntervalsApi.gs) → `buildEventPayload` (IntervalsApi.gs:165) → `buildWorkoutZwo_`
+  (Algorithm.gs:1720) → `zwoStepFromRow_`/`zwoPct_` bestaan alleen de laatste twee (`packages/engine/src/zones.ts`).
+  Verder: `workers/api/src/integrations/intervals.ts` is read-only bij ontwerp, er is geen uitgaande schrijf-call in
+  de Worker, en er is geen push/synced-state in D1. Bouwen is een EIGEN FASE, niet tussendoor, en pas na de review.
+  Volgorde als hij komt: (1) `zwoStepFromRow_` van de leesstapel lezen — die bepaalt letterlijk wat er op het apparaat
+  komt en wijkt af van GAS zonder dat iemand weet waarom; (2) `buildWorkoutZwo_` porten (engine — dat verschuift de
+  harness-cijfers, dus daarna module 1 opnieuw draaien); (3) schrijf-pad in de intervals-client + `buildEventPayload`
+  + route; (4) D1-migratie voor push-state; (5) knop + status in de PWA; (6) write-scope `INTERVALS_API_KEY` als
+  Worker-secret + prod-deploy, approval-gated. Dit is het eerste moment dat Cadans naar buiten schrijft: tot nu toe
+  kon een fout een verkeerd scherm geven, hierna een verkeerde training op het stuur.
 
 **REVIEW-CHAT CLOSE-OUT (juli 2026) — NORM-OMSLAG + REVIEW-ROUTE VASTGELEGD.** Bron van waarheid voor de norm =
 **`docs/TRAININGSMODEL-BESLUITEN.md`** (besluiten-log; citeren, niet samenvatten — `docs/TRAININGSMODEL.md` wordt
