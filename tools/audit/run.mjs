@@ -335,24 +335,30 @@ function concatCanon(node, opt) {
   );
 }
 
+// ÉÉN plek waar de declaratiesoort bepaald wordt (FIX A). Onder regel 6 genormaliseerd naar "V",
+// anders var/let/const — waar de lijst ook staat (statement, for-init, for-in, for-of).
+function declKindTok(dl, opt) {
+  if (opt.rules.has(6)) return "V";
+  return dl.flags & ts.NodeFlags.Const
+    ? "const"
+    : dl.flags & ts.NodeFlags.Let
+      ? "let"
+      : "var";
+}
+function serDeclarators(dl, opt) {
+  return dl.declarations.map((d) => {
+    const nm = ser(d.name, opt);
+    const init = d.initializer ? "=" + ser(d.initializer, opt) : "";
+    return `${nm}${init}`;
+  });
+}
 function serStatement(st, opt) {
-  // rule 1 — komma-declaratie splitsen; rule 6 — kind-normalisatie
+  // rule 1 — komma-declaratie splitsen (alleen op statement-niveau); rule 6 — kind-normalisatie
   if (ts.isVariableStatement(st)) {
-    const dl = st.declarationList;
-    const kindTok = opt.rules.has(6)
-      ? "V"
-      : dl.flags & ts.NodeFlags.Const
-        ? "const"
-        : dl.flags & ts.NodeFlags.Let
-          ? "let"
-          : "var";
-    const decls = dl.declarations.map((d) => {
-      const nm = ser(d.name, opt);
-      const init = d.initializer ? "=" + ser(d.initializer, opt) : "";
-      return `${nm}${init}`;
-    });
-    if (opt.rules.has(1)) return decls.map((d) => `${kindTok}(${d})`).join(";");
-    return `${kindTok}(${decls.join(",")})`;
+    const tok = declKindTok(st.declarationList, opt);
+    const decls = serDeclarators(st.declarationList, opt);
+    if (opt.rules.has(1)) return decls.map((d) => `${tok}(${d})`).join(";");
+    return `${tok}(${decls.join(",")})`;
   }
   return ser(st, opt);
 }
@@ -508,6 +514,11 @@ function ser(node, opt) {
   if (ts.isTemplateExpression(node) && opt.rules.has(4))
     return concatCanon(node, opt);
   if (ts.isVariableStatement(node)) return serStatement(node, opt);
+  // FIX A: een kale VariableDeclarationList (for-init / for-in / for-of) draagt óók de soort;
+  // zonder deze tak lekte de kop via het generieke pad en was var/let/const daar onzichtbaar.
+  if (ts.isVariableDeclarationList(node)) {
+    return `${declKindTok(node, opt)}(${serDeclarators(node, opt).join(",")})`;
+  }
   if (ts.isBlock(node))
     return "{" + serBlockStatements(node.statements, opt) + "}";
   if (ts.isParameter(node)) {
@@ -734,6 +745,25 @@ function selfTests() {
       ),
       false,
     ],
+    // regel 6 — LUS-KOP-vorm (de RISICOPLEK): alleen `for(var i)` vs `for(let i)`, geen closure
+    [
+      "r6loop+",
+      eq(
+        u("function g(){var s=0;for(var i=0;i<3;i++){s=s+i;}return s;}", "g"),
+        u("function c(){var s=0;for(let i=0;i<3;i++){s=s+i;}return s;}", "c"),
+        [6],
+      ),
+      true,
+    ],
+    [
+      "r6loop-",
+      eq(
+        u("function g(){var s=0;for(var i=0;i<3;i++){s=s+i;}return s;}", "g"),
+        u("function c(){var s=0;for(let i=0;i<3;i++){s=s+i;}return s;}", "c"),
+        [],
+      ),
+      false,
+    ],
     // FIX A — beknopte arrow-body == equivalente block-body, ZONDER enige regel
     [
       "fixA",
@@ -773,7 +803,24 @@ function selfTests() {
         `STOP: regel-zelftest '${id}' faalde (kreeg ${got}, verwacht ${want}).`,
       );
   }
-  return { guard: "betrapt", rulePairs: n };
+
+  // FIX B — END-TO-END: het kunstmatige capture-paar MOET via compare() als "verschil" komen
+  // (niet identiek, niet equivalent). Dit bewijst dat de bewaker BEREIKBAAR is, niet alleen correct.
+  const e2eG = u(
+    "function t(){var f=[];for(var i=0;i<3;i++){f.push(function(){return i;});}return f;}",
+    "t",
+  );
+  const e2eC = u(
+    "function t(){const f=[];for(let i=0;i<3;i++){f.push(() => i);}return f;}",
+    "t",
+  );
+  const e2e = compare(e2eG, e2eC).bin;
+  if (e2e !== "verschil")
+    throw new Error(
+      `STOP: bewaker end-to-end faalde — compare() gaf '${e2e}', verwacht 'verschil'.`,
+    );
+
+  return { guard: "betrapt", rulePairs: n, e2e };
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -865,6 +912,7 @@ function main() {
   L.push("");
   L.push(`type-lekken: GEEN`);
   L.push(`bewaker-zelftest: ${st.guard}`);
+  L.push(`bewaker end-to-end: ${st.e2e}`);
   L.push(`regel-zelftests: ${st.rulePairs} paren, alle geslaagd`);
   L.push("");
   L.push("=== De zes gelijkstellingsregels (VASTGESTELD) ===");
