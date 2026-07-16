@@ -11,6 +11,59 @@ live tot cutover.
 
 ## Stand
 
+**R0 MODULE 1 — AST-SORTEERMACHINE KLAAR (juli 2026).** Laatste CODE-commit `a0139bc` (tools/audit, NIET in CI,
+engine ongemoeid). Leeft in `tools/audit/` (`alias.mjs`, `rules.mjs`, `run.mjs`). Entry: `node tools/audit/run.mjs`.
+GAS-bron via env `GAS_SRC` (default `C:\Users\daan\Projects\training`), read-only; harde abort als HEAD ≠ `3e8090a`.
+Uitvoer naar `tools/audit/out/` (gitignored). **NADRUKKELIJK NIET IN CI** — in CI zou hij de engine voor eeuwig aan
+GAS vastvriezen. Hangt aan geen pnpm-script; bewaakt zichzelf met asserts die de run ABREKEN, niet met vitest.
+- **Wat het IS:** een sorteermachine, GEEN rechter. "identiek" is geen kwaliteitsoordeel en "verschil" is geen bug.
+  Verdicts toetsen aan het MODEL (`docs/TRAININGSMODEL.md`), niet aan GAS — zie vondst 1 (AST-identiek `effectiveMacroFase_`
+  én toch het zwaarste trainings-defect).
+- **De zes gelijkstellingsregels staan VAST en zijn door Daan gereviewd.** De volledige regel-lijst
+  (onderbouwing/voorwaarde/restrisico/dragers) wordt bij ELKE run uit de regel-objecten geprint, zodat doc en code
+  niet kunnen driften. Een zevende regel gaat eerst langs Daan.
+- **Verse run (bron van deze getallen):** 166 naam-matches — identiek 63, equivalent onder regels 76, verschil 27,
+  alleen-in-GAS 482, alleen-in-Cadans 124. type-lekken: GEEN. Regel-dragers: regel 1 → 3, regel 2 → 2, regel 3 → 2,
+  regel 4 → 6, regel 5 → 29, regel 6 → 58.
+- **Leesstapel ("verschil", input voor R1/R2), voluit:** getGewicht, dashActualsByDate_, dashVormReeks_,
+  dashStatsFromActivities_, dashBeginAnker_, dashNiveauReeks_, gatherWeekplanEntries_, assignWorkouts, buildWorkout,
+  genericPendelIntervals, getReadinessScore_, expectedRpe_, rpeSignal_, combineSignals_, formatDate, mesoFactor,
+  zoneTimesFromCell_, dslBlockFromRow_, zwoStepFromRow_, getWellness, getActivities, getEvents, getPowerCurve, plus
+  de vier aliassen (trnPlannable_→isDayPlannable, trnDurLabel_→durLabel, coachActualZoneMin_→actualZone5_,
+  isoWeek_→isoWeekNumber). Deels al verklaard: seams uit debt (b) + de Sheets-lezers (getWellness/getActivities/
+  getEvents/getPowerCurve/zoneTimesFromCell_), platform-shims (formatDate), mesoFactor-neutralisatie (loadCarry x1),
+  combineSignals_ (niet-muterend, output-equivalent). **assignWorkouts en buildWorkout zijn de zwaarste onbekenden.**
+- **Bewaker regel 6:** over de hele GAS-bron NUL closures die een var-lusvariabele vangen én de ronde overleven.
+  Twee capture-gevallen (`allocateQualityWeek_` 'anchors', `scaleBlocksToFit_` 'on'), beide whitelisted
+  array-callbacks die binnen de ronde afronden → regel 6 verviel voor geen enkele functie. Whitelist, geen blacklist.
+- **Drie bugs gevonden en gedicht tijdens de review, met de les:**
+  1. `0f5d258`→`25ff64a`: regel 5 miste elke beknopte arrow-body ("RET(" was een handgeschreven label dat het
+     generieke "K254(" moest spiegelen). LES: nooit een label handmatig naspelen dat het generieke pad óók produceert
+     — bouw de node en serialiseer hem.
+  2. `25ff64a`: `serFunc` liet de functienaam weg, ook voor FunctionDeclaration → geneste helpers die alleen in naam
+     verschilden konden vals-identiek worden. Gedicht; in de echte corpus verschoof er niets, maar het mechanisme is
+     nu door een zelftest afgedekt.
+  3. `25ff64a`→`a0139bc`: de declaratiesoort werd alleen op een VariableStatement getagd, niet in een lus-kop.
+     Daardoor was `for (var i)` baseline-gelijk aan `for (let i)` — op precies de risicoplek waarvoor de bewaker van
+     regel 6 bestaat, en `compare()` keert al terug op "identiek" vóór de bewaker draait (`findVariantById_` schoof
+     hierdoor van identiek naar equivalent [6]). LES: een bewaker-zelftest die de bewaker RECHTSTREEKS aanroept
+     bewijst dat hij KLOPT, nooit dat hij BEREIKBAAR is — zelftests lopen sindsdien end-to-end door `compare()`
+     ("bewaker end-to-end: verschil"). Tweede les: de negatieve zelftest van regel 6 testte de makkelijke vorm
+     (statement-declaratie) i.p.v. de risicovorm (lus-kop). De harness draait nu 18 regel-zelftest-paren, alle geslaagd.
+- **Verificatie (waarom module 1 als klaar geldt — niet de gate):** de getallen zijn onafhankelijk gereproduceerd
+  door een tweede, los geschreven implementatie (chat-side probe tegen een verse read-only kloon van
+  daanhhk/training op `3e8090a`). Elk getal en elke functienaam kwam overeen.
+- **CORRECTIE VOOR DE RECORD:** commit `a0139bc` is gemaakt tijdens deze reeks, niet eerder. Het rapport bij die
+  commit beweerde dat de fixes al in HEAD stonden en dat de prompt identiek was aan de vorige ronde; dat klopt niet —
+  `a0139bc` is een kind van `25ff64a`, met een eigen commit-message, en bij `25ff64a` stond identiek nog op 64 met
+  het lus-kop-gat open. Het werk is goed, de narratie eromheen was fout. Genoteerd zodat een volgende chat niet zoekt
+  naar een herkomst die er niet is.
+- **VOLGENDE:** R0 module 2 = risico-matrix (naam-gebaseerde call-graph: bereik vanaf de echte app-entrypoints ×
+  oracle-bereik vanaf `selftest.test.ts`, gekruist met het AST-verdict) + oracle-inventaris (50 GAS-suites ↔ de
+  gespiegelde suites, statische assert-call-sites per suite). Eerlijkheid vooraf: een naam-gebaseerde call-graph
+  over-approximeert (naamcollisies) én onder-approximeert (`obj[key]()`-dispatch) — het woord "dood" hoort niet in dat
+  rapport. Daarna R1 → R2 → R3 → R4 volgens de route.
+
 **TRAININGSMODEL GESCHREVEN (juli 2026) — commit `fc76af2`, docs-only, engine ongemoeid, niets gedeployd.**
 `docs/TRAININGSMODEL.md` = de NORM voor de trainings-laag; R1-R4 vellen hun verdicts hiertegen
 (verdict-criterium: toets aan het MODEL, niet aan GAS).
@@ -22,9 +75,11 @@ live tot cutover.
   (testcase §11 = status + functie; de waarden blijven in BESLUITEN).
 - **Toetsbaarheid:** vondsten 1/2/3/4/8 zijn beoordeelbaar via M50/M46/M33+M39/M56/M31. Vondsten 5/6/7/9 zijn GEEN
   model-vragen (infra-parity + data) — dat is de norm-omslag in werking.
-- **FOCUS VOLGENDE CHAT:** R0 harness (`tools/audit/`, NIET in CI), daarna R1 FASE-B port-correctheid.
-- **OPENSTAAND (ongewijzigd):** functionele round-trip op PROD in de browser; het A-event op prod staat op
-  `2027-04-18` en moet `2027-04-17` zijn (remote-D1-fix, approval-gated).
+- **FOCUS VOLGENDE CHAT:** R0 module 1 (AST-sorteermachine) is KLAAR — zie het R0-blok bovenaan Stand. Volgende =
+  R0 module 2 (risico-matrix + oracle-inventaris), daarna R1 FASE-B port-correctheid.
+- **OPENSTAAND (ongewijzigd):** functionele round-trip op PROD in de browser (hard refresh/incognito i.v.m.
+  service-worker-cache); het A-event op prod staat op `2027-04-18` en moet `2027-04-17` zijn (AGR Toerversie =
+  zaterdag; remote-D1-fix, approval-gated).
 
 **REVIEW-CHAT CLOSE-OUT (juli 2026) — NORM-OMSLAG + REVIEW-ROUTE VASTGELEGD.** Bron van waarheid voor de norm =
 **`docs/TRAININGSMODEL-BESLUITEN.md`** (besluiten-log; citeren, niet samenvatten — `docs/TRAININGSMODEL.md` wordt
