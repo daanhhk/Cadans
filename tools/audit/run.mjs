@@ -359,7 +359,9 @@ function serStatement(st, opt) {
 function serBlockStatements(stmts, opt) {
   return stmts.map((s) => serStatement(s, opt)).join(";");
 }
-function serFunc(node, opt) {
+// includeName: naam telt mee bij GENESTE (named) functies, NIET bij de vergeleken top-level
+// unit (canonOf roept met includeName=false — matchen gebeurt al op naam/alias).
+function serFunc(node, opt, includeName = true) {
   const params = node.parameters
     .map((p) => {
       const nm = ser(p.name, opt);
@@ -371,15 +373,26 @@ function serFunc(node, opt) {
   let body;
   if (node.body && ts.isBlock(node.body))
     body = "{" + serBlockStatements(node.body.statements, opt) + "}";
-  else if (node.body)
-    body = "{RET(" + ser(node.body, opt) + ")}"; // beknopte arrow-body
-  else body = "{}";
+  else if (node.body) {
+    // FIX A: een beknopte arrow-body loopt via een ECHTE ReturnStatement door hetzelfde pad
+    // als `return x;` — geen handgeschreven label dat het generieke pad naspeelt.
+    const ret = ts.factory.createReturnStatement(node.body);
+    body = "{" + serBlockStatements([ret], opt) + "}";
+  } else body = "{}";
   const tag = opt.rules.has(5)
     ? "FN"
     : ts.isArrowFunction(node)
       ? "ARROW"
       : "FEXPR";
-  return `${tag}(${params})${body}`;
+  // FIX B: de naam van een FunctionDeclaration / NAMED FunctionExpression telt mee; anonieme
+  // functie-expressies en arrows hebben geen naam en blijven zoals ze zijn.
+  const nm =
+    includeName &&
+    (ts.isFunctionDeclaration(node) || ts.isFunctionExpression(node)) &&
+    node.name
+      ? ":" + node.name.text
+      : "";
+  return `${tag}${nm}(${params})${body}`;
 }
 
 const SKIP_MODIFIER = new Set([
@@ -522,7 +535,8 @@ function ser(node, opt) {
 }
 
 function canonOf(unit, rules, rename) {
-  return serFunc(unit.node, { rules, rename });
+  // top-level unit: naam telt NIET mee (matchen gebeurt op naam/alias; anders breken de aliassen)
+  return serFunc(unit.node, { rules, rename }, /*includeName*/ false);
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -586,7 +600,180 @@ function selfTests() {
     throw new Error(
       "STOP: bewaker-zelftest faalde — closure niet als ONTSNAPT betrapt.",
     );
-  return { guard: "betrapt" };
+
+  // ── per-regel-zelftests op kleine hand-snippets (NIET op de echte bron) ──
+  // POSITIEF: gelijk MÉT de regel. NEGATIEF: verschil ZÓNDER de regel (anders doet de regel
+  // niets, of iets anders normaliseert het al stiekem weg).
+  const u = (code, name) => {
+    const m = extractUnits([parse(code, "st.js", ts.ScriptKind.JS)]);
+    return name ? m.get(name) : [...m.values()][0];
+  };
+  const eq = (a, b, rules) => equalUnder(a, b, new Set(rules));
+  const cases = [
+    // regel 1 — komma-declaratie splitsen
+    [
+      "r1+",
+      eq(
+        u("function g(){var a=1,b=2;return a+b;}", "g"),
+        u("function c(){var a=1;var b=2;return a+b;}", "c"),
+        [1],
+      ),
+      true,
+    ],
+    [
+      "r1-",
+      eq(
+        u("function g(){var a=1,b=2;return a+b;}", "g"),
+        u("function c(){var a=1;var b=2;return a+b;}", "c"),
+        [],
+      ),
+      false,
+    ],
+    // regel 2 — ongebruikte param (andere naam, in BEIDE ongebruikt)
+    [
+      "r2+",
+      eq(
+        u("function g(a,b){return a;}", "g"),
+        u("function c(a,zzz){return a;}", "c"),
+        [2],
+      ),
+      true,
+    ],
+    [
+      "r2-",
+      eq(
+        u("function g(a,b){return a;}", "g"),
+        u("function c(a,zzz){return a;}", "c"),
+        [],
+      ),
+      false,
+    ],
+    // regel 3 — Date-aftrekking
+    [
+      "r3+",
+      eq(
+        u("function g(a,b){return a-b;}", "g"),
+        u("function c(a,b){return a.getTime()-b.getTime();}", "c"),
+        [3],
+      ),
+      true,
+    ],
+    [
+      "r3-",
+      eq(
+        u("function g(a,b){return a-b;}", "g"),
+        u("function c(a,b){return a.getTime()-b.getTime();}", "c"),
+        [],
+      ),
+      false,
+    ],
+    // regel 4 — WEL vlak: "a"+b == `a${b}`
+    [
+      "r4flat+",
+      eq(
+        u('function g(b){return "a"+b;}', "g"),
+        u("function c(b){return `a${b}`;}", "c"),
+        [4],
+      ),
+      true,
+    ],
+    [
+      "r4flat-",
+      eq(
+        u('function g(b){return "a"+b;}', "g"),
+        u("function c(b){return `a${b}`;}", "c"),
+        [],
+      ),
+      false,
+    ],
+    // regel 4 — NIET vlak: a+b+"c" moet VERSCHILLEN van `${a}${b}c` (a+b kan optellen)
+    [
+      "r4noflat",
+      eq(
+        u('function g(a,b){return a+b+"c";}', "g"),
+        u("function c(a,b){return `${a}${b}c`;}", "c"),
+        [4],
+      ),
+      false,
+    ],
+    // regel 5 — funcexpr-block == arrow-concise (dekt ook FIX A via de arrow-kant)
+    [
+      "r5+",
+      eq(
+        u("const g = function(x){return x+1;};", "g"),
+        u("const c = (x) => x+1;", "c"),
+        [5],
+      ),
+      true,
+    ],
+    [
+      "r5-",
+      eq(
+        u("const g = function(x){return x+1;};", "g"),
+        u("const c = (x) => x+1;", "c"),
+        [],
+      ),
+      false,
+    ],
+    // regel 6 — var == const
+    [
+      "r6+",
+      eq(
+        u("function g(){var a=1;return a;}", "g"),
+        u("function c(){const a=1;return a;}", "c"),
+        [6],
+      ),
+      true,
+    ],
+    [
+      "r6-",
+      eq(
+        u("function g(){var a=1;return a;}", "g"),
+        u("function c(){const a=1;return a;}", "c"),
+        [],
+      ),
+      false,
+    ],
+    // FIX A — beknopte arrow-body == equivalente block-body, ZONDER enige regel
+    [
+      "fixA",
+      eq(
+        u("const g = (x) => x+1;", "g"),
+        u("const c = (x) => {return x+1;};", "c"),
+        [],
+      ),
+      true,
+    ],
+    // FIX B — twee GENESTE helpers die alleen in naam verschillen zijn NIET gelijk (alle regels)
+    [
+      "fixB-nested",
+      eq(
+        u("function g(){function merge(p){return p;}return 1;}", "g"),
+        u("function c(){function anders(p){return p;}return 1;}", "c"),
+        [1, 2, 3, 4, 5, 6],
+      ),
+      false,
+    ],
+    // FIX B — top-level naam telt NIET mee (anders breken de aliassen)
+    [
+      "fixB-toplevel",
+      eq(
+        u("function foo(x){return x;}", "foo"),
+        u("function bar(x){return x;}", "bar"),
+        [],
+      ),
+      true,
+    ],
+  ];
+  let n = 0;
+  for (const [id, got, want] of cases) {
+    n++;
+    if (got !== want)
+      throw new Error(
+        `STOP: regel-zelftest '${id}' faalde (kreeg ${got}, verwacht ${want}).`,
+      );
+  }
+  return { guard: "betrapt", rulePairs: n };
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -678,6 +865,7 @@ function main() {
   L.push("");
   L.push(`type-lekken: GEEN`);
   L.push(`bewaker-zelftest: ${st.guard}`);
+  L.push(`regel-zelftests: ${st.rulePairs} paren, alle geslaagd`);
   L.push("");
   L.push("=== De zes gelijkstellingsregels (VASTGESTELD) ===");
   for (const r of RULES) {
