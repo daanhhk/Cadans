@@ -1,7 +1,7 @@
 # Trainingsmodel - BESLUITEN (review-chat, juli 2026)
 
-Status: besluiten-log, GEEN model-document. docs/TRAININGSMODEL.md wordt hieruit
-geschreven in een verse chat. Dit bestand is de bron; vat het niet samen, citeer het.
+Status: besluiten-log, GEEN model-document. docs/TRAININGSMODEL.md IS hieruit
+geschreven (juli 2026) en is de norm; dit bestand blijft het log en het bewijs. Dit bestand is de bron; vat het niet samen, citeer het.
 
 ## Norm-omslag (wijzigt de werkwijze)
 GAS is de REFERENTIE, niet de NORM. Bron van waarheid over wat GAS DOET - dus altijd
@@ -193,7 +193,8 @@ Verdict-criterium: toets aan het MODEL, niet aan GAS. Drie normen naast elkaar.
 GEEN engine-wijziging in de hele review. Findings -> verdicts -> aparte bouw-chats.
 
 ## Open
-- docs/TRAININGSMODEL.md nog te schrijven (verse chat, uit DIT bestand).
+- docs/TRAININGSMODEL.md GESCHREVEN (juli 2026): de norm, regels M1-M61 met statuslabels.
+  Dit bestand blijft de bron voor de afleiding; het model verwijst hierheen.
 - Duurvermogen: de vraag "zakt zijn klimvermogen weg" is DEELS beantwoord (~10-12% bij
   2500+ kJ, dunne bak). Niet als "geen probleem" lezen.
 - Open-source vs commercieel: Scope B (open-source, geen backend) bijt met "fundering voor

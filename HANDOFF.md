@@ -11,6 +11,21 @@ live tot cutover.
 
 ## Stand
 
+**TRAININGSMODEL GESCHREVEN (juli 2026) — commit `fc76af2`, docs-only, engine ongemoeid, niets gedeployd.**
+`docs/TRAININGSMODEL.md` = de NORM voor de trainings-laag; R1-R4 vellen hun verdicts hiertegen
+(verdict-criterium: toets aan het MODEL, niet aan GAS).
+- **Mechaniek:** regels M1-M61, append-only, nooit hernummeren; statuslabels
+  NORM/HEURISTIEK/BEVINDING/OPEN/INGETROKKEN; claimregel M5 (de app beweert niets dat niet als regel met status in
+  het model staat); M6: een schending = bevinding, geen release-gate.
+- **Rolverdeling vast:** BESLUITEN (`docs/TRAININGSMODEL-BESLUITEN.md`) = log + bewijs (citeren, niet samenvatten);
+  MODEL = de norm. Het model bevat bewust GEEN regelnummers/bestandsnamen (M2) en GEEN persoonlijke trainingsdata
+  (testcase §11 = status + functie; de waarden blijven in BESLUITEN).
+- **Toetsbaarheid:** vondsten 1/2/3/4/8 zijn beoordeelbaar via M50/M46/M33+M39/M56/M31. Vondsten 5/6/7/9 zijn GEEN
+  model-vragen (infra-parity + data) — dat is de norm-omslag in werking.
+- **FOCUS VOLGENDE CHAT:** R0 harness (`tools/audit/`, NIET in CI), daarna R1 FASE-B port-correctheid.
+- **OPENSTAAND (ongewijzigd):** functionele round-trip op PROD in de browser; het A-event op prod staat op
+  `2027-04-18` en moet `2027-04-17` zijn (remote-D1-fix, approval-gated).
+
 **REVIEW-CHAT CLOSE-OUT (juli 2026) — NORM-OMSLAG + REVIEW-ROUTE VASTGELEGD.** Bron van waarheid voor de norm =
 **`docs/TRAININGSMODEL-BESLUITEN.md`** (besluiten-log; citeren, niet samenvatten — `docs/TRAININGSMODEL.md` wordt
 daar in een verse chat uit geschreven). Kernpunten:
