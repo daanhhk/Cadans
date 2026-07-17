@@ -11,7 +11,7 @@ live tot cutover.
 
 ## Stand
 
-**R2 LOPEND — batch a1 klaar (juli 2026).** Findings-doc `docs/R2-ENGINE-END-AUDIT.md`. **Findings,
+**R2 LOPEND — batch a1 + a2 klaar (juli 2026).** Findings-doc `docs/R2-ENGINE-END-AUDIT.md`. **Findings,
 GEEN verdicts** (die zijn R4; verdict-criterium = het MODEL, niet GAS). Docs-only, engine ongemoeid,
 niets gedeployd, vloeren ongewijzigd.
 - **R2-SCOPE (Daan akkoord 17-07-2026) — drie brokken, in volgorde.** R1 bewees: body-gelijkheid is
@@ -78,15 +78,54 @@ niets gedeployd, vloeren ongewijzigd.
   expliciete "volgende week"-invoer van de carry-forward (GAS-analoog: ja)? welke velden rollen mee
   (GAS: train/minuten/dagtype/toelichting; `voorgesteld`+`gedaan` leeg)? bron = laatst-aangeraakte
   week of vorige kalenderweek? carry-forward bij lezen of bij schrijven?
-- **NOG OPEN IN R2-a** (volgende chat, uit de 95): coach-inputs (`coachEventFromMacro_`,
-  `coachPatternCount_`, `dashDayCard_`, `dashWeekplanByDate_`, `sumTssVanafDatum_`, `getWeekLoad_`);
-  zone-resolutie (`syncAthleteZones`, `resolveZones_`, `normalizeZones_`, `sweetSpotFromActivity_` —
-  infra, dus parity is norm); `buildGoalProfile_`; de RPE-mismatch-laag (`rpeWeekData_`,
-  `rpeMismatchFlag_`, `plannedTypeForDate_`); de snapshot-laag (`writeDaySessions_`,
-  `cleanupOldProposals_`, `writeVoorgesteldType`); `reconcilePlannerWithActivities` (de wortel van
-  R1-B0-ii, mét ongeporte matching-regel: ride/run én duur ≥ 50% van de geplande minuten);
-  `syncActivitiesIncremental_`; `eventContextFrom_`; `bepaalFaseVoorDatum_`; `garminHeuristic`.
-  Daarna R2-b (14 fns, incl. `buildWorkout`) en R2-c (115, gefilterd).
+- **R2-a2 KLAAR — V4/V5/V6/V7, alle vier gedraaid of mechanisch bewezen (122 inhouds-asserties
+  groen; 18 eigen ankers waren fout en zijn vóór publicatie gecorrigeerd).**
+  **V4 `reconcilePlannerWithActivities` (`Sync.gs:567`) niet geport = de VULLER onder `gedaan`.**
+  GAS tikt het vinkje aan bij elke `syncAll` (`Sync.gs:31`) én bij elke `generateProposal`
+  (`ensureDataAndReconcile_`, `Algorithm.gs:83`) -> bij het LEZEN is het veld per constructie vers.
+  Match-regel = BELEID, 4 delen (`Sync.gs:582-603`): dagvenster · type bevat 'ride'/'run' · duur >=
+  50% van de geplande minuten · eerste match wint PER ACTIVITEIT (nooit gesommeerd). Cadans heeft
+  geen reconcile en geen handmatig pad (`workers/api/src/routes/api.ts:657`); zijn de-facto regel is
+  `apps/web/src/lib/schema.ts:744` `isDone = doneTss > 0` (geen type-/duur-filter, dag GESOMMEERD).
+  GEDRAAID: vandaag 65' gereden op een 60'-plan -> Cadans plant er 62'/52 TSS bovenop (week 257'/189
+  TSS); met de tik verdwijnt vandaag en schuift de kwaliteitssessie naar donderdag (210'/157 TSS).
+  SCOPE: `gedaan` is in GAS een WEEK-KLADJE (rollover wist kolom H, `Planner.gs:319`) -> een 1-op-1
+  port maakt er stilzwijgend een historie van die GAS nooit had. Zelfde vorm als V3.
+  **V5 `syncAthleteZones` (`Sync.gs:57`) niet geport — 1 echte gap, 4 schijn-gaps.** `syncAll` heeft
+  4 armen, Cadans 2 (activities + wellness): athlete-arm én reconcile-arm ontbreken. `resolveZones_`/
+  `resolvePowerZones_`/`resolveHrZones_`/`normalizeZones_`/`sweetSpotFromActivity_` voeden UITSLUITEND
+  `buildZones` (`Zones.gs:122-123`/`:167-168`) = de Zones-TAB (display, `REBUILD-SCOPE.md:70` "sterft").
+  De engine leest de grenzen niet (`actualZoneMinutes_`'s param is dood, `Algorithm.gs:526` geeft
+  `null`; port heet `_zoneBoundaries`) -> 5 units afgesloten met BEWIJS. ECHTE gap: FTP/LTHR/hr_max/
+  hr_rest komen in Cadans alleen uit de handmatige `PUT /api/settings` — GAS overschrijft ze elke sync
+  ONVOORWAARDELIJK (`Sync.gs:62-65`). NB GAS spreekt zichzelf tegen: `syncAthleteZones` negeert het
+  auto-update-vinkje, `syncAthleteFromIcu` (`Sync.gs:672`) gate't er wél op.
+  **V6 acht D1-kolommen die NUL regels code lezen/schrijven** (prod, migratie `0000`):
+  `settings.threshold_pace`/`ftp_auto_update`/`weight_auto_update`/`email_digest` + de HELE tabel
+  `sync_state` (`last_sync`/`meso_week`/`load_carry`/`ftp_last_sync`/`weight_last_sync`);
+  `syncState` komt buiten `workers/api/src/db/schema.ts` in geen enkel bestand voor. `REBUILD-SCOPE.md`
+  specificeerde ze (`:95-97`, `:102`). SLUIT V2's migratie-punt (kolom `meso_week` staat er al) én
+  R1-A2's `loadCarry` (kolom staat er al). MECHANISME: `writeSettings`/`writePlannerDays` zijn
+  full-replace-upserts waarin het `vals`-object de de-facto kolom-whitelist IS -> in `vals` met een
+  constante = actief gewist (B0-i/ii); buiten `vals` = passief gewist. Beide vragen de SCHRIJVER.
+  **V7 de snapshot-laag = de WORTEL onder B0-i/ii/iii, A2, B2 en B8 tegelijk.** GAS' voorstel is een
+  SCHRIJF (3 mirrors: kolom G `Algorithm.gs:148` · `proposal_<dISO>` `:213` · `weekplan_<maandag>`
+  `:257`), Cadans' een LEES. `cleanupOldProposals_` (`:723`) wist ALLE `proposal_*` (naam liegt) en de
+  rollover wist kolom G -> `weekplan_<maandag>` is het ENIGE durabele plan-van-record. Cadans schrijft
+  alle drie niet. `plannedTypeForDate_` (`Algorithm.gs:1931`) voedt TWEE ketens: `rpeWeekData_`->
+  `rpeSignal_` (=R1-B2) én `rpeLastWeekMismatch_`->`loadCarryFactor_`->DocProp `loadCarry`
+  (`Algorithm.gs:89`)->`mesoFactor` (=R1-A2). Eén wortel, twee vondsten. `rpeLastWeekMismatch_` vraagt
+  VORIGE week op -> alleen de week-snapshot kan dat nog leveren = bewijs dat hij DRAGEND is, niet
+  historie. Scherpste consequentie (nieuw): regeneratie is niet reproduceerbaar — een verleden week
+  wordt herbouwd met de FTP van NU. Open voor R4/bouw: waar leeft het plan-van-record (`weekplans`
+  week-vorm of `planner_days.voorgesteld_type` dag-vorm)? wie schrijft het, en wanneer, nu er geen
+  "Genereer voorstel"-knop is? is `gedaan` een afgeleide bij lezen of een kolom bij schrijven (= V3's
+  vierde open punt)?
+- **NOG OPEN IN R2-a** (volgende chat, uit de 95): de coach-inputs (`coachEventFromMacro_`,
+  `coachPatternCount_`, `dashDayCard_`, `dashWeekplanByDate_`, `sumTssVanafDatum_`, `getWeekLoad_`),
+  `buildGoalProfile_`, `eventContextFrom_` (`Algorithm.gs:711`), `bepaalFaseVoorDatum_`,
+  `garminHeuristic`, `syncActivitiesIncremental_`. Daarna R2-b (14 fns, incl. `buildWorkout`) en
+  R2-c (115, gefilterd).
 - **WERKWIJZE BEVESTIGD (R2 = 4e keer):** chat leest zelf (read-only kloon + grep), NUL CC-prompts
   voor het lezen. **DRAAI HET** — de bundel-route (esbuild, buiten de repo-tree, `TZ=Europe/Amsterdam`)
   corrigeerde in deze batch twee vermoedens: mesoFactor bleek vermogen te schalen i.p.v. duur, en de
@@ -160,9 +199,10 @@ hieronder alleen wat een volgende chat moet weten om niet verkeerd te beginnen.
   de drie fouten zaten in de 22 erbuiten. In batch C ving de mechanische toets (105 ankers geëxtraheerd, 135
   met een inhouds-assertie bestand+regel+substring gedraaid) **drie foute ankers in de eigen tekst** vóór het
   committen. Bestaan-en-in-bereik is NIET genoeg: alle drie wezen naar bestaande regels.
-- **FOCUS VOLGENDE CHAT:** **R2 — end-audit op de risico-matrix.** Verse chat (R1 vulde z'n context). Geen
-  engine-wijziging; findings → R4-verdicts → aparte bouw-chats. Verdict-criterium blijft: toets aan het
-  MODEL (`docs/TRAININGSMODEL.md`), niet aan GAS.
+- **FOCUS VOLGENDE CHAT:** **R2-a3** — de rest van de 95 (coach-inputs, `buildGoalProfile_`,
+  `eventContextFrom_`, `bepaalFaseVoorDatum_`, `garminHeuristic`, `syncActivitiesIncremental_`).
+  Verse chat. Geen engine-wijziging; findings -> R4-verdicts -> aparte bouw-chats. Verdict-criterium
+  blijft: toets aan het MODEL (`docs/TRAININGSMODEL.md`), niet aan GAS.
 
 **R0 KLAAR — module 1 (AST-sorteermachine) + 2a (fundering) + 2b (matrix/oracle/entrypoint-map) + 2c (bewaker-fix)
 (juli 2026).** Commits: 2a `8e66ded`, 2b `2093bcd`, 2c `24e7a4f` (+ module 1 `03804eb`/`0fac374`/`f48ed6b`/`7ead6b8`
