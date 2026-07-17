@@ -11,6 +11,88 @@ live tot cutover.
 
 ## Stand
 
+**R2 LOPEND — batch a1 klaar (juli 2026).** Findings-doc `docs/R2-ENGINE-END-AUDIT.md`. **Findings,
+GEEN verdicts** (die zijn R4; verdict-criterium = het MODEL, niet GAS). Docs-only, engine ongemoeid,
+niets gedeployd, vloeren ongewijzigd.
+- **R2-SCOPE (Daan akkoord 17-07-2026) — drie brokken, in volgorde.** R1 bewees: body-gelijkheid is
+  nodig, niet genoeg; geen van de 21 vondsten zat in een body. De matrix sorteert exact op body-diff.
+  **R2 keert de as om** en sorteert op bereikbaarheid + invulling; de matrix levert de inventaris.
+  **a** = wat GAS doet en Cadans niet (alleen-in-GAS ∩ web-server-bereik = **109 units**, na filter
+  op SelfTest/TelegramBot/Secrets/Script.html). **b** = de 14 verschil-fns die R1 liet liggen
+  (matrix-groep 3+4, incl. `buildWorkout`). **c** = de 115 alleen-in-Cadans, gefilterd op "neemt een
+  beslissing". Buiten R2: het MODEL-risico (matrix-gat 1) → R3; de 140 body-gelijke fns integraal.
+- **Van de 109: 14 hebben een geporte aanroeper** (de gap-regel — grotendeels al door R1 geraakt),
+  **95 hebben alléén niet-geporte aanroepers** = hele lagen. Die 95 komt de matrix per constructie
+  niet tegen (gat 6) — daar zit R2-a's bestaansrecht.
+- **PATROON BEVESTIGD:** bijna elke R1-vondst wortelt in die 95. R1 vond het symptoom (geporte fn
+  inert of op nul); de oorzaak is steeds dat de VOEDENDE fn niet meekwam. `mesoFactor` ×1 ←
+  `loadCarryFactor_`; `rpeSignal_` vuurt nooit ← `rpeWeekData_`; dode intent-tak ←
+  `intentZonesForDate_`; geen event-tailoring ← `eventContextFrom_`.
+- **G1 — GEREEDSCHAP: de app-bereik-kolom is asymmetrisch; "buiten bereik" is aan de Cadans-kant NIET
+  sterk.** De GAS-kant kreeg een top-level-statement-start; de Cadans-kant start alleen bij refs in
+  `main.tsx`/`App.tsx`/`index.ts`. Hono-routes zijn top-level statements, geen units → **de hele
+  Worker-route-boom hangt los van de sluiting**. Bewijs: `pcNormalize_` staat als "app-bereik nee"
+  maar draait server-side (`workers/api/src/integrations/powercurve.ts:157`); ≥5 van de 46 zijn zo.
+  Gebruik de kolom als hint, nooit als bewijs. R1's leesvolgorde is niet aangetast (label, geen bewijs).
+- **V1 `getVolumeTargets` (Algorithm.gs:31) niet geport — front-end, dus GAS is norm → drift.**
+  Uren-band per profiel × fase (`'Gevorderd 7u'`: Base [4,7] Build [6,9] Peak [6,9] Taper [3,5]
+  Recovery [2,4]). (a) De Volume-stat op de plan-kaart is in Cadans een **constant getal uit de
+  preset-NAAM** (`presetHoursLabel`, `apps/web/src/lib/settings.ts:127` → `apps/web/src/lib/schema.ts:829` → `PeriodTimeline.tsx:173`);
+  GAS toont de fase-band (`Doel.gs:331/342` → `Script.html:804-805`). In Taper/Recovery ligt "7"
+  buiten de band. (b) **Brok 4b §2's motivering "GAS bouwt GÉÉN range" is aantoonbaar onwaar**; de
+  VORMGEVING-SPEC §2-correctie `4-7u`→`7u` ging de verkeerde kant op — `4-7` wás de Base-band. Klassieke
+  meetlat-val (`PROFIEL_PRESET_OPTIONS` i.p.v. `getVolumeTargets`). (c) De adherence-regel
+  **`voortgangPct` bestaat in Cadans niet**: GAS `WebApp.gs:1302/1316/1325` → `Script.html:1177`
+  `'% van plan'` / `:1178` `'blok net gestart'`, onder het W/kg-niveau. (`WeekLoad.tsx:180` toont óók
+  "% van plan" maar dat is `w.progressPct`, een andere metriek.)
+- **V2 `getMesoWeek` (Utils.gs:48) niet geport — de meso-ramp draait op een ANDERE teller.** GAS:
+  DocProp, clamp 1..4 (`:50`), cyclisch via `advanceMeso` (`:59-64`), **uitsluitend handmatig** via
+  het menu (`Code.gs:56`); `generateProposal` leest 'm op `Algorithm.gs:87`. Cadans: `proposal.ts:233`
+  `weekIndexFromStart_` = weken sinds `doelStart`, ONGECLAMPT (`packages/engine/src/planner.ts:917`) — in GAS is dat de
+  **variant-rotatie**-index (`Algorithm.gs:2524` / `packages/engine/src/planner.ts:1492`), die rol heeft hij óók nog: één
+  teller, twee banen (variant N zit nu vast aan factor N). GEDRAAID: blokweek 1→1,00 · 2→1,00 ·
+  3→1,08 · 4→1,15 · 5→0,60 · **6+→1,00 permanent** (`utils.ts:49` `MESO_MOD[week] || 1.0`, geen
+  clamp). Dus **off-by-one** (0- vs 1-gebaseerd) én **na blokweek 5 modulatie voorgoed uit**.
+  KARAKTER-DRIFT (GEËRFD, GAS-identiek → R3): `packages/engine/src/planner.ts:986/988` `adj = p*f + off` schaalt
+  vermogens-PERCENTAGES, niet duur/TSS — bij 1,08 wordt een sweet-spot `103%/95% FTP` (threshold), bij
+  0,60 `57%/53%` (Z2), met onveranderde naam én niet-meegeschaalde bpm-range. **R1-A2 dekte de tweede
+  factor (`× loadCarry`); deze eerste-factor-invulling is NIEUW** — R1-A2 noteerde het als R2-werk.
+  REGRESSIE? Daan bevestigde (17-07) dat hij het menu-item niet bewust bijhield (verwarde het met
+  `'📋 Rol Weekplanner +1 naar huidig'`, `Code.gs:61`) → DocProp stond op default `1` → de GAS-ramp
+  was in de praktijk óók vlak → geen cutover-blokker; "wat hóórt de meso-week te zijn" is R3.
+  **MIGRATIE: DocProp `mesoWeek` bewust mee of bewust niet — toevoegen aan de migratie-scope.**
+- **V3 het weekplanner-VANGNET niet geport — lege week = NUL dagen.** GAS: `generateProposal` roept
+  ALTIJD `ensureCurrentWeek` (`Algorithm.gs:79`) → (1) `_pullPlus1IntoCurrent_`, anders (2)
+  `materializeWeek_` uit `getPattern()` (DocProp `pattern` via menu `Code.gs:60`, fallback
+  `PLANNER_DEFAULTS` `Planner.gs:31-33`: di 150 pendel / do 90 vrij / za 120 weekend). **De huidige
+  week kán in GAS niet leeg zijn.** Cadans: geen pattern/defaults/materialize; `buildWeekForm`
+  (`apps/web/src/lib/planner.ts:93/102`) geeft ontbrekende dagen als `train:false`. GEDRAAID: `buildWeekProposal` met
+  `plannerDays: []` → `days.length === 0` (niet 7 lege dagen — NUL) → Schema-tab rendert niets.
+  `docs/SCHEMA-EMPTY-RECON.md` zag dit symptoom al maar noemde het een DATA-toestand; de oorzaak is
+  het ontbrekende vangnet. De ROL zelf is architecturaal correct vervangen (D1 sleutelt op datum;
+  "+1"-invoer staat er vanzelf) — daar is GEEN gat.
+  **BESLUIT DAAN (17-07-2026) — BEWUSTE FORK, GAS NIET HERSTELLEN.** `PLANNER_DEFAULTS` bestond alleen
+  omdat een Sheet-tab gevuld moest worden = platform-artefact, geen trainings-intentie. Gewenst:
+  **CARRY-FORWARD** — de laatst door Daan aangepaste week is de basis voor de volgende; past hij niets
+  aan dan rolt die door, past hij wel aan dan wordt die de nieuwe basis. Open voor bouw/R4: wint een
+  expliciete "volgende week"-invoer van de carry-forward (GAS-analoog: ja)? welke velden rollen mee
+  (GAS: train/minuten/dagtype/toelichting; `voorgesteld`+`gedaan` leeg)? bron = laatst-aangeraakte
+  week of vorige kalenderweek? carry-forward bij lezen of bij schrijven?
+- **NOG OPEN IN R2-a** (volgende chat, uit de 95): coach-inputs (`coachEventFromMacro_`,
+  `coachPatternCount_`, `dashDayCard_`, `dashWeekplanByDate_`, `sumTssVanafDatum_`, `getWeekLoad_`);
+  zone-resolutie (`syncAthleteZones`, `resolveZones_`, `normalizeZones_`, `sweetSpotFromActivity_` —
+  infra, dus parity is norm); `buildGoalProfile_`; de RPE-mismatch-laag (`rpeWeekData_`,
+  `rpeMismatchFlag_`, `plannedTypeForDate_`); de snapshot-laag (`writeDaySessions_`,
+  `cleanupOldProposals_`, `writeVoorgesteldType`); `reconcilePlannerWithActivities` (de wortel van
+  R1-B0-ii, mét ongeporte matching-regel: ride/run én duur ≥ 50% van de geplande minuten);
+  `syncActivitiesIncremental_`; `eventContextFrom_`; `bepaalFaseVoorDatum_`; `garminHeuristic`.
+  Daarna R2-b (14 fns, incl. `buildWorkout`) en R2-c (115, gefilterd).
+- **WERKWIJZE BEVESTIGD (R2 = 4e keer):** chat leest zelf (read-only kloon + grep), NUL CC-prompts
+  voor het lezen. **DRAAI HET** — de bundel-route (esbuild, buiten de repo-tree, `TZ=Europe/Amsterdam`)
+  corrigeerde in deze batch twee vermoedens: mesoFactor bleek vermogen te schalen i.p.v. duur, en de
+  off-by-one was met lezen alleen niet te zien. **REKEN JE EIGEN WERK NA:** 4 van de eerste 14
+  locatie-ankers wezen naar de verkeerde regel — mechanisch gevangen vóór publicatie.
+
 **R1 KLAAR — 21 van de 21 (juli 2026).** Findings-doc `docs/R1-PORT-CORRECTHEID.md` (1231 regels), gepind:
 https://raw.githubusercontent.com/daanhhk/Cadans/4b6a8774a0f2d0e8e090fb055973ef078e466f25/docs/R1-PORT-CORRECTHEID.md
 Commits: batch A `c679f0a`, batch B deel 1 `9599ef8`, batch B deel 2 `df3280b`, batch C `4b6a877` — docs-only,
