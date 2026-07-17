@@ -663,3 +663,569 @@ Twee dingen die R4 uit deel 2 moet meenemen:
 **2. De vier gaten wijzen ALLE VIER dezelfde kant op.** (a) geen variatie · (b) het volle harde quotum bovenop wat al gereden is · (c) intensiteit uit een lange rit telt niet als gedekt → nóg meer intensiteit · (d) vandaag blijft plannbaar. Geen enkel gat wijst de andere kant op (minder belasting). Dat is geen toeval: elk van de vier is een REM die GAS heeft en Cadans niet, en elke rem leunt op dezelfde twee lege velden. Model 2's caveat uit deel 1 (twee van de vier signalen kunnen niet vuren) krijgt hier zijn scherpste vorm — niet alleen de signalen zijn dood, ook de quota-rem en de dekking-rem in de consument zelf.
 
 **Batch B is klaar (8/8). Volgende: batch C (11 losse fns)** — `genericPendelIntervals`, `zwoStepFromRow_`, `dashVormReeks_`, `todayIso`, `isDayPlannable`, `durLabel`, `actualZone5_`, `isoWeekNumber`, `weekPlannedTypes`, `nextPlannableDate`, `maandLabel`.
+
+# BATCH C — de elf losse fns
+
+Geen keten, geen gedeelde inputs — op één na. `C0` is het cross-cutting blok (B0's tegenhanger
+aan de settings-kant) en staat daarom vooraan: vier van de tien overige findings erven eruit.
+
+**Methode-noot.** Batch C is niet alleen gelezen maar **gedraaid**: de engine is puur en bundelbaar,
+de GAS-tegenhanger is uit de `.gs` te snijden en als module te importeren. Elke `zo gedraaid`-regel
+hieronder is een differentiële run van beide kanten naast elkaar op ECHTE input (workout-rijen uit
+`buildWorkout` zelf, weken uit `buildWeekProposal` zelf — geen verzonnen fixtures). Waar een leesronde
+een vermoeden geeft, geeft een run een feit: twee claims uit de vorige leesronde zijn er door
+gecorrigeerd (C7, C1-nuance), en één anker in de HANDOFF-micro-correctie bleek zelf fout.
+
+---
+
+## C0 · De `SETTINGS_DEFAULTS`-laag is niet geport
+
+- **locaties** — GAS `src/Settings.gs:72` (`SETTINGS_DEFAULTS`, map `:72-96`) + `readSettings`
+  `src/Settings.gs:263` (tien `|| SETTINGS_DEFAULTS.x`-velden, `:272-287`) + `getGewicht`
+  `src/Settings.gs:315` + `getProfielPreset` `src/Settings.gs:316` · Cadans `readSettings`
+  `workers/api/src/db/repo.ts:83` (rauw door, `:93-108`), `EMPTY_SETTINGS`
+  `apps/web/src/lib/schema.ts:696` (alle velden `null`), D1-DDL
+  `workers/api/drizzle/0000_redundant_maginty.sql:84-103` (geen enkele `DEFAULT`; `0001`/`0002`/`0003`
+  voegen er ook geen toe)
+- **matrix-cel** — geen fn-cel: dit is een LAAG, niet één unit. Raakt groep 1 (`genericPendelIntervals`)
+  en groep 3 (`buildWorkout`) via de invulling · app-bereik ja · web-ui-bereik ja
+- **waar het verschil leeft** — **invulling: ONVERKLAARD** (de laag is er niet)
+- **richting — GEÏNTRODUCEERD.** GAS kán geen lege `settings.ftp` produceren.
+
+### De structuur
+
+GAS heeft drie accessors met een defaults-laag erin: `readSettings` (tien velden), `getGewicht` en
+`getProfielPreset`. Een leeg veld is in GAS **onbereikbaar** — `Number(v('FTP')) || SETTINGS_DEFAULTS.ftp`
+geeft 280, nooit `null`.
+
+Cadans heeft die laag op GEEN van de drie niveaus: niet in de DDL (kolommen zijn nullable zonder
+`DEFAULT`), niet in de repo (`readSettings` mapt 1-op-1 door), en niet in de client. `EMPTY_SETTINGS`
+zet in plaats daarvan ALLES op `null` en is **bereikbaar**: `loadSchemaWeek`
+(`apps/web/src/lib/schema.ts:846`) doet `settings ?? EMPTY_SETTINGS` op twee plekken — `:886` (naar
+`buildWeekProposal`) en `:928` (naar de view-return).
+
+### De breedte (gedraaid — dit was het openstaande deel)
+
+Per veld: Cadans' `null` tegenover de GAS-DEFAULT voor datzelfde veld, over een echte
+`buildWeekProposal`-run. **Zes van de twaalf lekken door naar zichtbare output:**
+
+| veld | GAS-default | lekt? | wat je ziet |
+|---|---|---|---|
+| `ftp` | 280 | **ja** | elk wattage-bereik wordt `"0-0W"` |
+| `lthr` | 178 | **ja** | elk hartslag-bereik wordt `"0-0 bpm"` |
+| `doel` | `'FTP'` | **ja** | `"Pendel + null intervallen (…)"`; het interval-blok blijft `["—","—","—","—","—"]` |
+| `pendelDuurMin` | 80 | **ja** | valt terug op `d.minuten` (dag-beschikbaarheid) i.p.v. 80 |
+| `pendelAantal` | 2 | **ja** | `sessieCount` 1 i.p.v. 2 |
+| `profielPreset` | `'Gevorderd 7u'` | **ja** | §2 Volume-stat leeg (zie de vocabulaire-noot) |
+| `doelStart` | `new Date()` (`Settings.gs:76` + `:253-255`) | nee | Cadans' `null` geeft dezelfde uitkomst als GAS' vandaag-default: `macroFase` Base, `mesoWeek` 0 |
+| `fase` | `'build'` | nee | Cadans' `""` (= `FASE_OPTIONS` "Automatisch", `apps/web/src/lib/settings.ts:165-168`) is output-equivalent |
+| `doelDuur` | 12 | nee (hier) | geen effect op het voorstel; lekt WEL elders — zie onder |
+| `hr_max` / `hr_rest` | 198 / 51 | nee | geen engine-consument aan beide kanten; alleen opslag + Instellingen-scherm |
+| `gewicht` | 75 | nee (hier) | de seam van A1; buiten het voorstel |
+| `threshold_pace` | `'4:27'` | n.v.t. | **geen Cadans-tegenhanger.** Bestaat alleen als dode D1-kolom (`workers/api/src/db/schema.ts:50`); staat niet in `SettingsInput` (`packages/shared/src/settings.ts:10-32`) en heeft nul consumenten |
+
+Zo gedraaid: `genericPendelIntervals("pendel_intervals", null, EMPTY_SETTINGS, 2, "Build", null)` geeft
+naam `"Pendel + null intervallen (150 min)"`, structuur-rij `["Heen Z2","75 min","0-0W","0-0 bpm",…]`,
+blok `["—","—","—","—","—"]`. Een verse Cadans-user en een verse GAS-user geven **niet** dezelfde week.
+
+**`doelDuur` lekt buiten het voorstel.** `doelTestWeken_` (`packages/engine/src/niveau.ts:723`) via
+`apps/web/src/pages/Niveau.tsx:152`: met 12 → `2` (weken tot testdag), met `null` → `null` ⇒ de
+testdag-teller op Niveau valt leeg. Zelfde oorzaak, andere consument.
+
+### Debt (o) is stale — zelfde vorm als debt (b) in batch A
+
+`HANDOFF.md:1094` noteert debt (o) als **OPGELOST**, en noemt exact twee van de leaks hierboven:
+~~"· null"~~ (= `doel`) en ~~"0-0 bpm"~~ (= `lthr`). De oplossing die er staat is een **LOKALE D1-seed**
+(`settings.doel='Ardennen-trip'`, `settings.lthr=178`) — expliciet "LOKAAL (miniflare…), NIET in
+repo/remote". Dat is het symptoom wegnemen op één machine, niet de oorzaak. Debt (o) erkent dat zelf
+half ("de `EMPTY_SETTINGS`-fallback in `loadSchemaWeek` verzacht een verse user maar raakt de
+users-bootstrap-debt"), maar draagt de kop OPGELOST.
+
+Waarom het niet opvalt: v1 is single-user (`CURRENT_USER_ID=1`) en die ene rij is gevuld. De leak is
+**latent**, niet weg. Elke verse user — en het schema heet multi-user-ready — reproduceert 'm.
+
+### Vocabulaire-noot bij `profielPreset` (migratie-relevant, geen R1-finding)
+
+GAS: `PROFIEL_PRESET_OPTIONS = ['Amateur 3u','Gemiddeld 5u','Gevorderd 7u','Pro 10u+','Custom']`
+(`src/Settings.gs:100`), default `'Gevorderd 7u'`. Cadans: `["amateur","gemiddeld","gevorderd",
+"professional"]` (`apps/web/src/lib/settings.ts:110-119`) — andere sleutels, geen `Custom`, geen default.
+Zo gedraaid: `presetHoursLabel("gevorderd")` → `"7u"`; `presetHoursLabel("Gevorderd 7u")` → `null`
+(onbekende sleutel) → `view.volumeUren` leeg (`apps/web/src/lib/schema.ts:829`). **Een GAS-waarde die
+1-op-1 gemigreerd wordt, geeft een lege Volume-stat.** Hoort op de migratie-mapping.
+
+### Aangrenzende observatie — BUITEN R1-scope, signaal voor R2
+
+Bij het natrekken van `profielPreset`: in GAS is dat veld een **engine-input**. `getVolumeTargets`
+(`src/Algorithm.gs:31`, `presets[getProfielPreset()]` op `:38`) levert doel-uren/week per macro-fase en
+heeft vier productie-aanroepers: `src/Proposal.gs:470`, `src/WebApp.gs:1302`, `src/Doel.gs:331`,
+`src/TelegramBot.gs:405`. **In Cadans bestaat `getVolumeTargets` niet** (nul treffers in
+`packages/`, `apps/web/src`, `workers/api/src`); `proposal.ts:84-85` documenteert `profielPreset`
+expliciet als "WEB-ONLY: de engine leest profielPreset niet".
+
+Dit is een **alleen-in-GAS**-unit ⇒ geen naam-match ⇒ geen matrix-cel ⇒ geen R1-verdict. Het staat hier
+als signaal omdat het bij C0's veld hoort en R2 het anders niet tegenkomt: de matrix sorteert
+naam-matches, en dit gat heeft per definitie geen tegenhanger om tegen te sorteren. (`HANDOFF.md:450`
+schrijft bij de Volume-stat "GAS bouwt GÉÉN range"; `getVolumeTargets` levert wél ranges — bv.
+`Gevorderd 7u` → `Build: [6, 9]`. Niet uitgezocht welke van de twee GAS-paden 4b bedoelde; R2.)
+
+---
+
+## C1 · `genericPendelIntervals` (GAS) → `genericPendelIntervals` (Cadans)
+
+- **locaties** — GAS `src/Algorithm.gs:2819` · Cadans `packages/engine/src/planner.ts:2012`.
+  Call-site: GAS `src/Algorithm.gs:2537` ↔ Cadans `packages/engine/src/planner.ts:1511`.
+  Invulling: GAS `src/Algorithm.gs:191-193` (in `generateProposal`) ↔ Cadans
+  `apps/web/src/lib/proposal.ts:392-397`
+- **matrix-cel** — groep 1 (verschil, geen enkele test in GAS noch Cadans) · app-bereik ja ·
+  web-ui-bereik ja
+- **waar het verschil leeft** — body: **verklaard** · **invulling: ONVERKLAARD**
+- **richting — GEÏNTRODUCEERD**, maar zie "geen simpele port-fout" hieronder
+
+### De body is geen vindplaats
+
+Zo gedraaid: 80.640 gevallen (5 types × 8 doelen × 14 minuten-waarden × 6 mesoWeeks × 6 macroFases ×
+4 settings, incl. `null`/0/randwaarden) door beide implementaties → **nul verschillen**. `genericPendelZ2`
+(GAS `:2798` ↔ Cadans `:1970`) idem: 1.080 gevallen, nul verschillen.
+
+Twee cosmetische afwijkingen, beide zonder gevolg: GAS declareert `var heen = Math.floor(mins / 2),
+terug = mins - heen;` (`Algorithm.gs:2822`) waarin **`terug` een dode var is** — nergens gebruikt in
+deze fn (wél in `genericPendelZ2`, `:2811`); de port laat 'm weg (`planner.ts:2023` heeft alleen `heen`).
+En `macroFase` → `_macroFase`: ongebruikt aan beide kanten.
+
+### De vondst zit in de invulling: het pendel-veld betekent iets anders
+
+`mins` komt uit `settings.pendelDuurMin` via de sessie-expansie. Die expansie is logisch byte-gelijk:
+
+- GAS `Algorithm.gs:191-193`: `isPendel = d.type === 'pendel'` · `sessieCount = Math.max(1,
+  Math.round(settings.pendelAantal) || 1)` · `sessieMin = settings.pendelDuurMin || d.minuten`
+- Cadans `proposal.ts:392-397`: idem (`?? 0` i.p.v. impliciet — zelfde uitkomst bij `null`)
+
+Maar de OPGESLAGEN waarde verschilt, omdat het veld anders heet en anders wordt weggeschreven:
+
+- GAS: `PENDEL_DUUR = { row: 52, label: 'Pendel duur per rit', unit: 'min' }` (`src/Settings.gs:39`)
+  naast `PENDEL_AANTAL = { row: 53, label: 'Pendel ritten per dag' }` (`:40`). Wat de gebruiker typt
+  wordt rauw opgeslagen.
+- Cadans: `<Row label="Pendel (enkele reis)" sub="heen + terug = 2×">`
+  (`apps/web/src/pages/Instellingen.tsx:778`) schrijft `legToRoundTrip(v) = v * 2` weg
+  (`apps/web/src/lib/settings.ts:172`). Het aparte veld `pendelAantal` ("Pendel-ritten", sub "per
+  pendeldag", `Instellingen.tsx:793`) vermenigvuldigt daar in de expansie **nog eens** overheen.
+
+Zo gedraaid, echte `buildWeekProposal`-run (week ma 13-07 t/m zo 19-07, doel FTP, Peak/mesoWeek 10),
+gebruiker typt **40 min** met **2 ritten**:
+
+| | dag-minuten | dag-TSS | sessies |
+|---|---|---|---|
+| GAS (opgeslagen 40) | **80** | **59** | `Pendel + Z2 (40 min)` + `Pendel + FTP intervallen (40 min)` |
+| Cadans (opgeslagen 80) | **160** | **111** | `Pendel + Z2 (80 min)` + `Pendel + FTP intervallen (80 min)` |
+
+Exact 2×. **Tweede-orde-effect in dezelfde run:** de verdubbelde pendel-belasting verschuift de
+weekbalans — vrijdag kreeg bij 40 een `vo2max` en bij 80 een `threshold`. De fout blijft niet op de
+pendeldag staan.
+
+### Twee nuances die mee moeten
+
+**(1) De fouten heffen elkaar NIET precies op — alleen de minuten.** Als `pendelAantal` leeg is
+(Cadans `null` → `sessieCount` 1; GAS kan dit niet, default 2) geldt: dag-minuten 80 = 80 ✓, maar
+**TSS 59 (GAS) tegen 63 (Cadans)** en **2 sessies tegen 1**. Bij GAS is de eerste sessie een
+geforceerde `pendel_z2` (lichter) en de tweede de intervallen; bij Cadans is het één intervallen-sessie
+van 80 min. Dit verklaart wél waarom het nooit opviel — de dagduur klopte.
+
+**(2) GAS is hier zelf intern tegenstrijdig.** Het label zegt `'per rit'` en de aggregaat-naam is
+`'Pendel ' + sessions.length + '× ' + sessieMin + 'm'` (`Algorithm.gs:233`) — beide lezen `mins` als
+één rit. Maar **beide** pendel-generics splitsen `mins` in heen+terug (`Algorithm.gs:2801` en `:2822`)
+— dat leest `mins` als een RETOUR. GAS' eigen default (`pendelDuurMin: 80`, `pendelAantal: 2`) is langs
+beide lezingen 160 min/dag, met onderling strijdige structuur.
+
+Commit `faed841` ("pendel duration as per-leg setting (store round-trip; engine splits heen/terug)")
+koos bewust de tweede lezing en maakte het LABEL consistent met de engine — maar liet `pendelAantal`
+erbovenop staan. De commit-tekst zegt het zelf: "pendelAantal unchanged".
+
+⇒ **Dit is geen simpele port-fout maar een MODEL-vraag voor R4:** welke lezing is deugdelijk — is
+`pendelDuurMin` één rit of een retour, en wat betekent `pendelAantal` dán? Zolang dat niet beslist is,
+is "Cadans heeft het mis" een half antwoord: GAS heeft geen consistent antwoord om tegen te ijken.
+
+**Anker-correctie.** `HANDOFF.md:650` verwijst voor de heen/terug-split naar `planner.ts:1948-1949`.
+Dat anker was JUIST bij `faed841` (daar stond `genericPendelZ2`s split), maar is verschoven: op main
+`1eaddfe` valt `:1948` in `genericSweetSpotLong` (`:1933`); de splits staan nu op `:1979-1980`
+(`genericPendelZ2`) en `:2023` (`genericPendelIntervals`). Regeldrift, geen fout van toen.
+
+---
+
+## C2 · `zwoStepFromRow_` — functioneel identiek, de onbekende is dood
+
+- **locaties** — GAS `src/Algorithm.gs:1753` · Cadans `packages/engine/src/zones.ts:368`.
+  Deps (puur, meegesneden): `dslPowerRange_` GAS `:1656`, `dslDurationSec_` `:1682`,
+  `dslRestFromNote_` `:1691`, `zwoPct_` `:1803`
+- **matrix-cel** — groep 1 (verschil, geen enkele test) · app-bereik nee (geen productie-aanroeper —
+  het push-pad is niet gebouwd) · web-ui-bereik nee
+- **waar het verschil leeft** — body: **verklaard (formattering)** · invulling: n.v.t.
+- **richting — n.v.t.** (geen gedragsverschil)
+
+Zo gedraaid: **616 unieke ECHTE workout-rijen**, gewonnen uit `buildWorkout` zelf over 34 types × 5
+doelen × 9 minuten-waarden × 4 mesoWeeks × 6 macroFases — dus precies de rijen die de app kan
+produceren, geen verzonnen fixtures. × 4 FTP-waarden (280/200/350/0) = **2.464 gevallen**. Alle vijf
+takken geraakt: `IntervalsT` 1504 · `SteadyState` 788 · `Warmup` 104 · `Cooldown` 60 · `null` 8.
+**Nul verschillen.**
+
+Het "verschil"-stempel van de matrix is een opmaak-artefact: string-concat → template literal, `var
+range` → `const rng`, `var` → `const`/`let`. Meer niet.
+
+### Dit corrigeert het OPENSTAAND-PUSH-blok
+
+`HANDOFF.md:206` zet als stap (1) van de push-stapel: "`zwoStepFromRow_` van de leesstapel lezen — die
+bepaalt letterlijk wat er op het apparaat komt **en wijkt af van GAS zonder dat iemand weet waarom**".
+Die onbekende bestaat niet. De fn is functioneel 1-op-1 en dat is nu mechanisch vastgesteld op de volle
+rij-ruimte die de app kan genereren. **Stap (1) vervalt**; de push-stapel begint bij (2)
+`buildWorkoutZwo_` porten. De zin "hierna kan een fout een verkeerde training op het stuur geven" blijft
+staan — maar niet vanwege déze fn.
+
+---
+
+## C3 · `dashVormReeks_` — geen gat, wél dode code
+
+- **locaties** — GAS `src/WebApp.gs:225` · Cadans `packages/engine/src/niveau.ts:190`.
+  GAS-aanroepers: `src/Algorithm.gs:1469` (de `reeks === undefined`-default in `getReadinessScore_`,
+  fn-def `:1466`) en `src/WebApp.gs:1189`. Cadans-aanroeper: **alleen**
+  `workers/api/test/wellness.test.ts:145`
+- **matrix-cel** — groep 2 (verschil, alleen een Cadans-test) · app-bereik **nee** · web-ui-bereik nee
+- **waar het verschil leeft** — body: **verklaard (seam)** · **aanroep: verklaard (bewuste bypass,
+  geverifieerd equivalent)**
+- **richting — n.v.t.**
+
+Body byte-identiek op de seam na: GAS `if (!wellValues) wellValues = readWellnessValues_();` → Cadans
+`if (!wellValues) wellValues = [];`.
+
+### De bypass is echt en is equivalent
+
+Cadans omzeilt de fn: `deriveReadiness` (`apps/web/src/lib/readiness.ts:68`) geeft op `:75` de RAUWE
+`WellnessInput[]` door als `reeks`-argument aan `getReadinessScore_` — niet `dashVormReeks_(rows)`.
+
+Dat werkt omdat de consument alleen `.vorm` leest: `getReadinessScore_`
+(`packages/engine/src/readiness.ts:74`) raakt `reeks` uitsluitend op `:86-93` via
+`reeks.filter(r => r.vorm != null)`, en `WellnessInput` draagt `vorm` zelf
+(`packages/shared/src/wellness.ts:19`).
+
+Zo gedraaid, zes wellness-dagen oudste-eerst: via `dashVormReeks_` → score **93 / ready**; via de bypass
+→ score **93 / ready**; volledige result-objecten **byte-identiek**.
+
+> **Hier ging de vorige leesronde bijna de fout in.** De hypothese "de reeks heeft de verkeerde vorm,
+> dus de vorm-trend is dood" leek sterk — en was FOUT. Alleen het narekenen ving het. Een afgekapte blik
+> op de interface (zonder `.vorm`) had een niet-bestaand gat opgeleverd.
+
+### Het restrisico dat WEL genoemd moet — en het is gemeten
+
+GAS' fn sorteerde ZELF (`out.sort(…)`, `WebApp.gs:241`). De bypass laat die vangnet-sortering vallen.
+Zo gedraaid met dezelfde zes dagen in willekeurige volgorde: via `dashVormReeks_` nog steeds **93**
+(hij sorteert zelf recht); via de bypass **83** — tien readiness-punten verschil. De
+volgorde-garantie hangt nu **volledig** aan `readWellness`' `.orderBy(asc(wellness.datum))`
+(`workers/api/src/db/repo.ts:576`). Vandaag houdt die; het vangnet eronder is weg.
+
+---
+
+## C4 · `todayIso`, C6 · `durLabel`, C8 · `isoWeekNumber` — infra, parity staat
+
+Deze drie zijn **infra**: parity is de NORM, drift is een bug. De norm staat, alle drie gedraaid:
+
+| # | GAS | Cadans | matrix | gedraaid | verschillen |
+|---|---|---|---|---|---|
+| C4 | `evTodayISO_` `src/Script.html:92` | `apps/web/src/lib/dates.ts:4` | groep 1 | 200 aanroepen | **0** |
+| C6 | `trnDurLabel_` `src/Script.html:1907` | `apps/web/src/lib/schema.ts:715` | groep 2 | 972 invoerwaarden (−60…900 + fractioneel: 0.4/0.5/59.5/60.5/−1.5/…) | **0** |
+| C8 | `isoWeek_` `src/Script.html:84` | `apps/web/src/lib/dates.ts:38` | groep 2 | 4.026 datums (elke dag 2020-2030 + jaargrens-randgevallen 2020-12-31/2021-01-04/2024-12-29/2015-12-28) | **0** |
+
+Alle drie byte-getrouw · body: verklaard (formattering) · richting n.v.t.
+
+---
+
+## C5 · `isDayPlannable` — twee weggevallen takken, verantwoord
+
+- **locaties** — GAS `trnPlannable_` `src/Script.html:1998` · Cadans `apps/web/src/lib/library.ts:176`
+- **matrix-cel** — groep 2 · app-bereik ja · web-ui-bereik ja
+- **waar het verschil leeft** — body: **verklaard (gelogde vereenvoudiging, verantwoording houdt)**
+- **richting — n.v.t.**
+
+De twee GAS-takken die wegvallen staan in de code-comment (`library.ts:172-174`) en de verantwoording
+houdt bij natrekken:
+
+- `d.status === 'preview'` — bestaat niet in Cadans' 1-week-venster (vgl. de geparkeerde
+  DayStrip-venster-feature; komt die er, dan komt deze tak terug)
+- `d.status === 'vandaag' && state.vandaag.actual` — de same-day-flip zet zo'n dag al op state `done`
+  (`schema.ts`, `isDone` → `state "done"`), dus de done-uitsluiting dekt 'm
+
+GAS' null-guard (`if (!d || !state.vandaag) return false;`) ontbreekt. **Onbereikbaar:** de parameter is
+`SchemaDay` (niet-nullable) en alle drie de call-sites voeden uit `deriveSchemaView`'s gemapte array —
+`apps/web/src/components/schema/SchemaView.tsx:85` (guardt bovendien zelf `!!day &&`, want zijn eigen
+`day` is optioneel), `apps/web/src/lib/library.ts:192` (binnen `nextPlannableDate`), en
+`apps/web/src/pages/Trainingen.tsx:277`.
+
+**VERKLAARD.**
+
+---
+
+## C7 · `actualZone5_` — body identiek, twee vondsten in de aanroeper
+
+- **locaties** — GAS `coachActualZoneMin_` `src/WebApp.gs:728` · Cadans
+  `apps/web/src/lib/schema.ts:285` (bucket-map `ZT_TO_ZONE5` `:254`). Aanroeper: Cadans
+  `apps/web/src/lib/schema.ts:301` (`buildDoneEntry`, `actualZone5_`-call op `:317`) gevoed door de
+  `doneByDate`-lus `:900-908` in `loadSchemaWeek`
+- **matrix-cel** — groep 2 · app-bereik ja · web-ui-bereik ja
+- **waar het verschil leeft** — body: **verklaard** · **invulling: ONVERKLAARD (2 vondsten)**
+- **richting — GEÏNTRODUCEERD; (b) in Cadans' voordeel — zie onder**
+
+`ZT_TO_ZONE5` is byte-identiek aan GAS' inline map (`WebApp.gs:738`): Z1→rust · Z2→z2 · Z3→tempo ·
+Z4→drempel · Z5/Z6/Z7→anaeroob; SS/overlays → skip; minuten = secs/60. De port **splitste de fn**: GAS
+zoekt de activiteit zelf op (`getActivities(35)` + match-by-date), Cadans laat dat aan de aanroeper.
+Daar leven beide vondsten.
+
+### (a) Het fiets-filter valt weg — maar smaller dan het lijkt
+
+GAS slaat niet-fiets-activiteiten over: `if (!a.start_date_local || CYCLING_TYPES.indexOf(String(a.type
+|| '')) < 0) continue;` (`WebApp.gs:734`; `CYCLING_TYPES` op `Algorithm.gs:42`). De Cadans-lus
+(`schema.ts:900-908`) filtert **niet**. `CYCLING_TYPES` bestaat wel (`packages/engine/src/zones.ts:9`)
+maar wordt alleen gebruikt in `zones.ts:107` en `weekprep.ts:72` — niet hier. Stroomopwaarts filtert
+niets: `mergeById_` (Cadans `packages/engine/src/sync.ts:145`, GAS `src/Sync.gs:190`) filtert aan géén
+van beide kanten op type, en `readActivities` (`workers/api/src/db/repo.ts:291`) filtert alleen op datum.
+
+Zo gedraaid, `buildDoneEntry` op echte niet-fiets-rijen (zoals `activityToRow_` ze wegschrijft): een
+`Run`, `WeightTraining` en `Swim` krijgen alle drie een gevulde `zoneMin5`; end-to-end via
+`deriveSchemaView` flipt de dag naar state `done` met naam, TSS en zone-balk.
+
+**MAAR — en dit corrigeert de eerdere leesronde:** GAS' VOLTOOID-kaart komt niet uit
+`coachActualZoneMin_` maar uit `dashActivityScan_` (`src/WebApp.gs:106`) → `actualsByDate`
+(`:126-134`), en **dáár zit geen type-filter**. Een hardloopje vult de kaart dus **ook in GAS**. Het
+geïntroduceerde verschil is beperkt tot de **zone-balk**: GAS toont zo'n dag mét kaart maar zónder
+zone-balk (`coachActualZoneMin_` → `null` → `getDayCoachZones` valt terug), Cadans mét. De claim "een
+hardloopje kan de VOLTOOID-kaart vullen" is dus GEEN Cadans-vondst.
+
+*Empirische grens:* de zone-balk-leak vereist dat de niet-fiets-activiteit daadwerkelijk
+`icu_zone_times` draagt. Of intervals.icu die voor een hardloop-/krachtsessie emit, is buiten de repo
+niet vast te stellen — geen bewijs, geen weerlegging.
+
+### (b) Drie verschillende selectie-regels op één dag
+
+- GAS `dashActivityScan_` (`:126`): **hoogste idx0-timestamp per datum wint** — één rit, de rest valt weg
+- GAS `coachActualZoneMin_` (`:735`): **eerste matchende fietsrit** (`break`)
+- Cadans `doneByDate`-lus (`:907`) + `mergeDone` (`:324`): **merget ALLE activiteiten van de dag** (som
+  tss/minuten/zones; naam+type van de langste)
+
+Zo gedraaid, echte pendeldag met twee ritten (heen 07:30, 40 min, 26 TSS · terug 17:30, 40 min, 33 TSS):
+
+| | kaart toont |
+|---|---|
+| GAS `dashActivityScan_` | `"Woon-werk terug"` — **33 TSS / 40 min** (heen verdwijnt) |
+| GAS zone-balk (`coachActualZoneMin_`) | uit `"Woon-werk heen"` — de ANDERE rit dan de kaart |
+| Cadans `mergeDone` | **59 TSS / 80 min** (som) |
+
+GAS toont op een pendeldag de helft van de gereden belasting, en haalt kaart en zone-balk uit
+verschillende ritten. Cadans' merge is inhoudelijk het betere antwoord — een pendeldag *is* twee ritten.
+**Richting geïntroduceerd, maar naar de deugdelijke kant.** R4-vraag: is "som de dag" de norm? Zo ja,
+dan is dit geen regressie maar een stille verbetering die als zodanig vastgelegd hoort te worden — nu
+staat hij nergens.
+
+---
+
+## C9 · `weekPlannedTypes` — de badge vergeet op vrijdag wat je maandag reed
+
+- **locaties** — GAS `weekPlannedTypes_` `src/Algorithm.gs:2447` · Cadans
+  `apps/web/src/lib/library.ts:204`. Aanroepers: GAS `src/WebApp.gs:1391` (+ override-merge `:1392-1398`)
+  · Cadans `apps/web/src/pages/Trainingen.tsx:212`
+- **matrix-cel** — groep 2 · app-bereik ja · web-ui-bereik ja
+- **waar het verschil leeft** — body: n.v.t. (**andere handtekening**) · **invulling: ONVERKLAARD**
+- **richting — GEÏNTRODUCEERD; oorzaak = B0-i**
+
+De handtekeningen verschillen fundamenteel: GAS leest de `weekplan_<maandag>`-DocProp (= de B0-iii-bron,
+in GAS WÉL gevuld) en pakt `e.workoutType || e.voorgesteldType`. Cadans leest `d.voorgesteldType` over
+`SchemaDay[]`.
+
+### De keten is in zoverre schoon — de tweede B6-achtige uitzondering
+
+`d.voorgesteldType` is NIET altijd leeg, ondanks B0-i. De grid-seed is dat wel
+(`proposal.ts:247` = `pd.voorgesteldType` = altijd `null`), **maar `assignWorkouts` overschrijft op de
+grid** (`packages/engine/src/planner.ts:736`) → `ProposalDay.voorgesteldType` (`proposal.ts:443-447`) →
+`SchemaDay.voorgesteldType` (`schema.ts:808`). Dus gevuld. Zoals B6: "body goed, invulling leeg" is een
+patroon, geen wetmatigheid — blijf het per fn vragen.
+
+### Maar alleen voor de toekomst
+
+`assignWorkouts` krijgt alleen `tePlannen` mee (`proposal.ts:342-347`: `train && !gedaan && datum >=
+vandaag`) ⇒ **verstreken dagen houden `null`**.
+
+Zo gedraaid, echte `buildWeekProposal`-run, week ma 13-07 t/m zo 19-07 met vandaag = do 16-07:
+ma/di/wo → `voorgesteldType` `null`; badge-set = `{pendel_ftp_intervals, pendel_z2, long_z2}` — alleen
+uit do..zo. GAS' badge leest de snapshot ma..zo **inclusief gereden dagen**, plus de override-merge.
+
+**Zichtbaar gevolg:** de "In je blok"-badge op de Trainingen-tab toont op vrijdag niet meer wat je
+maandag gepland had. Hoe later in de week, hoe leger de badge.
+
+---
+
+## C10 · `nextPlannableDate` — bevestigde debt
+
+- **locaties** — GAS `trnNextPlannableDate_` `src/Script.html:2005` · Cadans
+  `apps/web/src/lib/library.ts:187`. Call-sites: `apps/web/src/pages/Trainingen.tsx:218` en `:278`
+- **matrix-cel** — groep 2 · app-bereik ja · web-ui-bereik ja
+- **waar het verschil leeft** — body: **verklaard (byte-getrouw, incl. de sort)**
+- **richting — GEËRFD**
+
+Byte-getrouw inclusief de sort. De GAS-getrouwe fallback geeft **altijd** `todayISO`: GAS' `state.vandaag
+? state.vandaag.dateISO : null` kan de `null`-tak niet halen (`state.vandaag` is gezet zodra
+`trnPlannable_` überhaupt draait), Cadans' `todayISO` evenmin ⇒ GAS' "Geen plan-dag beschikbaar."-tak is
+**dode code aan beide kanten**.
+
+De echte beslissing leeft op de call-site: `Trainingen.tsx:277` guardt op
+`view.days.some(d => isDayPlannable(d, todayISO))` en zet `target` op `null` als er geen echte kandidaat
+is (`:278`) — de code-comment op `:273-274` benoemt dat expliciet. Bevestigt de bestaande HANDOFF-debt;
+geen nieuwe vondst.
+
+---
+
+## C11 · `maandLabel` — drie implementaties, drie randgevallen
+
+- **locaties** — GAS `nlMaandLabel_` `src/Script.html:1415` (`NL_MND` `:1414`) · Cadans gedeeld
+  `apps/web/src/lib/niveau.ts:32` · Cadans **KOPIE**
+  `apps/web/src/components/niveau/ProgressieCard.tsx:30`. Call-sites: `ProgressieCard.tsx:57` (de
+  grafiek-labels, gebruikt de KOPIE) · `apps/web/src/lib/niveau.ts:103` (`sinceMonth`, de gedeelde)
+- **matrix-cel** — groep 2 · app-bereik ja · web-ui-bereik ja
+- **waar het verschil leeft** — body: **ONVERKLAARD (duplicatie)** · gedragsverschil: **onbereikbaar**
+- **richting — n.v.t.** (geen bereikbaar gedragsverschil); de duplicatie is **alleen-in-Cadans**-risico
+
+De R0-debt is echt: drie implementaties, drie verschillende terugvallen. GAS valt terug op `'?'` +
+`slice(-2)`; beide Cadans-versies op `""` + `slice(2)`; de lib-versie (`apps/web/src/lib/niveau.ts`) heeft een extra length-guard
+(`p.length < 2` → geeft de input terug), de KOPIE heeft die niet en defaultet `m = "1"` → verzint "jan".
+
+Zo gedraaid, alle drie naast elkaar:
+
+| invoer | GAS | `apps/web/src/lib/niveau.ts:32` | `ProgressieCard.tsx:30` |
+|---|---|---|---|
+| `"2026-03"` | `"mrt '26"` | `"mrt '26"` | `"mrt '26"` |
+| `"2026"` | `"? '26"` | `"2026"` | `"jan '26"` |
+| `""` | `"? '"` | `""` | `"jan '"` |
+| `"abc"` | `"? 'bc"` | `"abc"` | `"jan 'c"` |
+| `"2026-13"` | `"? '26"` | `" '26"` | `" '26"` |
+| `"26-03"` | `"mrt '26"` | `"mrt '"` | `"mrt '"` |
+
+Op welgevormde `"jjjj-MM"`: **132 waarden (2020-2030 × 12 maanden), nul divergentie**.
+
+**ONBEREIKBAAR:** `p.maand` = `formatDate(cur, "yyyy-MM")` aan BEIDE kanten (Cadans
+`packages/engine/src/niveau.ts:340`, GAS `src/WebApp.gs:331`) ⇒ altijd welgevormd. Alleen de gedeelde
+versie is getest (`apps/web/src/lib/niveau.test.ts`); de KOPIE — die de zichtbare grafiek-labels levert —
+is dat niet.
+
+⇒ **Echte duplicatie-schuld, geen gedragsverschil, alleen-in-Cadans-risico.** De divergentie is vandaag
+onbereikbaar; ze wordt bereikbaar zodra één van beide `maand`-bronnen ooit iets anders levert dan
+`formatDate`.
+
+---
+
+## Bonus-vondst · `plannedForDone` is dode code — en het B0-pad wekt hem
+
+Geen matrix-fn (alleen-in-Cadans), wel R4-kritisch.
+
+De guard (`apps/web/src/lib/proposal.ts:420-424`): `!tePlannenSet.has(d.dagIdx) && d.train &&
+d.voorgesteldType && d.minuten`. Met `gedaan` altijd `false` (B0-ii) is `tePlannen` = `train && datum >=
+vandaag`, dus `!tePlannenSet && d.train` ⇒ `datum < vandaag` ⇒ `d.voorgesteldType` is de grid-seed
+(`proposal.ts:247`) = altijd `null` (B0-i) ⇒ **`plannedForDone` is ALTIJD `null`**.
+
+Zo gedraaid, echte week-run: `null` op alle 7 dagen. Ook mét `gedaan: true` op ma+di in de
+planner-input (wat D1 nooit levert): nog steeds 0 van 7.
+
+Dit is de mechanische verklaring voor "VERLEDEN voltooide dagen tonen de gereduceerde DoneDetail" —
+door Daan zelf vanuit de app bevestigd. HANDOFF schrijft het toe aan een bewuste productbeslissing +
+niet-reproduceerbaarheid (aanpak A flipt het plan); die redenering staat overeind, maar de CODE faalt om
+een simpelere reden: **het veld is leeg**.
+
+### Waarom dit R4-kritisch is
+
+HANDOFF's **"aanpak B"** (`voorgesteldType` persisteren bij generatie) **ÍS het B0-schrijfpad**.
+
+Zo gedraaid met een gesimuleerd B0-pad (`plannerDays[].voorgesteldType` gevuld voor ma/di/wo):
+`plannedForDone` komt op alle drie de verstreken dagen tot leven — `"Threshold 2×20 (Peak)"`,
+`"Pendel + Z2 (90 min)"`, `"VO2 5×4min (Peak)"`. **En C9's badge herstelt in dezelfde run mee.**
+
+⇒ Het B0-pad heeft **twee neveneffecten**: het repareert C9 (badge) én het wekt `plannedForDone`. Het
+eerste is een bugfix, het tweede een **PRODUCTbeslissing** — verleden voltooide dagen gaan dan vanzelf de
+volle plan-vs-gedaan-vergelijking tonen in plaats van de gereduceerde kaart. Dat is niet optioneel bij
+dat pad; het gebeurt vanzelf. Zet dit expliciet bij B0's "nodig maar niet genoeg"-herziening: het pad is
+niet alleen groter dan gedacht, het is ook niet gedrags-neutraal.
+
+---
+
+## Batch C — samenvatting
+
+| # | fn | body | invulling | richting |
+|---|---|---|---|---|
+| C0 | *(settings-defaults-laag)* | n.v.t. | **ONVERKLAARD — 6 van 12 velden lekken** | geïntroduceerd |
+| C1 | `genericPendelIntervals` | verklaard (80.640 cases, 0 diff) | **ONVERKLAARD — 2× de pendel-belasting** | geïntroduceerd (model-vraag) |
+| C2 | `zwoStepFromRow_` | verklaard (2.464 cases, 0 diff) | n.v.t. (geen productie-aanroeper) | n.v.t. |
+| C3 | `dashVormReeks_` | verklaard (seam) | **geverifieerd schoon** (dode code + verloren vangnet) | n.v.t. |
+| C4 | `todayIso` | verklaard (200 cases, 0 diff) | n.v.t. | n.v.t. |
+| C5 | `isDayPlannable` | verklaard (2 takken verantwoord) | n.v.t. | n.v.t. |
+| C6 | `durLabel` | verklaard (972 cases, 0 diff) | n.v.t. | n.v.t. |
+| C7 | `actualZone5_` | verklaard (map byte-identiek) | **ONVERKLAARD — 2 vondsten** | geïntroduceerd; (b) naar de deugdelijke kant |
+| C8 | `isoWeekNumber` | verklaard (4.026 cases, 0 diff) | n.v.t. | n.v.t. |
+| C9 | `weekPlannedTypes` | n.v.t. (andere handtekening) | **ONVERKLAARD — badge vergeet het verleden** | geïntroduceerd (erft B0-i) |
+| C10 | `nextPlannableDate` | verklaard (byte-getrouw) | n.v.t. | geërfd |
+| C11 | `maandLabel` | **ONVERKLAARD (3 implementaties)** | onbereikbaar | n.v.t. |
+
+### Wat batch C toevoegt aan het R1-patroon
+
+**1. Het patroon houdt, met twee uitzonderingen.** Geen enkele batch-C-vondst zit in een fn-body — net
+als in A en B. C0, C1, C7 en C9 zitten alle vier in de invulling. C11 is de uitzondering die de regel
+bevestigt: dáár zit het verschil wél in de body, en juist dáár is het onbereikbaar.
+
+**2. Draaien is geen luxe.** Batch C is de eerste batch die differentieel gedraaid is, en dat corrigeerde
+drie dingen die een leesronde niet zag: C3's "vorm-trend is dood" (fout — de bypass is equivalent), C7's
+"de VOLTOOID-kaart vult bij een hardloopje" (te groot — GAS doet dat ook; het echte verschil is de
+zone-balk + de selectie-regel), en C1's "de fouten heffen elkaar op" (half — alleen de minuten). Een
+leesronde geeft een vermoeden, een differentiële run een feit. **Aanbeveling voor R2:** dezelfde
+harness gebruiken, niet opnieuw alleen lezen.
+
+**3. B0 is nu drie keer zo groot als bij zijn eerste formulering.** Batch B deel 2 voegde de drie remmen
+in `assignWorkouts` toe. Batch C voegt toe: C9 (badge) én `plannedForDone` (productbeslissing). Het
+"één schrijf-pad"-verhaal is geen opruimklus meer maar een ingreep met zichtbare gedragsgevolgen.
+
+**4. Twee vondsten zijn MODEL-vragen, geen port-fouten.** C1 (is `pendelDuurMin` één rit of een retour?
+GAS heeft zelf geen consistent antwoord) en C7-(b) (som je de dag of pak je één rit? Cadans' antwoord is
+het betere). Bij beide is "Cadans wijkt af van GAS" een waar maar nutteloos verdict. Ze horen in R3/R4
+tegen `docs/TRAININGSMODEL.md`, niet tegen de herkomst.
+
+**Batch C is klaar (11/11). R1 is klaar (21/21).** Volgende: R2 — end-audit op de risico-matrix.
+
+---
+
+# Anker-correcties op batch B deel 2 (append-only; de oude tekst is bewust NIET geëdit)
+
+`HANDOFF.md:77-81` noteert drie locatie-ankers uit het deel-2-blok als "wijzen naast de bedoelde
+regel" en schrijft de correctie voor. Alle drie zijn hier **mechanisch her-afgeleid tegen de bron**
+(niet overgenomen). **Twee kloppen; de derde is zelf fout.**
+
+| doc-regel | oud anker | HANDOFF schrijft voor | **feitelijk correct** | oordeel |
+|---|---|---|---|---|
+| `docs/R1-PORT-CORRECTHEID.md:551` | `Algorithm.gs:91` | `:92` | **`:92`** | HANDOFF klopt |
+| `docs/R1-PORT-CORRECTHEID.md:525` | `pages/Vorm.tsx:44` | `:45` | **`:45`** | HANDOFF klopt |
+| `docs/R1-PORT-CORRECTHEID.md:525` | `schema.ts:876` | `:872` | **`:874`** | **HANDOFF is FOUT** |
+
+- **`Algorithm.gs:91` → `:92`** ✓ — `:91` is `var wellness = getWellnessSignal(ss);` (de
+  var-declaratie); `:92` is `wellness = combineSignals_(wellness, rpeSignal_());` — de bedoelde
+  `combineSignals_`-call-site.
+- **`pages/Vorm.tsx:44` → `:45`** ✓ — `:44` is `getSettings()`; `:45` is `getWellness()` — de bedoelde
+  regel in de `Promise.all`.
+- **`schema.ts:876` → `:872`** ✗ — **de voorgeschreven correctie is óók fout.** In
+  `apps/web/src/lib/schema.ts` is de `Promise.all` in `loadSchemaWeek` (`:868-879`): `:872` =
+  `getActivities()`, **`:874` = `getWellness()`**, `:876` = `getDispositions()`. Het oude anker
+  (`:876`) en het voorgeschreven anker (`:872`) wijzen allebei naast de bedoelde regel. **Het juiste
+  anker is `:874`.**
+
+Alle drie zitten in bijzin-materiaal (B6's "alle drie de consumenten voeden uit `getWellness()`"); geen
+bevinding wordt geraakt, de dragende bewijsregels van deel 2 zijn hard getoetst en goed. De
+**inhoudelijke** claim op `:525` — dat alle drie de consumenten uit `getWellness()` voeden — is hier
+opnieuw geverifieerd en staat: `pages/Vorm.tsx:45`, `apps/web/src/lib/schema.ts:874`, en
+`proposal.ts:316` krijgt dezelfde array door.
+
+**Werkwijze-noot.** Dat de HANDOFF-correctie zelf fout was, is precies waarvoor de werkwijze-les uit
+batch B bedoeld is: *toets locatie-claims door ze MECHANISCH uit de geschreven tekst te extraheren en
+allemaal te draaien — nooit via een handgemaakte lijst.* Deze correctie was een handmatig
+overgeschreven getal, en is daarmee dezelfde klasse fout als de drie die hij moest repareren. In batch
+C is de regel wél toegepast: 105 ankers met een regex uit de eigen tekst geëxtraheerd, 121 dragende
+ankers met een inhouds-assertie (bestand + regel + verwachte substring) tegen beide klonen gedraaid.
+Dat ving drie foute ankers **in de batch-C-tekst zelf** vóór het committen. Bestaan-en-in-bereik is
+niet genoeg: alle drie wezen naar bestaande regels.
