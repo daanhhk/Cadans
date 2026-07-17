@@ -11,11 +11,11 @@ live tot cutover.
 
 ## Stand
 
-**R1 LOOPT — batch A + B deel 1 KLAAR (juli 2026).** Findings-doc `docs/R1-PORT-CORRECTHEID.md`, gepind:
-https://raw.githubusercontent.com/daanhhk/Cadans/9599ef8a6a3a03c02673533739d380e6189de129/docs/R1-PORT-CORRECTHEID.md
-Commits: batch A `c679f0a`, batch B deel 1 `9599ef8` — docs-only, engine ongemoeid, niets gedeployd, vloeren
-ongewijzigd. **Findings, GEEN verdicts** (die zijn R4). Lees het doc; hieronder alleen wat een volgende chat
-moet weten om niet verkeerd te beginnen.
+**R1 LOOPT — batch A + batch B KLAAR = 10 van de 21 (juli 2026).** Findings-doc `docs/R1-PORT-CORRECTHEID.md`, gepind:
+https://raw.githubusercontent.com/daanhhk/Cadans/df3280b7afd8e38da55c122072aa6b4a1980baeb/docs/R1-PORT-CORRECTHEID.md
+Commits: batch A `c679f0a`, batch B deel 1 `9599ef8`, batch B deel 2 `df3280b` — docs-only, engine ongemoeid, niets
+gedeployd, vloeren ongewijzigd. **Findings, GEEN verdicts** (die zijn R4). Lees het doc; hieronder alleen wat een
+volgende chat moet weten om niet verkeerd te beginnen.
 - **SCOPE-CORRECTIE — "R1 = FASE-B port-correctheid" is een STALE LABEL.** Matrix-groep 1+2 raakt de
   FASE-B-kern nul keer: `buildOverrideWorkout_`/`readinessAdjust_`/`coachAdaptatie_`/`coachFeedback_`/
   `buildFreeRideWorkout_`/`findVariantById_`/`selectVariant_` = equivalent [6]; `getTrainingLibrary_`/
@@ -25,44 +25,65 @@ moet weten om niet verkeerd te beginnen.
   zwakste oracle-dekking. Wat voor die fns WEL open blijft is hun AANROEP, niet hun body (divergentie (3):
   `previewOverrideSession` → `buildOverrideWorkout_` met `eventCtx` undefined).
 - **EENHEID VAN REVIEW = body + ÉÉN hop naar de invulling van de inputs.** Body-gelijkheid is nodig, niet
-  genoeg; drie fns uit drie bakjes bewijzen het (`getGewicht` verschil → seam-invulling fout ·
-  `buildOverrideWorkout_` equivalent[6] → aanroep wijkt af · `effectiveMacroFase_` identiek → zwaarste
-  trainings-defect). Verder dan één hop = R2.
-- **LEESVOLGORDE wijkt af van de matrix (set + dekking identiek, 21):** op AFHANKELIJKHEID, want
-  `assignWorkouts`' argumenten (`dekking`/`wellness`/`recentHardDate`/`debt`) ZIJN de uitvoer van de rest
-  van groep 2 — assembler `Algorithm.gs:88-130`. batch A (2, KLAAR) · batch B (8; deel 1 = 5 KLAAR, deel 2
-  = `wellnessSignal_`, `combineSignals_`, `assignWorkouts`) · batch C (11). Matrix-groep reist mee als
+  genoeg. Batch B deel 2 bevestigt het van beide kanten: `assignWorkouts` is na normalisatie **ratio 0.987**
+  tegen GAS (de 188→302 regels zijn opmaak + het additieve `redenCode`) en heeft toch VIER gaten — alle vier
+  in wat hem voedt. Verder dan één hop = R2.
+- **LEESVOLGORDE wijkt af van de matrix (set + dekking identiek, 21):** op AFHANKELIJKHEID. batch A (2, KLAAR)
+  · batch B (8, KLAAR) · **batch C (11, OPEN)** = `genericPendelIntervals`, `zwoStepFromRow_`, `dashVormReeks_`,
+  `todayIso`, `isDayPlannable`, `durLabel`, `actualZone5_`, `isoWeekNumber`, `weekPlannedTypes`,
+  `nextPlannableDate`, `maandLabel` — losse fns, geen keten, geen gedeelde inputs. Matrix-groep reist mee als
   risico-label per finding (R4 heeft 'm nodig).
-- **DRIE CLAIMS DIE NIET KLOPTEN (hier gecorrigeerd; de oude tekst is bewust NIET geëdit):** (a) debt (n)
+- **DRIE CLAIMS DIE NIET KLOPTEN (gecorrigeerd in het R1-doc; de oude tekst is bewust NIET geëdit):** (a) debt (n)
   "`plannedTypeByDate` uit `PlannerDay.voorgesteldType` — day-mirror = DEZELFDE WAARDE": de day-mirror is
   ALTIJD `null`. (b) `repo.ts:349` + `weekgen.ts:25` "`voorgesteldType` blijft null — client herberekent
-  live": de client herberekent op de grid-KOPIE; `plannedTypeByDate` (`proposal.ts:313`) leest
-  `plannerDays`, niet de grid → de herberekening bereikt de consument nooit. (c) debt (b) parkeert de
-  gewicht- én loadCarry-seam in "Fase 3b/4"; die fases staan op ✓. Gewicht is elders gevuld dan debt (b)
-  voorspelt (client, niet Worker) en met `?? 0` i.p.v. GAS' `|| 75`; loadCarry is NOOIT gevuld en zijn hele
-  keten (`loadCarryFactor_`/`rpeLastWeekMismatch_`/`carryFactorForAvg_`/`rpeWeekData_`) is niet geport.
-- **DRIE D1-VELDEN WORDEN NOOIT GESCHREVEN** (structureel — geen prod-waarneming nodig, de schrijver
-  bestaat niet): `planner_days.voorgesteld_type` (hardcoded `null` in `writePlannerDays`),
-  `planner_days.gedaan` (hardcoded `0`, idem), `weekplans.entries_json` (Worker-route
-  `PUT /api/weekplan/:monday` bestaat; `apps/web/src/lib/api.ts` heeft GEEN put-wrapper — de enige
-  aanroepers zijn Worker-tests). Eén schrijf-pad dicht alle drie, en het is dezelfde
-  weekplan-persistentie die HANDOFF al noemt als fundering voor verleden-dispositie, DayStrip-venster en
-  past-completed-day compare ("aanpak-B"). VOLGORDE-EIS: `zoneDebt_` mag pas aan zódra `weekplans` gevuld
-  is — hij heeft bewust geen clamp, dus intent-leeg + gedaan-true geeft NEGATIEVE debt.
-- **MODEL 2 — CAVEAT bij "PRIMAIR".** Twee van de vier signalen kunnen in de draaiende app niet vuren:
-  `zoneDebt_` = altijd `{0,0,0}` (`pd.gedaan` altijd false) en `rpeSignal_` = altijd `'normal'`
-  (`plannedTypeByDate` altijd leeg). `dekking` werkt (grover: IF-fallback i.p.v. intent),
-  `recentHardDate_` werkt (intent is daar additief). FASE 3a sloopte het override-make-up-model
-  (`0c954258`) MÉT de motivering "Model 2 is primair"; die motivering staat dus op losse schroeven tot de
-  inputs gevuld zijn. GEEN actie nu — R4 weegt. De read-only Model-2-bevestiging (`d74e257`) is geen
-  tegenbewijs: die test vult de inputs zelf.
-- **HET PATROON dat R2/R3 moeten meenemen:** geen enkele vondst tot nu toe zit in de fn-BODY — ze zitten
-  in wat de fn VOEDT, en elke test kijkt eroverheen omdat de test zijn eigen input bouwt (`testRpeSignal`
-  bouwt de plannedType-map met de hand; de SelfTest zet `loadCarry` nooit; geen test laat gewicht leeg).
-  De vloeren 329/957 zijn tegen deze klasse blind BY CONSTRUCTION, niet door slordigheid. R0's vondst 1
-  (`effectiveMacroFase_` AST-identiek én toch defect) is dezelfde munt, andere kant.
-- **FOCUS VOLGENDE CHAT:** R1 batch B deel 2 (`wellnessSignal_`, `combineSignals_`, `assignWorkouts`),
-  daarna batch C (11 fns). Geen engine-wijziging; findings → R4-verdicts → aparte bouw-chats.
+  live": de client herberekent op de grid-KOPIE; `plannedTypeByDate` leest `plannerDays`, niet de grid → de
+  herberekening bereikt de consument nooit. (c) debt (b) parkeert de gewicht- én loadCarry-seam in "Fase 3b/4";
+  die fases staan op ✓. Gewicht is elders gevuld dan debt (b) voorspelt (client, niet Worker) en met `?? 0`
+  i.p.v. GAS' `|| 75`; loadCarry is NOOIT gevuld en zijn hele keten is niet geport.
+- **DRIE D1-VELDEN WORDEN NOOIT GESCHREVEN** (structureel — de schrijver bestaat niet):
+  `planner_days.voorgesteld_type` (hardcoded `null` in `writePlannerDays`), `planner_days.gedaan` (hardcoded
+  `0`, idem), `weekplans.entries_json` (Worker-route bestaat; `apps/web/src/lib/api.ts` heeft GEEN put-wrapper).
+  **HERZIENING NA BATCH B DEEL 2 — "één schrijf-pad dicht alle drie" is NODIG maar NIET GENOEG.** Dat pad dicht
+  óók `assignWorkouts`' quota-rem (b), dekking-rem (c) en de vandaag-guard (d) — zes gaten in plaats van drie.
+  Maar het dicht de **recency-seed (B8-a) NIET**: `assignWorkouts` geeft intern hardcoded `null` als
+  `readWeekplan`-accessor mee en heeft geen parameter om een seed te ontvangen, terwijl de data al bij de client
+  staat (`readRecentWeekplans` → `GET /api/weekplans/recent` → gaat alleen naar `intentByDateFrom`). Dat vraagt
+  een TWEEDE ingreep: een seed/reader-parameter door `assignWorkouts` heen. VOLGORDE-EIS blijft: `zoneDebt_` mag
+  pas aan zodra `weekplans` gevuld is (geen clamp → intent-leeg + gedaan-true geeft NEGATIEVE debt).
+- **MODEL 2 — CAVEAT bij "PRIMAIR", VERSCHERPT door batch B deel 2.** Twee van de vier signalen kunnen niet
+  vuren: `zoneDebt_` = altijd `{0,0,0}` (`pd.gedaan` altijd false) en `rpeSignal_` = altijd `'normal'`
+  (`plannedTypeByDate` altijd leeg) — waardoor `combineSignals_` een pure pass-through is (correct geport,
+  correct aangeroepen, doet nooit iets). `dekking` werkt grover, `recentHardDate_` werkt. FASE 3a sloopte het
+  override-make-up-model (`0c954258`) MÉT de motivering "Model 2 is primair"; die staat op losse schroeven tot de
+  inputs gevuld zijn. **Deel 2 voegt toe: niet alleen de SIGNALEN zijn dood, ook de remmen IN de consument**
+  (quota-aftrek + dekking-verrijking). GEEN actie nu — R4 weegt. De read-only Model-2-bevestiging (`d74e257`) is
+  geen tegenbewijs: die test vult de inputs zelf.
+- **B8's VIER GATEN WIJZEN ALLE VIER DEZELFDE KANT OP** (R4-input, geen verdict): (a) recency-seed altijd leeg
+  → archetype-rotatie uit, elke week dezelfde sleutelsessie-variant · (b) `doneHard` altijd 0 → het volle
+  kwaliteitsquotum (Base 2 · Build 3 · Peak 2) bovenop wat al hard gereden is · (c) dekking-verrijking op
+  voltooide dagen dood → een lange rit mét blokken (IF ≈ 0,75, 20 min sweet-spot) telt niet als high-dekking →
+  extra intensiteit · (d) `tePlannen` sluit vandaag nooit uit. Geen enkel gat wijst de andere kant op. Geen
+  toeval: elk is een REM die GAS heeft en Cadans niet, en elke rem leunt op dezelfde twee lege velden.
+  `avoid-consecutive-hard` blijft wél staan (leunt op de activiteiten).
+- **B6 BREEKT HET PATROON — de eerste schone invulling in R1.** `wellnessSignal_` keert GAS' nieuwste-eerst-greep
+  om naar `slice(-28)`/`slice(-3)`; die omkering is over de volle keten geverifieerd (D1 `asc(datum)` → route-map
+  → client-map → `toWellRow`, alle drie de consumenten voeden uit `getWellness()`). "Body goed, invulling leeg of
+  fout" is dus een PATROON, geen wetmatigheid — dat blijft de vraag die je per fn stelt, niet het antwoord.
+- **HET PATROON dat R2/R3 moeten meenemen:** geen enkele vondst zit in de fn-BODY — ze zitten in wat de fn
+  VOEDT, en elke test kijkt eroverheen omdat de test zijn eigen input bouwt. Scherpste geval: de enige test die
+  `assignWorkouts` direct drijft (`redenCode.test.ts`) zet in zijn dag-fixture `gedaan: false` +
+  `voorgesteldType: null` — **exact de productie-leegte** — en kan (b)/(c)/(d) per constructie niet zien. De
+  vloeren 329/957 zijn tegen deze klasse blind BY CONSTRUCTION, niet door slordigheid.
+- **OPENSTAANDE MICRO-CORRECTIE op het R1-doc (meenemen in de batch-C-commit, append-only, NIET terug-editen):**
+  drie locatie-ankers in het deel-2-blok wijzen naast de bedoelde regel — `Algorithm.gs:91` moet `:92` zijn (de
+  `combineSignals_`-call-site; `:91` is de var-declaratie), `pages/Vorm.tsx:44` moet `:45` zijn en
+  `schema.ts:876` moet `:872` zijn (beide de `getWellness()`-regel in de `Promise.all`). Alle drie in
+  bijzin-materiaal; geen bevinding geraakt, de dragende bewijsregels zijn hard getoetst en goed.
+- **WERKWIJZE-LES (kostte drie foute ankers):** toets locatie-claims door ze MECHANISCH uit de geschreven tekst
+  te extraheren en allemaal te draaien — nooit via een handgemaakte lijst. De handmatige lijst dekte 48 van de 70
+  ankers; de drie fouten zaten in de 22 die buiten de lijst vielen.
+- **FOCUS VOLGENDE CHAT:** R1 batch C (11 losse fns, zie LEESVOLGORDE). Geen engine-wijziging; findings →
+  R4-verdicts → aparte bouw-chats.
 
 **R0 KLAAR — module 1 (AST-sorteermachine) + 2a (fundering) + 2b (matrix/oracle/entrypoint-map) + 2c (bewaker-fix)
 (juli 2026).** Commits: 2a `8e66ded`, 2b `2093bcd`, 2c `24e7a4f` (+ module 1 `03804eb`/`0fac374`/`f48ed6b`/`7ead6b8`
