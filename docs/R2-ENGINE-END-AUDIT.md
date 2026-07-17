@@ -8,6 +8,7 @@ die uit de keten zelf komt.
 
 Batch a1: G1 + V1 + V2 + V3. Batch a2: V4 + V5 + V6 + V7. Batch a3: V8 + V9 + V10 + V11 +
 V12 + V13 + de sluiting van R2-a. Batch b: V14 + V15 + V16 + V17 + V18 + V19 + V20 + de sluiting van R2-b.
+Batch c: G2 + V21 + V22 + V23 + V24 + de sluiting van R2-c en van R2 als geheel.
 
 ## Scope R2 — vastgesteld en door Daan geaccordeerd (17-07-2026)
 
@@ -1284,11 +1285,423 @@ stonden staan er nog steeds — b legt er geen zesde naast, maar maakt twee erva
 óók de reader-seam in `assignWorkouts` en het `zones`/`intent`-onderscheid meenemen, anders bouwt hij de laag
 en blijft de helft dood.
 
-## Nog open in R2 (volgende chats)
+## G2 · Gereedschap — de 115 is de inventaris van TWEE mappen, niet van Cadans (geen code-bevinding)
 
-R2-a en R2-b zijn KLAAR. Resteert:
+G1 stelde vast dat de app-bereik-kolom aan de Cadans-kant zwak is. Voor c geldt een tweede, hardere
+grens: **het vergelijkings-corpus zelf.** `cadansSources()` (`tools/audit/run.mjs:115`) scant exact twee
+mappen — `tools/audit/run.mjs:124` `packages/engine/src` en `tools/audit/run.mjs:125` `apps/web/src/lib` —
+en alleen `.ts` (geen `.tsx`, geen tests). `tools/audit/matrix.mjs:283` (`const cadVergSF = cadansSources();`) voedt
+dáármee de naam-vergelijking; de veel bredere `tools/audit/matrix.mjs:286` (`sourcesFrom([...])`) bouwt alleen de
+GRAAF, niet de cellen.
 
-- **R2-c** — de 115 alleen-in-Cadans-units, gefilterd op "neemt een beslissing".
+Gemeten (eigen scan, identieke regels, zelf-controle: de namenset reproduceert de 115 exact, 0
+ontbrekend):
 
-Daarna R3 (trainings-review tegen `docs/TRAININGSMODEL.md`) en R4 (verdict-doc per item;
-verdict-criterium = het MODEL, niet GAS).
+| | top-level units |
+|---|---|
+| IN het corpus (`packages/engine/src` + `apps/web/src/lib`, `.ts`) | 290 |
+| **BUITEN het corpus** | **177** |
+| — `apps/web/src/components` | 85 |
+| — `workers/api/src` | 53 |
+| — `apps/web/src/pages` | 30 |
+| — `apps/web/src` overig (`main.tsx`/`App.tsx`/hooks) | 9 |
+| — `packages/shared/src` | 0 (types-only, per ontwerp) |
+
+**Consequentie:** "115 alleen-in-Cadans" leest als *wat Cadans zelf verzon* en is het niet. Het is *wat
+Cadans binnen engine + web/lib zelf verzon*. De hele Worker-laag (routes, validatie, repo-schrijvers) en
+de hele component-laag vallen er per constructie buiten — inclusief plekken waar R1/R2 al beslissingen
+vonden (`workers/api/src/db/repo.ts:366-367`'s `voorgesteldType: null`/`gedaan: 0` = R1-B0-i/ii; de
+`vals`-whitelist uit V6). Dit is c's tegenhanger van a's gat 6: de bak is een inventaris, geen sluiting.
+Repareren kan (het corpus verbreden), maar dat verschuift alle matrix-cijfers → eigen beslissing, geen
+review-werk.
+
+**Per bestand, de 115 (volledige paden — de basename-groepering verbergt de splitsing):**
+`apps/web/src/lib/schema.ts` 23 · `api.ts` 20 · `planner.ts` 9 · `pickerState.ts` 8 · `library.ts` 7 ·
+`syncStatus.ts` 6 · `format.ts` 5 · `niveau.ts` 5 · `settings.ts` 5 · `readiness.ts` 4 ·
+`coachNarrative.ts` 3 · `plannerSignal.ts` 3 · `proposal.ts` 3 · `coach.ts` 2 · `dates.ts` 2 ·
+`activities.ts` 1 · `events.ts` 1 · `tsb.ts` 1 — samen **108**. Engine: `readiness.ts` 4 ·
+`niveau.ts` 2 · `weekprep.ts` 1 — samen **7**.
+
+**Dat is zelf de eerste bevinding: 108 van de 115 liggen in de client-lib.** Cadans verzint niets in de
+engine. De zeven engine-units zijn zonder uitzondering seams of shims (zie het filter). Waar Cadans zelf
+beslist, is precies de laag die GAS in `WebApp.gs` + `Script.html` had — en dat is de laag waar de norm
+"GAS is norm" geldt.
+
+## R2-c — het filter: wat GEEN beslissing neemt, met bewijs
+
+Criterium: een unit *neemt een beslissing* als hij op trainingsdata een keuze maakt (drempel, selectie,
+mapping met beleid, afleiding). Transport, formattering, geheugenvlaggen en pure re-exports vallen af.
+Zoals V5's vier schijn-gaps en V20's dode `getEvents` is elke uitsluiting hieronder met bewijs, niet met
+een vermoeden.
+
+**(1) HTTP-transport — 20 units, `apps/web/src/lib/api.ts:26` t/m `apps/web/src/lib/api.ts:248`.** `errMessage` · `parseBody` ·
+`apiGet` · `getSettings` · `putSettings` · `getPlanner` · `putPlanner` · `putEvents` · `getRpe` ·
+`getDispositions` · `getOverrides` · `getWeekplans` · `getCheckin` · `putCheckin` · `putRpe` ·
+`putDisposition` · `putOverride` · `postSync` · `postSyncActivities` · `postSyncWellness`. Alle twintig
+zijn fetch + parse + throw; **geen van de twintig leest een veld uit de payload** behalve `.error` en
+`.status`. De enige conditie in de hele bak is `apps/web/src/lib/api.ts:157`
+(`if (resp.status === 404) return null;`) — een protocol-afspraak (check-in nog niet ingevuld), geen
+beleid. NB twee bekende feiten hangen hieraan, geen van beide nieuw: `getSettings` levert `null` bij een
+verse user (R1-C0's `SETTINGS_DEFAULTS`) en `postSyncActivities`/`postSyncWellness` sturen nooit een
+`days`-param (HANDOFF §Geparkeerde debts, "VOLLEDIG-SYNC-PAD ONTBREEKT").
+
+**(2) Getal → NL-string — 5 units, `apps/web/src/lib/format.ts:18` · `apps/web/src/lib/format.ts:20` · `apps/web/src/lib/format.ts:22` · `apps/web/src/lib/format.ts:24` · `apps/web/src/lib/format.ts:26`.** `nlInt` · `nlDec1` ·
+`nlDec2` · `nlUpTo1` · `nlSigned1`: elk één regel om een `Intl.NumberFormat`. Geen drempel, geen keuze.
+
+**(3) Geheugen-vlaggen — 9 units.** `apps/web/src/lib/plannerSignal.ts:5` + `apps/web/src/lib/plannerSignal.ts:9` + `apps/web/src/lib/plannerSignal.ts:15`
+(`bumpPlannerVersion`/`subscribePlannerVersion`/`getPlannerVersion`) is de bump/subscribe-lus; de
+entrypoint-map noemt hem al als de vervanger van GAS' `regenerateWeb` (`tools/audit/entrypoints.mjs:19`,
+"geen route; Cadans regenereert elke render"). `apps/web/src/lib/syncStatus.ts:13` · `apps/web/src/lib/syncStatus.ts:18` · `apps/web/src/lib/syncStatus.ts:28` · `apps/web/src/lib/syncStatus.ts:33` · `apps/web/src/lib/syncStatus.ts:41` · `apps/web/src/lib/syncStatus.ts:50` is de
+in-memory sessie-variabele + zijn predicaten; a3's sluiting stelde het begrip-verschil met GAS'
+`last_sync` al vast, inclusief de dode `sync_state.last_sync`-kolom uit V6. Geen van beide raakt
+trainingsdata.
+
+**(4) De engine-kant — 7 units, alle zeven seam of shim.** `packages/engine/src/niveau.ts:22`
+(`_getGewichtImpl`) + `packages/engine/src/niveau.ts:23` (`setGewichtProvider`) = debt (b)'s gewicht-seam, in b afgesloten
+(INGELOST voor de niveau-keten). `packages/engine/src/readiness.ts:269` (`rdyNumOrNull_`) + `packages/engine/src/readiness.ts:273`
+(`rdyAvgNonNull_`) zijn geneste GAS-helpers die bij de port top-level werden = matrix-gat 3
+("alleen TOP-LEVEL units worden vergeleken, geneste helpers niet") — geen Cadans-verzinsel, een
+gereedschaps-artefact. `packages/engine/src/readiness.ts:376` (`formStateFromWellness_`) is V19's `fs`-
+input: de port van `getFormScore_`'s Sheet-pad. `packages/engine/src/readiness.ts:507` (`rpeIsoToLocal_`)
+en `packages/engine/src/weekprep.ts:47` (`isoToLocal_`) zijn de TZ-veilige vervanging van de Date-objecten
+die de Sheet native leverde. **Nul van de zeven neemt een eigen beslissing.**
+
+**(5) Hernoemde ports — de vergelijker koppelt ze niet, de code noemt de bron zelf.** Dit is de grootste
+en de verraderlijkste categorie: de matrix zíet de GAS-kant wel (de bewaker telt `pkGo`, `pkOpenCat`,
+`pkOpenWorkout`, `pkPickFree`, `pkPickLibrary`, `pkSliderInput`, `trnBack`, `trnInplannen`, `trnOpenCat`,
+`trnOpenWorkout`, `trnSliderInput` als string-handler-edges), maar zonder alias is er geen paar en valt de
+Cadans-kant in "alleen-in-Cadans".
+
+| Cadans | GAS-anker (uit de eigen comment, geverifieerd) |
+|---|---|
+| `apps/web/src/lib/pickerState.ts` (8 units) | `apps/web/src/lib/pickerState.ts:4` — "byte-getrouwe port van de GAS-picker (`src/Script.html:2065-2160`, openPicker/pkGo/pkOpenCat/pkOpenWorkout/pkSliderInput/pkFreeSet/pkHeadHtml_)" |
+| `findCategory` (`apps/web/src/lib/library.ts:97`) | `apps/web/src/lib/library.ts:96` — GAS `trnCat_` (`src/Script.html:1885`) |
+| `findVariant` (`apps/web/src/lib/library.ts:105`) | `apps/web/src/lib/library.ts:104` — GAS `trnVar_` (`src/Script.html:1886`) |
+| `libraryOverride` (`apps/web/src/lib/library.ts:118`) | `apps/web/src/lib/library.ts:113` — GAS `pkPickLibrary` (`src/Script.html:2156`; de comment noemt `src/Script.html:2158` = de `pkSave_`-regel bínnen die fn) |
+| `deriveDagtype` (`apps/web/src/lib/planner.ts:18`) | `apps/web/src/lib/planner.ts:16` — `src/Script.html:1035` |
+| `silhouetSegments` (`apps/web/src/lib/schema.ts:138`) | `apps/web/src/lib/schema.ts:133` — GAS `zoneBar` (`src/Script.html:236`) |
+
+De laatste twee zijn nagelopen tegen de bron: `src/Script.html:238` `var W = 100, H = 100, MINW = 1.4,
+GAP = 0.6;` staat 1-op-1 in `apps/web/src/lib/schema.ts:143-145`, inclusief de renormalisatie naar exact
+100 en `Math.max(0.8, w - GAP)`. `blokFromEngine` (`apps/web/src/lib/schema.ts:115`) spiegelt
+`DASH_BUCKET_STYLE_` (`src/WebApp.gs:38`, hoogtePct 25/45/65/85/100) — **met één noot**: GAS' tabel draagt
+óók de intent-fallback-buckets (`src/WebApp.gs:45-47` `low: 45` / `high: 65` / `anaerobic: 100`) voor
+`segmentsFromIntent_`, en Cadans' `BAR_BUCKET` niet. Onbereikbaar: `blokFromEngine` leest uitsluitend
+engine-`blokken` (5-bucket); de intent-vorm komt er nooit langs. Zie V21 voor waar dat wél telt.
+
+**(6) Al geraakt door R1/R2-a/R2-b — geen duplicatie.** `wkgSince` → V18 · `buildDoneEntry`/`mergeDone` →
+V17 + V4 · `presetHoursLabel` → V1-(a) · `intentByDateFrom` → de `zones`-vs-`intent`-landmijn ·
+`previewOverrideSession` → HANDOFF-divergentie (3) · `legToRoundTrip`/`roundTripToLeg` → R1-C1 ·
+`projectionDirection` → de bewuste divergentie bij `7308d660` · `planModusLabel` → a3's
+`bepaalFaseVoorDatum_`-sluiting · `deriveNiveauSerie` → HANDOFF-debt "Orchestratie-duplicatie" ·
+`toWellRow`/`deriveReadiness`/`deriveWellnessSignal`/`deriveWellnessSignalResult` → V19's vier inputs ·
+`buildWeekProposal` zelf → V2/V3/V7/V8/V14 (zie hieronder voor wat er ná die vijf overblijft).
+
+Wat overblijft zijn vier beslissers. Drie ervan zijn nabouw — de klasse die b blootlegde — en de vierde
+is een nabouw die zijn eigen meetlat verkeerd koos.
+
+## V21 · `coachPlannedArg_` — de FIX-4-seam staat op `null`, en de vuller ligt geport in de engine
+
+- **locaties** — Cadans `apps/web/src/lib/schema.ts:514` (de fn), `apps/web/src/lib/schema.ts:524`
+  (`segmenten: null,`); aanroepers `apps/web/src/lib/schema.ts:541` (`buildDoneCompareFull`) en
+  `apps/web/src/lib/schema.ts:619` (`missedCoach_`) · GAS `src/WebApp.gs:655` (`dashDayCard_`), de vulling
+  `src/WebApp.gs:660`, het veld `src/WebApp.gs:666` · de lezer `packages/engine/src/coach.ts:456` · de
+  ongebruikte vullers `packages/engine/src/niveau.ts:47` (`segmentsFromBlokken_`) en
+  `packages/engine/src/niveau.ts:67` (`segmentsFromIntent_`)
+- **norm** — de seam zelf is infra (parity); wat de planned-prikkel *hoort* te zijn is trainings-laag →
+  MODEL. Zie de nuance, die de-escaleert.
+- **R2-overlap** — V9 mat de coach-CTX (`{fase, event, patternCount}`). Dit is de ANDERE arg: `planned`.
+  Niemand keek ernaar. Nieuw.
+
+### Wat GAS doet en Cadans niet
+
+`coachFeedback_` bepaalt de geplande prikkel in twee trappen (`packages/engine/src/coach.ts:456-459`):
+`coachZmFromSegs_(planned.segmenten)` → `coachIntentFromZones_`, en **alleen als dat niets oplevert**
+`intentFromType_(planned.type)`. De comment erboven noemt het FIX 4
+(`packages/engine/src/coach.ts:131`): *"GEPLANDE zone-balk-segmenten → … zodat de planned-prikkel net als
+de done-kant uit de ECHTE zone-minuten volgt (i.p.v. het grove type-label)."*
+
+GAS vult die arg altijd. `dashDayCard_` (`src/WebApp.gs:655`) bouwt `voorstel.segmenten` op
+`src/WebApp.gs:660` (`segmentsFromBlokken_(wpEntry.blokken) || segmentsFromIntent_(wpEntry.intent)`) uit de
+weekplan-snapshot en zet het door op `src/WebApp.gs:666`.
+
+Cadans' `coachPlannedArg_` geeft `segmenten: null` (`apps/web/src/lib/schema.ts:524`). **FIX 4 is daarmee
+permanent uit; de classificatie valt altijd terug op het type-etiket.** Beide vullers zijn geport en via
+de barrel geëxporteerd, en de blokken zijn ter plekke aanwezig: de aanroeper heeft `plannedSession` al
+(`toSession` → `.blokken` via `blokFromEngine`). Dit is V15's vorm — een seam op `null` terwijl de vuller
+in een andere laag klaarligt — maar dan aan de client-kant, en zonder engine-signatuur-wijziging te
+vragen.
+
+### Wat het kost (GEDRAAID, `TZ=Europe/Amsterdam`, engine-bundel buiten de repo-tree)
+
+Per type één echte `buildWorkout` (FTP 280 / LTHR 165 / doel FTP, blokweek 2, Base, slot 1) op een
+realistische duur, daarna `coachFeedback_` twee keer: met `segmenten: null` (Cadans) en met
+`segmentsFromBlokken_(wo.blokken) || segmentsFromIntent_(ensureIntent_(wo))` (GAS' vulling, letterlijk
+zoals `src/WebApp.gs:660` hem samenstelt).
+
+| type (duur) | Cadans ziet (`intentFromType_`) | GAS ziet (`coachIntentFromZones_`) | zone-minuten |
+|---|---|---|---|
+| `long_z2` (150′) | duur | duur | `{z2: 135, rust: 15}` |
+| **`sweet_spot` (80′)** | **sweetspot** | **drempel** | `{rust: 57, drempel: 40}` |
+| **`threshold` (75′)** | **drempel** | **vo2** | `{rust: 26, z2: 25, anaeroob: 24}` |
+| `tempo` (75′) | tempo | tempo | `{rust: 28, z2: 7, tempo: 40}` |
+| `vo2max` (75′) | vo2 | vo2 | `{rust: 34, z2: 25, anaeroob: 16}` |
+| **`recovery` (60′)** | **herstel** | **duur** | `{z2: 60}` |
+| **`combo_long_with_efforts` (150′)** | **duur** | **drempel** | `{z2: 115, drempel: 30}` |
+| `fatox` (120′) | duur | duur | `{z2: 60}` |
+| `pendel_z2` (40′) | duur | duur | `{z2: 40}` |
+
+**4 van de 9 types classificeren anders → 8 van de 18 doorgerekende combinaties** (9 types × 2 gereden
+uitkomsten) wijken af in `state`, `narrative` of `adapt`. Zelf-controle: dezelfde harness twee keer mét
+dezelfde `segmenten` → 0 verschillen, dus het verschil komt van de arg, niet van de probe.
+
+`combo_long_with_efforts` is letterlijk het geval waarvoor FIX 4 gebouwd is (`src/WebApp.gs:714-716`:
+*"een 'duur'-TYPE-dag mét drempel-intervallen telt zo NIET als duur-substitutie"*). Gedraaid, plan =
+`combo_long_with_efforts` 150′, gereden = drempel 75′:
+
+- Cadans: *"Je trainde Drempel i.p.v. de geplande Duur — intensiever dan bedoeld. Geen sleutelprikkel, dus
+  kleine impact."*
+- GAS: *"Je raakte de Drempel-prikkel, maar reed korter dan gepland — minder Z2/totaaltijd dan de sessie
+  vroeg. Op een drukke dag is dat prima."*
+
+Scherper nog bij `threshold` 75′ / gereden drempel 75′: GAS geeft daar een `adapt` (*"Voorstel: verplaats
+de VO2max-sessie naar een verse dag later deze week."*) die Cadans niet geeft — en omgekeerd bij `vo2max`.
+
+### De nuance, en hij de-escaleert
+
+**Het aanzetten is niet automatisch beter.** Dezelfde run laat zien dat GAS' route een hersteltraining
+'duur' noemt en een drempel-sessie 'vo2'. De oorzaak is de drempel zelf
+(`packages/engine/src/coach.ts:123` `const thresh = Math.max(8, total * 0.12);`): hij weegt buckets tegen
+de TOTALE duur, inclusief warmup/rust, dus een lange sessie met korte harde blokken zakt door de test
+terwijl een korte sessie met veel rust erdoorheen glipt. `recovery` heeft per definitie geen eigen bucket
+en landt op `z2` → 'duur'. Dat is een defect in GAS' eigen fix, geen reden om hem te kopiëren.
+
+**Bereikbaar vandaag**, in beide richtingen: de done-VANDAAG-kaart draait (V11 mat 'm) en de gemist-kaart
+ook (`apps/web/src/lib/schema.ts:619`). Op verstreken dagen niet — daar keert `coachFeedback_` al terug op
+`if (!planned)` (V9's bereikbaarheids-noot).
+
+**Voor R4:** dit is geen "port FIX 4 alsnog". Het is: **waar hoort de geplande prikkel vandaan te komen —
+het etiket of de blokken — en welke drempel hoort daarbij?** Toetsen aan het MODEL. Wat er ook uitkomt,
+één ding staat vast: vandaag draait de coach op het etiket, terwijl de app de blokken al in handen heeft.
+
+## V22 · `weekTss` — de parity-claim klopt op het venster, niet op het filter
+
+- **locaties** — Cadans `apps/web/src/lib/niveau.ts:111` (de fn), de claim `apps/web/src/lib/niveau.ts:109`
+  ("repliceert GAS `actualTssByDate_` (`src/Algorithm.gs:662`, Monday-based, geen trailing-7)"); consument
+  `apps/web/src/components/vorm/MetricRow.tsx:6` · GAS `src/Algorithm.gs:662`, het filter
+  `src/Algorithm.gs:670` · `CYCLING_TYPES` (geport) `packages/engine/src/zones.ts:9`
+- **norm** — front-end/vormgeving → **GAS is norm** → drift = fout
+- **R2-overlap** — dezelfde familie als V4's de-facto regel (geen type-filter) en V10's nevenvondst
+  (dagen-telling zonder fiets-filter). Vierde consument, eigen oppervlak, eigen onware claim.
+
+GAS' `actualTssByDate_` begint met `src/Algorithm.gs:670`
+(`if (CYCLING_TYPES.indexOf(String(a.type || '')) < 0) return;`) — **alleen fiets**. Cadans' `weekTss`
+leest per rij uitsluitend idx0 (datum) en idx8 (TSS); idx1 (type) komt in de body niet voor. Het venster
+(`[maandag, maandag+7)`) is wél getrouw.
+
+**Bereikbaar:** er zit niets tussen. De sync-route filtert niet op type en `readActivities`
+(`workers/api/src/db/repo.ts:291`) evenmin — `/api/activities` levert wat er staat, runs inbegrepen.
+
+### GEDRAAID (`TZ=Europe/Amsterdam`) — kalenderweek ma 13-07 t/m zo 19-07-2026
+
+| fixture | Cadans `weekTss` | GAS-regel, op dezelfde rijen |
+|---|---|---|
+| 2× `Ride` (80 + 60 TSS) | **140** | **140** |
+| idem + 1× `Run` (55 TSS) | **195** | **140** |
+
+De eerste rij is de zelf-controle: zonder de `Run` geven de twee routes hetzelfde, dus het verschil in rij
+twee komt van het filter en niet van het venster of de fixture. De Vorm-tab telt een hardloopje dus mee in
+de week-belasting; GAS niet. `CYCLING_TYPES` is `["Ride","VirtualRide","GravelRide","MountainBikeRide"]`
+en staat geport en geëxporteerd klaar — de fn importeert hem niet.
+
+## V23 · `tsbZone` — nagebouwd op de verkeerde meetlat, uitkomst byte-identiek
+
+- **locaties** — Cadans `apps/web/src/lib/tsb.ts:11` (de fn), de motivering
+  `apps/web/src/lib/tsb.ts:3-5`; consument `apps/web/src/components/vorm/ConditiePmc.tsx:146` · GAS
+  `src/Script.html:1395` (de drempels), `src/Script.html:1379` (`BM_BAND`), labels/kleuren
+  `src/Script.html:1380-1382`, de kaart `src/Script.html:1384` (`renderBalans_`)
+- **norm** — front-end/vormgeving → **GAS is norm**. Geen drift; wel de val.
+
+De comment boven de fn zegt: *"BRON: design/src/conditie.jsx (ConditieBalans-gauge) — **de engine kent GEEN
+3-zone TSB-drempelfunctie** (alleen een form≥0 ? "fris" : "belast"-binair in readiness.ts), **dus het
+ontwerp is hier de autoriteit**."* (`apps/web/src/lib/tsb.ts:3-5`).
+
+**De premisse is onwaar.** GAS heeft de drie-band-indeling wél — niet in de engine, in de WEB-APP-laag:
+`src/Script.html:1395` `var key = (tsb < -10) ? 'over' : (tsb <= 5 ? 'prod' : 'fris');`, met `BM_BAND`
+(`src/Script.html:1379`, banden op `src/Script.html:1380-1382`) als labels + kleur-tokens.
+
+**En de uitkomst is toch identiek**, veld voor veld nagelopen:
+
+| | GAS `BM_BAND` + `src/Script.html:1395` | Cadans `apps/web/src/lib/tsb.ts:11` |
+|---|---|---|
+| tsb > 5 | `fris` · "Fris" · `var(--fresh)` / `var(--fresh-soft)` | "Fris" · `var(--fresh)` / `var(--fresh-soft)` |
+| −10 ≤ tsb ≤ 5 | `prod` · "Productief" · `var(--good)` / `var(--good-soft)` | "Productief" · `var(--good)` / `var(--good-soft)` |
+| tsb < −10 | `over` · "Oververmoeid" · `var(--bad)` / `var(--bad-soft)` | "Oververmoeid" · `var(--bad)` / `var(--bad-soft)` |
+
+Drempels, labels en tokens: gelijk. Waarschijnlijke verklaring: `design/src/conditie.jsx` voedde ze
+allebei — GAS' eigen comment (`src/Script.html:1377`) noemt de `-soft`-banden en de custom SVG-track, dus
+die kaart is uit hetzelfde ontwerp gebouwd. Dan is het geen toeval maar een gedeelde bron.
+
+**Waarom dit toch in het doc staat: de redenering is V1-(b)'s val, letterlijk.** V1-(b): brok 4b nam
+`PROFIEL_PRESET_OPTIONS` als meetlat i.p.v. `getVolumeTargets` en streepte een correcte spec-regel weg.
+Brok 5: de zone-3→5-vraag stond op de ENGINE-meetlat terwijl het antwoord in `coachActualZoneMin_`
+(`src/WebApp.gs:728`) stond. Hier: "de engine kent het niet" is opnieuw als bewijs gebruikt dat GAS het
+niet kent. Dat de uitkomst goed is, is deze keer geluk — of liever: het ontwerp dekte beide kanten. Was
+het ontwerp ooit afgeweken, dan had niemand het gezien. **Geen actie; de comment corrigeren hoort bij de
+bouw-chat die het bestand toch aanraakt.**
+
+Eén micro-noot, geen vondst: GAS toont bij TSB exact 0 `±0` (`src/Script.html:1397`); Cadans' `nlSigned1`
+(`apps/web/src/lib/format.ts:26`, `signDisplay: "always"`) maakt daar `+0` van.
+
+## V24 · `plannedForDone` — Cadans' vervanger van de bevroren snapshot-entry
+
+- **locaties** — Cadans `apps/web/src/lib/proposal.ts:419` (de declaratie), `apps/web/src/lib/proposal.ts:426` (de
+  `buildWorkout`-regeneratie), `apps/web/src/lib/proposal.ts:453` (het veld); de lezer `apps/web/src/lib/schema.ts:777`
+  (`plannedForCompare`) · GAS `src/Algorithm.gs:185` (`snapshotDayAction_`-aanroep), `src/Algorithm.gs:186`
+  (de freeze-tak), `prevByDate` gevuld op `src/Algorithm.gs:161`
+- **norm** — architectuur-fork (V7), met een eigen call-site → infra
+- **R1/R2-overlap** — R1-B0 stelde vast dát `plannedForDone` altijd `null` is (7/7 dagen). V7 stelde vast
+  dat regeneratie niet reproduceerbaar is. **Nieuw is de c-vraag: wélke GAS-fn deed dit werk?** Antwoord:
+  de freeze.
+
+GAS' verstreken dag houdt zijn plan doordat de run hem **niet aanraakt**: `snapshotDayAction_` geeft
+`freeze` en de vorige weekplan-entry wordt onveranderd doorgeschoven (`src/Algorithm.gs:186`
+`if (action === 'freeze') { weekplan.push(prevByDate[dISO]); return; }`). Het plan van dinsdag is dus
+letterlijk wat de coach dinsdag zei.
+
+Cadans heeft geen freeze — `snapshotDayAction_` is geport, getest en heeft nul aanroepers (V10). In plaats
+daarvan **regenereert** `plannedForDone` het plan van een verstreken dag met `buildWorkout` op
+`apps/web/src/lib/proposal.ts:426`, met de settings van NU. Dat is de nabouw-klasse in zijn zuiverste vorm:
+dezelfde functie (het plan van een voorbije dag tonen), een andere bron (herberekening i.p.v. archief).
+
+De blast-radius is beperkter dan V7's algemene punt: de TYPE-keuze komt uit het opgeslagen
+`voorgesteldType`, niet uit `assignWorkouts` — dus alleen de variant/template/getallen driften mee, niet
+de dag-indeling. Maar ze driften wel op vier assen tegelijk: FTP en gewicht (settings van nu), `mesoWeek`
+(V2), `slot` (V14) en `macroFase` (van nu).
+
+**Vandaag staat het op nul** en dat is B0-i's gevolg, niet een keuze. **Landmijn:** wie V7 bouwt en
+`voorgesteld_type` gaat vullen, wekt hiermee ongemerkt de verleden-dag-vergelijking — de HANDOFF noemt dat
+"aanpak B" en merkt terecht op dat het een PRODUCTbeslissing is, geen bijvangst. Zelfde vorm als V8's `hm`,
+V14's zeven rijen en de `zones`/`intent`-landmijn: **het werkt half en zwijgt erover** — hier: het toont
+een week uit maart met de FTP van juli, zonder één markering dat het een reconstructie is.
+
+## Afgesloten in c, met bewijs — geen gat
+
+- **De dekking-verrijkings-loop in `buildWeekProposal`** (`apps/web/src/lib/proposal.ts:267-292`) is een
+  nabouw met een ANDERE bron, en dat valt goed uit. GAS leest de actuals uit
+  `feedback.details` (`src/Algorithm.gs:114-116`, gevuld door `computeZoneDebt_`); Cadans herbouwt ze uit
+  `zoneActsByDateFromTab_(activities)` + `actualZoneMinutes_`. Het verschil: `computeZoneDebt_` keert op
+  `src/Algorithm.gs:495-498` direct terug zodra er geen `weekplan_<maandag>` is → **in GAS is de
+  actuals-tak snapshot-afhankelijk, in Cadans niet.** Cadans is hier dus robuuster. Maar: (a) de loop
+  begint met `apps/web/src/lib/proposal.ts:269` `if (!d.train || !d.gedaan) continue;` en `gedaan` is
+  altijd `0` (V4/R1-B0-ii) → **de loop draait nooit**; en (b) hij is per constructie grotendeels redundant
+  met `rollingZoneCoverage_`, want elke voltooide dag van de HUIDIGE week valt binnen diens venster
+  `[today-7 … today]`. GEDRAAID (di 14-07 = 60′ Z2 gereden, vandaag wo 16-07): `gedaan=false` en
+  `gedaan=true` geven een identieke week (300′ / 227 TSS, zelfde types). **Verklaard, geen eigen vondst** —
+  wel een derde plek waar V4's ontbrekende reconcile een consument stillegt.
+- **De override-datumeis.** `apps/web/src/lib/proposal.ts:374` gate't de override-tak op
+  `!d.gedaan && … >= todayT`; GAS gate't alleen op `!d.gedaan` (`src/Algorithm.gs:174`) en laat een
+  override op een verstreken dag dus wél de freeze overslaan. Onbereikbaar via de UI (de picker biedt geen
+  verleden dag aan — dat is het `isDayPlannable`-parity-herstel uit `f498163`) en zonder plan-van-record
+  zonder gevolg. Inventaris.
+- **`eventsSummary`** (`apps/web/src/lib/events.ts:6`) selecteert het A-doel op de lexicografisch kleinste
+  datum — dus óók een A-event dat al geweest is. Display-only (de Instellingen-ingang "Doelen & events");
+  `eventFase_` kiest zijn hoofdevent zelf en trekt zich er niets van aan. Cadans-eigen scherm zonder
+  GAS-tegenhanger (GAS heeft geen samenvattingsregel, `src/Script.html:88-149` toont de editor direct).
+  Geen beslissing over training.
+- **`coachNarrative.ts`** (3 units: `normalizeCoachPersona` · `seedIndex` · `coachNarrative`) — **nul
+  GAS-tegenhanger, en dat is hier het antwoord, geen vraag.** V17's les ("nul aanroepers is een vraag")
+  geldt voor geporte fns; dit is nieuwbouw met een eigen HANDOFF-spoor (`83f3740`/`f498163` engine
+  `redenCode` → client-narrative-laag). Hij herformuleert de engine-reden-string warm; de reden zelf komt
+  onveranderd uit de engine. → **R3/R4-materiaal, geen port-vraag.** Idem `apps/web/src/lib/coach.ts:6` + `apps/web/src/lib/coach.ts:15`
+  (`displayCoach`/`initials`): de instelbare coach-naam is een Cadans-toevoeging (brok 3, migratie `0002`);
+  GAS heeft geen `coachNaam`-veld.
+- **`tierProgress`** (`apps/web/src/lib/niveau.ts:73`) leunt op de geporte `TIERS`/`tierIndex`; de
+  voortgangsbalk zelf is de Vorm-lite-debt (k), in `1a8d354` bewust gebouwd. Geen bron-drift.
+
+## R2-c — samenvatting
+
+**De 115 zijn verklaard.** 108 liggen in de client-lib, 7 in de engine — en die zeven zijn zonder
+uitzondering seam, shim of geneste helper: **Cadans verzint niets in de engine.** Van de 108 vallen er
+ruim tachtig af met bewijs (20 × HTTP-transport zonder één conditie op trainingsdata · 5 × Intl-formatter ·
+9 × geheugenvlag · de hernoemde ports met hun eigen GAS-anker · de units die a/b al raakten). Vier
+beslissers blijven staan: V21, V22, V23, V24.
+
+**De nabouw-ader die b voorspelde is echt, en hij is drie keer geraakt.** V21 (`coachPlannedArg_` ↔
+`dashDayCard_`'s segmenten-vulling), V22 (`weekTss` ↔ `actualTssByDate_`), V24 (`plannedForDone` ↔ de
+snapshot-freeze). Alle drie beantwoorden de vraag "welke GAS-fn deed dit werk eerder?" met een naam — en
+in alle drie de gevallen is de Cadans-vorm losgekoppeld van iets dat GAS wél had. V23 voegt de vierde
+variant toe: een nabouw waarvan de MOTIVERING de verkeerde meetlat nam, met een uitkomst die toevallig
+klopt.
+
+**V17's tweede les houdt: "nul GAS-tegenhanger" is een vraag, geen verdict.** `tsbZone` claimde er geen te
+hebben en had er wel een. `coachNarrative` claimt er geen te hebben en heeft er echt geen — daar is het
+antwoord R3, niet parity.
+
+**Wat vraagt welk R4-verdict** (richting, geen verdict):
+
+| bevinding | vraag voor R4 | toets aan |
+|---|---|---|
+| V21 FIX-4-seam op `null` | waar hoort de geplande prikkel vandaan: het etiket of de blokken? en welke drempel? | MODEL (GAS' eigen fix is defect) |
+| V22 `weekTss` zonder fiets-filter | de Vorm-tab telt hardlopen mee in de week-belasting | GAS is norm |
+| V23 `tsbZone` | geen — uitkomst identiek; alleen de comment liegt | GAS is norm (dicht) |
+| V24 `plannedForDone` | landmijn onder V7: wekt de verleden-dag-vergelijking mét de settings van nu | GAS is norm (infra) + PRODUCT |
+| G2 corpus-grens | wil de matrix de Worker + components dekken? (verschuift alle cijfers) | n.v.t. — gereedschap |
+
+**Geen nieuwe open bouw-vraag.** V24 valt binnen V7's plaats-en-schrijver-vraag; V21 en V22 zijn elk een
+wijziging van minder dan tien regels op één plek, zonder architectuurkeuze. De vijf die na a3 open stonden
+staan er nog steeds, ongewijzigd.
+
+**Vier landmijnen liggen er nu**, alle vier dezelfde vorm — *het werkt half en zwijgt erover*: V8's `hm`,
+V14's zeven rijen, `zones`-vs-`intent`, en nu V24's stille reconstructie.
+
+## R2 — sluiting (a + b + c)
+
+**R2 is klaar. Drie brokken, 24 vondsten, één gereedschaps-bevinding per kant.**
+
+| brok | scope | vondsten |
+|---|---|---|
+| **a** | 109 alleen-in-GAS ∩ web-server-bereik | G1 + V1-V13 (13) |
+| **b** | de 14 verschil-fns (matrix-groep 3+4) | V14-V20 (7) + 1 bouw-landmijn |
+| **c** | de 115 alleen-in-Cadans, gefilterd op beslissers | G2 + V21-V24 (4) |
+
+**R1's kernles heeft alle drie de brokken overleefd: geen enkele van de 24 vondsten zit in een fn-body.**
+Ze zitten in wie de inputs vult (a), in wat een parameter betekent (b), en in wat er in de laag ERBOVEN
+opnieuw is bedacht (c). De matrix sorteert op body-diff en heeft daarmee exact nul van de 24 aangewezen —
+hij leverde de inventaris, en dat was zijn taak.
+
+**Eén wortel draagt nu acht vondsten.** V7's ontbrekende plan-van-record verklaart R1-B0-i/ii/iii, R1-A2,
+R1-B2, R1-B8, V10, V11, V9's onbereikbaarheid op verstreken dagen — en c voegt V24 toe (de call-site die
+de fork zichtbaar maakt) plus de derde stilgelegde consument (de dekking-verrijkings-loop). Wie die laag
+bouwt, dicht ze allemaal tegelijk; wie hem niet bouwt, dicht er geen. En b's waarschuwing staat: die bouw
+moet óók de reader-seam in `assignWorkouts` (V15) en het `zones`/`intent`-onderscheid meenemen.
+
+**Drie klassen zijn nu benoemd**, en ze zijn niet hetzelfde:
+
+1. **geporte fn, inert** — zijn voedende fn kwam niet mee (R1's patroon; a's 95).
+2. **geporte fn, nul aanroepers** — de laag waar hij in hoort ontbreekt (V10, V17 ×4). "Nul aanroepers" is
+   een vraag, geen verdict: van de vier had er één drift (V18), twee waren verklaard, één wacht op fase C.
+3. **nagebouwd met een andere bron** — de fn is geport én de nabouw staat ernaast (V17's
+   `dashActualsByDate_`, V18's `dashBeginAnker_`, c's V21/V22/V24). Dit is de klasse die de matrix het
+   slechtst ziet, want er is geen naam-match: de nabouw heet anders.
+
+**Het gereedschap is aan beide kanten asymmetrisch, en dat is nu vastgelegd.** G1: de app-bereik-kolom is
+aan de Cadans-kant zwak (de Worker-routes zijn top-level statements, geen units). G2: het
+vergelijkings-corpus is twee mappen; 177 Cadans-units vallen erbuiten. Beide zijn hints, geen bewijs. De
+review is daar niet door aangetast — a, b en c leunen alle drie op de bron en op draaien, niet op de kolom.
+
+**Wat R2 NIET deed, bewust:** het MODEL-risico (matrix-gat 1) → R3. De 140 body-gelijke fns integraal →
+alleen waar a/b/c hun invulling raakten. En **geen enkel verdict** — die zijn R4, en het criterium is het
+MODEL (`docs/TRAININGSMODEL.md`), niet GAS.
+
+## Nog open (volgende chats)
+
+R0, R1 en R2 zijn KLAAR. Resteert:
+
+- **R3** — trainings-review tegen `docs/TRAININGSMODEL.md`. Komt NIET uit de matrix (gat 1: de rustigste
+  cel, `effectiveMacroFase_`, is het zwaarste trainings-defect).
+- **R4** — verdict-doc "cutover-blokkerend ja/nee" per item, over R1 + R2 samen. Verdict-criterium = het
+  MODEL, niet GAS. De drie normen gelden naast elkaar: front-end → GAS is norm; infra → parity is norm;
+  trainings-laag → coaching-deugdelijkheid is norm.
+
+Daan bouwt niets tot R4 klaar is.
