@@ -501,3 +501,165 @@ engine-input. Losse noot: `zoneDebt_` mag pas aan zodra `weekplans` gevuld is (n
 
 **Nog te lezen in deel 2:** `wellnessSignal_`, `combineSignals_`, `assignWorkouts` — de eerste twee
 zijn de andere helft van het signaal-pad, `assignWorkouts` is de consument van alle vier.
+
+# BATCH B — deel 2: het signaal-slot + de consument
+
+Gelezen: `wellnessSignal_`, `combineSignals_`, `assignWorkouts`. Batch B is hiermee klaar (8/8).
+
+## B6 · `wellnessSignal_` — getrouwe port, invulling KLOPT (de eerste in R1)
+
+- **locaties** — GAS `src/Algorithm.gs:1251` (`getWellnessSignal`) · Cadans `packages/engine/src/readiness.ts:293`, invulling `apps/web/src/lib/readiness.ts:48` (`toWellRow`) + `:74` / `:87`, bron `workers/api/src/db/repo.ts:568-576`
+- **matrix-cel** — groep 2 (verschil, alleen een Cadans-test) · app-bereik ja · web-ui-bereik ja
+- **waar het verschil leeft** — body: verklaard (seam + bewuste volgorde-omkering) · **invulling: VERKLAARD ÉN GEVERIFIEERD**
+
+### De volgorde-omkering is correct
+
+GAS' Wellness-tab staat NIEUWSTE-EERST: `syncWellness` (`src/Sync.gs:289`) sorteert expliciet aflopend op datum, en `src/Wellness.gs:1-5` + `:68` bevestigen het ("rij 2 = nieuwste, data staat nieuwste-eerst"). GAS' `hrvSeries.slice(0, 28)` = de NIEUWSTE 28, `slice(0, 3)` = de nieuwste 3, `sleepSeries[0]` = vannacht.
+
+Cadans keert dat om (`slice(-28)` / `slice(-3)` / `sleepSeries[sleepSeries.length - 1]`). Dat is correct dan en slechts dan als de reeks OUDSTE-EERST binnenkomt. Nagerekend over de volle keten:
+
+- `readWellness` (`repo.ts:568-576`) → `.orderBy(asc(wellness.datum))` = oudste-eerst
+- `GET /api/wellness` (`workers/api/src/routes/api.ts:141`) → `serializeWellness` (`:126`) = een `map`, volgorde-behoudend
+- `getWellness` (`apps/web/src/lib/api.ts:69`) → geen sortering
+- `toWellRow` (`apps/web/src/lib/readiness.ts:48`) = een `map`, volgorde-behoudend
+- alle drie de consumenten voeden uit `getWellness()`: `pages/Vorm.tsx:44`, `apps/web/src/lib/schema.ts:876`, en `proposal.ts:316` krijgt dezelfde array door
+
+**Dit is de eerste fn in R1 waar de invulling-hop schoon is.** Het patroon van A1/B2-B5 (body goed, invulling leeg of fout) breekt hier — vermeldenswaard, want anders leest het patroon als een wetmatigheid.
+
+### Wat wél verschilt (drie dingen, alle zonder gevolg)
+
+1. De twee GAS-fallbacks (`wellnessFallback_('geen Wellness tab')` bij ontbrekende tab, `'geen wellness data'` bij lege) zijn samengevoegd tot één (`readiness.ts:295`, `rdyWellnessFallback_("geen wellness-data")`). De tab-tak is een Sheet-concept (seam, verklaard); de reason-STRING wijkt af met een streepje. Geen consument toont hem: de fallback geeft `signal: "normal"` ⇒ de demote-pass vuurt niet, en geen UI-component leest `.reason` van dit object.
+2. `hrvDeficit`: GAS `(hrvBaseline && hrvRecent)` (truthy) → Cadans `hrvBaseline != null && hrvBaseline !== 0 && hrvRecent != null`; idem in de return (`hrvBaseline ? …` → `!= null ?`). Onbereikbaar: `rdyNumOrNull_` (`readiness.ts:269`) mapt `0` → `null`, dus elk gemiddelde is `null` of `> 0`. Alleen bij een NEGATIEF HRV-gemiddelde (fysiek onmogelijk) zou GAS `null` geven en Cadans `-100%` → demote. Genoteerd, niet gewogen.
+3. De reason-strings van alle vijf de takken zijn byte-identiek (mechanisch vergeleken), evenals drempels en tak-volgorde.
+
+### Eén venster-noot (klein, echt)
+
+GAS' array is per constructie ≤ 32 rijen: `readWellnessValues_` (`src/WebApp.gs:91`) klemt op `WELL_STATS_ROW - 2` (`src/Wellness.gs:20` = 35) en `syncWellness` clear't + herschrijft de tab met precies `getWellness(30)`. Cadans' `readWellness` haalt de VOLLE tabel op (geen limit, geen datum-filter); `slice(-28)` pakt de nieuwste 28 RECORDS. Identiek zolang de laatste 28 dagen compleet zijn. Bij gaten in de laatste 30 dagen rekent GAS de baseline over wat er is, Cadans vult aan met records van vóór dag 30. Micro-afwijking in `hrvBaseline`; geen tak-wissel te verwachten.
+
+- **richting — GEEN gedragsverschil op het signaal.**
+
+---
+
+## B7 · `combineSignals_` — getrouwe port, structureel inert
+
+- **locaties** — GAS `src/Algorithm.gs:1229-1243` · Cadans `packages/engine/src/readiness.ts:560-575` (`SIGNAL_RANK_` `:455`, GAS `:1220` — beide `{normal:0, warning:1, demote:2, recovery:3}`), aanroep `apps/web/src/lib/proposal.ts:338`
+- **matrix-cel** — groep 2 · app-bereik ja · web-ui-bereik ja
+- **waar het verschil leeft** — body: verklaard (gelogde divergentie) · aanroep: verklaard (gelogde divergentie) · **invulling: het RPE-argument is dood (B2)**
+
+### Body
+
+Vier takken, alle vier gelijk: rpe normal/leeg → wellness ongewijzigd · strikt hogere rang → rpe's signal + reason · anders beide reasons → concat met `' + '` · anders ongewijzigd. Enige verschil: GAS muteert `wellness` IN-PLACE, Cadans bouwt een nieuw object (`{...w}`). Beide GAS-call-sites wijzen het resultaat toe aan dezelfde var (`Algorithm.gs:91`, `src/WebApp.gs:1043`) ⇒ de mutatie is onwaarneembaar. HANDOFF logt dit als bewuste, impactloze parity-divergentie ("niet-muterend … output-equivalent, caller gebruikt `.signal`"); **die claim is hier nagerekend en klopt.**
+
+Eén onbereikbare vorm-afwijking: GAS' null-fallback is `{signal:'normal', reason:''}` (twee velden), Cadans' `rdyWellnessFallback_("")` het volle object met `hrvBaseline: null` etc. Beide leveranciers geven altijd een object terug; de tak is dood.
+
+### De aanroep wijkt bewust af (gelogd)
+
+`proposal.ts:320-338`: param 1 is niet `wSig` maar `baseWSig` — de holistische readiness-band vervangt het signal-veld (`ready→normal · caution→demote · rest→recovery`; band `null` → terugval op `wSig`). CLIENT-ONLY. Gelogd in HANDOFF als FASE-B-divergentie (1), commit `ae00730`. Verklaard.
+
+### De vondst: param 2 is altijd 'normal'
+
+`rSig = rpeSignal_(rpe || [], plannedTypeByDate, todayLocalISO)` (`proposal.ts:317`) → B2: `plannedTypeByDate` is altijd `{}` want `pd.voorgesteldType` is altijd `null` (B0-i) ⇒ `rSig.signal === "normal"`, altijd ⇒ `combineSignals_` valt uit op `readiness.ts:565` met `return { ...w }`.
+
+**De fn is in de draaiende app een pure pass-through.** Correct geport, correct aangeroepen, doet nooit iets. Zijn hele bestaansreden — het RPE-signaal in het demote-pad mengen — is dood. Dit is de doorwerking van B2, geen tweede vondst; het staat hier omdat "`combineSignals_` is port-correct" zonder deze zin misleest.
+
+- **richting — GEEN eigen gedragsverschil; erft B2's geïntroduceerde gat volledig.**
+
+---
+
+## B8 · `assignWorkouts` — body 1-op-1, vier gaten in de invulling
+
+- **locaties** — GAS `src/Algorithm.gs:985-1172` · Cadans `packages/engine/src/planner.ts:475-777`, aanroep `apps/web/src/lib/proposal.ts:348`; assembler GAS `src/Algorithm.gs:88-130` ↔ Cadans `apps/web/src/lib/proposal.ts:230-346`
+- **matrix-cel** — groep 2 (verschil, alleen een Cadans-test; GAS' `src/SelfTest.gs` noemt hem NUL keer) · app-bereik ja · web-ui-bereik ja
+- **waar het verschil leeft** — body: verklaard (`redenCode` additief) · **invulling: ONVERKLAARD, vier gaten**
+
+### De body is geen vindplaats
+
+Genormaliseerde vergelijking van beide bodies (comments/whitespace weg, `var|let|const` → V, `function(){}` → arrow, TS-annotaties weg): **ratio 0.987**. Na het strippen van de `redenCode`-statements (2a; additief — zet een machineleesbare code náást de reden-string, raakt `type` nooit) blijft ÉÉN materiële afwijking over: de twee extra argumenten in `gatherWeekplanEntries_(RECENCY_HORIZON_WEEKS, null, null)` (`planner.ts:531`). De rest is formattering. De 188 → 302 regels zijn opmaak + `redenCode`, geen logica.
+
+Alle vier de vondsten zitten in wat de fn VOEDT.
+
+### (a) De cross-week archetype-recency wordt nooit gezaaid — en het B0-schrijfpad dicht dit NIET
+
+`planner.ts:530-533` roept `gatherWeekplanEntries_(RECENCY_HORIZON_WEEKS, null, null)` aan. De derde parameter is de `readWeekplan`-accessor; `gatherWeekplanEntries_` (`planner.ts:454`) doet `const raw = readWeekplan ? readWeekplan(key) : null; if (!raw) continue;` ⇒ met `null` levert de lus ALTIJD `[]` ⇒ `recencyFromWeekplan_([])` → `[]` (`archetypes.ts:1378`) ⇒ **`qualityRecency` is leeg bij elke run.**
+
+GAS zaait wél: `gatherWeekplanEntries_(RECENCY_HORIZON_WEEKS)` (`Algorithm.gs:971`) leest 8 weken `weekplan_<monday>`-DocProps, die `generateProposal` elke run schrijft.
+
+Wat de seed stuurt (`goalWorkout_`, `archetypes.ts:1313-1376`), twee dingen tegelijk:
+
+1. `lastIntent` (`archetypes.ts:1322-1323`) → `goalPickIntent_(profiel, fase, lastIntent, …)` mijdt herhaling van dezelfde intent. Leeg ⇒ `lastIntent = null` ⇒ geen vermijding.
+2. `gebruikt`/`staleness` (`archetypes.ts:1346-1355`) → recent gebruikte archetypes vallen uit de pool; de rest sorteert op profielvoorkeur → staleness → duurRange → id. Leeg ⇒ `gebruikt = {}` ⇒ pool = alle kandidaten, alle staleness-waarden gelijk ⇒ **deterministisch dezelfde winnaar, week na week.**
+
+De in-loop-aanvulling (`planner.ts:741`) helpt niet waar het telt: `allocateQualityWeek_` draait ÉÉN keer VÓÓR de per-dag-loop (`planner.ts:538`) en krijgt dus altijd de lege seed. In Base/Build/Peak (`allocActive`, `planner.ts:513`) plaatst juist die allocator de kwaliteitsdagen.
+
+**Zichtbaar gevolg:** elke week dezelfde sleutelsessie-variant in dezelfde volgorde. De archetype-rotatie — de reden dat de archetype-laag bestaat — staat uit.
+
+**Waarom dit APART staat van B0-iii:** de data reist al mee. `readRecentWeekplans` (`workers/api/src/db/repo.ts:193-223`) bouwt een echte reader en roept dezelfde `gatherWeekplanEntries_` aan mét werkende accessor; het resultaat gaat via `GET /api/weekplans/recent` naar de client en komt in `buildWeekProposal` binnen als `weekplans` — waar het ALLEEN naar `intentByDateFrom` gaat (`proposal.ts:236`). `assignWorkouts` heeft geen parameter om het te ontvangen en geeft intern hardcoded `null` door. **Het weekplan-schrijfpad uit B0 vult de tabel, maar de seed bereikt `assignWorkouts` nog steeds niet.** Dit vraagt een tweede ingreep: een seed/reader-parameter door `assignWorkouts` heen (`allocateQualityWeek_` krijgt 'm al als 5e arg).
+
+**Hoe het zichzelf verantwoordt:** `planner.ts:12-14` ("de PropertiesService-read is vervangen door de injecteerbare readWeekplan-accessor … assignWorkouts geeft null door (untested pad)") + `planner.ts:529` ("DATA-IN: het weekplan-lees-pad is untested in de port → null-accessor (geen seed)"). Dat documenteert het MECHANISME, niet dat GAS hier iets doet wat de gebruiker merkt, en het staat NIET in HANDOFF's divergentie-lijst. Zelfde vorm als A2 (`× loadCarry`): een suite-verantwoording stil opgewaardeerd tot productie-equivalentie. Half-verklaard telt als onverklaard.
+
+- **richting — GEÏNTRODUCEERD.**
+
+### (b) `doneHard` telt altijd 0 — het volle quotum bovenop wat al gereden is
+
+`allocateQualityWeek_` (`planner.ts:173`, GAS `Algorithm.gs:818`), regels `planner.ts:215-220` ↔ `Algorithm.gs:837-840` (byte-gelijk): `doneScan.forEach(d => { if (d.gedaan && isHardType_(d.voorgesteldType, doel)) doneHard++; })` en `remaining = Math.max(0, quota - doneHard)`.
+
+`weekDays` = de volle `grid` (`proposal.ts:239`, doorgegeven op `:359`). Twee velden, allebei leeg:
+
+- `d.gedaan` ⇐ `pd.gedaan` ⇐ `readPlannerDays` (`repo.ts:342`) ⇐ `writePlannerDays` (`repo.ts:367`, hardcoded `gedaan: 0`) = ALTIJD false (B0-ii)
+- `d.voorgesteldType` ⇐ idem hardcoded `null` (`repo.ts:366`) = ALTIJD null (B0-i); `isHardType_(null, doel)` (`planner.ts:153`) → geen high/anaerobic → false
+
+⇒ `doneHard` = 0, altijd ⇒ `remaining = quota` ⇒ de plaatsingslus (`planner.ts:399`) plaatst het VOLLE quotum over de resterende dagen.
+
+GAS telt wél: `readPlanner` (`src/Planner.gs:396`) leest `voorgesteldType` (kolom G, `:411`) en `gedaan` (kolom H, `:412`) uit de Weekplanner-sheet; `writeVoorgesteldType` (`:418`) schrijft de generator-output elke run terug (`Algorithm.gs:139`). **De dag-mirror is in GAS ECHT gevuld** — dat is de tegenhanger die B0-i/ii mist.
+
+**Beide velden zijn nodig.** Alleen `gedaan` vullen laat `isHardType_(null)` false geven; alleen `voorgesteldType` vullen laat de `d.gedaan`-guard falen. Tweede argument voor B0's "één schrijf-pad", nu vanaf de consument-kant.
+
+**Zichtbaar gevolg** (`kwaliteitPerWeek`, `archetypes.ts:1155/1165/1179/1193/1207`: Base 2 · Build 3 · Peak 2): woensdag in een Build-week met ma+di al hard gereden → GAS plaatst nog `3 − 2 = 1` kwaliteitsdag in wo-zo, Cadans nog 3. De rem op het weektotaal bestaat niet. `avoid-consecutive-hard` blijft wél staan (leunt op `recentHardDate_`, die uit de activiteiten komt — B5): twee harde dagen op rij worden nog vermeden, het weekTOTAAL niet.
+
+**GAS' eigen noot op `Algorithm.gs:836`** ("0. quota − reeds-voltooide harde dagen (NB: bij wiring met tePlannen = 0; zie HANDOFF)") beschrijft precies deze faalmodus voor het geval `weekDays` ontbreekt. Cadans geeft `weekDays` wél door — en valt er alsnog in, via de lege velden. De bewaker is geport, de data eronder niet.
+
+- **richting — GEÏNTRODUCEERD.**
+
+### (c) De dekking-verrijking op voltooide dagen is dood — intensiteit uit een lange rit telt niet mee
+
+Assembler `proposal.ts:266-292` ↔ GAS `Algorithm.gs:111-126`. Drie lagen op elkaar:
+
+1. `rollingZoneCoverage_` over [today-7..today] → `dekking.X = rolling.X > 0` (`proposal.ts:256`) — **werkt** (B3, grover)
+2. per voltooide dag van deze week: ≥ `DEKKING_MIN_MIN` (15; `planner.ts:49` = GAS `Algorithm.gs:14`) ECHTE zone-minuten in een bucket → `dekking[b] = true`
+3. geen zone-data → terugval op `workoutZones(d.voorgesteldType, doel)`
+
+Lagen 2 en 3 staan achter `if (!d.train || !d.gedaan) continue` (`proposal.ts:269`) ⇒ **beide dood** (B0-ii). Laag 3 zou bovendien op `d.voorgesteldType` leunen (B0-i) — dubbel dood. GAS' equivalent loopt over `voltooid` (`Algorithm.gs:96`) met gereconcileerde vinkjes (`ensureDataAndReconcile_`, `:83`) en leest de actuals uit `feedback.details` (`computeZoneDebt_`, `:105`).
+
+**Laag 2 is NIET redundant met laag 1.** Laag 1 classificeert per ACTIVITEIT op IF (`≥0.95` anaerobic · `≥0.85`/`≥0.80` high · `>0` low); laag 2 telt de ECHTE zone-minuten. Een `combo_long_with_efforts` — lange rit, 20 min sweet-spot, IF ≈ 0,75 — komt in laag 1 in `low` terecht en zet `dekking.high` NIET; laag 2 zou dat wél doen (20 ≥ 15). Precies het meest voorkomende weekend-type.
+
+**Zichtbaar gevolg:** na een lange rit met blokken denkt de planner dat de high-zone nog open staat ⇒ de weekend-tak (`planner.ts:675`) en `cov`/`keyIntensity` forceren extra intensiteit. Zelfde richting als (b).
+
+- **richting — GEÏNTRODUCEERD.**
+
+### (d) `tePlannen` sluit vandaag nooit uit
+
+`proposal.ts:342` ↔ GAS `Algorithm.gs:100-102` (byte-gelijk): `train && !gedaan && (!datum || datum >= vandaag)`. Met `gedaan` altijd false (B0-ii) valt de middelste guard weg. De datum-guard dekt het verleden af ⇒ **alleen VANDAAG is geraakt**: een dag waarop al gereden is blijft plannbaar en telt mee in `eligible_` (`planner.ts:203`, GAS `Algorithm.gs:831`) ⇒ hij kan een quotum-plek krijgen die al op is. Kleinste van de vier, zelfde oorzaak, zelfde richting.
+
+- **richting — GEÏNTRODUCEERD, impact klein.**
+
+### Wat de oracle wél en niet vastlegt
+
+`apps/web/src/lib/redenCode.test.ts` (de enige test die `assignWorkouts` direct drijft) geeft `days` als `weekDays` mee (`:85`) en zet in zijn dag-fixture `gedaan: false` (`:59`) + `voorgesteldType: null` (`:60`) — **exact de productie-leegte**. Hij legt de reden↔redenCode-koppeling per tak vast en is daarin correct; (b), (c) en (d) kan hij per constructie niet zien. `proposal.test.ts:636` drijft `assignWorkouts` indirect via `buildWeekProposal` met dezelfde lege velden. GAS' `src/SelfTest.gs` noemt `assignWorkouts`, `getWellnessSignal` en `combineSignals_` geen enkele keer.
+
+---
+
+## Deel 2 — samenvatting
+
+| # | fn | body | invulling | richting |
+|---|---|---|---|---|
+| B6 | `wellnessSignal_` | verklaard (seam + volgorde-omkering) | **geverifieerd schoon** | n.v.t. |
+| B7 | `combineSignals_` | verklaard (gelogde divergentie) | RPE-arg dood (B2) | erft B2 |
+| B8 | `assignWorkouts` | verklaard (`redenCode` additief; ratio 0.987) | **onverklaard, 4 gaten** | geïntroduceerd |
+
+Twee dingen die R4 uit deel 2 moet meenemen:
+
+**1. Het B0-schrijfpad is NODIG maar niet GENOEG.** B0 concludeerde dat één schrijf-pad (`voorgesteldType` + `gedaan` + de weekplan-snapshot) drie gaten tegelijk dicht. Deel 2 voegt toe: het dicht ook B8-(b), (c) en (d) — maar **(a) NIET**. De recency-seed vraagt een tweede ingreep (seed/reader-parameter door `assignWorkouts`), want de data staat al bij de client en er is geen route naar de fn. Volgorde-eis blijft staan (`zoneDebt_` pas aan zodra `weekplans` gevuld is — negatieve debt).
+
+**2. De vier gaten wijzen ALLE VIER dezelfde kant op.** (a) geen variatie · (b) het volle harde quotum bovenop wat al gereden is · (c) intensiteit uit een lange rit telt niet als gedekt → nóg meer intensiteit · (d) vandaag blijft plannbaar. Geen enkel gat wijst de andere kant op (minder belasting). Dat is geen toeval: elk van de vier is een REM die GAS heeft en Cadans niet, en elke rem leunt op dezelfde twee lege velden. Model 2's caveat uit deel 1 (twee van de vier signalen kunnen niet vuren) krijgt hier zijn scherpste vorm — niet alleen de signalen zijn dood, ook de quota-rem en de dekking-rem in de consument zelf.
+
+**Batch B is klaar (8/8). Volgende: batch C (11 losse fns)** — `genericPendelIntervals`, `zwoStepFromRow_`, `dashVormReeks_`, `todayIso`, `isDayPlannable`, `durLabel`, `actualZone5_`, `isoWeekNumber`, `weekPlannedTypes`, `nextPlannableDate`, `maandLabel`.
