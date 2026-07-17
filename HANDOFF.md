@@ -11,79 +11,76 @@ live tot cutover.
 
 ## Stand
 
-**R1 LOOPT — batch A + batch B KLAAR = 10 van de 21 (juli 2026).** Findings-doc `docs/R1-PORT-CORRECTHEID.md`, gepind:
-https://raw.githubusercontent.com/daanhhk/Cadans/df3280b7afd8e38da55c122072aa6b4a1980baeb/docs/R1-PORT-CORRECTHEID.md
-Commits: batch A `c679f0a`, batch B deel 1 `9599ef8`, batch B deel 2 `df3280b` — docs-only, engine ongemoeid, niets
-gedeployd, vloeren ongewijzigd. **Findings, GEEN verdicts** (die zijn R4). Lees het doc; hieronder alleen wat een
-volgende chat moet weten om niet verkeerd te beginnen.
+**R1 KLAAR — 21 van de 21 (juli 2026).** Findings-doc `docs/R1-PORT-CORRECTHEID.md` (1231 regels), gepind:
+https://raw.githubusercontent.com/daanhhk/Cadans/4b6a8774a0f2d0e8e090fb055973ef078e466f25/docs/R1-PORT-CORRECTHEID.md
+Commits: batch A `c679f0a`, batch B deel 1 `9599ef8`, batch B deel 2 `df3280b`, batch C `4b6a877` — docs-only,
+engine ongemoeid, niets gedeployd, vloeren ongewijzigd. **Findings, GEEN verdicts** (die zijn R4). Lees het doc;
+hieronder alleen wat een volgende chat moet weten om niet verkeerd te beginnen.
 - **SCOPE-CORRECTIE — "R1 = FASE-B port-correctheid" is een STALE LABEL.** Matrix-groep 1+2 raakt de
-  FASE-B-kern nul keer: `buildOverrideWorkout_`/`readinessAdjust_`/`coachAdaptatie_`/`coachFeedback_`/
-  `buildFreeRideWorkout_`/`findVariantById_`/`selectVariant_` = equivalent [6]; `getTrainingLibrary_`/
-  `renderVariant_`/`getPool_` = equivalent [5,6]. Alleen `assignWorkouts` (g2) + `buildWorkout` (g3) raken
-  FASE B. GEEN gat — equivalent[6] is mechanisch bewijs (bodies AST-identiek op var/let/const na), sterker
-  dan een handmatige lees — maar het label overclaimt. R1 = port-correctheid van de 21 verschil-fns met de
-  zwakste oracle-dekking. Wat voor die fns WEL open blijft is hun AANROEP, niet hun body (divergentie (3):
-  `previewOverrideSession` → `buildOverrideWorkout_` met `eventCtx` undefined).
-- **EENHEID VAN REVIEW = body + ÉÉN hop naar de invulling van de inputs.** Body-gelijkheid is nodig, niet
-  genoeg. Batch B deel 2 bevestigt het van beide kanten: `assignWorkouts` is na normalisatie **ratio 0.987**
-  tegen GAS (de 188→302 regels zijn opmaak + het additieve `redenCode`) en heeft toch VIER gaten — alle vier
-  in wat hem voedt. Verder dan één hop = R2.
-- **LEESVOLGORDE wijkt af van de matrix (set + dekking identiek, 21):** op AFHANKELIJKHEID. batch A (2, KLAAR)
-  · batch B (8, KLAAR) · **batch C (11, OPEN)** = `genericPendelIntervals`, `zwoStepFromRow_`, `dashVormReeks_`,
-  `todayIso`, `isDayPlannable`, `durLabel`, `actualZone5_`, `isoWeekNumber`, `weekPlannedTypes`,
-  `nextPlannableDate`, `maandLabel` — losse fns, geen keten, geen gedeelde inputs. Matrix-groep reist mee als
-  risico-label per finding (R4 heeft 'm nodig).
-- **DRIE CLAIMS DIE NIET KLOPTEN (gecorrigeerd in het R1-doc; de oude tekst is bewust NIET geëdit):** (a) debt (n)
-  "`plannedTypeByDate` uit `PlannerDay.voorgesteldType` — day-mirror = DEZELFDE WAARDE": de day-mirror is
-  ALTIJD `null`. (b) `repo.ts:349` + `weekgen.ts:25` "`voorgesteldType` blijft null — client herberekent
-  live": de client herberekent op de grid-KOPIE; `plannedTypeByDate` leest `plannerDays`, niet de grid → de
-  herberekening bereikt de consument nooit. (c) debt (b) parkeert de gewicht- én loadCarry-seam in "Fase 3b/4";
-  die fases staan op ✓. Gewicht is elders gevuld dan debt (b) voorspelt (client, niet Worker) en met `?? 0`
-  i.p.v. GAS' `|| 75`; loadCarry is NOOIT gevuld en zijn hele keten is niet geport.
-- **DRIE D1-VELDEN WORDEN NOOIT GESCHREVEN** (structureel — de schrijver bestaat niet):
-  `planner_days.voorgesteld_type` (hardcoded `null` in `writePlannerDays`), `planner_days.gedaan` (hardcoded
-  `0`, idem), `weekplans.entries_json` (Worker-route bestaat; `apps/web/src/lib/api.ts` heeft GEEN put-wrapper).
-  **HERZIENING NA BATCH B DEEL 2 — "één schrijf-pad dicht alle drie" is NODIG maar NIET GENOEG.** Dat pad dicht
-  óók `assignWorkouts`' quota-rem (b), dekking-rem (c) en de vandaag-guard (d) — zes gaten in plaats van drie.
-  Maar het dicht de **recency-seed (B8-a) NIET**: `assignWorkouts` geeft intern hardcoded `null` als
-  `readWeekplan`-accessor mee en heeft geen parameter om een seed te ontvangen, terwijl de data al bij de client
-  staat (`readRecentWeekplans` → `GET /api/weekplans/recent` → gaat alleen naar `intentByDateFrom`). Dat vraagt
-  een TWEEDE ingreep: een seed/reader-parameter door `assignWorkouts` heen. VOLGORDE-EIS blijft: `zoneDebt_` mag
-  pas aan zodra `weekplans` gevuld is (geen clamp → intent-leeg + gedaan-true geeft NEGATIEVE debt).
-- **MODEL 2 — CAVEAT bij "PRIMAIR", VERSCHERPT door batch B deel 2.** Twee van de vier signalen kunnen niet
-  vuren: `zoneDebt_` = altijd `{0,0,0}` (`pd.gedaan` altijd false) en `rpeSignal_` = altijd `'normal'`
-  (`plannedTypeByDate` altijd leeg) — waardoor `combineSignals_` een pure pass-through is (correct geport,
-  correct aangeroepen, doet nooit iets). `dekking` werkt grover, `recentHardDate_` werkt. FASE 3a sloopte het
-  override-make-up-model (`0c954258`) MÉT de motivering "Model 2 is primair"; die staat op losse schroeven tot de
-  inputs gevuld zijn. **Deel 2 voegt toe: niet alleen de SIGNALEN zijn dood, ook de remmen IN de consument**
-  (quota-aftrek + dekking-verrijking). GEEN actie nu — R4 weegt. De read-only Model-2-bevestiging (`d74e257`) is
-  geen tegenbewijs: die test vult de inputs zelf.
-- **B8's VIER GATEN WIJZEN ALLE VIER DEZELFDE KANT OP** (R4-input, geen verdict): (a) recency-seed altijd leeg
-  → archetype-rotatie uit, elke week dezelfde sleutelsessie-variant · (b) `doneHard` altijd 0 → het volle
-  kwaliteitsquotum (Base 2 · Build 3 · Peak 2) bovenop wat al hard gereden is · (c) dekking-verrijking op
-  voltooide dagen dood → een lange rit mét blokken (IF ≈ 0,75, 20 min sweet-spot) telt niet als high-dekking →
-  extra intensiteit · (d) `tePlannen` sluit vandaag nooit uit. Geen enkel gat wijst de andere kant op. Geen
-  toeval: elk is een REM die GAS heeft en Cadans niet, en elke rem leunt op dezelfde twee lege velden.
-  `avoid-consecutive-hard` blijft wél staan (leunt op de activiteiten).
-- **B6 BREEKT HET PATROON — de eerste schone invulling in R1.** `wellnessSignal_` keert GAS' nieuwste-eerst-greep
-  om naar `slice(-28)`/`slice(-3)`; die omkering is over de volle keten geverifieerd (D1 `asc(datum)` → route-map
-  → client-map → `toWellRow`, alle drie de consumenten voeden uit `getWellness()`). "Body goed, invulling leeg of
-  fout" is dus een PATROON, geen wetmatigheid — dat blijft de vraag die je per fn stelt, niet het antwoord.
-- **HET PATROON dat R2/R3 moeten meenemen:** geen enkele vondst zit in de fn-BODY — ze zitten in wat de fn
-  VOEDT, en elke test kijkt eroverheen omdat de test zijn eigen input bouwt. Scherpste geval: de enige test die
-  `assignWorkouts` direct drijft (`redenCode.test.ts`) zet in zijn dag-fixture `gedaan: false` +
-  `voorgesteldType: null` — **exact de productie-leegte** — en kan (b)/(c)/(d) per constructie niet zien. De
-  vloeren 329/957 zijn tegen deze klasse blind BY CONSTRUCTION, niet door slordigheid.
-- **OPENSTAANDE MICRO-CORRECTIE op het R1-doc (meenemen in de batch-C-commit, append-only, NIET terug-editen):**
-  drie locatie-ankers in het deel-2-blok wijzen naast de bedoelde regel — `Algorithm.gs:91` moet `:92` zijn (de
-  `combineSignals_`-call-site; `:91` is de var-declaratie), `pages/Vorm.tsx:44` moet `:45` zijn en
-  `schema.ts:876` moet `:872` zijn (beide de `getWellness()`-regel in de `Promise.all`). Alle drie in
-  bijzin-materiaal; geen bevinding geraakt, de dragende bewijsregels zijn hard getoetst en goed.
-- **WERKWIJZE-LES (kostte drie foute ankers):** toets locatie-claims door ze MECHANISCH uit de geschreven tekst
-  te extraheren en allemaal te draaien — nooit via een handgemaakte lijst. De handmatige lijst dekte 48 van de 70
-  ankers; de drie fouten zaten in de 22 die buiten de lijst vielen.
-- **FOCUS VOLGENDE CHAT:** R1 batch C (11 losse fns, zie LEESVOLGORDE). Geen engine-wijziging; findings →
-  R4-verdicts → aparte bouw-chats.
+  FASE-B-kern nul keer: die fns sorteren als `equivalent [6]`/`[5,6]` (bodies AST-identiek op var/let/const
+  na — mechanisch bewijs, sterker dan een handmatige lees), niet als `verschil`. Alleen `assignWorkouts` (g2)
+  + `buildWorkout` (g3) raken FASE B. R1 = port-correctheid van de 21 verschil-fns met de zwakste
+  oracle-dekking. Wat voor de FASE-B-fns open blijft is hun AANROEP, niet hun body (divergentie (3)).
+- **EENHEID VAN REVIEW = body + ÉÉN hop naar de invulling.** Body-gelijkheid is nodig, niet genoeg. Over alle
+  21: **geen enkele vondst zit in een fn-body** — op C11 na, en juist daar is het verschil onbereikbaar.
+  Begin bij een fn dus NIET bij de body-diff maar bij: wie vult zijn inputs, en met wat. Verder = R2.
+- **BATCH C DRAAIDE, EN DAT VERANDERDE DE UITKOMST.** De engine is puur en bundelbaar; de GAS-tegenhanger is
+  uit de `.gs` te snijden en als module te importeren; dan diffen op ECHTE input (workout-rijen uit
+  `buildWorkout` zelf, weken uit `buildWeekProposal` zelf). Recept staat in het doc (Methode-noot). Dat
+  corrigeerde drie leesronde-claims: C3's "vorm-trend is dood" (FOUT — de bypass is equivalent, 93 = 93),
+  C7's "een hardloopje vult de VOLTOOID-kaart" (TE GROOT — GAS doet dat óók; het echte verschil is de
+  zone-balk + de selectie-regel), C1's "de fouten heffen elkaar op" (HALF — alleen de minuten, niet de TSS).
+  **R2-aanbeveling: gebruik dezelfde harness, lees niet opnieuw alleen.**
+- **DE VIER BATCH-C-VONDSTEN.** (C0) GAS' `SETTINGS_DEFAULTS`-laag (`Settings.gs:72`, drie accessors) is NIET
+  geport — geen DDL-default, geen repo-default, `EMPTY_SETTINGS` = alles null en BEREIKBAAR via
+  `loadSchemaWeek:886`/`:928`. Zes van twaalf velden lekken: ftp → "0-0W" · lthr → "0-0 bpm" · doel → "Pendel
+  + null intervallen" · pendelDuurMin · pendelAantal · profielPreset → lege Volume-stat. GEÏNTRODUCEERD.
+  (C1) Het pendel-veld betekent aan beide kanten iets anders: GAS 'Pendel duur per rit' (rauw opgeslagen)
+  tegenover Cadans "Pendel (enkele reis)" (`legToRoundTrip` = ×2) mét `pendelAantal` er nóg eens overheen ⇒
+  **exact 2× de pendel-belasting** (40 min + 2 ritten: GAS 80 min/59 TSS, Cadans 160 min/111 TSS) én het
+  verschuift de rest van de week. (C7) `actualZone5_`s aanroeper mist het fiets-filter (zone-balk-only) en
+  merget de dag waar GAS één rit pakt. (C9) De "In je blok"-badge vergeet het verleden (erft B0-i).
+- **TWEE VONDSTEN ZIJN MODEL-VRAGEN, GEEN PORT-FOUTEN — R3/R4, toets aan `docs/TRAININGSMODEL.md`.** C1: is
+  `pendelDuurMin` één rit of een retour? **GAS heeft zelf geen consistent antwoord** — het label zegt 'per
+  rit' en de aggregaat-naam ook, maar beide pendel-generics splitsen `mins` in heen+terug. `faed841` koos de
+  retour-lezing en liet `pendelAantal` staan. C7-(b): som je de dag of pak je één rit? GAS toont op een
+  pendeldag de helft (33 TSS i.p.v. 59) en haalt kaart en zone-balk uit verschillende ritten; **Cadans'
+  merge is het betere antwoord**. Bij beide is "Cadans wijkt af van GAS" waar maar nutteloos.
+- **B0 IS NU DRIE KEER ZO GROOT — EN NIET GEDRAGS-NEUTRAAL.** Het schrijf-pad dicht B0-i/ii/iii + B8's drie
+  remmen + C9's badge. **En het wekt `plannedForDone`** (nu ALTIJD null — `proposal.ts:420-424`, mechanisch
+  bewezen op 7/7 dagen; dat is de echte verklaring voor de gereduceerde DoneDetail op verleden dagen, niet
+  de productbeslissing die HANDOFF noemt). HANDOFF's "aanpak B" ÍS dit pad. Verleden voltooide dagen gaan
+  dan **vanzelf** de volle plan-vs-gedaan-vergelijking tonen — dat is een PRODUCTbeslissing, niet optioneel.
+  Dicht nog steeds NIET: de recency-seed (B8-a, vraagt een tweede ingreep). Volgorde-eis blijft: `zoneDebt_`
+  pas aan zodra `weekplans` gevuld is.
+- **MODEL 2 — CAVEAT bij "PRIMAIR".** `zoneDebt_` = altijd `{0,0,0}`, `rpeSignal_` = altijd 'normal' ⇒
+  `combineSignals_` is een pure pass-through. FASE 3a sloopte het override-make-up-model (`0c954258`) MÉT de
+  motivering "Model 2 is primair"; die staat op losse schroeven tot de inputs gevuld zijn. GEEN actie nu — R4
+  weegt. De read-only Model-2-bevestiging (`d74e257`) is geen tegenbewijs: die test vult de inputs zelf.
+- **MIGRATIE-SCOPE IS ONDERGESPECIFICEERD — EN ER ZIT EEN KLOK OP.** De §Data-migratie noemt alleen "Sheet →
+  D1" en verder niets. Twee dingen die er wél op moeten: (1) **de weekplan-snapshots.** `dashWeekplanByDate_`
+  (`WebApp.gs:179`, "Volledige historie") bewaart Daans hele gepland-vs-gedaan-verleden in DocProps — NIET in
+  de Sheet, dus "Sheet → D1" vangt het per constructie niet. Het dekt tot de laatste échte
+  GAS-proposal-generatie; sindsdien schrijft geen van beide apps het op en dat gat is echt weg. Hoe langer
+  GAS niet draait, hoe groter. (2) **de `profielPreset`-vocabulaire.** GAS `'Gevorderd 7u'` ↔ Cadans
+  `'gevorderd'`; 1-op-1 migreren geeft een lege Volume-stat.
+- **SIGNAAL VOOR R2 (buiten R1-scope, geen matrix-cel).** `getVolumeTargets` (`Algorithm.gs:31`) is in GAS een
+  echte engine-input met vier aanroepers (`Proposal.gs:470`, `WebApp.gs:1302`, `Doel.gs:331`,
+  `TelegramBot.gs:405`) en bestaat in Cadans NIET; `profielPreset` is daar presentatie-only. Alleen-in-GAS ⇒
+  geen naam-match ⇒ de matrix komt het niet tegen. Er zijn er 473 van die klasse.
+- **DE MICRO-CORRECTIE IS AF — EN WAS ZELF FOUT.** Verwerkt in `4b6a877` als append-only sectie (de oude
+  regels 525/551 staan bewust nog letterlijk). Uitkomst: `Algorithm.gs:91`→`:92` ✓ · `Vorm.tsx:44`→`:45` ✓ ·
+  `schema.ts:876`→**`:874`**, NIET `:872` zoals hier stond (`:872` = `getActivities()`, `:874` =
+  `getWellness()`, `:876` = `getDispositions()`). Het voorgeschreven anker was een handmatig overgeschreven
+  getal en daarmee dezelfde klasse fout als de drie die het moest repareren.
+- **WERKWIJZE-LES, NU TWEE KEER BEVESTIGD:** extraheer locatie-ankers MECHANISCH met een regex uit de eigen
+  tekst en draai ze ALLEMAAL — nooit via een handgemaakte lijst. In batch B dekte de handlijst 48 van 70 en
+  de drie fouten zaten in de 22 erbuiten. In batch C ving de mechanische toets (105 ankers geëxtraheerd, 135
+  met een inhouds-assertie bestand+regel+substring gedraaid) **drie foute ankers in de eigen tekst** vóór het
+  committen. Bestaan-en-in-bereik is NIET genoeg: alle drie wezen naar bestaande regels.
+- **FOCUS VOLGENDE CHAT:** **R2 — end-audit op de risico-matrix.** Verse chat (R1 vulde z'n context). Geen
+  engine-wijziging; findings → R4-verdicts → aparte bouw-chats. Verdict-criterium blijft: toets aan het
+  MODEL (`docs/TRAININGSMODEL.md`), niet aan GAS.
 
 **R0 KLAAR — module 1 (AST-sorteermachine) + 2a (fundering) + 2b (matrix/oracle/entrypoint-map) + 2c (bewaker-fix)
 (juli 2026).** Commits: 2a `8e66ded`, 2b `2093bcd`, 2c `24e7a4f` (+ module 1 `03804eb`/`0fac374`/`f48ed6b`/`7ead6b8`
@@ -203,8 +200,9 @@ GAS vastvriezen. Hangt aan geen pnpm-script; bewaakt zichzelf met asserts die de
   (`packages/engine/src/zones.ts`), de assemblers niet.
   Verder: `workers/api/src/integrations/intervals.ts` is read-only bij ontwerp, er is geen uitgaande schrijf-call in
   de Worker, en er is geen push/synced-state in D1. Bouwen is een EIGEN FASE, niet tussendoor, en pas na de review.
-  Volgorde als hij komt: (1) `zwoStepFromRow_` van de leesstapel lezen — die bepaalt letterlijk wat er op het apparaat
-  komt en wijkt af van GAS zonder dat iemand weet waarom; (2) `buildWorkoutZwo_` porten (engine — dat verschuift de
+  Volgorde als hij komt: (1) ~~`zwoStepFromRow_` lezen~~ — **VERVALLEN.** R1-C2 stelde mechanisch vast dat hij
+  functioneel 1-op-1 is (2.464 gevallen uit een echt `buildWorkout`-corpus, alle vijf takken, nul verschillen);
+  de "wijkt af van GAS zonder dat iemand weet waarom" bestond niet. Begin bij (2) `buildWorkoutZwo_` porten (engine — dat verschuift de
   harness-cijfers, dus daarna module 1 opnieuw draaien); (3) schrijf-pad in de intervals-client + `buildEventPayload`
   + route; (4) D1-migratie voor push-state; (5) knop + status in de PWA; (6) write-scope `INTERVALS_API_KEY` als
   Worker-secret + prod-deploy, approval-gated. Dit is het eerste moment dat Cadans naar buiten schrijft: tot nu toe
@@ -647,7 +645,7 @@ GAS-bron leggen (`raw.githubusercontent.com/daanhhk/training/3e8090a/...`, zie B
   herbouwen na een Weekplanner-save (puur planner-gedreven, GEEN intervals-sync); de ververs-knop
   re-derive't nu ONVOORWAARDELIJK (ontkoppeld van de sync-uitkomst). Commit `937c031`.
 - **Pendel-duur = "enkele reis"** — het settings-veld toont de enkele reis; opgeslagen als retour
-  (2×, `legToRoundTrip`), de engine leest de retour + splitst heen/terug (`planner.ts:1948-1949`).
+  (2×, `legToRoundTrip`), de engine leest de retour + splitst heen/terug (`planner.ts:1979-1980` (was `:1948-1949` bij `faed841` — juist toen, sindsdien regeldrift; `:1948` valt nu in `genericSweetSpotLong`)).
   Pendel-dag = leg+leg (bv. 75+75=150). GEEN engine/`proposal.ts`/`planner.ts`-wijziging. Commit `faed841`.
 - **Live Version ID `9120970c`**; laatste main-commit = `faed841`. CI groen. Recon-docs deze chat
   (achtergrond): `BESCHIKBAARHEID-MOBILE-RECON`, `ENGINE-DAGTYPE-BRANCHES-RECON`, `DAGKAART-PENDEL-RECON`.
@@ -1091,13 +1089,18 @@ Open schulden die bewust naar een latere fase zijn geschoven:
   state-ladder done > gemist > today laat een specifieker feit al winnen van "Vandaag"; een override is zo'n feit.
   Eén gedeelde conditie `isOverrideCard` voedt zowel het label als de `OverriddenDetail`-dispatch. Hiermee is debt
   (a) "dag-detail-overline VOORSTEL boven de override-pin = tegenspraak" INGELOST.
-- **(o) 5.3c-ii live-Schema-cosmetica — OPGELOST (seed + focus-prettify).** De drie leaks op de live
+- **(o) 5.3c-ii live-Schema-cosmetica — SYMPTOOM WEG, OORZAAK NIET (R1-C0).** De drie leaks op de live
   /dev-Schema zijn weg: (1) ~~"· null"~~ → `settings.doel='Ardennen-trip'` geseed; (2) ~~"0-0 bpm"~~ →
   `settings.lthr=178` geseed (watts klopten al, FTP 280); (3) ~~rauwe focus-bucket "low"/"high"/"anaerobic"~~
   → geprettify't via `focusLabel` (`apps/web/src/lib/schema.ts`, commit `c63d217`) naar Duur/Drempel/VO2max,
   proza-focus onveranderd. Telefoon-geverifieerd. Seed = LOKAAL (miniflare, zie seed-recipe), NIET in
   repo/remote. De `EMPTY_SETTINGS`-fallback in `loadSchemaWeek` verzacht een verse user maar raakt de
   users-bootstrap-debt (kruisverwijzing **(m)**).
+  **R1-C0 herziet dit:** de seed nam het symptoom weg op één machine; de OORZAAK is dat GAS'
+  `SETTINGS_DEFAULTS`-laag (`Settings.gs:72`) niet geport is. Zes van de twaalf velden lekken door naar
+  zichtbare output (ftp · lthr · doel · pendelDuurMin · pendelAantal · profielPreset). Latent, niet weg: v1
+  is single-user (`CURRENT_USER_ID=1`) en die ene rij is gevuld. Elke verse user reproduceert 'm. Zelfde
+  stale-vorm als debt (b) in batch A.
 - **(p) Fase-token nog Engels ("Build") — engine-copy, NIEUW (5.3c-ii nazorg).** De macro-fase wordt
   INGEBAKKEN in engine-strings: `packages/engine/src/planner.ts:623` (reden, "… — fase <macroFase>") én
   `:1079` (workout-naam, bv. "Z2 progressief (Build, ingekort)"). Er is GEEN discreet `macroFase`-veld op
