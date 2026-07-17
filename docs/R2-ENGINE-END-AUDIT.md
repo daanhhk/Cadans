@@ -6,7 +6,8 @@ mechanisch geverifieerd: locatie-ankers met een inhouds-assertie (bestand + rege
 substring), en waar gedrag geclaimd wordt is de engine GEDRAAID onder `TZ=Europe/Amsterdam` op input
 die uit de keten zelf komt.
 
-Batch a1: G1 + V1 + V2 + V3. Batch a2 (deze chat): V4 + V5 + V6 + V7.
+Batch a1: G1 + V1 + V2 + V3. Batch a2: V4 + V5 + V6 + V7. Batch a3: V8 + V9 + V10 + V11 +
+V12 + V13 + de sluiting van R2-a.
 
 ## Scope R2 — vastgesteld en door Daan geaccordeerd (17-07-2026)
 
@@ -494,18 +495,400 @@ week, GAS-vorm) of `planner_days.voorgesteld_type` (dag-vorm, D1-natuurlijker)? 
 op welk moment, nu er geen "Genereer voorstel"-knop meer is? En: is `gedaan` (V4) een afgeleide bij
 het lezen of een kolom bij het schrijven — dezelfde vraag als V3's vierde open punt.
 
-## Nog open in R2-a (volgende chat)
+## V8 · `eventContextFrom_` (Algorithm.gs:711) niet geport — het event raakt de workout NIET
 
-Uit de 95, na a1 (G1 · V1 · V2 · V3) en a2 (V4 · V5 · V6 · V7): de coach-inputs
-(`coachEventFromMacro_`, `coachPatternCount_`, `dashDayCard_`, `dashWeekplanByDate_`,
-`sumTssVanafDatum_`, `getWeekLoad_`), het doel-profiel (`buildGoalProfile_`), `eventContextFrom_`
-(`Algorithm.gs:711` — de wortel onder "workouts niet event-getailord"), `bepaalFaseVoorDatum_`,
-`garminHeuristic`, en de sync-paden (`syncActivitiesIncremental_`).
+- **locaties** — GAS `src/Algorithm.gs:711`; aanroepers `src/Algorithm.gs:151` (`generateProposal`) en
+  `src/Proposal.gs:331`; consumenten `src/Algorithm.gs:2517` (`tour_taper_z2`) en `src/Algorithm.gs:2520`
+  (`long_z2`) · Cadans: bestaat niet; de drie `buildWorkout`-aanroepen geven `undefined`
+  (`apps/web/src/lib/proposal.ts:409`, `:433`) plus `buildOverrideWorkout_` (`apps/web/src/lib/proposal.ts:384`)
+- **norm** — trainings-laag (welke prikkel krijgt de rijder) → coaching-deugdelijkheid is norm → R3/R4.
+  De port-vraag ("is dit bewust?") is wél infra: het staat als bewuste vereenvoudiging gemeld
+  (`apps/web/src/lib/proposal.ts:167`), dus dit is een INVULLING van die melding, geen nieuwe ontdekking
+  dát hij ontbreekt.
+- **HANDOFF-overlap** — debt (n)-1 "workouts niet event-getailord". Die formulering is te zwak; zie
+  hieronder.
 
-Afgesloten door a2, met bewijs, dus NIET meer op de lijst: `reconcilePlannerWithActivities` (V4) ·
-`syncAthleteZones` + `resolveZones_` + `normalizeZones_` + `sweetSpotFromActivity_` (V5 — vier
-daarvan zijn géén engine-gap) · de snapshot-laag `writeDaySessions_` / `cleanupOldProposals_` /
-`writeVoorgesteldType` én de RPE-mismatch-laag `rpeWeekData_` / `rpeMismatchFlag_` /
-`plannedTypeForDate_` (V7 — één wortel, twee ketens).
+### De functie is triviaal — de tak eronder niet
 
-Daarna R2-b (14 fns, incl. `buildWorkout`) en R2-c (115, gefilterd).
+`eventContextFrom_` is zes regels: geen `macro.hoofdEvent` → `null`, anders
+`{naam, afstandKm, hm, klimType, weken}` (`src/Algorithm.gs:715-720`). Alle vijf velden zijn in Cadans
+aanwezig: `eventFase_` levert `hoofdEvent` (`packages/engine/src/phase.ts:170`) en
+`apps/web/src/lib/proposal.ts:213` leest er al `klimType` uit. De port is een adapter van zes regels.
+
+Wat hij aanstuurt is groter. `buildWorkout` heeft een tak die het HELE variant-pool overslaat:
+
+    src/Algorithm.gs:2520   if (type === 'long_z2' && eventCtx) return genericLongZ2(mins, settings, mesoWeek, eventCtx);
+
+Zonder `eventCtx` valt `long_z2` door naar `getPool_` → `selectVariant_` → `renderVariant_`. **Met een
+hoofd-event gebruikt GAS het long_z2-variant-pool dus NOOIT.** Cadans gebruikt niets anders. De port is
+byte-getrouw (`packages/engine/src/planner.ts:1487`, `genericLongZ2` op
+`packages/engine/src/planner.ts:1549`) — alleen de arg is `undefined`.
+
+### Wat je ervan merkt (GEDRAAID, `TZ=Europe/Amsterdam`, engine-bundel buiten de repo-tree)
+
+Fixture: A-race over 40 weken, 150 km / 2000 hm; blokweek 2; `long_z2` 150 min.
+
+| | naam | duur | TSS | blokken |
+|---|---|---|---|---|
+| Cadans (`eventCtx` undefined) | Z2 nuchter (Base) | 150′ | 105 | Warmup/Z2 nuchter/Z2 endurance/Cooldown |
+| GAS (`eventCtx` gevuld) | Lange Z2 (162 min) | 162′ | 119 | Warmup/Z2 base/**Klim-sim**/Cooldown |
+
+Het is dus niet "dezelfde workout zonder event-schaling" — het is een **andere workout**. GAS' eindregel
+wordt `Bouw richting Amstel Gold Race — 150km/2000hm. Bergachtig profiel → klim-simulatie blokken erin.`;
+Cadans' wordt `Ochtend nuchter, strak Z2 — vetverbranding.`
+
+Op weekniveau (zelfde fixture, 5 gevulde dagen): **precies de 2 `long_z2`-dagen wijken af**; sweet_spot
+en threshold zijn identiek. Week: Cadans 472′ / 358 TSS · GAS 490′ / 382 TSS. Controle: dezelfde
+her-aanroep mét `eventCtx=undefined` reproduceert de Cadans-dagkaart 5/5 exact — het verschil is de arg,
+niet de harness.
+
+`tour_taper_z2` (`src/Algorithm.gs:2517`) gebruikt `eventCtx` alleen voor één zin
+(`src/Algorithm.gs:2704`); duur/TSS/structuur ongewijzigd. Klein.
+
+### De port heeft een landmijn: `hm` bestaat in Cadans niet
+
+GAS' event-object heet `hm` (`src/Events.gs:189`) en `eventContextFrom_` geeft dat 1-op-1 door
+(`src/Algorithm.gs:717`). `genericLongZ2` beslist zijn hele klim-simulatie erop
+(`src/Algorithm.gs:2571`; port `packages/engine/src/planner.ts:1567`). In Cadans heet het veld overal
+`hoogtemeters` (`packages/shared/src/weekgen.ts:46`, `workers/api/src/db/schema.ts:157`); de identifier
+`hm` komt in de hele Cadans-bron alleen voor in `packages/engine/src/planner.ts` — bij de LEZER, nergens
+bij een schrijver. GEDRAAID met een adapter die `hoogtemeters` doorgeeft i.p.v. `hm`: "Lange Z2 (162 min)",
+162′ / **113** TSS, **geen Klim-sim**, eindregel `Bouw richting Amstel Gold Race — 150km/?hm.` Een
+naïeve port werkt dus half en zwijgt daarover. Noteren voor de bouw-chat.
+
+### Nevenvondst (R3, geërfd)
+
+`genericLongZ2` schaalt de DUUR met de meso-factor (`src/Algorithm.gs:2569`, port
+`packages/engine/src/planner.ts:1562`): 150 gevraagd × 1,08 → 162 geleverd. Dat is een ANDERE
+meso-consument dan V2's `renderVariant_` (die vermogens-PERCENTAGES schaalt) — geen tegenspraak met V2,
+een tweede baan. De GAS-comment erboven zegt expliciet dat de meso-factor alleen mag KRIMPEN
+("EventCtx geeft alleen het hilly-profiel, NIET een duur-override (eerder werd 120 → 163 gepusht, fout)")
+terwijl `MESO_MOD[2] = 1,08` hem laat GROEIEN — de beschikbaarheid wordt met 12 min overschreden. GAS-identiek.
+
+## V9 · De coach-ctx is in Cadans teruggebracht tot één veld
+
+- **locaties** — GAS `coachEventFromMacro_` `src/WebApp.gs:700` · `coachPatternCount_` `src/WebApp.gs:708`
+  · de ctx-assemblage `src/WebApp.gs:1114` en `src/WebApp.gs:762` · de aanroepen
+  `src/WebApp.gs:1152-1153` · Cadans `apps/web/src/lib/schema.ts:549` (done) en
+  `apps/web/src/lib/schema.ts:621` (gemist), beide `{ fase: macroFase }`
+- **norm** — trainings-laag (coach-duiding) → coaching-deugdelijkheid is norm → R3/R4
+- **R1-overlap** — geen. R1 raakt `coachFeedback_` nergens; de HANDOFF noemt de done-narrative "de rijkste
+  coaching-output van de app" (§Geparkeerde debts, "Warme persona op done") — dat is precies de fn waarvan
+  hier twee van de drie ctx-velden leeg blijken.
+
+### Wat GAS meegeeft en Cadans niet
+
+GAS bouwt per render `coachCtx = { fase: macro.macroFase, event: coachEventFromMacro_(macro),
+patternCount: coachPatternCount_(actuals, wpByDate, today) }` (`src/WebApp.gs:1114`) en geeft dat aan ELKE
+`coachFeedback_`-aanroep, zowel voltooid als gemist (`src/WebApp.gs:1152-1153`).
+
+- `coachEventFromMacro_` → `{ naam, type, isEndurance: (type === 'trip') }`.
+- `coachPatternCount_` telt over 14 dagen hoe vaak een geplande duur/herstel-dag intensiever werd gereden
+  (`src/WebApp.gs:714-724`) — de patroon-teller.
+
+De engine leest ze allebei: `packages/engine/src/coach.ts:452` (`patternCount: ctx.patternCount || 0`) en
+`packages/engine/src/coach.ts:263` (`const endur = !!(ev && ev.isEndurance)`); ontbreekt het event, dan
+wordt de naam letterlijk `"je doel"` (`packages/engine/src/coach.ts:262`).
+
+### Wat het kost (GEDRAAID — 24 combinaties: 4 plan-types × 6 uitkomsten incl. gemist)
+
+Diff van de volledige coach-output (state + narrative + adapt) tegen de Cadans-ctx `{fase}`:
+
+| ctx | wijkt af van Cadans |
+|---|---|
+| event = A-RACE, patternCount 0 | **6 / 24** |
+| event = A-RACE, patternCount 3 | 6 / 24 |
+| event = TRIP, patternCount 0 | **15 / 24** |
+| event = TRIP, patternCount 3 | 15 / 24 |
+
+Tweede as, `patternCount` 0 → 3 mét event: **race 0/24 · trip 4/24**. `coachPatternCount_` wordt dus
+UITSLUITEND gelezen achter `isEndurance` — bij een race doet hij niets, ook niet als je hem port.
+
+**Dat is de belangrijkste nuance en hij de-escaleert.** Daans echte A-event (Amstel Gold Race) is
+`type: 'race'` → `isEndurance` false. Voor hém kost de hele ontbrekende ctx exact één ding: de naam. Zes van
+de 24 teksten zeggen `richting je doel` waar GAS `richting Amstel Gold Race` zegt. Voorbeeld (gemist, geen
+sleutelprikkel): *"Geen punt — een aanvullende sessie gemist; je week ligt ruim op koers richting je doel."*
+tegenover *"…richting Amstel Gold Race."*
+
+Bij een TRIP-event verdwijnt een hele coachingslaag. Gedraaid, plan `long_z2` 150′, gereden drempel 75′:
+
+- Cadans: *"Je trainde Drempel i.p.v. de geplande Duur — intensiever dan bedoeld. Geen sleutelprikkel, dus
+  kleine impact."* · adapt: geen
+- GAS met trip + patternCount 3: *"Je koos nu 3× intensiteit (Drempel) i.p.v. de geplande duur. Voor
+  Girona-trip — lange dagen — is juist de duur/drempel-basis bepalend; herhaalde losse intensiteit ondermijnt
+  die opbouw."* · adapt: *"Voorstel: houd de komende ritten bewust Z2/drempel en parkeer de losse intensiteit
+  tot na Girona-trip."*
+
+### Bereikbaarheid — waar dit überhaupt zichtbaar is
+
+Alleen op een dag die VANDAAG of later is. Een verstreken dag heeft geen `voorgesteldType` en geen sessies
+(V7/B0), dus `plannedForCompare` is null en `coachFeedback_` keert direct terug op `if (!planned) return null`
+(`packages/engine/src/coach.ts:446`). GEDRAAID en bevestigd. De ctx-armoede is daarmee een probleem van de
+done-VANDAAG-kaart en de gemist-kaart, niet van de historie — die is er niet.
+
+## V10 · `getWeekLoad_` (WebApp.gs:994) niet geport — de noemer krimpt door de week heen
+
+- **locaties** — GAS `src/WebApp.gs:994`, aangeroepen `src/WebApp.gs:1401`; noemer via
+  `weekPlanSummary_` `src/WebApp.gs:973` over de `weekplan_<maandag>`-snapshot (`src/WebApp.gs:1012`);
+  clamp `src/WebApp.gs:1024` · Cadans `apps/web/src/lib/schema.ts:733` (aggregatie), `:762`
+  (`tss.gepland += s.tss`), `apps/web/src/components/schema/WeekLoad.tsx:71-72` (`pct`)
+- **norm** — front-end/vormgeving → **GAS is norm** → drift = fout
+- **R2-overlap** — dit is V7 (geen plan-van-record) met een meetbaar, dagelijks zichtbaar gevolg. NIET
+  hetzelfde punt: V7 gaat over wat de ENGINE terugleest, dit over wat de KAART toont.
+
+GAS' `geplandTss` is de som over de BEVROREN week-snapshot; `progressPct = gedaan / geplandTss`, geklemd op
+0..100 (`src/WebApp.gs:1024`). Cadans telt `tss.gepland` op uit `d.sessions` — en sessies bestaan alleen voor
+dagen ≥ vandaag (`apps/web/src/lib/proposal.ts:342`, `tePlannen`). Verstreken dagen leveren een lege
+`sessions`-array, dus ze verdwijnen uit de noemer. `apps/web/src/components/schema/WeekLoad.tsx:72` klemt niet.
+
+### GEDRAAID (`TZ=Europe/Amsterdam`) — één week, oplopende "vandaag"
+
+Fixture: 5 trainingsdagen (di 80′ · wo 75′ · do 75′ · za 150′ · zo 75′), ritten gaandeweg toegevoegd.
+
+| vandaag | gepland TSS | gedaan TSS | dagen gepland | de kaart toont |
+|---|---|---|---|---|
+| ma 13-07 | 358 | 0 | 5 | 0% van plan |
+| wo 15-07 | 275 | 62 | 4 | 23% van plan |
+| vr 17-07 | 164 | 204 | 2 | **124% van plan** |
+| zo 19-07 | 53 | 319 | 1 | **602% van plan** |
+
+De kop van de kaart is "Deze week · gepland vs gedaan"
+(`apps/web/src/components/schema/WeekLoad.tsx:85`). Op vrijdag zegt hij dus letterlijk: 204 TSS gedaan van
+164 gepland. GAS zou 319 / 358 = 89% tonen op zondag. Álle drie de stats driften (TSS, uren, dagen); de
+voortgangsbalk zelf wordt door `overflow: hidden` (`apps/web/src/components/schema/WeekLoad.tsx:188`)
+geklemd, het PERCENTAGE-label niet.
+
+### `snapshotDayAction_` — geport, getest, en nooit aangeroepen
+
+GAS heeft dit probleem gehad en expliciet gerepareerd. `src/Algorithm.gs:158` noemt het "Knip-fix (a):
+bevries VOORBIJE dagen (date-compare, niet tePlannenSet) — behoud hun vorige weekplan-entry i.p.v.
+retroactief herbouwen/verdwijnen." De beslissing is een pure fn: `snapshotDayAction_`
+(`src/Algorithm.gs:57`, aangeroepen `src/Algorithm.gs:185`) → `freeze` / `rebuild` / `skip`.
+
+Die fn IS geport (`packages/engine/src/planner.ts:67`) en IS getest
+(`packages/engine/src/selftest.test.ts:1441` e.v., telt mee in de 957-vloer). Buiten de zelftest heeft hij in
+de hele Cadans-bron **nul aanroepers** — mechanisch vastgesteld. Hij is via de barrel geëxporteerd
+(`packages/engine/src/index.ts:10` `export * from "./planner"`), dus "niet bereikbaar" is de verkeerde
+diagnose: hij is bereikbaar en wordt niet gebruikt, omdat de laag waar hij in hoort (de snapshot, V7) niet is
+meegekomen.
+
+**Nieuwe klasse t.o.v. R1.** R1's patroon was: geporte fn, inert omdat zijn INPUT nul is. Dit is: geporte fn,
+nul call-sites — en zijn functie is exact het gedrag dat we hierboven hebben gemeten. Voor G1 is dit de
+tegenhanger die de kolom nodig heeft: hier zou "app-bereik nee" toevallig kloppen, maar om de verkeerde reden.
+
+### Nevenvondst — het `dagen`-begrip verschilt ook los van de drift
+
+GAS telt de GEDANE dagen alleen voor fiets-activiteiten (`src/WebApp.gs:1003`, `CYCLING_TYPES`) en de
+GEPLANDE dagen als "entry met minuten > 0" (`src/WebApp.gs:980`). Cadans telt een dag als gedaan zodra
+`doneTss > 0` (`apps/web/src/lib/schema.ts:744`) — zonder type-filter, en het dag-totaal is gesommeerd
+(`apps/web/src/lib/schema.ts:324`, `mergeDone`). Dat is exact de de-facto regel die V4 al vaststelde; hier
+raakt hij een tweede consument. Geen aparte vondst — wel de bevestiging dat V4's regel breder doorwerkt dan
+alleen `gedaan`.
+
+## V11 · `dashDayCard_` (WebApp.gs:655) — GAS zwijgt over het plan zodra je gereden hebt
+
+- **locaties** — GAS `src/WebApp.gs:655`, de onderdrukking `src/WebApp.gs:669`
+  (`reden: actual ? '' : (wpEntry.reden || '')`); de status-dispatch `src/WebApp.gs:1136-1143` ·
+  Cadans `apps/web/src/components/schema/SchemaView.tsx:105-106` (de gate), de dag-state
+  `apps/web/src/lib/schema.ts:751-759`
+- **norm** — front-end/vormgeving → **GAS is norm** → drift = fout
+- **R1-overlap** — erft B0-ii (`planner_days.gedaan` hardcoded `0`,
+  `workers/api/src/db/repo.ts:367`). B0-ii vond het veld; dit is een gevolg dat R1 niet noemt.
+
+GAS bouwt elke dagkaart via `dashDayCard_` en blankt daar de plan-rationale zodra er een activiteit is
+(`src/WebApp.gs:669`). Rationale = vooruitkijkend ("hier plan ik X want…"); zodra je gereden hebt neemt de
+coach-feedback het over. Eén coach-stem per kaart.
+
+Cadans' gate is `day?.reden && !day.override` (`apps/web/src/components/schema/SchemaView.tsx:106`), met de
+comment ernaast: *"done/gemist-dagen hebben geen redenCode → geen dubbel coach-blok"*
+(`apps/web/src/components/schema/SchemaView.tsx:101`). Die aanname is onwaar. Omdat `planner_days.gedaan`
+altijd `0` is (B0-ii) blijft VANDAAG in `tePlannen`, dus `assignWorkouts` zet er wél een `reden` op — terwijl
+`state` op `done` staat, want dat leest de activity (`apps/web/src/lib/schema.ts:744`).
+
+### GEDRAAID — done-VANDAAG-kaart, `TZ=Europe/Amsterdam`
+
+Woensdag = vandaag, sweet-spot gepland, 's ochtends 70′ drempel gereden:
+
+    state           : done
+    day.reden       : "Sleutelsessie · FTP — fase Base"
+    day.redenCode   : "key_session"
+    coach.narrative : "Je trainde Drempel i.p.v. de geplande Sweet Spot — intensiever dan bedoeld. …"
+    gate (day.reden && !day.override) = true  →  CoachCallout rendert BOVEN de DoneCompareCard
+
+De kaart draagt dus **twee coach-blokken met dezelfde coachnaam**: bovenaan de warme plan-rationale ("ik plan
+hier een sleutelsessie"), daaronder de done-box die zegt dat je iets anders reed. GAS toont er één.
+
+Dit is de kaart die de HANDOFF markeert als "STATUS done-vandaag-kaart: nog NIET visueel geverifieerd" — er
+was tijdens de bouw geen voltooide dag-van-vandaag. De verificatie kan nu gericht: kijk of er twee coach-boxen
+staan.
+
+### Nevenvondst — een verstreken gemiste dag heet in Cadans "Rustdag"
+
+Zelfde run: dinsdag stond op train, 80 min, geen rit. Cadans → `state: "rest"` → "Rustdag · Geen training
+gepland vandaag. Herstel is training." GAS: `else if (card.voorstel) { status = 'gepland'; }`
+(`src/WebApp.gs:1138`) — de bevroren snapshot-entry maakt de dag 'gepland', en pas een expliciete dispositie
+maakt hem 'gemist' (`src/WebApp.gs:1143`). Cadans beweert met terugwerkende kracht dat er niets gepland stond.
+Dit is dezelfde wortel als V10 (geen plan-van-record) en de scherpste gebruikers-vorm ervan; de A2/A4-noot in
+de HANDOFF ("'Niet gedaan?' toont ALLEEN op vandaag/toekomst") beschrijft het symptoom als een
+architectuurkeuze, niet als een claim die de app doet.
+
+## V12 · De "Waarom deze training?"-onthulling ontbreekt — `garminHeuristic` is er één regel van
+
+- **locaties** — GAS `garminHeuristic` `src/Proposal.gs:541`, aangeroepen `src/WebApp.gs:1046`; de
+  waarom-lijst `src/WebApp.gs:1072-1086`; de render `src/Script.html:257` (`wkWhy_`), aangeroepen
+  `src/Script.html:410` en `src/Script.html:415` · Cadans: bestaat niet
+- **norm** — front-end/vormgeving → **GAS is norm** → drift = fout
+
+GAS' plan-kaart heeft onder de workout een inklapbare `<details>` met de kop "Waarom deze training?"
+(`src/Script.html:260`). De inhoud is een lijst van maximaal zes regels (`src/WebApp.gs:1072-1086`):
+
+1. `Macro-fase: <fase> (<N> wk tot event)`
+2. `Taper — fris worden voor het event.` (alleen bij taper)
+3. `Bijsturing: <reason>` (alleen als het wellness/RPE-signaal niet 'normal' is)
+4. `Garmin-verwachting: <verdict>` — de uitkomst van `garminHeuristic(weekTss, mesoWeek, macro.fase, fs)`
+5. `Zone-debt <bucket>: +<N> min tekort.` per bucket ≥ 5 min
+6. `Mesocyclus week <N>/4 · load <factor>×`
+
+In Cadans komt geen van deze zes voor. Grep over `apps/web/src` op `waarom` / `garmin` / `Garmin-verwachting`
+levert nul treffers; de enige "Waarom…"-affordance is `Waarom dit cijfer?` op de ReadinessCard
+(`apps/web/src/components/vorm/ReadinessCard.tsx:213`, de port van GAS' `rc-why`,
+`src/Script.html:1251`). Het patroon is dus geport voor readiness en niet voor het plan.
+
+### Waarom dit meer is dan een ontbrekend kaartje
+
+Regel 5 en 6 zijn de ENIGE plek in de hele GAS-UI waar de zone-debt en de meso-ramp aan de gebruiker worden
+getoond. Daarmee sluit dit twee eerdere vondsten:
+
+- **R1-B4** (`zoneDebt_` geeft altijd nul): in Cadans zou zelfs een gevulde debt onzichtbaar blijven — er is
+  geen oppervlak dat hem toont.
+- **V2** (de meso-ramp draait op een andere teller, na blokweek 5 permanent vlak): in GAS staat de factor
+  letterlijk op het scherm, in Cadans nergens. Een gebruiker kan het verschil niet zien, en dat is precies
+  waarom V2's regressie-vraag ("hield Daan het menu-item bij?") in Cadans niet eens gesteld kan worden.
+
+`garminHeuristic` zelf is een drempel-tabel op week-TSS × mesoWeek × macroFase met een ramp-gate
+(`src/Proposal.gs:541-564`). Het is een SCHATTING van wat een extern apparaat zou zeggen, geen coaching-regel.
+Hij landt ook in de payload als `vandaag.garminStatus` (`src/WebApp.gs:1091`) — die tak is in `Script.html`
+nergens gerenderd. Voor R4 zijn dat twee losse vragen: (a) willen we de waarom-lijst terug, en (b) willen we
+de Garmin-schatting daarin — want dat is de enige regel van de zes die niet over Cadans' eigen model gaat.
+
+## V13 · `buildGoalProfile_` (WebApp.gs:643) — de assembler is nagebouwd, de CTL-input niet
+
+- **locaties** — GAS `src/WebApp.gs:643`, aangeroepen `src/WebApp.gs:1263`; de CTL-bron
+  `src/WebApp.gs:1253` (`ctlNow = vorm.huidig.ctl`) uit `getFormScore_` (`src/Algorithm.gs:1337`); de
+  afronding `src/WebApp.gs:1266` · Cadans `apps/web/src/pages/Niveau.tsx:118` (de assembler),
+  `apps/web/src/pages/Niveau.tsx:117` (`currentCtl`)
+- **norm** — front-end/vormgeving → **GAS is norm** → drift = fout
+- **HANDOFF-overlap** — §Geparkeerde debts noemt dit twee keer: "Client-side goal-assembler … Eind-audit:
+  1-op-1 mirror van de GAS-assembler verifiëren" en "DoelProjectie start-CTL op maand-granulariteit …
+  eind-audit". Dít is die audit.
+
+**De assembler zelf is een getrouwe mirror.** GAS mapt `prof.dims` naar
+`{key,label,metric,unit,dir,target,current,gap,onTrack,pct}` via `goalGap_`; `apps/web/src/pages/Niveau.tsx:129-138`
+doet hetzelfde met dezelfde engine-primitieven. Enige structuurverschil: GAS geeft ook `key: prof.key` terug
+(`src/WebApp.gs:651`), Cadans niet — geen consument, geen gevolg. Deze debt kan dicht.
+
+**De INPUT is een andere.** GAS voedt de assembler met `ctl: ctlNow`, en `ctlNow` is de meest recente
+WELLNESS-rij (`src/Algorithm.gs:1339-1354`: idx0 datum / idx8 CTL / idx9 ATL), afgerond op een heel getal
+(`src/WebApp.gs:1241`). Cadans voedt hem met `currentCtl = ctlMap[lastMonth]` — de laatste MAANDBUCKET uit
+`ctlReeksMaandelijks_`, en die rekent CTL uit de ACTIVITEITEN-TSS (`packages/engine/src/niveau.ts:363-375`,
+idx8 = TSS), ongerond.
+
+Dat zijn drie verschillen tegelijk, niet één: **andere bron** (wellness-CTL uit intervals.icu tegenover een
+eigen EWMA over rit-TSS), **andere korrel** (dag tegenover maand) en **andere afronding**. De HANDOFF-debt
+noemt alleen de korrel.
+
+De wellness-CTL is in Cadans wél beschikbaar — `formStateFromWellness_`
+(`packages/engine/src/readiness.ts:376`) is de port van `getFormScore_` en levert exact `{form, ctl, atl,
+ramp}`. Hij is op deze pagina alleen niet in bereik: `Niveau.tsx` haalt settings, activities en power-curve
+(`apps/web/src/pages/Niveau.tsx:33`) en geen wellness. Dit is dus een architectuur-gevolg, geen vergissing —
+en dat maakt de R4-vraag scherp: is de goal-gap een wellness- of een activiteiten-metriek?
+
+**Blast-radius.** `currentCtl` voedt niet alleen de CTL-gap-rij maar ook `projectie.currentCtl` → de
+CTL-ramp → de FTP-band. Het is dezelfde `Niveau 49 vs Vorm 50`-afwijking die debt (l) tak (1) heeft
+AFGEVINKT als "granulariteits-artefact, GEEN engine-unificatie nodig". Die conclusie was op de VISUELE
+vraag correct (twee getallen op twee tabs) maar dekt de invulling niet: hetzelfde getal is hier een
+engine-INPUT. Zelfde vorm als V1-(b) — een claim afgesloten tegen de verkeerde meetlat.
+
+## Afgesloten in a3, met bewijs — geen gat
+
+- **`bepaalFaseVoorDatum_` (`src/Doel.gs:346`)** — de wrapper om `eventFase_` is niet geport; Cadans bouwt
+  de velden inline in `apps/web/src/lib/proposal.ts:206-229`. Nagelopen, veld voor veld: `macroFase`/`fase`
+  identiek (`eventFase_` is 1-op-1, `packages/engine/src/phase.ts:96`); `wekenTotEvent` ← `macro.wekenTot`
+  (`apps/web/src/lib/proposal.ts:229`, zelfde mapping als `src/Doel.gs:354`); `eventName` ←
+  `macro.hoofdEvent.naam` (`apps/web/src/lib/proposal.ts:227`, zelfde hoist als `src/Doel.gs:400`); de
+  `vasteMeso`-fallback ← `computeMacroPhase` (`apps/web/src/lib/proposal.ts:211`), en die fn is 1-op-1
+  (`src/Settings.gs:295` ↔ `packages/engine/src/phase.ts:31`). De ref-keuze
+  (`src/Doel.gs:371`: vandaag als de te plannen week de huidige is, anders de maandag) is voor Cadans
+  irrelevant: `buildWeekProposal` bouwt uitsluitend de week rond `todayISO`
+  (`apps/web/src/lib/proposal.ts:192`), dus de tak is altijd "vandaag". De HANDOFF-debt "eventDriven-synthese-naad"
+  (`eventDriven = (macro != null)`) is EQUIVALENT en kan dicht: `eventFase_` geeft null precies dan als GAS
+  `eventDriven: false` zet, en `planModusLabel` (`apps/web/src/lib/proposal.ts:158`) voedt de geporte
+  `planModeLabel_` met exact dat. De gedropte velden (`week`, `isTestWeek`, `dagenTotEvent`, `taperIsTrip`
+  los) hebben in GAS alleen Sheet-tab-lezers (`src/Doel.gs:94`, `src/Proposal.gs:19`, `src/Settings.gs:215`,
+  `src/Proposal.gs:124`) — de kolom "display (sterft)".
+- **`dashWeekplanByDate_` (`src/WebApp.gs:179`)** — de lezer van het durabele plan-van-record. Volledig
+  gedekt door V7; de migratie-scope-klok staat er al. Niet gedupliceerd. Eén toevoeging: hij leest ALLE
+  `weekplan_*`-keys ineens (`src/WebApp.gs:181-192`), dus de migratie-export is één DocProps-dump — geen
+  per-week-loop. Relevant zodra de migratie-chat begint.
+- **`sumTssVanafDatum_` (`src/WebApp.gs:280`)** — een som over Activiteiten-kolom I vanaf een datum. Enige
+  aanroeper is `src/WebApp.gs:1324`, binnen het `voortgangPct`-blok. Dat blok is V1-(c) en bestaat in Cadans
+  niet; de helper is een implementatie-detail daarvan, geen eigen gat.
+- **`syncActivitiesIncremental_` (`src/Sync.gs:263`)** — dít is juist de arm die Cadans WÉL heeft
+  (`refreshActivities` → `src/WebApp.gs:1598` ↔ `POST /api/sync/activities`,
+  `workers/api/src/routes/api.ts:501`). Het ontbrekende pad is `syncAll`, en dat is drie dingen die alle drie
+  al vastliggen: de reconcile-arm (V4), de athlete-arm (V5) en het volledige-sync-venster + `last_sync`-stempel
+  (HANDOFF §Geparkeerde debts, "VOLLEDIG-SYNC-PAD ONTBREEKT"). Eén noot erbij, klein: GAS stempelt `last_sync`
+  BEWUST niet bij de top-up (`src/WebApp.gs:1595-1596`) zodat "Laatst gesynct" de laatste VOLLEDIGE sync
+  betekent. Cadans' "Laatst gesynct" leest een in-memory sessie-variabele
+  (`apps/web/src/lib/syncStatus.ts:13`) die na een page-reload leeg is. Zelfde label, ander begrip; de
+  D1-kolom die het echte begrip zou dragen is de dode `sync_state.last_sync` uit V6.
+
+## R2-a — samenvatting (a1 + a2 + a3)
+
+**De 109 zijn verklaard.** De 14 met een geporte aanroeper waren grotendeels R1-werk. Van de 95 zonder
+geporte aanroeper is nu elke laag geraakt: de fase/volume-inputs (V1, V2), het planner-vangnet (V3), de
+sync-armen (V4, V5), de dode D1-kolommen (V6), de snapshot-laag (V7), de event-tailoring (V8), de coach-ctx
+(V9), de week-load (V10), de dagkaart-bouwer (V11), de waarom-onthulling (V12) en het doel-profiel (V13).
+Verklaard-en-geen-gat blijven: de 16 entrypoints, de Sheet-IO, de push-keten (FASE C), de ride-detail-keten
+(2d), de vier zone-resolutie-units uit V5 en de vier hierboven.
+
+**Eén wortel draagt zes vondsten.** V7's ontbrekende plan-van-record verklaart R1-B0-i/ii/iii, R1-A2, R1-B2,
+R1-B8, plus — nieuw in a3 — V10 (de krimpende noemer), V11 (de dubbele coach-stem én de "Rustdag" op een
+gemiste dag) en de onbereikbaarheid van V9's coach-ctx op verstreken dagen. Wie die laag bouwt, dicht ze
+allemaal tegelijk; wie hem niet bouwt, dicht er geen.
+
+**Het patroon uit R1 houdt, met één uitbreiding.** R1: geporte fn, inert omdat zijn voedende fn niet meekwam.
+a3 voegt de scherpere variant toe (V10): geporte fn, GETEST, en met nul aanroepers — `snapshotDayAction_` is
+de reparatie die GAS voor exact dit probleem bouwde, en hij ligt ongebruikt in de engine. De matrix ziet hem
+als naam-match in de rustigste cel.
+
+**Wat vraagt welk R4-verdict** (richting, geen verdict):
+
+| bevinding | vraag voor R4 | toets aan |
+|---|---|---|
+| V8 event-tailoring | krijgt de rijder de doel-specifieke prikkel? | MODEL |
+| V9 coach-ctx | mag de coach het doel bij naam noemen; is de patroon-waarschuwing gewenst? | MODEL |
+| V10 week-load | de kaart liegt over de noemer — vormgeving-drift | GAS is norm |
+| V11 dubbele coach-stem + "Rustdag" | idem — de kaart claimt iets onwaars | GAS is norm |
+| V12 waarom-onthulling | terug ja/nee; en of de Garmin-schatting daarin hoort | GAS is norm, m.u.v. Garmin |
+| V13 goal-CTL | is de goal-gap een wellness- of activiteiten-metriek? | MODEL |
+
+V10 en V11 zijn de enige twee uit a3 die zonder de snapshot-laag te bouwen zijn NIET te dichten — ze zijn
+gevolg, geen keuze. V12 is een losse UI-klus. V8, V9 en V13 zijn elk een adapter van minder dan tien regels,
+mits R4 ze wil.
+
+**Vijf open bouw-vragen staan nu naast elkaar** (niet beslissen in R2): V3's vier carry-forward-vragen, V7's
+plaats-en-schrijver van het plan-van-record, plus a3 legt er geen nieuwe naast — V10/V11 hangen aan V7's
+vraag, V8/V9/V13 zijn adapters zonder architectuurkeuze.
+
+## Nog open in R2 (volgende chats)
+
+R2-a is KLAAR. Resteert:
+
+- **R2-b** — de 14 verschil-fns die R1 liet liggen (matrix-groep 3 + 4), inclusief `buildWorkout`, de laatste
+  van de twee "zwaarste onbekonden". NB: a3 heeft `buildWorkout`s event-tak al geraakt (V8); de rest van de
+  body is ongelezen.
+- **R2-c** — de 115 alleen-in-Cadans-units, gefilterd op "neemt een beslissing".
+
+Daarna R3 (trainings-review tegen `docs/TRAININGSMODEL.md`) en R4 (verdict-doc per item;
+verdict-criterium = het MODEL, niet GAS).

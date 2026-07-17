@@ -11,7 +11,7 @@ live tot cutover.
 
 ## Stand
 
-**R2 LOPEND — batch a1 + a2 klaar (juli 2026).** Findings-doc `docs/R2-ENGINE-END-AUDIT.md`. **Findings,
+**R2-a KLAAR — a1 + a2 + a3 (juli 2026).** Findings-doc `docs/R2-ENGINE-END-AUDIT.md`. **Findings,
 GEEN verdicts** (die zijn R4; verdict-criterium = het MODEL, niet GAS). Docs-only, engine ongemoeid,
 niets gedeployd, vloeren ongewijzigd.
 - **R2-SCOPE (Daan akkoord 17-07-2026) — drie brokken, in volgorde.** R1 bewees: body-gelijkheid is
@@ -121,11 +121,24 @@ niets gedeployd, vloeren ongewijzigd.
   week-vorm of `planner_days.voorgesteld_type` dag-vorm)? wie schrijft het, en wanneer, nu er geen
   "Genereer voorstel"-knop is? is `gedaan` een afgeleide bij lezen of een kolom bij schrijven (= V3's
   vierde open punt)?
-- **NOG OPEN IN R2-a** (volgende chat, uit de 95): de coach-inputs (`coachEventFromMacro_`,
-  `coachPatternCount_`, `dashDayCard_`, `dashWeekplanByDate_`, `sumTssVanafDatum_`, `getWeekLoad_`),
-  `buildGoalProfile_`, `eventContextFrom_` (`Algorithm.gs:711`), `bepaalFaseVoorDatum_`,
-  `garminHeuristic`, `syncActivitiesIncremental_`. Daarna R2-b (14 fns, incl. `buildWorkout`) en
-  R2-c (115, gefilterd).
+- **R2-a3 KLAAR — V8/V9/V10/V11/V12/V13 + de sluiting van R2-a** (117 inhouds-asserties groen,
+  100% dekking; 10 eigen ankers waren fout en zijn vóór publicatie gecorrigeerd). **V8**
+  `eventContextFrom_` niet geport -> een week MET A-event is byte-identiek aan een week zonder
+  events; GAS' `long_z2 && eventCtx`-tak slaat het variant-pool over, dus met een hoofdevent
+  gebruikt GAS dat pool NOOIT. Gedraaid: 2 van 5 dagen wijken af (week 472'/358 TSS vs 490'/382).
+  Landmijn voor de bouw: GAS' veld heet `hm`, Cadans' `hoogtemeters` -> naïeve adapter = event-naam
+  wél, klim-simulatie NIET. **V9** de coach-ctx is `{fase}` i.p.v. `{fase,event,patternCount}`;
+  gedraaid over 24 combinaties: race 6/24 afwijkend (alleen de NAAM: "je doel"), trip 15/24;
+  `coachPatternCount_` wordt uitsluitend achter `isEndurance` gelezen -> bij een race 0/24.
+  **V10** `getWeekLoad_` niet geport -> de noemer krimpt: ma 0% · wo 23% · vr 124% · zo **602% van
+  plan** (GAS bevriest de snapshot + klemt op 0..100). `snapshotDayAction_` = GAS' eigen reparatie
+  hiervoor, IS geport + getest maar heeft NUL aanroepers = nieuwe klasse naast R1's "inerte fn".
+  **V11** `dashDayCard_` blankt de plan-rationale zodra er een rit is; Cadans niet -> done-VANDAAG
+  toont TWEE coach-blokken (gedraaid). Verstreken gemiste dag = "Rustdag" i.p.v. GAS' 'gepland'.
+  **V12** de "Waarom deze training?"-uitklapper (6 regels) ontbreekt = de enige GAS-plek waar
+  meso-factor (V2) en zone-debt (R1-B4) zichtbaar waren. **V13** `buildGoalProfile_`-mirror is
+  getrouw (debt kan dicht), maar de CTL-input verschilt op drie assen tegelijk: bron
+  (wellness vs activiteiten-TSS), korrel (dag vs maand) en afronding.
 - **WERKWIJZE BEVESTIGD (R2 = 4e keer):** chat leest zelf (read-only kloon + grep), NUL CC-prompts
   voor het lezen. **DRAAI HET** — de bundel-route (esbuild, buiten de repo-tree, `TZ=Europe/Amsterdam`)
   corrigeerde in deze batch twee vermoedens: mesoFactor bleek vermogen te schalen i.p.v. duur, en de
@@ -199,10 +212,9 @@ hieronder alleen wat een volgende chat moet weten om niet verkeerd te beginnen.
   de drie fouten zaten in de 22 erbuiten. In batch C ving de mechanische toets (105 ankers geëxtraheerd, 135
   met een inhouds-assertie bestand+regel+substring gedraaid) **drie foute ankers in de eigen tekst** vóór het
   committen. Bestaan-en-in-bereik is NIET genoeg: alle drie wezen naar bestaande regels.
-- **FOCUS VOLGENDE CHAT:** **R2-a3** — de rest van de 95 (coach-inputs, `buildGoalProfile_`,
-  `eventContextFrom_`, `bepaalFaseVoorDatum_`, `garminHeuristic`, `syncActivitiesIncremental_`).
-  Verse chat. Geen engine-wijziging; findings -> R4-verdicts -> aparte bouw-chats. Verdict-criterium
-  blijft: toets aan het MODEL (`docs/TRAININGSMODEL.md`), niet aan GAS.
+- **FOCUS VOLGENDE CHAT:** **R2-b** — de 14 verschil-fns uit matrix-groep 3+4, incl.
+  `buildWorkout` (a3 raakte alleen z'n event-tak, V8). Daarna R2-c (115 alleen-in-Cadans,
+  gefilterd). Verse chat. Geen engine-wijziging; findings -> R4-verdicts -> aparte bouw-chats.
 
 **R0 KLAAR — module 1 (AST-sorteermachine) + 2a (fundering) + 2b (matrix/oracle/entrypoint-map) + 2c (bewaker-fix)
 (juli 2026).** Commits: 2a `8e66ded`, 2b `2093bcd`, 2c `24e7a4f` (+ module 1 `03804eb`/`0fac374`/`f48ed6b`/`7ead6b8`
