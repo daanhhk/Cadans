@@ -11,8 +11,8 @@ live tot cutover.
 
 ## Stand
 
-**R2-a + R2-b KLAAR (juli 2026).** Findings-doc `docs/R2-ENGINE-END-AUDIT.md` (1294 regels), gepind:
-https://raw.githubusercontent.com/daanhhk/Cadans/20430760126bee8c4c647e5c1237ec303ee4d5c2/docs/R2-ENGINE-END-AUDIT.md **Findings,
+**R2 KLAAR — a + b + c (juli 2026).** Findings-doc `docs/R2-ENGINE-END-AUDIT.md` (1707 regels), gepind:
+https://raw.githubusercontent.com/daanhhk/Cadans/ecd953003d3f09e5114a79fd9db59f5be5dbd208/docs/R2-ENGINE-END-AUDIT.md **Findings,
 GEEN verdicts** (die zijn R4; verdict-criterium = het MODEL, niet GAS). Docs-only, engine ongemoeid,
 niets gedeployd, vloeren ongewijzigd.
 - **R2-SCOPE (Daan akkoord 17-07-2026) — drie brokken, in volgorde.** R1 bewees: body-gelijkheid is
@@ -20,7 +20,7 @@ niets gedeployd, vloeren ongewijzigd.
   **R2 keert de as om** en sorteert op bereikbaarheid + invulling; de matrix levert de inventaris.
   **a** = wat GAS doet en Cadans niet (alleen-in-GAS ∩ web-server-bereik = **109 units**, na filter
   op SelfTest/TelegramBot/Secrets/Script.html). **b** (KLAAR) = de 14 verschil-fns die R1 liet liggen
-  (matrix-groep 3+4, incl. `buildWorkout`). **c** = de 115 alleen-in-Cadans, gefilterd op "neemt een
+  (matrix-groep 3+4, incl. `buildWorkout`). **c** (KLAAR) = de 115 alleen-in-Cadans, gefilterd op "neemt een
   beslissing". Buiten R2: het MODEL-risico (matrix-gat 1) → R3; de 140 body-gelijke fns integraal.
 - **Van de 109: 14 hebben een geporte aanroeper** (de gap-regel — grotendeels al door R1 geraakt),
   **95 hebben alléén niet-geporte aanroepers** = hele lagen. Die 95 komt de matrix per constructie
@@ -225,6 +225,104 @@ niets gedeployd, vloeren ongewijzigd.
   off-by-one was met lezen alleen niet te zien. **REKEN JE EIGEN WERK NA:** a1 4/14 · a2 18/122 · a3 10/118 · b 4/116 locatie-ankers wezen naar de
   verkeerde regel — elke keer mechanisch gevangen vóór publicatie. Idem de CC-rapporten: git fetch +
   byte-diff + de asserties opnieuw tegen de GECOMMITTE bytes — twaalf keer schoon.
+- **R2-c KLAAR — de 115 alleen-in-Cadans (G2 + V21-V24).** 4 vondsten. **108 van de 115 liggen in
+  `apps/web/src/lib`, 7 in de engine — en die zeven zijn zonder uitzondering seam, shim of geneste
+  helper: Cadans verzint NIETS in de engine.** Hij verzint in de laag die GAS in `WebApp.gs` +
+  `Script.html` had — precies waar "GAS is norm" geldt. Ruim tachtig vallen af met bewijs: 20 ×
+  HTTP-transport (`apps/web/src/lib/api.ts`, nul condities op trainingsdata; de enige conditie is
+  `apps/web/src/lib/api.ts:157`'s 404→null = protocol), 5 × Intl-formatter, 9 × geheugenvlag (`plannerSignal` = de
+  entrypoint-map's `regenerateWeb`-vervanger; `syncStatus` = a3's begrip-verschil), de units die
+  a/b al raakten, en de **hernoemde ports** — `pickerState.ts` (8, GAS `openPicker`/`pk*`,
+  `src/Script.html:2065-2160`), `findCategory`/`findVariant`/`libraryOverride` (`trnCat_`/`trnVar_`/
+  `pkPickLibrary`), `deriveDagtype` (`src/Script.html:1035`), `silhouetSegments` (`zoneBar`,
+  `src/Script.html:236`, `W/H/MINW/GAP` 1-op-1). De matrix ZIET die GAS-kant (de bewaker telt `pkGo`/
+  `trnOpenCat` e.a. als string-handler-edges) maar koppelt niet: geen alias ⇒ "alleen-in-Cadans".
+- **G2 — GEREEDSCHAP: de 115 is de inventaris van TWEE MAPPEN, niet van Cadans.** `cadansSources()`
+  (`tools/audit/run.mjs:115`) scant exact `packages/engine/src` + `apps/web/src/lib`, alleen `.ts`.
+  Gemeten: **290 units in het corpus, 177 erbuiten** — `apps/web/src/components` 85 ·
+  `workers/api/src` 53 · `apps/web/src/pages` 30 · overig 9 · `packages/shared/src` 0. De hele
+  Worker-laag en de hele component-laag vallen er per constructie buiten, inclusief plekken waar R1
+  al beslissingen vond (`workers/api/src/db/repo.ts:366-367`). c's tegenhanger van a's gat 6 en G1:
+  inventaris, geen sluiting. Verbreden kan, maar verschuift ALLE matrix-cijfers → eigen beslissing.
+- **V21 `coachPlannedArg_` — de FIX-4-seam staat op `null`, en de vuller ligt geport in de engine.
+  DE ZWAARSTE VAN c.** `coachFeedback_` bepaalt de geplande prikkel in twee trappen
+  (`packages/engine/src/coach.ts:456`): `coachZmFromSegs_(planned.segmenten)` →
+  `coachIntentFromZones_`, en pas als dat niets geeft `intentFromType_(planned.type)`. GAS vult die
+  arg ALTIJD (`dashDayCard_`, `src/WebApp.gs:660` `segmentsFromBlokken_(wpEntry.blokken) ||
+  segmentsFromIntent_(wpEntry.intent)` → `src/WebApp.gs:666`). Cadans geeft `segmenten: null`
+  (`apps/web/src/lib/schema.ts:524`) ⇒ **FIX 4 permanent uit; de coach draait op het type-ETIKET.**
+  Beide vullers zijn geport + geëxporteerd (`packages/engine/src/niveau.ts:47` + `packages/engine/src/niveau.ts:67`) en de blokken
+  liggen ter plekke (`toSession(plannedWo).blokken`) — V15's vorm, maar client-side en ZONDER
+  engine-signatuur-wijziging. GEDRAAID: **4 van 9 types classificeren anders → 8 van 18 combinaties**
+  wijken af in state/narrative/adapt (`sweet_spot` sweetspot→drempel · `threshold` drempel→vo2 ·
+  `recovery` herstel→duur · `combo_long_with_efforts` duur→drempel). Zelf-controle: zelfde harness
+  mét dezelfde segmenten → 0 verschil. `combo_long_with_efforts` is letterlijk het geval waarvoor
+  FIX 4 gebouwd is (`src/WebApp.gs:714-716`). **NUANCE, en hij de-escaleert: aanzetten is NIET
+  automatisch beter** — GAS' route noemt een hersteltraining 'duur' en een drempel-sessie 'vo2',
+  want de drempel (`packages/engine/src/coach.ts:123` `Math.max(8, total*0.12)`) weegt buckets tegen
+  de TOTALE duur incl. warmup/rust. GAS' eigen fix heeft een defect. R4-vraag = **waar hoort de
+  planned-prikkel vandaan: etiket of blokken, en welke drempel** → MODEL. Bereikbaar VANDAAG
+  (done-vandaag + gemist; op verstreken dagen niet — V9's bereikbaarheids-noot).
+- **V22 `weekTss` — de parity-claim klopt op het venster, niet op het filter.** GAS
+  `actualTssByDate_` filtert `CYCLING_TYPES` (`src/Algorithm.gs:670`); Cadans' `weekTss`
+  (`apps/web/src/lib/niveau.ts:111`) leest per rij alleen idx0+idx8 — idx1 (type) komt in de body
+  niet voor, terwijl `apps/web/src/lib/niveau.ts:109` letterlijk "repliceert GAS `actualTssByDate_`" claimt. GEDRAAID: 2×
+  Ride (80+60) → beide 140 (zelf-controle); + 1× Run (55) → **Cadans 195, GAS 140.** De Vorm-tab
+  (`apps/web/src/components/vorm/MetricRow.tsx`) telt hardlopen dus mee in de week-belasting.
+  Bereikbaar: noch de sync-route noch `readActivities` (`workers/api/src/db/repo.ts:291`) filtert op
+  type. VIERDE consument van V4's type-filter-loze de-facto regel. GAS is norm → drift.
+- **V23 `tsbZone` — nagebouwd op de VERKEERDE MEETLAT, uitkomst byte-identiek.** De comment
+  (`apps/web/src/lib/tsb.ts:3-5`) zegt "de engine kent GEEN 3-zone TSB-drempelfunctie … dus het
+  ontwerp is hier de autoriteit". **Premisse onwaar:** GAS heeft 'm, in de WEB-APP-laag —
+  `src/Script.html:1395` `(tsb < -10) ? 'over' : (tsb <= 5 ? 'prod' : 'fris')` + `BM_BAND`
+  (`src/Script.html:1379`, banden `src/Script.html:1380-1382`). Drempels, labels én kleur-tokens: **gelijk** (vermoedelijk omdat
+  `design/src/conditie.jsx` beide voedde). **Geen drift — maar het is V1-(b)'s val, letterlijk:**
+  "de engine kent het niet" als bewijs dat GAS het niet kent. Was het ontwerp ooit afgeweken, dan
+  had niemand het gezien. Comment corrigeren hoort bij de bouw-chat die het bestand toch aanraakt.
+- **V24 `plannedForDone` — Cadans' vervanger van de bevroren snapshot-entry.** GAS raakt een
+  verstreken dag NIET aan: `snapshotDayAction_` → freeze → de vorige entry schuift onveranderd door
+  (`src/Algorithm.gs:186`). Cadans **regenereert** met `buildWorkout` op
+  `apps/web/src/lib/proposal.ts:426`, met de settings van NU. Nieuw t.o.v. R1-B0 (dat vond alleen
+  dát hij null is) en V7 (dat vond het principe): **dit is de call-site.** Drift op vier assen —
+  FTP/gewicht, `mesoWeek` (V2), `slot` (V14), `macroFase`. Type-keuze niet (die komt uit
+  `voorgesteldType`). **LANDMIJN: wie V7 bouwt en `voorgesteld_type` vult, wekt ongemerkt de
+  verleden-dag-vergelijking** — HANDOFF's "aanpak B", een PRODUCTbeslissing, geen bijvangst. Vierde
+  landmijn naast V8's `hm`, V14's 7 rijen en `zones`/`intent`. Zelfde vorm: het werkt half en zwijgt.
+- **Afgesloten in c, met bewijs:** de dekking-verrijkings-loop (`apps/web/src/lib/proposal.ts:267-292`)
+  is een nabouw met een andere bron — GAS leest `feedback.details` (snapshot-afhankelijk:
+  `computeZoneDebt_` keert terug op `src/Algorithm.gs:495-498` zonder `weekplan_<maandag>`), Cadans
+  herbouwt uit `zoneActsByDateFromTab_(activities)` ⇒ **robuuster**. Maar `apps/web/src/lib/proposal.ts:269`
+  `if (!d.train || !d.gedaan) continue` ⇒ dood (V4), én per constructie grotendeels redundant met
+  `rollingZoneCoverage_` (elke voltooide dag van deze week valt binnen `[today-7…today]`). GEDRAAID:
+  `gedaan` false vs true → identieke week. DERDE stilgelegde consument van V4. Verder afgesloten:
+  de override-datumeis (`apps/web/src/lib/proposal.ts:374` vs GAS `src/Algorithm.gs:174` — GAS heeft géén datum-eis; via de UI
+  onbereikbaar), `eventsSummary` (display-only), `coachNarrative.ts` + `coach.ts` (**nul
+  GAS-tegenhanger, en dat is hier het ANTWOORD, geen vraag** — nieuwbouw → R3/R4), `tierProgress`.
+- **R2-SLUITING (a+b+c) — 24 vondsten, 2 gereedschaps-bevindingen.** a: G1 + V1-V13 (109 units). b:
+  V14-V20 + 1 landmijn (14 fns). c: G2 + V21-V24 (115 units). **R1's kernles overleefde alle drie:
+  GEEN van de 24 vondsten zit in een fn-body.** Ze zitten in wie de inputs vult (a), wat een
+  parameter betekent (b), en wat er in de laag ERBOVEN opnieuw is bedacht (c). De matrix sorteert op
+  body-diff en wees exact NUL van de 24 aan — hij leverde de inventaris, en dat was zijn taak.
+  **Eén wortel draagt acht vondsten:** V7 verklaart R1-B0-i/ii/iii, R1-A2, R1-B2, R1-B8, V10, V11,
+  V9's onbereikbaarheid — plus c's V24 (de call-site) en de derde stilgelegde consument.
+  **DRIE KLASSEN, en ze zijn niet hetzelfde:** (1) geporte fn INERT — voedende fn kwam niet mee
+  (R1's patroon, a's 95); (2) geporte fn met NUL AANROEPERS — de laag ontbreekt (V10, V17 ×4); "nul
+  aanroepers" is een VRAAG, geen verdict (1 van 4 gaf drift); (3) **NAGEBOUWD MET EEN ANDERE BRON** —
+  de fn is geport én de nabouw ligt ernaast (V17's `dashActualsByDate_`, V18's `dashBeginAnker_`,
+  c's V21/V22/V24). Klasse 3 ziet de matrix het slechtst: geen naam-match, want de nabouw heet anders.
+  **Beide gereedschaps-assen liggen nu vast:** G1 (app-bereik-kolom zwak aan de Cadans-kant) + G2
+  (corpus = 2 mappen, 177 units erbuiten). Hints, geen bewijs — a/b/c leunden op de bron en op
+  DRAAIEN, niet op de kolom.
+- **WERKWIJZE (R2 = 6e bevestiging):** chat leest zelf (read-only kloon + grep), NUL CC-prompts voor
+  het lezen; CC doet alleen de close-out-commit. Matrix VIJF keer onafhankelijk gereproduceerd,
+  cijfers exact gelijk (115 alleen-in-Cadans). **DRAAI HET** — c's twee sterkste vondsten (V21's
+  8/18, V22's 195-vs-140) zijn beide gemeten, niet gelezen, elk met een zelf-controle die de fixture
+  uitsluit. **REKEN JE EIGEN WERK NA:** a1 4/14 · a2 18/122 · a3 10/118 · b 4/116 · **c 7/103**
+  locatie-ankers wezen naar de verkeerde regel — vier verkeerde regelnummers en drie paden zonder
+  map, alle mechanisch gevangen vóór publicatie. Idem het CC-rapport: git fetch + byte-diff (0
+  verschil) + de 103 asserties opnieuw tegen de GECOMMITTE bytes — **veertien keer schoon**.
+  PROMPT-LES: mijn `grep -c "^## V2"`-verificatie was te grof (vangt ook `## V2`/`## V20`); CC meldde
+  het en bevestigde de vier koppen apart. Anker verificatie-greps op de VOLLEDIGE kop, niet op een prefix.
 
 **R1 KLAAR — 21 van de 21 (juli 2026).** Findings-doc `docs/R1-PORT-CORRECTHEID.md` (1231 regels), gepind:
 https://raw.githubusercontent.com/daanhhk/Cadans/4b6a8774a0f2d0e8e090fb055973ef078e466f25/docs/R1-PORT-CORRECTHEID.md
@@ -293,9 +391,11 @@ hieronder alleen wat een volgende chat moet weten om niet verkeerd te beginnen.
   de drie fouten zaten in de 22 erbuiten. In batch C ving de mechanische toets (105 ankers geëxtraheerd, 135
   met een inhouds-assertie bestand+regel+substring gedraaid) **drie foute ankers in de eigen tekst** vóór het
   committen. Bestaan-en-in-bereik is NIET genoeg: alle drie wezen naar bestaande regels.
-- **FOCUS VOLGENDE CHAT:** **R2-b** — de 14 verschil-fns uit matrix-groep 3+4, incl.
-  `buildWorkout` (a3 raakte alleen z'n event-tak, V8). Daarna R2-c (115 alleen-in-Cadans,
-  gefilterd). Verse chat. Geen engine-wijziging; findings -> R4-verdicts -> aparte bouw-chats.
+- **FOCUS VOLGENDE CHAT: R3** — trainings-review tegen `docs/TRAININGSMODEL.md` (M1-M61,
+  append-only; BESLUITEN is het log, nooit de norm). R0/R1/R2 zijn KLAAR. R3 komt NIET uit de
+  matrix (gat 1: de rustigste cel, `effectiveMacroFase_`, is het zwaarste trainings-defect).
+  Daarna R4 = verdict-doc "cutover-blokkerend ja/nee" per item over R1+R2 samen;
+  verdict-criterium = het MODEL, niet GAS. Daan bouwt NIETS tot R4 klaar is. Verse chat.
 
 **R0 KLAAR — module 1 (AST-sorteermachine) + 2a (fundering) + 2b (matrix/oracle/entrypoint-map) + 2c (bewaker-fix)
 (juli 2026).** Commits: 2a `8e66ded`, 2b `2093bcd`, 2c `24e7a4f` (+ module 1 `03804eb`/`0fac374`/`f48ed6b`/`7ead6b8`
