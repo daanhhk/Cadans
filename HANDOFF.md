@@ -11,14 +11,15 @@ live tot cutover.
 
 ## Stand
 
-**R2-a KLAAR — a1 + a2 + a3 (juli 2026).** Findings-doc `docs/R2-ENGINE-END-AUDIT.md`. **Findings,
+**R2-a + R2-b KLAAR (juli 2026).** Findings-doc `docs/R2-ENGINE-END-AUDIT.md` (1294 regels), gepind:
+https://raw.githubusercontent.com/daanhhk/Cadans/20430760126bee8c4c647e5c1237ec303ee4d5c2/docs/R2-ENGINE-END-AUDIT.md **Findings,
 GEEN verdicts** (die zijn R4; verdict-criterium = het MODEL, niet GAS). Docs-only, engine ongemoeid,
 niets gedeployd, vloeren ongewijzigd.
 - **R2-SCOPE (Daan akkoord 17-07-2026) — drie brokken, in volgorde.** R1 bewees: body-gelijkheid is
   nodig, niet genoeg; geen van de 21 vondsten zat in een body. De matrix sorteert exact op body-diff.
   **R2 keert de as om** en sorteert op bereikbaarheid + invulling; de matrix levert de inventaris.
   **a** = wat GAS doet en Cadans niet (alleen-in-GAS ∩ web-server-bereik = **109 units**, na filter
-  op SelfTest/TelegramBot/Secrets/Script.html). **b** = de 14 verschil-fns die R1 liet liggen
+  op SelfTest/TelegramBot/Secrets/Script.html). **b** (KLAAR) = de 14 verschil-fns die R1 liet liggen
   (matrix-groep 3+4, incl. `buildWorkout`). **c** = de 115 alleen-in-Cadans, gefilterd op "neemt een
   beslissing". Buiten R2: het MODEL-risico (matrix-gat 1) → R3; de 140 body-gelijke fns integraal.
 - **Van de 109: 14 hebben een geporte aanroeper** (de gap-regel — grotendeels al door R1 geraakt),
@@ -139,11 +140,91 @@ niets gedeployd, vloeren ongewijzigd.
   meso-factor (V2) en zone-debt (R1-B4) zichtbaar waren. **V13** `buildGoalProfile_`-mirror is
   getrouw (debt kan dicht), maar de CTL-input verschilt op drie assen tegelijk: bron
   (wellness vs activiteiten-TSS), korrel (dag vs maand) en afronding.
-- **WERKWIJZE BEVESTIGD (R2 = 4e keer):** chat leest zelf (read-only kloon + grep), NUL CC-prompts
+- **R2-b KLAAR — de 14 verschil-fns (matrix-groep 3+4).** Alle veertien verklaard; **7 vondsten
+  (V14-V20) + 1 bouw-landmijn**. Zes van de tien groep-3-fns hadden een body-diff die **mechanisch**
+  tot exact één benoemde transformatie is teruggebracht (canon identiek na toepassing): vier ×
+  Sheet-IO-seam, plus `zoneTimesFromCell_` (`catch (e)`→`catch`) en `dslBlockFromRow_` (lokale var
+  `range`→`rng`) — die twee zijn een **gereedschaps-feit**, niet de port: regel-kandidaten 7+8 voor de
+  sorteermachine. **`buildWorkout` — R0's tweede "zwaarste onbekende" — is in zijn body NIETS**:
+  het enige verschil is `src/Algorithm.gs:2512` `var ftp = settings.ftp, lthr = settings.lthr;`, in GAS
+  nergens gelezen. Zes van zijn acht args zijn identiek gevuld; de twee die afwijken zijn V8 + V2.
+  **R1's kernles houdt: geen van de 7 vondsten zit in een body.**
+- **V14 `slot` = array-positie i.p.v. weekdag — LATENT, vuurt op V3's carry-forward.** GAS
+  `readPlanner` (`src/Planner.gs:396`) leest ALTIJD 7 rijen (`src/Planner.gs:401`) → `dagIdx` ís ma..zo. Cadans
+  `apps/web/src/lib/proposal.ts:239-240` mapt de array uit D1; `readPlannerDays`
+  (`workers/api/src/db/repo.ts:313`) garandeert geen 7 en `PUT /api/planner/:monday`
+  (`workers/api/src/routes/api.ts:658`) checkt alleen `Array.isArray`. `slot` voedt `selectVariant_`
+  (`packages/engine/src/planner.ts:1492`). GEDRAAID, 5 train-rijen i.p.v. 7: **4 van de 5 dagen een
+  andere variant** (472'/358 TSS → 456'/343); zelfde types (gaps rekenen op `datum`). Zelf-controle:
+  aangevuld tot 7 met `train:false` → exact de 7-rijen-uitkomst. Vandaag onbereikbaar (B1-editor
+  stuurt altijd 7 via `buildWeekForm`). **BOUW-REGEL: de carry-forward moet 7 rijen leveren, niet
+  alleen de train-dagen.** Neven: `mesoWeek === 4` is V2's DERDE baan (`packages/engine/src/planner.ts:494`
+  `isMesoRecovery` = de recovery-vlag van de hele allocator) → V2's off-by-one verschuift de
+  recovery-week naar blokweek 5 en zet 'm daarna voorgoed uit.
+- **V15 `gatherWeekplanEntries_` — twee banen, en de GAS-baan is DOOD.** In GAS één baan
+  (`src/Algorithm.gs:1015`, de cross-week archetype-recency-seed). In Cadans twee, tegengesteld gevuld:
+  `packages/engine/src/planner.ts:531` = dezelfde baan maar met reader **hardcoded `null`** (de
+  comment geeft het toe) → GEDRAAID `[]`, altijd; `workers/api/src/db/repo.ts:222` = een baan die GAS
+  niet heeft (mét echte D1-reader, via `GET /api/weekplans/recent` → `intentByDate`; GAS vult die
+  lookup met `intentZonesForDate_`, niet geport). **V7's bouw dicht dus niet alles wat hij belooft:**
+  baan 2 komt vanzelf tot leven, baan 1 niet — `assignWorkouts`' 12 params bevatten geen reader →
+  **engine-signatuur-wijziging**. Kosten gemeten: 1 dag/week herhaalt het archetype over de weekgrens
+  (`threshold_overunder` i.p.v. `_long`). Binnen één week roteert het wél (`packages/engine/src/planner.ts:741`). Neven:
+  `workers/api/src/db/repo.ts:218`'s `JSON.parse` mist GAS' `try/catch` → één corrupte rij laat de hele read falen.
+- **V16 `formatDate` — de shim faalt STIL op 2 van de 8 patronen.** `packages/engine/src/utils.ts:28`
+  is een herimplementatie (6 tokens) waar GAS aan `Utilities.formatDate` delegeert. GEDRAAID:
+  `EEE dd-MM` → `"EEE 17-07"` en `d/M` → `"d/M"`, letterlijk, zonder fout. **Geen gat vandaag, met
+  bewijs:** beide leven uitsluitend in `Proposal.gs` (display, sterft) + TelegramBot/`rpeStatusLines_`
+  (fase 6). Cadans' eigen 3 patronen zijn gedekt. **Landmijn voor fase 6** — V8's `hm`-vorm.
+- **V17 vier geporte fns met NUL productie-aanroepers** (V10's klasse ×4, maar drie redenen):
+  `dashStatsFromActivities_` (consument = `voortgangPct`, bestaat niet → hangt onder V1-(c)) en
+  `dslBlockFromRow_` (bouwsteen van de niet-geporte push-assembler → FASE C) zijn **verklaard, geen
+  gat**; `dashActualsByDate_` is vervangen door `buildDoneEntry`/`mergeDone`
+  (`apps/web/src/lib/schema.ts:301/324`) met andere regels (dag gesommeerd waar GAS de nieuwste rit
+  pakt, `src/WebApp.gs:126`) = V4's de-facto regel, derde consument; `dashBeginAnker_` → V18.
+  **"Nul aanroepers" is dus een vraag, geen verdict.**
+- **V18 `wkgSince` — de app claimt progressie waar GAS zwijgt. VORMGEVING → GAS is norm → DRIFT.**
+  Het getal is getrouw (`src/Script.html:1341` `dWkg` = `apps/web/src/lib/niveau.ts:94`). Het **label**
+  niet: GAS neemt de maand van de oudste Activiteiten-rij (`dashBeginAnker_` → `src/WebApp.gs:1290`),
+  Cadans het eerste serie-punt mét W/kg. GEDRAAID: oudste rit mét ftp+gewicht → **identiek**
+  (zelf-controle); oudste rit **zonder** ftp → GAS `beginLabel = null` → **de hele regel wordt
+  onderdrukt** (`src/Script.html:1342`), Cadans toont "+0,20 W/kg ↑ sinds jan '26" terwijl de data in
+  okt '25 begint = **twee onware claims**. Bereikbaar na de 365d-backfill (geen `icu_ftp` op oude ritten).
+- **V19 `getReadinessScore_` — vier inputs, alle vier verklaard, GEEN gat.** `fs` = port van GAS'
+  Sheet-pad; `wellness` = ongecombineerd, maar **GEDRAAID byte-identiek** voor alle 4 rpe-signalen
+  (`combineSignals_` raakt enkel `.signal`/`.reason`, die de fn niet leest); `reeks` = R1-C3 (93=93);
+  `checkin` = seam gevuld (`apps/web/src/lib/schema.ts:878`).
+- **V20 groep 4 was GEEN architectuurgrens** maar drie ongelijksoortige gevallen. **`getEvents` heeft
+  in de héle GAS-bron NUL aanroepers = dode code** — de naam-match is toeval; de werkende fn is
+  `getAllEvents_` (`src/Events.gs:171`, ongefilterd) en dát is Cadans' tegenhanger. Sterker: GAS'
+  dode filter (`e.datum >= today`) zou `eventFase_`'s Recovery-tak **breken** → Cadans' keuze is nódig.
+  `getPowerCurve` = RPC-entrypoint, geport als route. `getActivities` = de Worker is getrouw (venster
+  28 ✓, sort expliciet gespiegeld). Eén echte drift: **`getWellness` 30 → 60**
+  (`workers/api/src/integrations/wellness.ts:97`) — méér historie, dus geen verlies, maar stilzwijgend.
+- **BOUW-LANDMIJN `zones` vs `intent` — vuurt op V7's bouw.** GAS' snapshot draagt BEIDE velden
+  (`src/Algorithm.gs:243` + `src/Algorithm.gs:244`) en heeft twee lezers die elk een ander veld pakken: `computeZoneDebt_`
+  leest `intent` (minuten, correct), `rollingZoneCoverage` leest `.zones` (string-array, via
+  `intentZonesForDate_`). Cadans levert beide lezers hetzélfde object (`apps/web/src/lib/proposal.ts:136`
+  `const it = e.intent`) en heeft `rollingZoneCoverage_` dáárop herschreven
+  (`packages/engine/src/weekprep.ts:76` `if (iz.low > 0) cov.low++`). Omdat `ensureIntent_` de duur
+  óók over `low` verdeelt terwijl `zones` alleen de WERK-zone noemt, telt élke kwaliteitsrit in Cadans
+  óók als low-dekking. GEDRAAID, week met uitsluitend kwaliteitsdagen: GAS `dekking.low = false`,
+  Cadans `true` → de allocator denkt dat de duur-basis gedekt is zonder één Z2-rit. Zelf-controle:
+  lege `intentByDate` → beide op de IF-fallback, identiek = **de stand van vandaag** (R1-B3), dus
+  onbereikbaar tot V7. Voetnoot V6: `planner_days.dag` is een **negende** dode kolom
+  (`workers/api/src/db/repo.ts:362` `dag: null`, nergens gelezen).
+- **DRIE LANDMIJNEN liggen nu naast V8's `hm`** — V14 (carry-forward moet 7 rijen leveren), V16
+  (`EEE`/`d/M` falen stil in fase 6), `zones`-vs-`intent` (V7 activeert een verkeerde dekking-telling).
+  Alle drie dezelfde vorm: **het werkt half en zwijgt erover.** **Geen nieuwe open bouw-vraag** — V14
+  valt binnen V3's vierde punt, V15 + `zones`/`intent` binnen V7's plaats-en-schrijver-vraag. Maar b
+  maakt er twee **duurder**: wie V7 bouwt moet óók de reader-seam in `assignWorkouts` en het
+  `zones`/`intent`-onderscheid meenemen, anders bouwt hij de laag en blijft de helft dood.
+- **WERKWIJZE BEVESTIGD (R2 = 5e keer):** chat leest zelf (read-only kloon + grep), NUL CC-prompts
   voor het lezen. **DRAAI HET** — de bundel-route (esbuild, buiten de repo-tree, `TZ=Europe/Amsterdam`)
   corrigeerde in deze batch twee vermoedens: mesoFactor bleek vermogen te schalen i.p.v. duur, en de
-  off-by-one was met lezen alleen niet te zien. **REKEN JE EIGEN WERK NA:** 4 van de eerste 14
-  locatie-ankers wezen naar de verkeerde regel — mechanisch gevangen vóór publicatie.
+  off-by-one was met lezen alleen niet te zien. **REKEN JE EIGEN WERK NA:** a1 4/14 · a2 18/122 · a3 10/118 · b 4/116 locatie-ankers wezen naar de
+  verkeerde regel — elke keer mechanisch gevangen vóór publicatie. Idem de CC-rapporten: git fetch +
+  byte-diff + de asserties opnieuw tegen de GECOMMITTE bytes — twaalf keer schoon.
 
 **R1 KLAAR — 21 van de 21 (juli 2026).** Findings-doc `docs/R1-PORT-CORRECTHEID.md` (1231 regels), gepind:
 https://raw.githubusercontent.com/daanhhk/Cadans/4b6a8774a0f2d0e8e090fb055973ef078e466f25/docs/R1-PORT-CORRECTHEID.md
