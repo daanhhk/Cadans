@@ -608,3 +608,208 @@ T6 is bewust niet uitgegeven (de VO2max-nevenmeting is onder T4 genoteerd); de r
 append-only en wordt niet hernummerd. **T7 is INGETROKKEN door T10 en blijft letterlijk staan** —
 zoals M3 voorschrijft voor het model, en zoals R1's micro-correctie voor dit soort documenten
 vastlegde. Een ingetrokken vondst wordt niet herschreven en niet hergebruikt.
+
+---
+
+## b — DOSERING (§1 + §7 · M7-M9 + M43-M48 · 7 NORM + 2 HEURISTIEK)
+
+**Scope.** De negen dosering-regels: §1 doelfunctie (M7 rendement/uur, M8 uitsluitingen, M9 schaal-eis
+3u↔15u) en §7 belasting/intensiteit (M43 piramidaal, M44 sweet-spot-ruggengraat, M45 polarized-drempel
+[HEURISTIEK], M46 geen restpost, M47 totale-belasting-primair [HEURISTIEK], M48 weegt voorgaande weken).
+Model-first: begin bij de regel, meet de plek in de app die de claim maakt. `b` erft `a`'s proefopstelling;
+`a`'s uitkomst (de vlakke 36' — T10) is hier de invoer.
+
+### Methode-b
+
+Alle metingen GEDRAAID via de a-bundel (esbuild van `apps/web/src/lib/proposal.ts` → `buildWeekProposal`
++ engine-internals), buiten de repo, `TZ=Europe/Amsterdam`, lokale datumdelen. **Standaard-fixture = a's
+fixture** (week ma 2026-07-13, `todayISO` = die maandag; ftp 280; doelStart varieert per fase; profielen
+via `doel`), MÉT de a3-fixture-correctie: `Date` gestubt op 2026-07-13 (bundel-niveau) zodat
+`allocateQualityWeek_`'s ambient klok (`packages/engine/src/planner.ts:537` `const allocToday =
+stripTime_(new Date())`) samenvalt met `input.todayISO` — anders meet je de `keyIntensity`-noodroute i.p.v.
+de allocator die de app draait. Volume gevarieerd via dag-AANTAL met normale 60-90'-sessies (realistisch),
+NIET via proportioneel oprekken van een vast 4-dagen-week (dat conflateert "langere sessies" met "meer
+volume" en produceert artefacten aan beide uiteinden). Fase gezet via `doelStart`: computeMacroPhase
+(`packages/engine/src/phase.ts:31`) → week 1-4 Base, 5-8 Build, 9-11 Peak, 12+ Test.
+
+**Zelf-controles (sluiten de fixture uit).**
+- A (reproductie): FTP 405' Build → HIGH 77' hoog-intent, TSS 303 — reproduceert T10's 77' exact.
+- B (het plan verándert echt): FTP 405', Base → HIGH 45' / q#2 / TSS 295 vs Build → HIGH 77' / q#3 / TSS 303.
+  Een echt verschil (fase) wijzigt het plan → de metingen meten het plan, niet de fixture.
+- C (identieke weken): FTP 7h/4d, Build mesoWk 5/6/7 (doelStart 2026-06-08 / -06-01 / -05-25) → alle drie
+  byte-identiek (LOW 313 · HIGH 77 · ANA 0 · TSS 293).
+
+**Herkomst-omslag.** Alle dosering-machinerie is GEËRFD, GAS-identiek (profielen/gewichten
+`src/Archetypes.gs:492-552`, `BASE_POLAR_VOL_U0=9` `src/Archetypes.gs:507`, `restrictTo:['onderhoud']`
+`src/Archetypes.gs:255/368` + oracle-frozen `src/SelfTest.gs:1429-1431`, `MESO_MOD` `src/Algorithm.gs:11`).
+Eén Cadans-DIVERGENTIE: `loadCarry` is uit-geport (`apps/web/src/lib/proposal.ts:166` "geen loadCarry";
+`packages/engine/src/utils.ts:13-16`) — GAS heeft het (`src/Algorithm.gs:47`), maar R1-A2 mat het daar ×1.
+"Cadans is GAS-identiek" is geen vrijspraak: de model-gaten zijn geërfd; de divergentie (loadCarry) verandert
+het model-oordeel niet (§M48). Herkomst per vondst vastgelegd (R4-cutover-criterium).
+
+---
+
+### T15 — Piramidaal ja, maar het harde topje ontbreekt voor de capaciteitsdoelen. *(M43)*
+
+De verdeling is piramidaal en wordt piramidaler met volume: LOW loopt van ~75% (3u) naar ~95% (15u), met
+een klein midden en een near-nul top. MAAR voor **FTP en Conditie is de anaerobe (vo2) top structureel
+afwezig** — ANA = 0 op ELK urenbudget 3u-15u, in Base én Build.
+
+Mechanisme: de profielen wegen `vo2: 0.2` (`packages/engine/src/archetypes.ts:1131` FTP-gewichten;
+`packages/engine/src/archetypes.ts:1191` Conditie), altijd #3 achter drempel/sweetspot. `goalPickIntent_` (`packages/engine/src/archetypes.ts:1272`) kiest per kwaliteitsdag
+de zwaarst-gewogen intent die niet gelijk is aan de vorige → met 2-3 kwaliteitsslots alterneren de top-TWEE
+(drempel↔sweetspot) en wordt #3 (vo2) NOOIT bereikt. Zelfs bij 15u in Base (max volume-effect) blijft FTP-vo2 = 0,20 − 0,10 (Base-shift) + 0,15 (volume, `vo2Cap` gecapt) = 0,25;
+mét de dekking-boost (`COVERAGE_BOOST_ = 0.1`) 0,35 — nog steeds onder sweetspot 0,45 en drempel 0,50 → #3,
+onbereikbaar. Dus een
+FTP-gerichte renner krijgt NOOIT een vo2-sessie via het normale pad; het hardste dat het plan gaat is
+drempel (zone 4). De piramide is twee-traps (laag + drempel/sweetspot), niet drie-traps met een vo2-tip.
+
+M43 vraagt "een klein hard topje". Voor de capaciteitsdoelen ontbreekt dat topje; voor VO2max/Beklimmingen
+(vo2-basisgewicht 0.4/0.35) verschijnt vo2 wél, maar pas bij ~15u (zie T18). **GEËRFD.**
+
+Meting (realistisch, HIGH/ANA in minuten, %L/%H/%A):
+- FTP Build: 3u→75/25/0 · 7u→80/20/0 · 12u→85/15/0 · ANA 0 overal.
+- Conditie Build: idem-vorm, sweetspot-gedreven midden, ANA 0 overal.
+
+---
+
+### T16 — De ruggengraat bij weinig uren is niet sweet-spot, maar wat het doelprofiel toevallig zwaarst weegt. *(M44)*
+
+M44: bij weinig uren is sweet-spot de ruggengraat (hoog genoeg om te tellen, laag genoeg om te herhalen).
+De app kent GEEN weinig-uren→sweet-spot-mechanisme. De ruggengraat is de zwaarst-gewogen intent van het
+doelprofiel, VAST over alle volumes: FTP→drempel (`GOAL_INTENT_WEIGHTS_FTP_` `packages/engine/src/archetypes.ts:1128`,
+drempel 0.45), Conditie→sweetspot (`packages/engine/src/archetypes.ts:1191`, sweetspot 0.45), VO2max→drempel (Base, zie T18), Beklimmingen→drempel.
+Alleen Conditie valt toevallig samen met M44.
+
+Bij weinig totaal-uren met NORMALE sessies (3u = 3×60') volgt dus gewoon het profiel: FTP-ruggengraat =
+drempel, niet sweet-spot. De dosering verschuift niet naar het meest herhaalbare bij tijdgebrek; ze houdt de
+doel-nadruk aan. **GEËRFD.**
+
+Meting: 3u/3×60' → FTP: drempel+sweetspot (drempel-ruggengraat) · Conditie: sweetspot+drempel · VO2max:
+drempel+sweetspot · Beklimmingen: drempel+sweetspot.
+
+---
+
+### T17 — De korte-sessie-val: 35-51' beschikbaar → geforceerd vo2max, ongeacht doel. *(M46 + M44 + M47)* — de zwaarste van b
+
+De kortste NIET-onderhoud archetypes per intent (`packages/engine/src/archetypes.ts`):
+drempel = `threshold_overunder` [54,90] (`packages/engine/src/archetypes.ts:319/:323`); sweetspot = `sweetspot_short` [52,90] (`packages/engine/src/archetypes.ts:444/:448`);
+vo2 = `vo2_microburst` [35,70] (`packages/engine/src/archetypes.ts:547/:551`). De kórtere `threshold_2x8` [33,45] (`packages/engine/src/archetypes.ts:780/:785`) en
+`sweetspot_2x10` [35,45] (`packages/engine/src/archetypes.ts:469/:474`) dragen `restrictTo:['onderhoud']` (`packages/engine/src/archetypes.ts:473/:784`) — onzichtbaar voor de
+vier andere doelen. Gevolg: een kwaliteitsdag met **35-51' beschikbaar** heeft ALLEEN vo2 als haalbaar
+archetype (`intentHaalbaar_` `packages/engine/src/archetypes.ts:1258`) → de app forceert een maximale, anaerobe vo2-sessie, ONGEACHT het doel.
+
+Gemeten (enkele kwaliteitsdag, beschikbare minuten oplopend, Base):
+- 35-51' → álle doelen (FTP/Conditie/VO2max/Beklimmingen) = vo2max.
+- 52-53' → sweet_spot (sweetspot_short past net).
+- ≥54' → het profiel neemt over (FTP/VO2max/Beklimmingen→drempel, Conditie→sweetspot).
+
+Doel-onafhankelijk, precies op de archetype-minimum-naad. Dit is M46's exacte antipatroon: de prikkel wordt
+gekozen door wat in het TIJD-gat past, niet door wat de prikkel moet doen ("de duur van een prikkel volgt uit
+wat de prikkel moet doen, niet uit wat er in het gat past" — hier omgekeerd: de INTENT volgt het gat). Het
+inverteert M44 (sweet-spot, herhaalbaar, bij weinig uren) en raakt M47 (weinig minuten ≠ "dus intensiteit").
+Het bijt precies de tijdgebonden renner: een 45'-doordeweekse rit krijgt maximale intervallen — de slechtst
+herhaalbare dosis. **GEËRFD + ORACLE-FROZEN** (`src/SelfTest.gs:1429-1431` bevriest de restrictTo).
+
+Opmerking: dit is NIET a's scheve-klok-vo2 (a2, ingetrokken). Dit is op de gecorrigeerde fixture (`Date`
+gestubt) en het mechanisme is geïsoleerd tot de archetype-minima + restrictTo-hek.
+
+---
+
+### T18 — M45's polarisatie-knik bestaat als constante maar polariseert niet. *(M45 — HEURISTIEK)*
+
+`BASE_POLAR_VOL_U0 = 9` bestaat (`packages/engine/src/archetypes.ts:1145`); `volumeModulatie` (`packages/engine/src/archetypes.ts:1243`)
+schaalt in Base de vo2-intent bij boven 9 weekuren (`z.vo2 = min(vo2Slope·max(0,V−9), vo2Cap)`). Drie
+redenen waarom dit NIET polariseert:
+1. **Base-only.** In Build/Peak retourneert `volumeModulatie` 0 → geen volume-effect; de intent-gewichten zijn
+   daar statisch.
+2. **Bewust sub-dominant.** GAS' eigen ontwerp-comment (`src/Archetypes.gs:578`): vo2 "gecapt < de #1
+   Base-intent (blijft #2)". De cap houdt vo2 STRIKT onder de zwaarste intent — vo2 mag nooit domineren. Dus
+   de machinerie levert per ontwerp een piramide-met-vo2-smaak, geen polarisatie (vo2-dominantie).
+3. **Inert voor FTP/Conditie.** Hun vo2-basisgewicht (0.2) is zo laag dat vo2 zelfs bij de cap #3 blijft (T15)
+   → ANA = 0 tot 15u. Alleen VO2max/Beklimmingen (vo2 0.4/0.35) laten vo2 als #2 verschijnen, en pas bij ~15u.
+
+M45's "polarized pas vanaf ~8-10u" is dus niet geïmplementeerd als polarisatie; het is een gecapte,
+sub-dominante vo2-duw die nauwelijks vuurt. **Presentatie:** de 9u-drempel is een interne constante — nergens
+naar de gebruiker ge-uit. Er is dus geen M5-schending (er wordt niets als wetenschap beweerd), maar de
+heuristiek wordt ook niet AS heuristiek getoond die M45 vereist; de dosering-rationale is voor de gebruiker
+volledig opaak (raakt M10 "de app zegt altijd waarom" → §2, valt in `c`). **GEËRFD.**
+
+Meting (Base): FTP/Conditie ANA 0 t/m 15u · VO2max/Beklimmingen ANA verschijnt (14') pas bij ~15u.
+
+---
+
+### T19 — Onderhoud schaalt niet en koopt geen prikkel per extra uur. *(M9 + M47 + M7)* — verlengt T10
+
+`a`'s T10 (vlakke 36') over de volle reeks: Onderhoud = HIGH 36' op ELK budget 3u-15u, ANA altijd 0.
+Zelf-controle: TSS loopt van 134 (3u) naar 534 (15u) — alleen LOW groeit (143→714), de prikkel niet.
+Mechanisme = het profiel: `kwaliteitPerWeek Build:2`, `langeRitPerWeek: 0` (geen lange rit),
+`maxDuurMin: 45` (`packages/engine/src/archetypes.ts:1205-1215`; GAS `src/Archetypes.gs:547-552`) → twee
+"kort"-sessies (sweetspot_2x10 + threshold_2x8, ~20'+16' = 36'), byte-identiek van 3u tot 15u. Gepind op
+Base (T9, `effectiveMacroFase_` `packages/engine/src/planner.ts:87`).
+
+M9 (schaal-eis: hetzelfde model bij 3u én 15u, alleen de DOSERING verandert): faalt — de dosering verandert
+NIET; 3u en 15u leveren identiek 36' prikkel. M7 (rendement/uur): een extra uur koopt bij Onderhoud nul extra
+prikkel — 12 extra uren → 0 extra stimulus. M47 (totale belasting = primaire hendel): geldt hier NIET —
+belasting schaalt (LOW/TSS) maar stuurt de prikkel niet. **GEËRFD.**
+
+---
+
+### T20 — Bij de capaciteitsdoelen schaalt LOAD wél met de uren, intensiteit blijft een vaste verdeling. *(M47 + M9)*
+
+Voor FTP/Conditie/VO2max/Beklimmingen: meer uren → meer LOW-volume + TSS (totale belasting schaalt), terwijl
+het harde quotum vast blijft (kwaliteitPerWeek: Base 2 / Build 3 / Peak 2, elk gecapt in duur). Het plan
+antwoordt op weinig uren dus NIET met intensiteit (M47-conform op weekniveau) en werkt bij 3u én 15u (M9 ✓
+voor deze doelen). De "knik" die M47 noemt is FASE-gedreven (quotum Base 2 ↔ Build 3 ↔ Peak 2), niet
+volume-gedreven; binnen een fase zijn opeenvolgende weken identiek (zelf-controle C).
+
+Nuance: omdat het harde quotum vast is, zijn de harde MINUTEN vrijwel vlak — "meer trainen" = "meer Z2". Dat
+is verdedigbaar (M47: intensiteit is de verdeling van de belasting), maar betekent dat de intensiteits-dosis
+inelastisch is t.o.v. volume. De primaire hendel ÍS totale belasting (grotendeels laag) — M47 grotendeels
+gehonoreerd, met de kanttekening dat de honorering deels uit inelasticiteit voortkomt, niet uit een expliciete
+belasting-hendel. **GEËRFD.**
+
+Meting FTP: hard-minuten 45(Base)→77(Build)→26(Peak), gedreven door fase-quotum, niet volume; LOW + TSS
+groeien monotoon met de uren.
+
+---
+
+### T21 — De dosering weegt de voorgaande weken niet mee — M48 gebeurt vrijwel niet. *(M48)*
+
+M48: wat je de weken ervoor deed, verandert wat deze week hoort te zijn. Drie kandidaat-mechanismen, alle drie
+leeg:
+
+1. **loadCarry — afwezig (Cadans-divergentie).** Uit-geport (`apps/web/src/lib/proposal.ts:166`;
+   `packages/engine/src/utils.ts:13-16`); GAS heeft het (`src/Algorithm.gs:47` `× parseFloat(getDocProp
+   ('loadCarry','1'))`) maar R1-A2 mat ×1. Doet in Cadans niets.
+2. **Meso-ramp — éénmalig, en op vermogens-%.** `mesoFactor(week) = MESO_MOD[week] || 1.0`
+   (`packages/engine/src/utils.ts:48`), met `MESO_MOD = {1:1.0, 2:1.08, 3:1.15, 4:0.6}` (`packages/engine/src/utils.ts:17`; GAS
+   `src/Algorithm.gs:11`). Teller = `weekIndexFromStart_` (`packages/engine/src/planner.ts:917`), ONGECLAMPT —
+   ánders dan de fase-teller (computeMacroPhase, clamp week>12→12). Gevolg: week 0-3 rampt (1.0→1.15), week 4
+   is een éénmalige deload (0.6 + `isMesoRecovery = mesoWeek === 4` `packages/engine/src/planner.ts:494` → geen kwaliteit), week 5+ valt
+   VOORGOED terug op 1.0 (geen herhalende 4-weken-cyclus). En de factor schaalt VERMOGENS-% (`adj = round
+   (basePct·mesoFactor)+offset`, `packages/engine/src/planner.ts:986`), niet dosis. Gemeten effect op de weekdosis: TSS 285→286 (+1) bij
+   factor 1.15 — de %-schaling valt in TSS weg. Bevestigt R2-V2 én kwantificeert het.
+3. **Activities (dekking/recentHard) — reactieve 7-daagse zone-dekking, geen dosis-progressie.**
+   `rollingZoneCoverage_` (`packages/engine/src/weekprep.ts:58`, 7-daags venster) + `recentHardDate_` (`packages/engine/src/weekprep.ts:134`)
+   voeden de dekking-boost (intent-variatie) en harde-dag-spacing. `zoneDebt_` (`packages/engine/src/weekprep.ts:95`) is alleen DÉZE week.
+   Gemeten: een ZWARE vs LICHTE voorafgaande 7 dagen laat de dosis ONGEWIJZIGD (FTP Build 7h: hard 77, TSS
+   ~293 in beide) — alleen de kwaliteits-intent-VOLGORDE herschikt bij harde ritten. Geen deload na een zware
+   week, geen extra na een lichte.
+
+Conclusie: de weekdosis is een vaste functie van het fase-schema (kalender vanaf `doelStart`), invariant t.o.v.
+opgebouwde belasting — precies M48's faalmodus ("de meegenomen belasting op één zetten, per week in het
+luchtledige doseren"). **GEËRFD (meso) + DIVERGENTIE (loadCarry).**
+
+---
+
+### `b` — samenvatting van herkomst + doorverwijzing
+
+- Alle zeven vondsten GEËRFD; T21 draagt daarnaast de loadCarry-DIVERGENTIE (model-neutraal).
+- **M7/M8:** M8 niet geschonden — de app duwt het volume niet omhoog (neemt de opgegeven uren) en traint niet
+  zacht-voor-retentie als doelfunctie-keuze (Onderhoud is een doel, geen doelfunctie). M7 geraakt door T19/T20.
+- **M46 elders:** T17 is de M46-in-dosering-vondst; `a`'s T8 (45'-cap) + T12 (wekelijkse test) staan.
+- **Naar `c`:** de opake dosering-rationale (T18-presentatie) en de vaste-quotum-inelasticiteit (T20) raken
+  M10/M53-56 (§2/§3, agency + coach-stem) — daar beoordeeld, niet hier.
+- Geen verdicts, geen model-regels, geen engine-wijziging: dit zijn `b`'s bevindingen; het cutover-oordeel is R4
+  (criterium = het MODEL).
