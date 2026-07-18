@@ -813,3 +813,153 @@ luchtledige doseren"). **GEËRFD (meso) + DIVERGENTIE (loadCarry).**
   M10/M53-56 (§2/§3, agency + coach-stem) — daar beoordeeld, niet hier.
 - Geen verdicts, geen model-regels, geen engine-wijziging: dit zijn `b`'s bevindingen; het cutover-oordeel is R4
   (criterium = het MODEL).
+
+## c — AGENCY / BEWIJSLAST / COACH-STEM (§2 + §3 + §9 · M10-M19 + M53-M56 · 11 NORM + 2 OPEN + 1 BEVINDING)
+
+Model-first: begin bij de regel, meet de plek die de claim maakt (of hoort te maken). Herkomst per vondst
+(GEËRFD = GAS doet het ook · Cadans-DIVERGENTIE = eigen keuze). De readiness-demote (T22) + de check-in-nudge
+zijn GEDRAAID, niet gelezen — meerdere leesbare hypothesen sneuvelden (o.a. de FTP-projectie bleek na het
+draaien juist correct, zie slot). Geen verdicts.
+
+### T22 — De app kent geen voorstel-en-bevestig-lus; de readiness-band herschrijft de week stil. *(M10, M11, M13, M15, M16, M18 + M12)* — de zwaarste van c, GEDRAAID
+
+M10 is de éne regel: de app STELT VOOR, de gebruiker BEVESTIGT, de app zegt WAAROM. Die lus bestaat nergens.
+De readiness-band stuurt een plan-signaal (`apps/web/src/lib/proposal.ts:324` `bandSignal`: ready→normal ·
+caution→demote · rest→recovery) dat `assignWorkouts` (`packages/engine/src/planner.ts:763-771`) elke
+toekomstige dag laat herschrijven: caution → `demoteType_(voorgesteldType)` (lichter type, reden "Lichter
+gehouden — wellness laag"), rest → `recovery` (reden "Herstel — wellness laag"). Geen voorstel, geen
+bevestiging, origineel overschreven, week-breed — alleen een `reden` achteraf.
+
+M13 noemt dit letterlijk: automatisch ingrijpen is een DEFECT, en de regel weigert expliciet "bewuste
+afwijking" als verweer — HANDOFF's label "bewuste GAS-divergentie" dekt het dus niet af. M18 zette de
+readiness-score op informant (beslisser af); de band routeert de demote juist via `getReadinessScore_` —
+precies de score die M18 degradeerde. M15/M16: een informant mag het voorstel niet vervangen.
+
+M12 (de cijfers weten het niet): de score neemt de ochtend-check-in mee (`packages/engine/src/readiness.ts:180-181`
+`score + checkinDelta_`, met `checkinDelta_` `:53` = slaap/benen/stress, elk ±2, geklemd ±6). Gemeten: een
+slechte-nacht-check-in geeft −6; toegepast op een grens-score tikt dat de band een niveau omlaag (66→60
+ready→caution · 52→46 caution→rest). Jouw eigen ochtendmelding stuurt dus stil je week — de omkering van M12's
+bedoeling (de rijder hoort te kiezen).
+
+**Herkomst gesplitst.** De stille week-demote is GEËRFD, byte-identiek (GAS `src/Algorithm.gs:1155-1167` ↔
+`planner.ts:763-771`). De band-bedrading (`getReadinessScore_` i.p.v. de botte `wellnessSignal_`-vlag) is
+Cadans-DIVERGENTIE (`ae00730`) — ze routeert de demote door de exacte score die M18 afwees én vouwt de check-in erin.
+
+Meting (standaard-fixture, doel FTP): band null/ready → di threshold · do threshold · za long_z2 · zo sweet_spot;
+band caution → di/do/zo `tempo` ("Lichter gehouden — wellness laag"), za long_z2 onveranderd; band rest → alle
+vier `recovery` ("Herstel — wellness laag"). Zelf-controle: null en ready zijn identiek, het verschil zit
+uitsluitend in de band — de fixture is niet de oorzaak.
+
+---
+
+### T23 — Het inhalen is gebouwd maar niet aangesloten — en zou, aangesloten, óók stil ingrijpen. *(M10, M13 · koppelt R2-V7)*
+
+De inhaal-tak zit in de engine: bij een high/anaerobic/low-tekort forceert `assignWorkouts` een combo of
+quality-sessie (`packages/engine/src/planner.ts:659-694`, redenCodes `catchup_high`/`catchup_anaerobic`/
+`catchup_<bucket>`). Die tak hangt volledig aan `debt` = `zoneDebt_` (`apps/web/src/lib/proposal.ts:296`),
+gevoed door `intentByDate` uit de weekplan-blob die de client via `getWeekplans` ophaalt
+(`apps/web/src/lib/schema.ts:873` → `GET /api/weekplans/recent`, `workers/api/src/routes/api.ts:168`).
+
+De schrijf-route bestáát (`PUT /api/weekplan/:monday`, `workers/api/src/routes/api.ts:638` → `writeWeekplan`,
+`workers/api/src/db/repo.ts:151`) maar GEEN client-code roept haar aan (grep leeg; de client kent alleen de
+lees-route). Gevolg: de weekplans-tabel blijft leeg → `zoneDebt_` = {0,0,0} → de inhaal-tak vuurt NOOIT. Dat is
+waarom een inhaalsessie nooit verschijnt — niet omdat de app eerst vraagt.
+
+Aangesloten zou hij stil ingrijpen: de coach-copy claimt een gedane daad ("Ik heb je schema bijgesteld …",
+`apps/web/src/lib/coachNarrative.ts:44` `catchup_high`), net als de demote → dezelfde M10/M13-schending. Dit is
+dezelfde stille-plan-karakter-wissel als T14 (event-overname), daar al gevonden.
+
+**Herkomst.** De niet-aansluiting = de snapshot-schrijf is niet bedraad (R2-V7's wortel onder 8 vondsten). Het
+stil-ontwerp = GEËRFD. (NORM-eis, Daan 18-07: op de eerstvolgende trainingsdag een gemiste sessie AANKAARTEN +
+inhalen VOORSTELLEN mét uitleg waarom het zin heeft, gebruiker bevestigt.)
+
+---
+
+### T24 — Er is geen voorstel-oppervlak; de kant-en-klare readiness-copy claimt een gebeurde daad. *(M10, M16, M55)*
+
+De today-only readiness-overlay is geport én geëxporteerd — `readinessAdjust_` (`packages/engine/src/coach.ts:595`),
+`readinessRegel_` (`:637`), `readinessRegelDone_` (`:664`) — maar wordt ALLEEN in `selftest.test.ts` genoemd,
+nergens in een lib-aanroeppad. GAS' `rdyCoach` (`src/WebApp.gs:1199-1227`) is today-only en schrijft de
+`adaptatie` (`src:'readiness'`) pas bij commit → in GAS is het een VOORSTEL. Cadans heeft dus geen
+voorstel-oppervlak (de overlay ligt inert).
+
+De copy die klaarligt, mag niet hergebruikt: `readinessRegel_` (GAS `src/Coach.gs:330`) zegt "Ik heb je [X]
+verlicht naar [Y]" — bewering dat de daad gebeurd is vóór de bevestiging = M55. (HANDOFF's ontwerp-noot flagt
+deze valkuil.)
+
+**Herkomst.** De inert-geporte overlay = Cadans ("ontworpen, niet gebouwd"). De M55-schendende copy = GEËRFD
+(readinessRegel_ is GAS').
+
+---
+
+### T25 — De dag-coach houdt nooit een slag om de arm waar hij gist. *(M53, M54, M55, M5)* — GEDRAAID
+
+M54: "wellicht" blijft staan — empirisch verdiend (M18). Gemeten: grep op wellicht/misschien/mogelijk/raadt over
+de héle `apps/web/src/lib/coachNarrative.ts` = LEEG. Geen hedge, nergens in de dag-coach. De demote-copy (`:30`
+`demote_wellness_light`) is stellig en belooft een opbrengst die M18 niet draagt ("lichter vandaag betekent
+sterker straks") = claim zonder dekking (M5).
+
+Contrast (belangrijk, en het corrigeert een leesbare aanname): de doel-projectie
+(`apps/web/src/components/niveau/DoelProjectie.tsx`) hedge't WÉL — expliciete `aannames` + een bereik + een
+vloer. M54 wordt dáár gehonoreerd. De vondst is dus beperkt tot de dag-coach.
+
+**Herkomst.** De `reden`-strings GEËRFD; de warme opbrengst-copy Cadans-DIVERGENTIE (`coachNarrative.ts` =
+nieuwbouw, R2-c).
+
+---
+
+### T26 — De dag-coach kan niet strategisch sturen op tijd-rendement. *(M53 · koppelt T17/T19/T20)*
+
+De pools in `coachNarrative.ts` zijn zonder uitzondering per-DAG (demote/catchup/key/long/endurance/recovery/
+test/taper/commute) — geen strategie-niveau. De coach kan niet zeggen "je zit op je volume-plafond, dat extra
+uur levert weinig — stop het liever in een tweede kwaliteitssessie", terwijl juist die tijd-versus-rendement-
+afweging de kern van een tijd-geoptimaliseerde app is.
+
+Nuance (na het draaien): de doel-projectie TOONT wél een tijd-hendel ("+2u → N weken eerder je doel",
+`DoelProjectie.tsx` `weeksPlus2`/`sooner`). Een deel-hendel bestaat dus op het niveau-scherm; het gemis zit in de
+dag-coach. De strategische inzet die de coach zou moeten maken vraagt bovendien dat de dosis op kwaliteit
+reageert — en T17/T19/T20 toonden dat dat vrijwel niet gebeurt.
+
+**Herkomst.** GEËRFD (GAS heeft geen strategische coach — geen warme coach).
+
+---
+
+### T27 — De test-week-copy verkoopt een terugkerende test als betekenisvolle meting. *(M5, M53)* — de coach-kant van T12
+
+De `test`-pool (`apps/web/src/lib/coachNarrative.ts:135`) bevestigt de test warm als "een mooie graadmeter van je
+vooruitgang" waarvan "deze cijfers je komende trainingen sturen". T12 toonde dat die test ná blokweek 12 elke week
+terugkomt, voorgoed, voor 4 van 5 doelen — een fase-teller-artefact, geen gestuurde meting. De coach affirmeert een
+doel dat het artefact niet heeft (M5/M53); de terugkerende test wordt bovendien nooit voorgesteld (M10).
+
+**Herkomst.** De test-fase GEËRFD; de warme test-copy Cadans-DIVERGENTIE op een geërfd artefact.
+
+---
+
+### `c` — samenvatting van herkomst + doorverwijzing
+
+- **Agency (§2):** M10 (voorstellen-en-bevestigen) heeft NUL implementatie — T22 (readiness, aan/gemeten), T23
+  (inhalen, gebouwd maar uit), T24 (geen voorstel-oppervlak); T14 (event) draagt dezelfde vorm. M11/M13/M15/M16/M18
+  vallen binnen T22/T24. M14 (OPEN, week/dag): de app beslecht dit door week-niveau + geen-bevestiging te kiezen.
+  M12 in T22 (de check-in stuurt stil). M17/M19 (OPEN) onder T22.
+- **Coach-stem (§9):** M54 (T25, geen hedge in de dag-coach) · M53 (T26, geen strategie-niveau) · M5/M53 (T27,
+  valse legitimiteit) · M55 (T24, "ik heb verlicht"-copy).
+- **M56 — seed-correctie (combo levering).** a's zaad vermoedde dat `combo_long_with_efforts` niet leverbaar is
+  (`blokken: undefined`). WEERLEGD na het draaien: de GAS-levering leest `workout.structuur` (`src/Algorithm.gs`
+  `buildWorkoutZwo_` + `buildWorkoutDsl_` :1579), niet `blokken`; `genericCombo` levert `structuur`, en de
+  "Efforts · 3x 10min"-rij parseert netjes naar een 3-intervallen-ZWO mét rust. De combo IS leverbaar en getrouw;
+  `blokken: undefined` raakt alleen de dashboard-silhouet (weergave → GAS is norm) en de coach-segmenten (V21, toch
+  al null). Geen M56-vondst.
+- **FTP-projectie — GEEN c-vondst (getraceerd, slaagt op c's toets).** De projectie (`DoelProjectie.tsx`
+  `ftpBandFromProjection_` `:431`) is een BEREIK ("nooit één getal"), met `aannames` (hedge), verankerd op de
+  wérkelijke huidige CTL (`apps/web/src/pages/Niveau.tsx:117` = laatste maand-CTL uit ritten) — die de gereden
+  weken/tekorten al draagt; het opschalen tilt alleen het toekomstige plafond. Op c's toets (agency + eerlijkheid)
+  SLAAGT dit — het eerlijke tegenvoorbeeld van de demote-copy.
+- **Naar de MODELVRAAG (geparkeerd, ná R3):** of de projectie een echte daling moet tonen bij ondertraining (de
+  vloer = huidige FTP toont nooit achteruitgang) · of de uren-schuif (standaard op recent geréden volume,
+  `weeklyHoursRecent_`) aan de plan-instelling-uren gekoppeld moet worden · de eis dat de gereden weken meetellen
+  (bevestigd: dat doet de projectie al via de werkelijke CTL). Dit zijn M9/M39-modelvragen, geen agency-vragen — met
+  de intervals.icu-validatie (buiten de repo) als input.
+- Geen verdicts, geen model-regels, geen engine-wijziging: dit zijn `c`'s bevindingen; het cutover-oordeel is R4
+  (criterium = het MODEL).
+
+---
