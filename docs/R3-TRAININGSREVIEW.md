@@ -287,18 +287,304 @@ draaien weerlegd. Welke helft precies, en wat de fase-modulatie (`GOAL_FASE_MOD_
 
 ---
 
-## Wat a3 open laat
+## a3 — het slot van brok a
 
-- **M38** voor de klim-doelen (lang + kort): wat vraagt het plan, wat levert het. T4 dekt
-  Conditie/FTP/Onderhoud; klim is niet gemeten.
-- **M51/M52** — plan-transities als voorstel, en de activeringsdrempel. R2's V8 stelde vast dat
-  `eventContextFrom_` niet geport is en een week MET A-event byte-identiek is aan een week
-  zonder. Dat maakt M51's toets ("gaat het plan stilzwijgend over?") scherper, niet losser: er
-  is geen overname, dus ook geen voorstel — en het doel wordt niet event-gedreven bediend.
+### Methode-correctie (a3) — de standaard-fixture mat een pad dat de app niet draait
+
+De Methode-sectie hierboven blijft letterlijk staan; deze correctie komt eronder, niet ervoor in de
+plaats. Zij raakt T4, T7 en het slot van T9.
+
+`allocateQualityWeek_` dateert zichzelf op de AMBIENT klok: `packages/engine/src/planner.ts:537`
+(`const allocToday = stripTime_(new Date())`) voedt de `today`-parameter, en `eligible_` eist
+`packages/engine/src/planner.ts:209` (`stripTime_(d.datum).getTime() >= todayT`, met
+`packages/engine/src/planner.ts:194` als bron). De rest van de pijplijn dateert zich op
+`input.todayISO` (`apps/web/src/lib/proposal.ts:341`, `const todayT = today.getTime()`).
+
+**In de app vallen die twee ALTIJD samen:** `apps/web/src/lib/schema.ts:856` — `const todayISO =
+todayIso()`. De app kan `todayISO` niet op iets anders zetten dan vandaag. **In de standaard-fixture
+niet:** die zet `todayISO` op maandag 2026-07-13 terwijl de klok op 17/18-07 stond. Gevolg: di 14-07
+en do 16-07 zaten wél in `tePlannen` (≥ `todayISO`) maar NIET in de allocator (< `allocToday`) en
+vielen door naar de per-dag-takken — dus naar `keyIntensity`. De fixture-regel "alle 7 dagen
+plannbaar" klopt voor `tePlannen` en is onwaar voor de allocator.
+
+**Herkomst: dit is een fixture-eigenschap, geen app-eigenschap.** GAS kent de seam niet: daar is er
+geen `todayISO`-parameter — `generateProposal` leest `src/Algorithm.gs:93`
+(`var today = stripTime_(new Date());`) en de allocator `src/Algorithm.gs:1019`
+(`var allocToday = stripTime_(new Date());`) — twee keer dezelfde ambient bron, dus per constructie
+gelijk. Cadans voegde `todayISO` toe als test-seam. De scheefstand is dáármee introduceerbaar, en
+alleen in een test of een probe.
+
+De discriminant is af te lezen: de allocator schrijft `reden` mét `week-plaatsing`
+(`packages/engine/src/planner.ts:622` e.v.), `keyIntensity` zonder.
+
+**GEDRAAID — gecontroleerd, alles gelijk behalve de klok** (zelfde week, zelfde `todayISO`, zelfde
+`doelStart`, zelfde `mesoWeek`; `Date` gestubd op bundel-niveau, geen repo-wijziging). Hoog-intent
+(FTP-dragende intensiteit) per week:
+
+| week | | klok 18-07 (a1/a2's opstelling) | klok 13-07 (= `todayISO`, zoals de app) |
+|---|---|---|---|
+| zomer 405' | Onderhoud | **94'** | **36'** |
+| | FTP | 66' | 77' |
+| winter 210' | Onderhoud | **76'** | **36'** |
+| | FTP | 45' | 45' |
+| winter 180' | Onderhoud | **76'** | **36'** |
+| | FTP | 45' | 45' |
+
+Zelf-controle 1: de a1/a2-kolom reproduceert T4's tabel EXACT (339'/66' · 336'/69' · 315'/72'+14' ·
+366'/21'+19' · 310'/94'; TSS 299/301/327/297/307) — de fixture is stabiel en de metingen zijn
+vergelijkbaar. Zelf-controle 2: FTP verschuift bij 210'/180' NIET (45' in beide kolommen) — de
+klok-verschuiving is dus geen globale ruis; ze raakt Onderhoud en laat FTP staan. Dat is precies het
+mechanisme: `keyIntensity` leest het doelprofiel alléén in Build/Peak
+(`packages/engine/src/planner.ts:847`), en Onderhoud staat door de pin (T9) op Base → geen tak matcht
+→ de anonieme rest-regel `packages/engine/src/planner.ts:878` (`return "sweet_spot"`). FTP staat op
+Build en krijgt via `keyIntensity` hetzelfde profiel als via de allocator.
+
+### T10 — T7 is WEERLEGD: onder de klok van de app is Onderhoud op elk urenbudget MINDER intensief dan FTP, en vlak. *(M37, M38, M50 + M7)*
+
+T7 concludeerde het omgekeerde. Die conclusie rust volledig op de twee `keyIntensity`-dagen uit de
+Methode-correctie: `keyIntensity` gaf Onderhoud daar een derde en vierde kwaliteitsdag via de
+anonieme rest-regel — een pad dat de app niet draait (T11).
+
+**Wat de app wél levert** (zelfde fixture, klok = `todayISO`): **36 minuten hoog-intent per week, bij
+405', bij 210' én bij 180'.** Een constante. FTP levert 77' bij 405' en 45' bij 210'/180'.
+
+De week ziet er zo uit (zomer 405', doel=Onderhoud, alles allocator-geplaatst):
+
+| dag | gepland | geleverd | naam |
+|---|---|---|---|
+| di | 90' | `sweet_spot` | "Sweet Spot 2×10 kort" |
+| do | 75' | `long_z2` | "Z2 + hoge cadans (Base, ingekort)" |
+| za | 180' | `long_z2` | "Z2 nuchter (Base)" |
+| zo | 60' | `threshold` | "Drempel 2×8 kort" |
+
+**Het mechanisme is het profiel zelf, niet `keyIntensity`.** Drie velden doen het werk, alle drie in
+`packages/engine/src/archetypes.ts`: `kwaliteitPerWeek: { Base: 2, Build: 2, Peak: 2 }` (`packages/engine/src/archetypes.ts:1207`)
+tegenover ftp's `{ Base: 2, Build: 3, Peak: 2 }` → twee kwaliteitsdagen i.p.v. drie;
+`langeRitPerWeek: 0` (`packages/engine/src/archetypes.ts:1213`) → stap 1 van de allocator slaat over; en `maxDuurMin: 45` (`packages/engine/src/archetypes.ts:1215`) =
+T8's cap → beide kwaliteitsdagen krijgen een "kort"-archetype, ongeacht de dagduur. Gemeten:
+"Sweet Spot 2×10 kort" op een dag van 90' levert 20' hoog-intent, "Drempel 2×8 kort" op een dag van
+60' levert 16'. 20' + 16' = 36'. Bij 180' beschikbaar levert de app **exact dezelfde twee sessies**
+(dezelfde namen, dezelfde 20' en 16') op kortere dagen — vandaar dat de 36' niet beweegt als de uren
+bewegen.
+
+**Gevolg voor het model — een bevinding OVER T7, niet over M50.** T7 verklaarde M50's MOTIVERING
+("dan levert het plan geen doel-gedreven kwaliteitsdag meer, en traint de gebruiker zacht precies
+wanneer hij zijn FTP moet vasthouden") empirisch onjuist. **Die weerlegging vervalt: de motivering is
+onder de klok van de app juist.** M50's regel én motivering staan. Wat wél onjuist blijft is het
+MECHANISME dat `docs/TRAININGSMODEL-BESLUITEN.md` (vondst 1) ervoor aanwijst —
+"keyIntensity levert alleen in Build/Peak een doel-gedreven kwaliteitsdag" — want die functie stuurt
+het plan niet (T11). Het urgentie-argument dat aan M50 hing ("moet weg vóór de winterdip") krijgt zijn
+onderbouwing hiermee terug; T7's verwijzing naar T8 als vervangende kandidaat is niet meer nodig, maar
+T8 blijft zelfstandig staan en verklaart nu de 36'.
+
+**Onder M7** (rendement per beschikbaar uur): bij Onderhoud koopt een extra uur nul extra prikkel —
+alleen meer `long_z2`. 405' en 180' leveren dezelfde 36'.
+
+**Herkomst: geërfd.** Alle drie de profielvelden staan identiek in GAS (`src/Archetypes.gs:510` e.v.);
+de allocator-keten is byte-identiek (`src/Algorithm.gs:818` · `src/Algorithm.gs:1003` ·
+`src/Algorithm.gs:1019` · `src/Algorithm.gs:1070`).
+
+### T11 — `keyIntensity` is in de app geen kwaliteits-kiezer: 400 weken, nul treffers buiten een test-week. *(M49 + M5)*
+
+`allocateQualityWeek_` eindigt met een endurance-fill die ÉLKE eligible dag een plaats geeft
+(`packages/engine/src/planner.ts:433`, "4. endurance-fill"). `assignWorkouts` laat de allocator-tak
+vóór de per-dag-takken gaan (`packages/engine/src/planner.ts:622`). Omdat `tePlannen`
+(`apps/web/src/lib/proposal.ts:341`) en `eligible_` (`packages/engine/src/planner.ts:209`) in de app
+op dezelfde datum staan, is elke plannbare vrije dag per constructie allocator-dag → de
+`keyIntensity`-tak (`packages/engine/src/planner.ts:697`) komt er niet aan toe.
+
+`allocActive` (`packages/engine/src/planner.ts:513`) is uit bij event-recovery, meso-recovery en
+test-week. De eerste twee vangen álle dagen af in een eerdere tak. Blijft over: de test-week.
+
+**GEDRAAID, mechanisch:** 5 doelen × blokweek 1..20 × 4 week-vormen = **400 weken**, klok =
+`todayISO`. `keyIntensity`-treffers: **180 — alle 180 in `fase Test`.** Nul in Base, Build of Peak.
+Per doel: FTP 45 · Conditie 45 · Beklimmingen 45 · VO2max 45 · **Onderhoud 0** (de pin houdt hem in
+Base → allocator). Zelf-controle: dezelfde detector op de standaard-fixture (klok 18-07) geeft exact
+de 2 verwachte treffers (di + do) — de detector werkt.
+
+**Wat daaruit volgt.** (a) De `goalWorkout_`-aanroep binnen `keyIntensity`
+(`packages/engine/src/planner.ts:847`-tak) vereist Build of Peak; de enige fase waarin `keyIntensity`
+draait is Test. **Die tak is onbereikbaar.** (b) Daarmee is óók
+`packages/engine/src/planner.ts:862` (`const ct = climbTypeWorkout_(klimType, macroFase, dekking)`)
+onbereikbaar — zie T13. (c) De twee eerste regels van de functie zijn dood:
+`packages/engine/src/planner.ts:841` (`if (macroFase === "Taper") return "taper_openers"`) — de
+docstring van `assignWorkouts` zegt zelf dat macroFase daar nooit 'Taper' is — en
+`packages/engine/src/planner.ts:842` (`if (macroFase === "Recovery") return "recovery"`), want
+`isEventRecovery` vangt die dagen eerder af. (d) Wat `keyIntensity` in een test-week wél doet, is voor
+alle vier de doelen dezelfde categorie-tak zonder profiel.
+
+**Vierde geval van "een toelichting claimt een premisse die de bron tegenspreekt"** (na R2's V1-(b),
+V23 en T9): de comment boven de Build/Peak-tak beschrijft een keuze-architectuur die niet draait.
+
+**Herkomst: geërfd, structureel identiek.** GAS `src/Algorithm.gs:1820` (`keyIntensity`),
+`src/Algorithm.gs:1859` (`climbTypeWorkout_`) en `src/Algorithm.gs:985` (`assignWorkouts`) dragen
+dezelfde volgorde en dezelfde takken.
+
+### T12 — Na blokweek 12 plant de app elke week een FTP-test, voorgoed — voor vier van de vijf doelen. *(M46, M49, M5)*
+
+`computeMacroPhase` (`packages/engine/src/phase.ts:49` e.v.) verdeelt: week 1-4 Base · 5-8 Build ·
+9-11 Peak · **daarna** `packages/engine/src/phase.ts:52` (`fase = "Test"`). Er is geen bovengrens: de
+docstring zegt het zelf ("Voorbij week 12 → blijft op Test"). `packages/engine/src/planner.ts:496`
+(`const isTestWeek = macroFase === "Test"`) zet dan `allocActive` uit — de hele week-allocatie valt
+weg.
+
+**GEDRAAID** (klok = `todayISO`, zonder events): blokweken mét een `test`-sessie, per doel — FTP
+**12,13,14,15,16,17,18,19,20** · Conditie idem · Beklimmingen idem · VO2max idem · **Onderhoud: geen
+enkele.** De meting stopte bij 20 omdat de fase niet meer verandert.
+
+Een voorbeeld-week op blokweek 13 (doel=FTP, zomer 405'): `test` · `sweet_spot` · `long_z2` ·
+`long_z2` — elke week opnieuw, met dezelfde test op dezelfde dag.
+
+Onder M46 ("elke sessie heeft een bedoeling; er is geen restpost"): een wekelijkse FTP-test is geen
+prikkel, en de drie dagen eromheen zijn wat er overblijft als de kwaliteitsallocatie uit staat. Onder
+M49 ("de fase volgt het doel"): de fase volgt hier een teller die na twaalf weken vastloopt. Onder M5:
+de app noemt het een test-week.
+
+**Bereikbaarheid is niet theoretisch.** Het settings-veld `doelDuur` (default 12) wordt door
+`computeMacroPhase` niet gelezen — de 4/4/3-verdeling staat hard in de functie. Wie zijn blok-start
+niet verzet, komt er vanzelf in; wie een blokduur van 16 weken instelt, periodiseert alsnog op 12. Het
+zichtbare pad eruit is `doelStart` verzetten, of Onderhoud kiezen.
+
+**Dit is wat de pin van T9 repareert.** Zonder de pin krijgt Onderhoud dezelfde wekelijkse test:
+gedraaid met een bundel-mutant (`effectiveMacroFase_` → passthrough, geen repo-wijziging), blokweek 13,
+doel=Onderhoud → `test` · `sweet_spot` · `long_z2` · `long_z2`, 45' hoog-intent. Mét pin: `sweet_spot`
+· `long_z2` · `long_z2` · `threshold`, 36'. **T9's M49-schending is daarmee niet zwakker maar sterker
+bewezen: de pin is een loodgietersfix, en het lek dat hij dicht is echt — voor de andere vier doelen
+staat het nog open.**
+
+**Herkomst: geërfd, byte-identiek.** GAS `src/Settings.gs:295` (`function computeMacroPhase`) met
+`src/Settings.gs:308` (`else { fase = 'Test'; isTestWeek = true; }`) — dezelfde functie, dezelfde
+ontbrekende bovengrens.
+
+### T13 — Lang versus kort klimmen heeft geen enkele route naar het plan. *(M36, M38, M33, M5)*
+
+M36 eist twee doelen en verbiedt expliciet dat het onderscheid uitsluitend via een event binnenkomt.
+T1 stelde vast dat de doel-lijst één "Beklimmingen" kent. a3 meet de andere helft: **de event-route
+werkt niet.**
+
+Het veld bestaat over de hele keten. De gebruiker kiest het in de events-editor
+(`apps/web/src/pages/Events.tsx:350`, `value={row.klimType}` — Lang/Kort/Gemengd/Vlak); de Worker
+valideert het (`workers/api/src/routes/api.ts:313`); D1 bewaart het
+(`workers/api/src/db/schema.ts:158`, `klimType: text("klim_type")`); de client leest het
+(`apps/web/src/lib/proposal.ts:213`) en geeft het door aan `assignWorkouts`, die het doorgeeft aan
+`keyIntensity` (`packages/engine/src/planner.ts:697`). Daar, en alleen daar, wordt het gelezen:
+`packages/engine/src/planner.ts:862` → `climbTypeWorkout_`
+(`packages/engine/src/planner.ts:889`, kort→`vo2max`, lang→`threshold`/`sweet_spot`,
+gemengd→`threshold`/`vo2max`). **Die aanroep zit binnen de Build/Peak-tak van een functie die alleen
+in een test-week draait (T11) — en hij is daarbinnen bovendien pas fallback, ná `goalWorkout_`.**
+
+**GEDRAAID** (doel=Beklimmingen, A-event over 6 weken, zomer 405', klok = `todayISO`): `klimType` =
+vlak / lang / kort / gemengd → **vier byte-identieke weken**, vergeleken op de volledige
+vingerafdruk (type + naam + alle blokken + TSS + minuten per sessie), niet op de totalen. Elke keer:
+`vo2max` · `threshold` · `combo_long_with_efforts` · `long_z2`, 51' hoog + 14' top. Zelf-controle:
+hetzelfde event 3 weken vooruit (→ Peak) levert wél een andere week (`vo2max` · `long_z2` ·
+`combo_long_with_efforts` · `long_z2`, 30' + 14') — de harness ziet echte verschillen.
+
+**Wat het ene klim-doel dan wél levert, hangt aan de blokweek** (geen event, zomer 405'):
+
+| fase | hoog | top | week |
+|---|---|---|---|
+| Base (wk 2) | 66' | 0' | `threshold` "Drempel lang 3×14" · `long_z2` · `long_z2` · `sweet_spot` |
+| Build (wk 6) | 51' | 14' | `vo2max` "VO2 Hill Repeats 9×90s" · `threshold` · `combo_long_with_efforts` "Lange rit + Beklimmingen efforts (180 min)" · `long_z2` |
+| Peak (wk 10) | 30' | 14' | `vo2max` · `long_z2` · `combo_long_with_efforts` · `long_z2` |
+
+Beide M38-eisen zitten in het profiel, door elkaar: de klim-`intentGewichten` mengen drempel 0,40 +
+vo2 0,35 + sweetspot 0,25 (`packages/engine/src/archetypes.ts:1123`), en
+`spreiding.effortsInLangeRit` levert in Build/Peak de "vermoeidheid die eraan voorafgaat" die M38 voor
+LANGE klimmen vraagt. Maar de mengverhouding volgt de blokweek, niet de keuze: in Base krijgt de
+klimmer nul werk boven de drempel (M38-kort niet bediend), in Peak zakt het drempelwerk naar 30'
+(M38-lang verzwakt). **Welk van M36's twee doelen je krijgt, bepaalt de kalender.**
+
+Onder M33 (aanbiedbaarheids-regel) en M5: de app VRAAGT de gebruiker om het klim-type en doet er
+niets mee.
+
+**Herkomst: geërfd.** `climbTypeWorkout_` staat identiek in GAS (`src/Algorithm.gs:1859`,
+`src/Algorithm.gs:1861` `if (klimType === 'kort') return 'vo2max';`) op dezelfde plek in dezelfde
+keten. Wat R3 hier meet is niet dat Cadans afwijkt, maar dat de constructie in beide apps niet vuurt.
+
+### T14 — Het event neemt het plan over — meteen, op elke afstand, zonder voorstel. *(M51, M52, M10, M5)*
+
+M51: gaat het plan over van doel-gedreven naar event-gedreven, dan stelt de coach de wissel voor en
+beslist de gebruiker. M52 (OPEN): de activeringsdrempel ligt niet vast.
+
+`apps/web/src/lib/proposal.ts:210` — `macroFaseBase = macro?.macroFase ?? computeMacroPhase(...)`.
+Zodra `eventFase_` een hoofdevent vindt, VERVANGT de event-aftelling de doel-gedreven cyclus. Het
+hoofdevent is het eerstvolgende A-event OF elk trip-event, zonder afstandsgrens
+(`packages/engine/src/phase.ts:72`, `if (e.prioriteit === "A" || e.type === "trip") return e`). De
+fase-mapping is de aftelling zelf (`packages/engine/src/phase.ts:131`, `wekenTot >= 9` → Base, `>= 5`
+→ Build, anders Peak).
+
+**GEDRAAID** (doel=FTP, `doelStart` zó dat de doel-gedreven cyclus **Build** zegt; zomer 405'; klok =
+`todayISO`):
+
+| A-race over | macroFase | fase | modus | hoog | top | week |
+|---|---|---|---|---|---|---|
+| — (geen event) | Build | Build | Opbouw | 77' | 0' | `threshold` · `threshold` · `long_z2` · `sweet_spot` |
+| 52 wkn | **Base** | Base | Doel-gericht | **45'** | 0' | `threshold` · `long_z2` · `long_z2` · `sweet_spot` |
+| 26 / 12 / 9 wkn | Base | Base | Doel-gericht | 45' | 0' | idem |
+| 8 / 5 wkn | Build | Build | Doel-gericht | 77' | 0' | `threshold` · `threshold` · `long_z2` · `sweet_spot` |
+| 4 / 2 wkn | Peak | Peak | Doel-gericht | 12' | 14' | `threshold` · `long_z2` · `long_z2` · `vo2max` |
+| 1 wk | Peak | **Taper** | Doel-gericht | 0' | 14' | `taper_openers` · `taper_z2_kort` ×3 |
+| 0 (deze week gereden) | Recovery | Recovery | Doel-gericht | 0' | 0' | `recovery` ×4 |
+
+**Een A-race die een JAAR weg is, haalt de week van 77' naar 45' hoog-intent — 42% minder — op het
+moment dat de gebruiker hem opslaat.** Geen voorstel, geen bevestiging, geen melding. Het enige
+zichtbare signaal is de plan-modus-pill die van "Opbouw" naar "Doel-gericht" springt; dat is een
+label, geen vraag (M10/M11).
+
+De grens is dag-precies en onaangekondigd: 57 dagen → `wekenTot` 9 → Base; 56 dagen → `wekenTot` 8 →
+Build. Op één willekeurige kalenderdag verandert het plan van karakter.
+
+**De prioriteit beschermt niet.** Gedraaid: een B-event en een C-event over 52 weken laten het plan
+ongemoeid (byte-identiek aan geen-event) — maar een **C-trip** over 52 weken neemt het plan wél over
+naar Base, want `pickMainEvent_` toetst `prioriteit === "A" || type === "trip"`. Een als onbelangrijk
+gemarkeerde vakantie stuurt dus een jaar lang de periodisering.
+
+**Onder M52.** De activeringsdrempel ligt in het model niet vast; in de app ligt hij wél vast, en hij
+is "onmiddellijk, op elke afstand". Onder M5 mag de app die regel niet hebben zolang het model hem
+niet draagt.
+
+**Dit scherpt R2's V8, en corrigeert de samenvatting ervan.** V8 stelde vast dat `eventContextFrom_`
+niet geport is → het event raakt de WORKOUT niet. Daaruit is in de overdracht "er is geen overname"
+geworden. Dat is te sterk: **de overname bestaat, alleen loopt zij via de macro-fase en niet via de
+workout.** De twee bevindingen samen geven de scherpste vorm: het plan wisselt van karakter zonder
+toestemming (M51), en de prikkel die je ervoor terugkrijgt is niet op het event afgestemd (V8). Het
+event kost agency en levert geen tailoring.
+
+**Herkomst: geërfd.** GAS `src/Doel.gs:201` (`if (e.prioriteit === 'A' || e.type === 'trip') return
+e;`) draagt dezelfde selectie; de fase-mapping en de drempels zijn 1-op-1.
+
+### T5 — herkomst (aanvulling uit a3): geërfd, byte-identiek
+
+T5 liet de herkomst open. Beide dragende delen staan letterlijk in de GAS-bron.
+
+De zin: GAS `src/Script.html:1633` draagt hem woord voor woord ("Bij <strong>' + hours + 'u/week</strong>
+blijft je fitheid-plafond onder je duurdoel — zo niet haalbaar. Verhoog het volume."); Cadans
+`apps/web/src/components/niveau/DoelProjectie.tsx:742` is dezelfde zin.
+
+De afgeleide default waarop het oordeel rust: GAS `src/WebApp.gs:1268` —
+`weeklyHoursDefault: weeklyHoursRecent_(actValues, 42)`, met de fallback 8 op `src/Script.html:1673` en de
+clamp 4..14 op `src/Script.html:1674`. Cadans `apps/web/src/pages/Niveau.tsx:157` spiegelt dat 1-op-1.
+
+**Nuance die R4 nodig heeft.** De M41/M8(a)/M27-schending is geërfd, maar de BEREIKBAARHEID was in
+Cadans een tijd lang gróter: de gap-tak vuurde ook op een FTP-doel, waar GAS hem onderdrukt. Dat is
+hersteld (`7308d660`) — de huidige stand is geërfde pariteit, geen geïntroduceerde regressie.
+
+---
+
+## Wat brok a openlaat
+
+**a is af.** Wat hieronder staat is doorgeschoven werk, geen open a-vraag.
+
 - **De blokken-loze combo.** `combo_long_with_efforts` levert wel `structuur` (weergave) maar
-  `blokken: undefined` (gemeten, doel=Beklimmingen, za 180'). Raakt M56 (levering) → **c**,
-  en R2's V21 (de coach leest het etiket omdat de segmenten null zijn).
-- Welke helft van het onderhoud-profiel gelezen wordt (slot van T9).
+  `blokken: undefined` (gemeten, doel=Beklimmingen, za 180'). Raakt M56 (levering) → **c**, en R2's
+  V21 (de coach leest het etiket omdat de segmenten null zijn). T13 maakt hem zwaarder: die sessie is
+  de enige plek waar M38's "vermoeidheid die eraan voorafgaat" wordt bediend.
+- **De vlakke 36'** (T10) is een a-bevinding met een b-vervolg: onder M9 (schaal-eis) en M47 (totale
+  belasting is de primaire hendel) hoort b te wegen wat een urenbudget met de dosering hoort te doen.
+- **Voor R4, niet voor R3:** T12's test-lus en T14's overname raken beide een BOUW-vraag die R2 al
+  open had staan (V7's plaats-en-schrijver-vraag) — een voorstel-en-bevestig-lus vereist een
+  plan-van-record om "het vorige plan" tegenover te zetten.
 
 ## Vondsten-index
 
@@ -308,10 +594,17 @@ draaien weerlegd. Welke helft precies, en wat de fase-modulatie (`GOAL_FASE_MOD_
 | T2 | M33 | vijf doelen, twee meetlatten; Onderhoud meet tegen een lange-rit-doel dat hij nul keer plant | geërfd, oracle-bevroren |
 | T3 | M39 + M5 | CTL draagt het label "Duurvermogen" | geërfd |
 | T4 | M38 | Conditie koopt −3' duur; er is geen duur-intent | geërfd |
-| T5 | M40/M41, M8(a), M27/M29, M5 | haalbaarheids-oordeel + "verhoog het volume", op afgeleide uren | te bepalen (a3) |
-| T7 | M37/M38/M50 | "Onderhoud = zacht" weerlegd; motivering onjuist | n.v.t. (meting) |
+| T5 | M40/M41, M8(a), M27/M29, M5 | haalbaarheids-oordeel + "verhoog het volume", op afgeleide uren | **geërfd, byte-identiek (a3)** |
+| T7 | M37/M38/M50 | "Onderhoud = zacht" weerlegd; motivering onjuist — **INGETROKKEN, zie T10** | n.v.t. (meting) |
 | T8 | M46, M37/M38, M5 | de 45-min-cap begrenst de prikkel, niet de sessie: 20' werk bij elke duur | geërfd, byte-identiek |
-| T9 | M49, M50 | fase-pin = loodgietersfix (eigen docstring); payload draagt de gepinde fase | geërfd |
+| T9 | M49, M50 | fase-pin = loodgietersfix (eigen docstring); payload draagt de gepinde fase — **STAAT; T12 draagt het lek dat hij dicht** | geërfd |
+| T10 | M37/M38/M50 + M7 | T7 weerlegd: Onderhoud levert 36' hoog-intent bij 405', 210' én 180' — minder dan FTP, en vlak | geërfd |
+| T11 | M49 + M5 | `keyIntensity` stuurt het plan niet: 400 weken, 180 treffers, alle in fase Test; profiel-tak + `climbTypeWorkout_` + 2 guards onbereikbaar | geërfd |
+| T12 | M46, M49, M5 | na blokweek 12 elke week een FTP-test, voorgoed — 4 van 5 doelen; `doelDuur` wordt niet gelezen | geërfd, byte-identiek |
+| T13 | M36, M38, M33, M5 | lang/kort klimmen heeft geen route: `klimType` wordt gevraagd, opgeslagen en gethreaded — en alleen gelezen door een functie die niet draait | geërfd |
+| T14 | M51, M52, M10, M5 | elk A-event/trip neemt de fase over, op elke afstand, zonder voorstel: 77' → 45' door een race over een jaar; C-trip telt mee | geërfd |
 
 T6 is bewust niet uitgegeven (de VO2max-nevenmeting is onder T4 genoteerd); de reeks is
-append-only en wordt niet hernummerd.
+append-only en wordt niet hernummerd. **T7 is INGETROKKEN door T10 en blijft letterlijk staan** —
+zoals M3 voorschrijft voor het model, en zoals R1's micro-correctie voor dit soort documenten
+vastlegde. Een ingetrokken vondst wordt niet herschreven en niet hergebruikt.
