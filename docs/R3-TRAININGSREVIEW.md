@@ -963,3 +963,112 @@ doel dat het artefact niet heeft (M5/M53); de terugkerende test wordt bovendien 
   (criterium = het MODEL).
 
 ---
+
+## d — INVOER / GRENS (§4 + §5 · M21-M32 · 10 NORM + 2 OPEN)
+
+Model-first: begin bij de regel, meet de plek die de claim maakt (of hoort te maken). Herkomst per vondst
+(GEËRFD = GAS doet het ook · Cadans-DIVERGENTIE = eigen keuze). T29 (lege huls) en de RPE-sensor in T30 zijn
+GEDRAAID, niet gelezen — de RPE-sensor bleek bedraad-om-te-sturen waar M31 "niet aangesloten" zegt. Geen
+verdicts. M21 (doelgroep, niet begrensd op leeftijd/niveau/volume) levert geen vondst: de app gate't daar niet op.
+
+### T28 — Er is geen gedeclareerde-capaciteit-veld; er is niets om onder te zitten of tegen te spreken. *(M25, M26, M29 · toetst T5 + de geparkeerde uren-schuif tegen §5)* — de ruggengraat van d
+
+M26 vraagt een eigen capaciteit-veld, los van het weekplan — "zonder dit veld bestaat de regel 'je zit onder je
+limiet' niet." Dat veld bestaat niet. De `settings`-tabel (`workers/api/src/db/schema.ts:56`) heeft één
+volume-gerelateerd veld, `profielPreset` — en dat is precies wat M26 uitsluit ("een volume-preset is een dosering,
+geen limiet"). Sterker: `profielPreset` is in Cadans niet eens een dosering-invoer — de engine leest 'm nergens
+(`apps/web/src/lib/settings.ts:108` "NIET door de engine gelezen"); hij voedt alleen het §2 Volume-label
+(`presetHoursLabel` `:127`, R2-V1).
+
+Wat het plan dán als capaciteit gebruikt: de weekplan-minuten. Het weekvolume dat de Base-intent-weging voedt =
+Σ beschikbare minuten uit de weekplanner (`packages/engine/src/planner.ts:227` "weekvolume (uren)", `:232`
+`weekV += Number(d.minuten)`). Dat is de intentie (M28) — die M30 mág laten sturen. Maar de weekplanner is zo
+dubbel belast: hij is de intentie-sensor (M28) én de facto de capaciteit (M25's "waar alles op rust"), omdat de
+gedeclareerde limiet ontbreekt. Gevolg: M26's "onder je limiet" en M29's tegenspraak hebben geen referent — er is
+geen limiet om onder te zitten of om door data te laten tegenspreken.
+
+En de énige plek waar data wél aan "uren" komt, gaat de verkeerde kant op. M29: data mag de limiet TEGENSPREKEN,
+niet BEPALEN — als voorstel, onder M10. De doel-projectie-schuif staat standaard op recent geréden volume
+(`weeklyHoursRecent_`, `apps/web/src/components/niveau/DoelProjectie.tsx:393`, geclampt op de slider-range 4..14;
+T5/a3) — data die de uren BEPAALT, stil, als default, zónder voorstel. Dat is M29 omgekeerd, en het is precies
+M27's plateau-inbak ("deed is niet kon"). De geparkeerde modelvraag (koppel de schuif aan de plan-instelling-uren)
+is het symptoom hiervan: mét een gedeclareerd veld zou de schuif niet uit gereden volume hoeven af te leiden.
+R3-d re-litigeert T5 niet — het legt vast dat het ontbrekende veld de reden is dat data de gaten vult.
+
+**Herkomst.** GEËRFD. GAS heeft evenmin een capaciteit-veld: alleen `PROFIEL_PRESET` (`src/Settings.gs`, opties
+`Amateur 3u`..`Pro 10u+`/`Custom`, default `Gevorderd 7u`). GAS' `getVolumeTargets` geeft een fase-band per preset
+(dosering-target-bereik), geen gedeclareerd plafond dat de rijder als "zoveel tijd heb ik" invult. De
+Cadans-eigenaardigheid (`profielPreset` display-only i.p.v. GAS' echte dosering-input) is R2-V1, niet nieuw. Het
+ontbreken van de limiet zelf is geërfd.
+
+### T29 — De zichtbaarheidsgrens is niet bewaakt: zonder vermogensmeter levert de app een lege huls, en het belastingsmodel valt niet weg. *(M22, M23, M24)* — GEDRAAID
+
+M24 noemt het scenario letterlijk: "een app die zonder belastingsmodel toch een plan voorschotelt, verkoopt een
+lege huls." Gemeten (standaard-fixture, ftp gevarieerd): met `ftp: null` (verse user → `EMPTY_SETTINGS`,
+`apps/web/src/lib/schema.ts:697`) genereert `buildWeekProposal` een identiek plan — zelfde types (di threshold ·
+do threshold · za long_z2 · zo sweet_spot), zelfde namen, zelfde structuur — met watt-targets die overal `0-0W`
+zijn. Idem `ftp: 0`. Geen weigering, geen waarschuwing.
+
+Erger voor M23 ("de keten van FTP via TSS naar chronische en acute belasting is vermogen-only; wat wegvalt zonder
+vermogensmeter is het model"): de geplande TSS is ongewijzigd tussen ftp=280 en ftp=null (68 · 61 · 126 · 48,
+byte-identiek). De geplande TSS is %FTP-relatief, dus ftp-onafhankelijk — het model valt dus níét weg zonder
+vermogensmeter, het produceert dezelfde belasting-getallen en doet alsof. Aan de lees-kant neemt de sync
+intervals.icu's `icu_training_load ?? training_load ?? tss` (`packages/engine/src/sync.ts:79`) zonder
+vermogen-vs-hartslag-onderscheid; voor een rijder zonder meter is dat HR-afgeleide load die als het
+belastingsmodel binnenkomt. De grens uit M22/M23 wordt nergens afgedwongen.
+
+**Herkomst gesplitst.** Het ontbreken van de grens-poort — een plan leveren ongeacht een échte vermogensmeter — is
+GEËRFD. GAS levert óók een plan; GAS' `SETTINGS_DEFAULTS.ftp = 280` (`src/Settings.gs:73`) maskeert alleen de
+`0-0W` door een FTP te verzinnen — nog steeds een lege huls, op een verzonnen FTP. De zichtbare `0-0W`-lek op een
+verse Cadans-user is Cadans-INTRODUCEERD (R2-C0: de defaults-laag niet geport, ftp lekt null). De grens-poort
+ontbreekt in beide; de 0W-zichtbaarheid is Cadans.
+
+### T30 — De sensoren: de RPE-mismatch is bedraad om te sturen (niet te informeren) en alleen uitgehongerd; de dispositie-reden is gevangen maar niet bedraad, en mist de benen-optie. *(M30, M31 + M15/M18 · toetst T22 · koppelt R2-V7)* — GEDRAAID
+
+M31 zegt van twee sensoren "gebouwd maar niet aangesloten ... geen nieuwe bouw; bedrading." Gemeten wijkt dat af
+per sensor.
+
+**RPE-mismatch — bedraad, niet enkel gebouwd.** `rpeSignal_` (`packages/engine/src/readiness.ts:521`) zit in het
+plan-signaal: `apps/web/src/lib/proposal.ts:317` roept 'm aan, `combineSignals_` (`readiness.ts:560`) neemt de
+zwaarste van band en RPE, en dat signaal stuurt `assignWorkouts`' demote (het pad van T22). Gedraaid: met gevulde
+planned-types + RPE ~2-3 boven verwacht geeft `rpeSignal_` `signal:"demote"`, reden "RPE +2,3 deze week (laatste 3
+sessies zwaarder dan gepland)", en `combineSignals_` propageert dat over een `normal`-band. Het is dus wél bedraad
+— om te STUREN. Hij is inert omdat zijn input leeg is: `plannedTypeByDate` komt uit `PlannerDay.voorgesteldType`
+(`proposal.ts:314`), en die wordt altijd null geschreven (`workers/api/src/db/repo.ts:366`, R2-V7). Met lege
+planned-types → altijd `normal` (gedraaid, bevestigd). M31's "bedrading" mist het punt: de draad-om-te-sturen
+bestaat al; wat ontbreekt is de input, en die invullen maakt een stille beslisser — een demote-reden achteraf,
+geen voorstel. Per M30 hoort RPE te INFORMEREN; per M15/M18 is RPE een zwakke informant, beslisser af. De
+aangesloten RPE-mismatch zou dus M30 + M15/M18 schenden, net als T22.
+
+**Dispositie-reden — gevangen, niet bedraad, en te grofmazig.** De reden (`geen_tijd | bewust_gerust | iets_anders`,
+`packages/shared/src/disposition.ts:8`) zet de dag op gemist en levert een label (`apps/web/src/lib/schema.ts:178`,
+GemistCard "Gemist · {label}"); de engine leest de reden nergens (geen match in `coach.ts`/`planner.ts`). Voor
+déze sensor klopt M31's "niet aangesloten". Maar de optie-set mist de benen-kant van M31's onderscheid ("agenda of
+benen — dat verschil verandert wat het model hoort te doen"): `geen_tijd` = agenda, `bewust_gerust` = keuze,
+`iets_anders` = restpost — geen "benen kapot / voelde slecht". Aangesloten zou hij dat onderscheid dus niet kunnen
+maken. Herkomst GEËRFD: GAS `DISPOSITION_REASONS = ['geen_tijd','bewust_gerust','iets_anders']`
+(`src/WebApp.gs:1634`), identiek.
+
+**M30-toets op T22.** M30 zet subjectieve terugkoppeling (RPE, check-in, reden) en wellness-proxies op INFORMEREN.
+De readiness-band (check-in + wellness) STUURT juist het plan (T22, gedraaid). Dezelfde vondst als T22, nu tegen
+M30's sensor-status: een informant/proxy die als beslisser optreedt. Niet ge-re-litigeerd; genoteerd als de
+§5-lens op T22.
+
+### `d` — samenvatting van herkomst + doorverwijzing
+
+- **Grens (§4):** M21 geen vondst (geen leeftijd/niveau/volume-gate). M22/M23/M24 in T29 (geen grens-poort → lege
+  huls; belastingsmodel valt niet weg; `0-0W` = R2-C0).
+- **Invoer (§5):** M25/M26/M29 in T28 (geen gedeclareerd capaciteit-veld; de weekplanner draagt dubbel; data
+  BEPAALT de uren i.p.v. TEGENSPREEKT). M27 via T5 (toets, niet ge-re-litigeerd). M28: de weekplanner werkt als
+  intentie-sensor (M30 laat 'm sturen) — geen vondst, wel de dubbele last onder T28. M30/M31 in T30 (RPE
+  bedraad-maar-uitgehongerd; dispositie gevangen-niet-bedraad + geen benen-optie; readiness-band stuurt =
+  T22-toets). M32 (OPEN) is stroomafwaarts van T28's afwezigheid — er is nog geen veld om te ontwerpen.
+- **T14-toets (event als invoer):** M30's sensor-status-taxonomie (gedeclareerde capaciteit · weekplan ·
+  uitgevoerde training · subjectieve terugkoppeling · wellness-proxies) noemt de event/doel-invoer niet, terwijl
+  dat de meest structurele invoer is (T14: het event neemt het plan over). Klein gat in M30; de agency-kant van
+  T14 blijft a/c.
+- **Geparkeerd (ná R3, M9/M39):** de uren-schuif-koppeling — T28 legt vast waaróm die vraag bestaat (ontbrekend
+  gedeclareerd veld), lost 'm niet op.
+- Geen verdicts, geen model-regels, geen engine-wijziging: dit zijn `d`'s bevindingen. **Hiermee sluit R3**
+  (a+b+c+d, T1-T30; T6 ongebruikt, T7 ingetrokken). Volgende = R4: het cutover-oordeel per item over R1+R2+R3
+  samen (criterium = het MODEL).
