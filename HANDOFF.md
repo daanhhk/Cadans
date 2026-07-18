@@ -20,7 +20,7 @@ de reeks is append-only en wordt niet hernummerd.
   mechanisch geteld, geen gaten. Negen vallen af met reden (M1-M4 = over het document zelf;
   M6/M20/M59 = binden de REVIEW; M60/M61 = INGETROKKEN); M57/M58 vallen buiten de trainings-laag.
   **50 binden de app**; M5 (claimregel) is dwarsdoorsnijdend; **49** in vier brokken: **a** (KLAAR)
-  doel→fase→prikkel (§6+§8, M33-M42+M49-M52, 14) · **b** dosering (§1+§7, M7-M9+M43-M48, 9) · **c**
+  doel→fase→prikkel (§6+§8, M33-M42+M49-M52, 14) · **b** (KLAAR) dosering (§1+§7, M7-M9+M43-M48, 9) · **c**
   agency/bewijslast/coach-stem (§2+§3+§9, M10-M19+M53-M56, 14) · **d** invoer/grens (§4+§5, M21-M32,
   12). Volgorde a→b→c→d: a en b delen één proefopstelling, a's uitkomst is b's invoer.
 - **R3 SCHRIJFT GEEN MODEL-REGELS.** Legt een vondst een gat in het MODEL bloot, dan ís dat de vondst.
@@ -116,6 +116,41 @@ een pad dat de app niet draait. GAS kent de seam niet (`src/Algorithm.gs:93` + `
   (`src/Script.html` 1673→1674), **8** waren shorthand `:NNN` zonder pad (onoplosbaar → de
   dekkings-toets ving ze) en **1** was kaal (geen inhouds-verwachting) — alle mechanisch gevangen vóór
   publicatie; ambiguïteits- en kale-anker-toets schoon.
+
+**R3-b KLAAR — dosering (juli 2026).** Findings-doc `docs/R3-TRAININGSREVIEW.md` (nu incl. T15-T21),
+gepind:
+<https://raw.githubusercontent.com/daanhhk/Cadans/00b376f2d991b62147bbc6670add47647a2f3579/docs/R3-TRAININGSREVIEW.md> **Findings, GEEN
+verdicts** (die zijn R4; verdict-criterium = het MODEL). Docs-only, engine ongemoeid, niets gedeployd,
+vloeren ongewijzigd. **7 vondsten: T15-T21** (§1+§7, M7-M9+M43-M48). Reeks blijft append-only (T6
+ongebruikt, T7 ingetrokken door T10 — niet hernummerd). **`a`'s uitkomst is `b`'s invoer**; de
+proefopstelling stubt `Date` op de fixture-datum (a3-correctie).
+- **T15 piramidaal ja, het harde topje ontbreekt** (M43). vo2/anaeroob-top structureel afwezig voor
+  FTP/Conditie op elk urenbudget (ANA=0 bij 3-15 u); vo2-gewicht 0.20 altijd #3, `goalPickIntent_` wisselt
+  de top-2 → vo2 nooit bereikt. GEERFD.
+- **T16 de ruggengraat bij weinig uren is niet sweet-spot** (M44) maar wat het doelprofiel zwaarst weegt
+  (FTP→drempel, Conditie→sweetspot), VAST over alle volumes; geen weinig-uren→sweetspot-mechanisme. GEERFD.
+- **T17 de korte-sessie-val — DE ZWAARSTE VAN b** (M46+M44+M47). 35-51' beschikbaar → ALLE doelen
+  geforceerd naar vo2max (enig passend archetype), doel-onafhankelijk, op de archetype-minimum-naad. M46's
+  exacte anti-patroon. GEERFD + oracle-bevroren.
+- **T18 M45's polarisatie-knik bestaat als constante maar polariseert niet** (M45 — HEURISTIEK).
+  `BASE_POLAR_VOL_U0=9` is Base-only + gecapt onder de dominante intent ("blijft #2", GAS-ontwerp) → inert
+  voor FTP/Conditie; nooit getoond (geen M5-claim) maar ook nooit als heuristiek gepresenteerd (opake
+  rationale → c). GEERFD.
+- **T19 Onderhoud schaalt niet, koopt geen prikkel per extra uur** (M9+M47+M7) — verlengt T10. Hoog-intent
+  36' bij ELK budget 3-15 u, ANA altijd 0; TSS 134→534 (alleen LOW groeit). GEERFD.
+- **T20 bij de capaciteitsdoelen schaalt LOAD wél met de uren, intensiteit blijft vast** (M47+M9). LOW+TSS
+  groeien, harde quota vast → weinig uren NIET met intensiteit beantwoord (week-niveau M47-conform), werkt
+  3-15 u (M9-conform); de "knik" is fase-gedreven, niet volume-gedreven. GEERFD.
+- **T21 de dosering weegt de voorgaande weken niet mee — M48 gebeurt vrijwel niet** (M48). (a) `loadCarry`
+  gedropt = **Cadans-DIVERGENTIE** (GAS `src/Algorithm.gs:47`, R1-A2 mat ×1). (b) meso-ramp one-shot
+  (`MESO_MOD` 4 keys, wk5+ vlak, schaalt power-%, ~+1 TSS). (c) activities = reactieve 7-daagse
+  zone-dekking + hard-dag-spacing, deze-week-only; zware vs lichte voorafgaande 7 dagen laat de dosis
+  ONGEWIJZIGD (hard 77, TSS ~293), herschikt alleen de intent-volgorde. Dosis = vaste functie van de
+  fase-kalender uit `doelStart`, "in het luchtledige".
+- **HERKOMST:** alles GEERFD behalve T21's `loadCarry`-drop (bewuste Cadans-DIVERGENTIE, model-neutraal).
+  Geen M5-claim-schending in `b`; M8 niet geschonden; M7 geraakt door T19/T20; opake rationale +
+  inelasticiteit → `c` (M10/M53-56). Drie meet-zelfcontroles schoon; 49-assertie anker-zelftoets schoon
+  vóór publicatie.
 
 **R2 KLAAR — a + b + c (juli 2026).** Findings-doc `docs/R2-ENGINE-END-AUDIT.md` (1707 regels), gepind:
 https://raw.githubusercontent.com/daanhhk/Cadans/ecd953003d3f09e5114a79fd9db59f5be5dbd208/docs/R2-ENGINE-END-AUDIT.md **Findings,
