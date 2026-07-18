@@ -11,99 +11,111 @@ live tot cutover.
 
 ## Stand
 
-**R3-a LOPEND — a1 + a2 klaar (juli 2026).** Findings-doc `docs/R3-TRAININGSREVIEW.md` (317 regels),
-gepind: https://raw.githubusercontent.com/daanhhk/Cadans/9bd2624a8d07cb285e3ba28ddab17a2fc9490b31/docs/R3-TRAININGSREVIEW.md **Findings,
-GEEN verdicts** (die zijn R4; verdict-criterium = het MODEL). Docs-only, engine ongemoeid, niets
-gedeployd, vloeren ongewijzigd. **8 vondsten: T1-T5 (a1) + T7-T9 (a2).** T6 bewust niet uitgegeven;
+**R3-a KLAAR — a1 + a2 + a3 (juli 2026).** Findings-doc `docs/R3-TRAININGSREVIEW.md`, gepind:
+<https://raw.githubusercontent.com/daanhhk/Cadans/424bb68b4adedf0db5c54227dc5f46e56a63ae97/docs/R3-TRAININGSREVIEW.md> **Findings, GEEN verdicts** (die zijn R4; verdict-criterium = het MODEL). Docs-only,
+engine ongemoeid, niets gedeployd, vloeren ongewijzigd. **13 vondsten: T1-T5 (a1) + T7-T9 (a2) +
+T10-T14 (a3).** T6 bewust niet uitgegeven; **T7 is INGETROKKEN door T10** en blijft letterlijk staan;
 de reeks is append-only en wordt niet hernummerd.
 - **R3-SCOPE (Daan akkoord, 17-07-2026) — de INVENTARIS IS HET MODEL, niet de matrix.** 61 M-regels,
   mechanisch geteld, geen gaten. Negen vallen af met reden (M1-M4 = over het document zelf;
-  M6/M20/M59 = binden de REVIEW; M60/M61 = INGETROKKEN); M57/M58 vallen buiten de trainings-laag
-  (product-strategie). **50 binden de app**; M5 (claimregel) is dwarsdoorsnijdend; **49** in vier
-  brokken: **a** doel→fase→prikkel (§6+§8, M33-M42+M49-M52, 14) · **b** dosering (§1+§7, M7-M9+M43-M48,
-  9) · **c** agency/bewijslast/coach-stem (§2+§3+§9, M10-M19+M53-M56, 14) · **d** invoer/grens (§4+§5,
-  M21-M32, 12). Volgorde a→b→c→d: a en b delen één proefopstelling, a's uitkomst is b's invoer.
-  **Twee soorten werk:** LOCATIE-werk (het model heeft al beslist — M13/M18/M50 — dus zoek élke plek
-  waar de app de claim tóch maakt) en MEET-werk (de norm staat er, niemand heeft gemeten — M9/M38/M43).
-- **R3 SCHRIJFT GEEN MODEL-REGELS.** Legt een vondst een gat in het MODEL bloot, dan ís dat de vondst
-  (onder M5 mag de app daar niets beweren). Regels schrijven is Daans besluit; anders schrijft de
-  review de norm die de app vrijspreekt. Vormgevings-/infra-drift onderweg → parkeren (R1/R2-terrein).
+  M6/M20/M59 = binden de REVIEW; M60/M61 = INGETROKKEN); M57/M58 vallen buiten de trainings-laag.
+  **50 binden de app**; M5 (claimregel) is dwarsdoorsnijdend; **49** in vier brokken: **a** (KLAAR)
+  doel→fase→prikkel (§6+§8, M33-M42+M49-M52, 14) · **b** dosering (§1+§7, M7-M9+M43-M48, 9) · **c**
+  agency/bewijslast/coach-stem (§2+§3+§9, M10-M19+M53-M56, 14) · **d** invoer/grens (§4+§5, M21-M32,
+  12). Volgorde a→b→c→d: a en b delen één proefopstelling, a's uitkomst is b's invoer.
+- **R3 SCHRIJFT GEEN MODEL-REGELS.** Legt een vondst een gat in het MODEL bloot, dan ís dat de vondst.
 - **DE MATRIX HELPT IN R3 NIET, en dat is bewezen:** `effectiveMacroFase_` is AST-identiek, bereikbaar
-  én door beide oracles geraakt — de rustigste cel — en tegelijk het zwaarste trainings-defect (T9).
+  én door beide oracles geraakt — de rustigste cel — en tegelijk de spil van T9/T12.
+
+**⚠ FIXTURE-CORRECTIE (a3) — LEES DIT VÓÓR JE MEET.** `allocateQualityWeek_` dateert zich op de
+AMBIENT klok (`packages/engine/src/planner.ts:537`); de rest van de pijplijn op `input.todayISO`
+(`apps/web/src/lib/proposal.ts:341`). **In de app vallen die ALTIJD samen** (`apps/web/src/lib/schema.ts:856`
+`const todayISO = todayIso()`). De a1/a2-standaard-fixture (ma 2026-07-13, `todayISO` = die maandag)
+liep op een klok van 17/18-07 → di+do vielen buiten de allocator en door naar `keyIntensity`. **Elke
+nieuwe meting stubt `Date` op de fixture-datum** (bundel-niveau, geen repo-wijziging) — anders meet je
+een pad dat de app niet draait. GAS kent de seam niet (`src/Algorithm.gs:93` + `src/Algorithm.gs:1019`
+= twee keer ambient) → dit is een fixture-eigenschap, geen app-vondst.
+
 - **T1 de doel-lijst is niet die van het model** (M34/M35/M36/M42). `packages/engine/src/phase.ts:12`
-  `DOEL_OPTIONS = FTP/Conditie/Beklimmingen/VO2max/Onderhoud`; labels `apps/web/src/lib/settings.ts:100`.
-  VO2max staat er als DOEL (M35: middel); Beklimmingen is één doel waar M36 er twee eist. GEËRFD,
-  1-op-1 (GAS `src/Archetypes.gs:556` ↔ `packages/engine/src/archetypes.ts:1220`).
-- **T2 vijf doelen, TWEE meetlatten** (M33). `packages/engine/src/niveau.ts:570` `GOAL_PROFILES_` =
-  exact `girona` + `ftp`; `packages/engine/src/niveau.ts:629` `activeGoalProfile_`: FTP → ftp, **al het
-  andere → girona** (~90 km · 1200 hm/dag; dims 4,0 W/kg · CTL 65 · lange-rit 4,0 u). **Bij Onderhoud
-  intern tegenstrijdig:** het profiel zet `langeRitPerWeek: 0` + `maxDuurMin: 45`
-  (`packages/engine/src/archetypes.ts:1215`) — nul lange ritten gepland — en meet tegen een
-  lange-rit-doel van 4 u. GEËRFD én ORACLE-BEVROREN: GAS `src/SelfTest.gs:410` assert letterlijk
-  `activeProfile Conditie->girona`; GAS' eigen comment geeft de onvoltooidheid toe
-  (`src/Archetypes.gs:529`). De zelftest bewijst dát de terugval wérkt, niet of hij DEUGT.
-- **T3 CTL draagt het label "Duurvermogen"** (M39 + M5). De girona-dim `key:"duur"` heeft
-  `label:"Duurvermogen"`, `metric:"ctl"`, `target:65` — precies de claim die M39 OPEN verklaart.
-- **T4 "Duurvermogen" kiezen koopt −3 minuten duur** (M38). GEDRAAID (zomer-week 405', alleen `doel`
-  varieert; zelf-controle FTP×2 = 0 verschil): FTP 339' duur/66' kwaliteit · **Conditie 336'/69'** ·
-  Beklimmingen 315'/72'+14' top · VO2max 366'/21'+19' · Onderhoud 310'/94'. **Oorzaak dieper dan een
-  instelling:** `packages/engine/src/archetypes.ts:1138` `GOAL_KWALITEIT_INTENTS_ = ["drempel","sweetspot","vo2"]`
-  — DRIE kwaliteits-intents, GEEN duur-intent. Conditie = het FTP-profiel met de eerste twee
-  omgewisseld. **Duur is geen hendel die een doel kan bedienen.** GEËRFD (`src/Archetypes.gs:510`;
-  GAS' comment noemt de conditie-mix "sweetspot-led/endurance" = M34's begripsverwarring).
-- **T5 het haalbaarheids-oordeel dat M41 verbiedt, staat er letterlijk** (M40/M41 + M8(a) + M27/M29 + M5).
-  `apps/web/src/components/niveau/DoelProjectie.tsx:742`: "Bij {hours}u/week blijft je fitheid-plafond
-  onder je duurdoel — zo niet haalbaar. Verhoog het volume." Vier regels gestapeld: M41 (de app kan het
-  oordeel niet vellen), T3's CTL-maat, M8(a) (volume-maximalisatie uitgesloten — "het model krijgt de
-  uren, het verzint ze niet"), en M27 — `apps/web/src/pages/Niveau.tsx:157` vult de uren-default met
-  `weeklyHoursRecent_(rows, 42)` = het GEREDEN volume ("deed is niet kon"). Schuif verzetbaar, maar het
-  oordeel staat op de afgeleide default. M29 geeft de enige toegestane richting: VOORLEGGEN onder M10.
-  HERKOMST NOG TE BEPALEN → a3.
-- **T7 "Onderhoud = zacht trainen" is ONJUIST — WEERLEGD DOOR METING** (M37/M38/M50). GEDRAAID, high-intent
-  per week: 405' → Onderhoud **94'** vs FTP 66' · 210' → **76'** vs 45' · 180' → **76'** vs 45'.
-  Onderhoud is op ELK urenbudget intensiever dan het FTP-doel en ruilt bij weinig uren de lange rit in
-  voor een derde kwaliteitsdag — precies wat M37/M38 vragen. **M50's REGEL staat (T9 draagt hem
-  zelfstandig), maar M50's MOTIVERING + BESLUITEN' vondst 1 zijn op de intensiteits-hoeveelheid
-  empirisch onjuist.** Het urgentie-argument dat eraan hing ("moet weg vóór de winterdip") verliest zijn
-  onderbouwing en moet zelfstandig opnieuw gemaakt worden — **T8 is de kandidaat.** R4 weegt opnieuw.
-- **T8 de 45-minuten-cap begrenst de PRIKKEL, niet de sessie — DE ZWAARSTE VAN a** (M46 + M37/M38 + M5).
-  Enige lezer van `maxDuurMin`: `packages/engine/src/planner.ts:411` in `allocateQualityWeek_`
-  (`packages/engine/src/planner.ts:173`). `bt` gaat UITSLUITEND naar `goalWorkout_`
-  (`packages/engine/src/planner.ts:413`) = de archetype-KEUZE; de sessie wordt daarna op `sel.minuten`
-  gebouwd. GEDRAAID (doel=Onderhoud, za 45'→240'): **altijd "Sweet Spot 2×10 kort" met 20' werk** —
-  bij 240' is 220' opvulling (92%). Zelf-controle: dezelfde reeks bij FTP (geen cap → Infinity) levert
-  `long_z2` die WEL meeschaalt. M46 op zijn kop: niet een sessie als opvulling, maar een sessie waarvan
-  de PRIKKEL vastzit en de rest gat-vulling is. Onder M5: heet "kort" bij 240 minuten. GEËRFD,
-  byte-identiek incl. comment (`src/Algorithm.gs:943`).
+  `DOEL_OPTIONS = FTP/Conditie/Beklimmingen/VO2max/Onderhoud`. VO2max staat er als DOEL (M35: middel);
+  Beklimmingen is één doel waar M36 er twee eist. GEËRFD, 1-op-1.
+- **T2 vijf doelen, TWEE meetlatten** (M33). `packages/engine/src/niveau.ts:629` `activeGoalProfile_`:
+  FTP → ftp, **al het andere → girona**. Bij Onderhoud intern tegenstrijdig: `langeRitPerWeek: 0` +
+  meten tegen een lange-rit-doel van 4 u. GEËRFD én ORACLE-BEVROREN (`src/SelfTest.gs:410`).
+- **T3 CTL draagt het label "Duurvermogen"** (M39 + M5): girona-dim `key:"duur"`, `metric:"ctl"`,
+  `target:65` — precies de claim die M39 OPEN verklaart.
+- **T4 "Duurvermogen" kiezen koopt −3 minuten duur** (M38). `packages/engine/src/archetypes.ts:1138`
+  `GOAL_KWALITEIT_INTENTS_ = ["drempel","sweetspot","vo2"]` — DRIE kwaliteits-intents, GEEN
+  duur-intent. **Duur is geen hendel die een doel kan bedienen.** GEËRFD. (De tabel is gemeten op de
+  scheve klok; het mechanisme — er ís geen duur-intent — staat er los van.)
+- **T5 het haalbaarheids-oordeel dat M41 verbiedt, staat er letterlijk** (M40/M41 + M8(a) + M27/M29 +
+  M5). `apps/web/src/components/niveau/DoelProjectie.tsx:742` "…zo niet haalbaar. Verhoog het volume.",
+  op een default die `apps/web/src/pages/Niveau.tsx:157` uit het GEREDEN volume afleidt.
+  **HERKOMST (a3): GEËRFD, byte-identiek** — `src/Script.html:1633` (de zin) + `src/WebApp.gs:1268`
+  (de afgeleide default). Cadans' bereikbaarheid wás groter (vuurde ook op FTP); hersteld in `7308d660`.
+- **T7 — INGETROKKEN DOOR T10.** Luidde "Onderhoud = zacht trainen is ONJUIST, weerlegd door meting"
+  (94' vs FTP 66'). Die tabel is op de scheve klok gemeten. **M50's regel én motivering staan.**
+- **T8 de 45-minuten-cap begrenst de PRIKKEL, niet de sessie — DE ZWAARSTE VAN a** (M46 + M37/M38 +
+  M5). Enige lezer van `maxDuurMin`: `packages/engine/src/planner.ts:411`; `bt` gaat UITSLUITEND naar
+  `goalWorkout_` = de archetype-KEUZE, de sessie wordt op `sel.minuten` gebouwd. GEDRAAID: altijd
+  "Sweet Spot 2×10 kort" met 20' werk, van 45' tot 240'. GEËRFD, byte-identiek. **T10 promoveert hem:
+  T8's cap is het mechanisme achter de vlakke 36'.**
 - **T9 de app plant op een andere fase dan hij toont** (M49/M50). `packages/engine/src/planner.ts:87`
-  `effectiveMacroFase_` pint Onderhoud op `"Base"`; **de docstring noemt de reden zelf** ("→ allocActive
-  TRUE + een eerste-klas fase, geen missing-key") = exact M49's loodgietersfix, bewezen uit de eigen
-  documentatie. Diezelfde docstring claimt dat de display-sites de échte fase tonen — **GEDRAAID: onwaar**
-  (zelfde `doelStart`: FTP → `payload.macroFase "Build"`, Onderhoud → **`"Base"`**; bron
-  `apps/web/src/lib/proposal.ts:210`). `planModeLabel_` (`packages/engine/src/phase.ts:180`) geeft wél
-  "Onderhoud", maar dat is het MODUS-label, niet de fase. **DERDE keer dat een comment een premisse
-  claimt die de bron tegenspreekt** (na V1-(b) en V23) — patroon: de comment beschrijft de BEDOELING,
-  niet de uitkomst. **Wat de pin kost:** `keyIntensity` (`packages/engine/src/planner.ts:833`) kiest
-  doel-gedreven alléén in Build/Peak; Onderhoud matcht daarbuiten geen tak → de anonieme rest-regel
-  `return "sweet_spot"` (dezelfde die een ONBEKEND doel krijgt). Maar `allocateQualityWeek_` draait in
-  Base/Build/Peak en leest het profiel WÉL. GEDRAAID (probe-mutatie op de bundel, geen repo-wijziging):
-  onderhoud-`intentGewichten` → `{vo2:1.0}` verandert **1 van 3** kwaliteitsdagen; zelf-controle:
-  dezelfde mutatie op ftp verandert ÁLLE dagen. **Het profiel is HALF gelezen, niet dood** — de
-  hypothese "de pin maakt het profiel dood" is door draaien weerlegd. Welke helft → a3.
-- **a3 OPEN:** M38 voor de klim-doelen (lang + kort, niet gemeten) · M51/M52 (plan-transities als
-  voorstel + activeringsdrempel; R2's V8 maakt de toets SCHERPER: er is geen overname, dus ook geen
-  voorstel — en het doel wordt niet event-gedreven bediend) · T5's herkomst · welke helft van het
-  onderhoud-profiel gelezen wordt (slot van T9). **Geparkeerd naar c:** `combo_long_with_efforts`
-  levert `structuur` maar `blokken: undefined` (GEDRAAID, doel=Beklimmingen za 180') → M56 (levering)
-  + R2's V21 (de coach leest het etiket omdat de segmenten null zijn).
-- **WERKWIJZE (R3 = 7e bevestiging):** chat leest zelf (read-only kloon + grep), NUL CC-prompts voor het
-  lezen; CC doet alleen de close-out-commit. **DRAAI HET** — a's twee belangrijkste uitkomsten zijn beide
-  WEERLEGGINGEN van wat lezen suggereerde (T7 weerlegt "Onderhoud = zacht"; T9's slot weerlegt "het
-  profiel is dood"), elk met een zelf-controle die de fixture uitsluit. **REKEN JE EIGEN WERK NA:**
-  **2 van 21** locatie-ankers wezen naar de verkeerde regel (`packages/engine/src/phase.ts` 181→180;
-  `packages/engine/src/planner.ts` 414→413), mechanisch gevangen vóór publicatie; dekkings-, ambiguïteits-
-  en kale-anker-toets alle drie schoon. **STANDAARD-FIXTURE staat in het doc onder Methode** —
-  reproduceerbaar; probe-scripts en ruwe uitvoer bleven buiten de repo-tree.
+  `effectiveMacroFase_` pint Onderhoud op `"Base"`; de docstring noemt de reden zelf ("→ allocActive
+  TRUE + een eerste-klas fase, geen missing-key") = M49's loodgietersfix, bewezen uit de eigen
+  documentatie. Payload draagt de gepinde fase (`apps/web/src/lib/proposal.ts:210`). **STAAT — en T12
+  maakt hem STERKER: het lek dat de pin dicht is echt, en staat voor de andere vier doelen open.**
+- **T10 T7 IS WEERLEGD — Onderhoud is op elk urenbudget MINDER intensief dan FTP, en VLAK** (M37/M38/
+  M50 + M7). GEDRAAID, gecontroleerd (alles gelijk, alleen de klok verschilt): hoog-intent per week
+  **Onderhoud 36' bij 405', 210' én 180'** vs FTP 77'/45'/45'. Zelf-controle: FTP verschuift bij
+  210'/180' NIET (45' in beide klokken) → de verschuiving raakt Onderhoud, niet de fixture. Mechanisme
+  = het PROFIEL, niet `keyIntensity`: `kwaliteitPerWeek Build:2` (ftp 3) + `langeRitPerWeek:0` +
+  `maxDuurMin:45` (T8) → 2 "kort"-sessies, 20' + 16' = 36', bij 180' **exact dezelfde twee sessies**.
+  **Onder M7: een extra uur koopt bij Onderhoud nul extra prikkel.** GEËRFD.
+- **T11 `keyIntensity` stuurt het plan niet** (M49 + M5). De endurance-fill van de allocator
+  (`packages/engine/src/planner.ts:433`) geeft ÉLKE eligible dag een plaats, en de allocator-tak gaat
+  vóór (`packages/engine/src/planner.ts:622`). GEDRAAID, mechanisch: **400 weken** (5 doelen × blokweek
+  1-20 × 4 week-vormen) → **180 `keyIntensity`-treffers, alle 180 in fase Test**, nul in Base/Build/
+  Peak, nul bij Onderhoud. Dus: de profiel-tak (`packages/engine/src/planner.ts:847`) onbereikbaar,
+  `climbTypeWorkout_` onbereikbaar (→ T13), en de Taper-/Recovery-guards
+  (`packages/engine/src/planner.ts:841` +
+  `packages/engine/src/planner.ts:842`) dood. **BESLUITEN' vondst 1 wijst het verkeerde
+  mechanisme aan.** VIERDE "comment claimt een premisse die de bron tegenspreekt" (na V1-(b), V23, T9).
+- **T12 na blokweek 12 plant de app ELKE WEEK een FTP-test, voorgoed** (M46/M49/M5).
+  `packages/engine/src/phase.ts:52` `fase = "Test"` zonder bovengrens → `allocActive` uit → de hele
+  week-allocatie valt weg. GEDRAAID: blokweken mét een `test`-sessie = **12 t/m 20 voor FTP, Conditie,
+  Beklimmingen én VO2max; Onderhoud nul** (de pin redt hem). Week 13 (FTP): `test · sweet_spot ·
+  long_z2 · long_z2`, elke week opnieuw. **`doelDuur` wordt door `computeMacroPhase` NIET gelezen** —
+  4/4/3 staat hard in de functie. GEËRFD, byte-identiek (`src/Settings.gs:295` + `src/Settings.gs:308`).
+- **T13 lang vs kort klimmen heeft GEEN route naar het plan** (M36/M38/M33/M5). `klimType` wordt
+  gevraagd (`apps/web/src/pages/Events.tsx:350`), gevalideerd (`workers/api/src/routes/api.ts:313`),
+  opgeslagen (`workers/api/src/db/schema.ts:158`), gethreaded (`apps/web/src/lib/proposal.ts:213`) — en
+  gelezen door precies één functie die niet draait (`packages/engine/src/planner.ts:862`, binnen T11's
+  dode tak, dáár nóg fallback ná `goalWorkout_`). GEDRAAID: vlak/lang/kort/gemengd → **vier
+  byte-identieke weken** op de volledige vingerafdruk (type + naam + blokken + TSS). Zelf-controle:
+  hetzelfde event 3 wkn vooruit (→ Peak) wijzigt de week wél. **Welk van M36's twee doelen je krijgt,
+  bepaalt de blokweek:** Base 66'/0' top · Build 51'/14' · Peak 30'/14'. GEËRFD.
+- **T14 het event neemt het plan over — meteen, op elke afstand, zonder voorstel** (M51/M52/M10/M5).
+  `apps/web/src/lib/proposal.ts:210`: zodra `eventFase_` een hoofdevent vindt, VERVANGT de aftelling de
+  doel-gedreven cyclus; hoofdevent = eerstvolgende A **of elke trip**, zonder afstandsgrens
+  (`packages/engine/src/phase.ts:72`). GEDRAAID (doel-cyclus zegt Build): **A-race over 52 weken → Base
+  → 77' naar 45' hoog-intent, −42%, op het moment van opslaan.** Dag-precies: 57 d → Base, 56 d →
+  Build. B/C-event: geen overname (byte-identiek); **C-TRIP: wél** → prioriteit beschermt niet.
+  **CORRIGEERT de overdracht van V8:** "er is geen overname" is te sterk — de overname bestaat, ze
+  loopt via de macro-fase; V8's punt is dat de WORKOUT niet getailord wordt. Samen: het event kost
+  agency en levert geen tailoring. GEËRFD (`src/Doel.gs:201`).
+- **b ERFT VAN a:** de vlakke 36' (T10) raakt M9 (schaal-eis) + M47 (totale belasting = primaire
+  hendel). **Geparkeerd naar c:** `combo_long_with_efforts` levert `structuur` maar `blokken:
+  undefined` → M56 + R2's V21; T13 maakt hem zwaarder (enige plek waar M38's "vermoeidheid die eraan
+  voorafgaat" wordt bediend).
+- **WERKWIJZE (R3 = 8e bevestiging):** chat leest zelf (read-only kloon + grep), NUL CC-prompts voor het
+  lezen; CC doet alleen de close-out-commit. **DRAAI HET** — a3's drie zwaarste uitkomsten (T10, T11,
+  T13) zijn alle drie WEERLEGGINGEN van wat lezen (en in T10's geval: van wat een eerdere METING)
+  suggereerde. **DE KLOK IS EEN FIXTURE-VARIABELE** — zie de fixture-correctie hierboven; stub `Date`.
+  **REKEN JE EIGEN WERK NA:** **1 van 48** locatie-ankers wees naar de verkeerde regel
+  (`src/Script.html` 1673→1674), **8** waren shorthand `:NNN` zonder pad (onoplosbaar → de
+  dekkings-toets ving ze) en **1** was kaal (geen inhouds-verwachting) — alle mechanisch gevangen vóór
+  publicatie; ambiguïteits- en kale-anker-toets schoon.
 
 **R2 KLAAR — a + b + c (juli 2026).** Findings-doc `docs/R2-ENGINE-END-AUDIT.md` (1707 regels), gepind:
 https://raw.githubusercontent.com/daanhhk/Cadans/ecd953003d3f09e5114a79fd9db59f5be5dbd208/docs/R2-ENGINE-END-AUDIT.md **Findings,
@@ -485,11 +497,10 @@ hieronder alleen wat een volgende chat moet weten om niet verkeerd te beginnen.
   de drie fouten zaten in de 22 erbuiten. In batch C ving de mechanische toets (105 ankers geëxtraheerd, 135
   met een inhouds-assertie bestand+regel+substring gedraaid) **drie foute ankers in de eigen tekst** vóór het
   committen. Bestaan-en-in-bereik is NIET genoeg: alle drie wezen naar bestaande regels.
-- **FOCUS VOLGENDE CHAT: R3** — trainings-review tegen `docs/TRAININGSMODEL.md` (M1-M61,
-  append-only; BESLUITEN is het log, nooit de norm). R0/R1/R2 zijn KLAAR. R3 komt NIET uit de
-  matrix (gat 1: de rustigste cel, `effectiveMacroFase_`, is het zwaarste trainings-defect).
-  Daarna R4 = verdict-doc "cutover-blokkerend ja/nee" per item over R1+R2 samen;
-  verdict-criterium = het MODEL, niet GAS. Daan bouwt NIETS tot R4 klaar is. Verse chat.
+- **FOCUS VOLGENDE CHAT: R3-b** — dosering (§1 + §7 van het model: M7-M9 + M43-M48). **R3-a is
+  KLAAR** (a1 + a2 + a3, 13 vondsten; T7 ingetrokken door T10). Route blijft R3 [b -> c -> d] ->
+  R4 = verdict-doc "cutover-blokkerend ja/nee" per item over R1+R2+R3 samen; verdict-criterium =
+  het MODEL, niet GAS. **Daan bouwt NIETS tot R4 klaar is.** Verse chat.
 
 **R0 KLAAR — module 1 (AST-sorteermachine) + 2a (fundering) + 2b (matrix/oracle/entrypoint-map) + 2c (bewaker-fix)
 (juli 2026).** Commits: 2a `8e66ded`, 2b `2093bcd`, 2c `24e7a4f` (+ module 1 `03804eb`/`0fac374`/`f48ed6b`/`7ead6b8`
