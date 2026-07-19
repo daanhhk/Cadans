@@ -43,6 +43,8 @@ const STATE_LABEL: Record<DayState, string> = {
 // PURE Schema-presentatie op het view-model. Interne state = geselecteerde datum
 // (default today). Geen fetch/derivatie hier — de container (pages/Schema.tsx) voedt 'm.
 // Sectie-volgorde volgt schema.jsx: PeriodTimeline → WeekLoad → DayStrip → dag-detail.
+// Het inhaal-voorstel (2b) staat tussen de dag-strip en de dagkaart: de weekcontext blijft
+// erboven, maar het voorstel plakt visueel aan de training waar het over gaat.
 export function SchemaView({
   proposalWeek,
   readiness,
@@ -152,6 +154,12 @@ export function SchemaView({
 
       <WeekLoad tss={view.tss} minuten={view.minuten} dagen={view.dagen} />
 
+      <DayStrip
+        days={view.days}
+        selected={day?.datum ?? ""}
+        onSelect={setSelected}
+      />
+
       {/* FASE 2b — inhaal-voorstel op WEEKNIVEAU (read-only). Onderdrukt zodra er een
           verlicht-voorstel voor vandaag staat: M66 laat herstel winnen van inhalen, dus
           die twee horen elkaar nooit te overlappen. De band-poort in buildInhaalVoorstel
@@ -159,12 +167,6 @@ export function SchemaView({
       {inhaal && !verlichtVoorstel && (
         <InhaalCard voorstel={inhaal} coachNaam={view.coachNaam} />
       )}
-
-      <DayStrip
-        days={view.days}
-        selected={day?.datum ?? ""}
-        onSelect={setSelected}
-      />
 
       {day && (
         <Card>
