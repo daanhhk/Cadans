@@ -3,6 +3,7 @@ import { useState } from "react";
 import { putOverride } from "../../lib/api";
 import { bumpPlannerVersion } from "../../lib/plannerSignal";
 import { durLabel, type SchemaSession } from "../../lib/schema";
+import { CoachCallout } from "./CoachCallout";
 import { WorkoutDetail } from "./WorkoutDetail";
 
 // OverriddenDetail (3b) — spiegelt GAS `overrideKaart_` (Script.html:2043). Toont een handmatig
@@ -112,10 +113,16 @@ export function OverriddenDetail({
   override,
   session,
   date,
+  coachRegel = null,
+  coachNaam = null,
 }: {
   override: DayOverride;
   session: SchemaSession | null;
   date: string;
+  /** LAAG 2: coach-resultaatregel bij een geaccepteerd verlicht-voorstel (src:'readiness');
+   * null bij een handmatige override — die krijgt geen coach-regel (de pin IS de reden). */
+  coachRegel?: string | null;
+  coachNaam?: string | null;
 }) {
   const [saving, setSaving] = useState(false);
 
@@ -133,6 +140,13 @@ export function OverriddenDetail({
   return (
     <div style={{ marginTop: "var(--s-4)" }}>
       <OverridePin />
+      {coachRegel && (
+        <CoachCallout
+          narrative={coachRegel}
+          coachNaam={coachNaam ?? null}
+          style={{ marginTop: "var(--s-3)" }}
+        />
+      )}
       {override.type === "free" ? (
         <FreeRideCard override={override} session={session} />
       ) : session ? (

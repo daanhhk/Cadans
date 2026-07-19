@@ -11,6 +11,7 @@ import {
   type DayState,
   type DoneEntry,
   deriveSchemaView,
+  verlichtResultaat,
 } from "../../lib/schema";
 import { Card, Overline } from "../ui";
 import { ActionButtons, GarminPushButton } from "./ActionButtons";
@@ -24,6 +25,7 @@ import { DoneDetail } from "./DoneDetail";
 import { GemistCard } from "./GemistCard";
 import { OverriddenDetail } from "./OverriddenDetail";
 import { PeriodTimeline } from "./PeriodTimeline";
+import { isVerlichtAfgewezen, VerlichtCard } from "./VerlichtCard";
 import { WeekLoad } from "./WeekLoad";
 import { WorkoutDetail } from "./WorkoutDetail";
 import { WorkoutPickerSheet } from "./WorkoutPickerSheet";
@@ -77,6 +79,10 @@ export function SchemaView({
   );
   const [selected, setSelected] = useState(todayISO);
   const [pickerOpen, setPickerOpen] = useState(false);
+  // LAAG 2: her-render-teller voor "Hou origineel". De afwijzing zelf leeft sessie-scoped in
+  // VerlichtCard (module-level set, per datum) zodat ze een remount na sync overleeft; deze
+  // state dwingt alleen de her-evaluatie af. Geen D1, geen localStorage.
+  const [, setVerlichtDismissed] = useState(0);
   const day = view.days.find((d) => d.datum === selected) ?? view.days[0];
   // dag >= vandaag: het knoppen-blok toont alleen op vandaag/toekomst (verleden kun je niet meer plannen).
   const dayFuture = !!day && day.datum >= todayISO;
@@ -102,6 +108,15 @@ export function SchemaView({
   // NB: de guard is `!day.override`, BEWUST breder dan `isOverrideCard`: ook op een done-dag waar toch
   // een override hangt zou "Handmatig gekozen" als coach-regel onzin zijn. NIET "harmoniseren" naar
   // isOverrideCard.
+  // LAAG 2: toon het verlicht-voorstel alleen op de GESELECTEERDE dag (het voorstel geldt
+  // per definitie vandaag) en alleen als het deze sessie niet is afgewezen.
+  const verlichtVoorstel =
+    view.verlicht &&
+    day?.datum === view.verlicht.datum &&
+    !isVerlichtAfgewezen(view.verlicht.datum)
+      ? view.verlicht
+      : null;
+
   const coachText =
     day?.reden && !day.override
       ? coachNarrative(
@@ -208,6 +223,10 @@ export function SchemaView({
               override={day.override}
               session={day.sessions[0] ?? null}
               date={day.datum}
+              // LAAG 2: alleen een GEACCEPTEERD verlicht-voorstel (src:'readiness') krijgt een
+              // coach-resultaatregel; een handmatige keuze niet (GAS overrideKaart_ ook niet).
+              coachRegel={verlichtResultaat(day.override)}
+              coachNaam={view.coachNaam}
             />
           ) : day.sessions.length === 0 ? (
             // §5a rustdag → lege-staat-copy. Knoppen-blok volgt NA de state-conditional.
@@ -255,6 +274,17 @@ export function SchemaView({
                 </div>
               ))}
             </div>
+          )}
+          {/* LAAG 2 — verlicht-VOORSTEL op vandaag (readiness caution/rest + harde sessie).
+              Staat NA de sessie-render zodat de gebruiker eerst ziet waar het over gaat, en
+              vóór de disposition-affordance. `verlichtVoorstel` is al null zodra de dag done/
+              gemist is, een override draagt, of het voorstel deze sessie is afgewezen. */}
+          {verlichtVoorstel && (
+            <VerlichtCard
+              voorstel={verlichtVoorstel}
+              coachNaam={view.coachNaam}
+              onDismiss={() => setVerlichtDismissed((n) => n + 1)}
+            />
           )}
           {/* Disposition-affordance (A2, GAS canDispose_): "Niet gedaan?" onder een plannbare,
               niet-gedisponeerde dag ≤ vandaag → flipt de dag naar 'gemist'. */}

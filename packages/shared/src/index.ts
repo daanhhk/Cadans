@@ -20,6 +20,8 @@ export type {
   OverrideRitType,
   OverrideWorkoutType,
 } from "./override";
+// Runtime-waarde (geen type): de toegestane library-override-types.
+export { OVERRIDE_WORKOUT_TYPES } from "./override";
 export type {
   PowerCurveEmpty,
   PowerCurveMarker,

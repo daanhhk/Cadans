@@ -7,8 +7,11 @@
  *  - `intentByDateFrom` (proposal.ts) levert een LEGE map → `rollingZoneCoverage_`,
  *    `zoneDebt_`, `recentHardDate_` en daarmee de `catchup_*`-takken blijven leeg-gevoed,
  *    exact zoals vóór deze bouw (de weekplans-tabel was leeg).
- *  - `plannedTypeByDate` (proposal.ts) blijft LEEG → `rpeSignal_` filtert alles weg
- *    (`expectedRpe_ == null`) en levert 'normal'; geen stille demote.
+ *
+ * SINDS LAAG 2 is dat de ENIGE gegate decider. De tweede (`plannedTypeByDate` → `rpeSignal_`)
+ * is vervallen: dat pad voedde uitsluitend de WEEK-BREDE demote in `assignWorkouts`, en die is
+ * met laag 2 uit de weekgeneratie gehaald (R3-T22). Komt RPE terug, dan via de voorstel-route
+ * (per-dag, aanvaarden of afwijzen) — niet als stille week-mutatie.
  *
  * Daarmee is het VOORUIT-plannen byte-identiek aan de staat vóór 1a, óók zodra de blob
  * daadwerkelijk geschreven wordt. Zie de byte-identiek-test in proposal.test.ts.

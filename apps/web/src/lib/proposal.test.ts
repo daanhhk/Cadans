@@ -1,4 +1,3 @@
-import { demoteType_ } from "@cadans/engine";
 import type {
   DayOverride,
   EventItem,
@@ -525,7 +524,19 @@ describe("buildWeekProposal", () => {
     });
   });
 
-  it("wellness recovery → tePlannen-dag gedemoot naar recovery", () => {
+  it("LAAG 2 — wellness 'recovery' demoot de week NIET meer (week-signaal is neutraal)", () => {
+    // Was: de botte wellnessSignal_-vlag ging als week-signaal naar assignWorkouts en
+    // verzachtte ALLE te-plannen dagen (days.forEach, planner.ts:759-782). Sinds laag 2 gaat
+    // er geen demote/recovery-signaal meer naar de weekgeneratie; de readiness stuurt
+    // uitsluitend het per-dag verlicht-VOORSTEL (schema.ts). Het week-plan is weer het
+    // onverzwakte beste plan.
+    const control = buildWeekProposal({
+      settings: settings(),
+      plannerDays: WEEK,
+      events: EV_FAR,
+      wellness: WELL_OK,
+      ...base,
+    });
     const r = buildWeekProposal({
       settings: settings(),
       plannerDays: WEEK,
@@ -533,8 +544,12 @@ describe("buildWeekProposal", () => {
       wellness: WELL_RECOVERY,
       ...base,
     });
-    expect(r.days[3].voorgesteldType).toBe("recovery"); // 03-12
-    expect(r.days[3].reden).toBe("Herstel — wellness laag");
+    expect(r.days.map((d) => d.voorgesteldType)).toEqual(
+      control.days.map((d) => d.voorgesteldType),
+    );
+    expect(r.days.some((d) => (d.reden ?? "").includes("wellness laag"))).toBe(
+      false,
+    );
   });
 
   it("band 'ready' ondanks een slechte nacht → GEEN demote (normaal plan)", () => {
@@ -565,8 +580,10 @@ describe("buildWeekProposal", () => {
     );
   });
 
-  it("band 'caution' → demote (één stap lichter)", () => {
-    const control = buildWeekProposal({
+  it("LAAG 2 — band 'caution' laat het vooruit-plan ONGEWIJZIGD (was: week-demote)", () => {
+    // De kern-invariant van laag 2 (T22): één matige ochtendscore mag de hele week niet
+    // stil verzachten. caution moet nu byte-identiek zijn aan ready.
+    const ready = buildWeekProposal({
       settings: settings(),
       plannerDays: WEEK,
       events: EV_FAR,
@@ -574,7 +591,7 @@ describe("buildWeekProposal", () => {
       readinessBand: "ready",
       ...base,
     });
-    const r = buildWeekProposal({
+    const caution = buildWeekProposal({
       settings: settings(),
       plannerDays: WEEK,
       events: EV_FAR,
@@ -582,24 +599,22 @@ describe("buildWeekProposal", () => {
       readinessBand: "caution",
       ...base,
     });
+    expect(JSON.stringify(caution.days)).toBe(JSON.stringify(ready.days));
     expect(
-      r.days.some((d) => d.reden === "Lichter gehouden — wellness laag"),
-    ).toBe(true);
-    expect(r.days.some((d) => d.reden === "Herstel — wellness laag")).toBe(
-      false,
-    );
-    // Elke gedemote dag = exact één stap lichter: demoteType_ van zijn controle-origineel.
-    for (let i = 0; i < r.days.length; i++) {
-      if (r.days[i].reden === "Lichter gehouden — wellness laag") {
-        expect(r.days[i].voorgesteldType).toBe(
-          demoteType_(control.days[i].voorgesteldType),
-        );
-      }
-    }
+      caution.days.some((d) => d.reden === "Lichter gehouden — wellness laag"),
+    ).toBe(false);
   });
 
-  it("band 'rest' → recovery", () => {
-    const r = buildWeekProposal({
+  it("LAAG 2 — band 'rest' laat het vooruit-plan ONGEWIJZIGD (was: week-recovery)", () => {
+    const ready = buildWeekProposal({
+      settings: settings(),
+      plannerDays: WEEK,
+      events: EV_FAR,
+      wellness: WELL_OK,
+      readinessBand: "ready",
+      ...base,
+    });
+    const rest = buildWeekProposal({
       settings: settings(),
       plannerDays: WEEK,
       events: EV_FAR,
@@ -607,14 +622,16 @@ describe("buildWeekProposal", () => {
       readinessBand: "rest",
       ...base,
     });
-    expect(r.days.some((d) => d.reden === "Herstel — wellness laag")).toBe(
-      true,
+    expect(JSON.stringify(rest.days)).toBe(JSON.stringify(ready.days));
+    expect(rest.days.some((d) => d.reden === "Herstel — wellness laag")).toBe(
+      false,
     );
-    expect(r.days[3].voorgesteldType).toBe("recovery"); // 03-12
   });
 
-  it("band weggelaten (null) → val terug op de botte wSig-vlag", () => {
-    // Aanhoudend lage slaap (sleepAvg3<5) zónder band → de wSig-vlag 'recovery' blijft leidend.
+  it("LAAG 2 — geen band-fallback meer: aanhoudend lage slaap verzacht de week niet", () => {
+    // Was: zonder band viel het week-signaal terug op de botte wSig-vlag, en die demootte
+    // (WELL_SUSTAINED_LOW → sleepAvg3 < 5 → 'recovery'). Sinds laag 2 is er geen
+    // week-signaal meer — ook de botte vlag muteert het plan niet stil.
     const rest = buildWeekProposal({
       settings: settings(),
       plannerDays: WEEK,
@@ -622,9 +639,6 @@ describe("buildWeekProposal", () => {
       wellness: WELL_SUSTAINED_LOW,
       ...base,
     });
-    expect(rest.days[3].voorgesteldType).toBe("recovery"); // 03-12
-    expect(rest.days[3].reden).toBe("Herstel — wellness laag");
-    // Normale wellness zónder band → geen demote.
     const ok = buildWeekProposal({
       settings: settings(),
       plannerDays: WEEK,
@@ -632,16 +646,24 @@ describe("buildWeekProposal", () => {
       wellness: WELL_OK,
       ...base,
     });
-    expect(ok.days.some((d) => (d.reden ?? "").includes("wellness laag"))).toBe(
-      false,
+    expect(rest.days.map((d) => d.voorgesteldType)).toEqual(
+      ok.days.map((d) => d.voorgesteldType),
     );
+    expect(
+      rest.days.some((d) => (d.reden ?? "").includes("wellness laag")),
+    ).toBe(false);
   });
 
-  it("band 'ready' + zware RPE → toch demote (RPE telt mee via combineSignals_)", () => {
-    // bandSignal 'normal' + rSig 'demote' (zware RPE) → combineSignals_ neemt de zwaarste = demote.
-    // planAdaptation: true — het RPE-pad hangt aan plannedTypeByDate, dat in laag 1a gegate is
-    // (PLAN_ADAPTATION_ENABLED=false). Deze test dekt het engine-gedrag dat laag 2 aanzet.
-    const r = buildWeekProposal({
+  it("LAAG 2 — zware RPE demoot de week NIET meer (rpeSignal_ voedde alleen de week-pass)", () => {
+    // Was: rpeSignal_ ging via combineSignals_ als week-signaal naar assignWorkouts en kon
+    // over een 'ready'-band heen demoten. Dat pad voedde UITSLUITEND de week-brede demote en
+    // is met laag 2 vervallen — een RPE-mismatch hoort te informeren, niet stil te beslissen
+    // (M30/M15/M18). Ook met planAdaptation aan (gevulde plannedTypes) verandert er niets.
+    const zwareRpe = [
+      { datum: "2026-03-09", rpe: 9 },
+      { datum: "2026-03-10", rpe: 6 },
+    ];
+    const control = buildWeekProposal({
       settings: settings(),
       plannerDays: WEEK,
       events: EV_FAR,
@@ -649,16 +671,28 @@ describe("buildWeekProposal", () => {
       readinessBand: "ready",
       activities: ACTS,
       weekplans: WEEKPLANS,
-      rpe: [
-        { datum: "2026-03-09", rpe: 9 },
-        { datum: "2026-03-10", rpe: 6 },
-      ],
+      rpe: [],
       todayISO: TODAY,
       planAdaptation: true,
     });
+    const metRpe = buildWeekProposal({
+      settings: settings(),
+      plannerDays: WEEK,
+      events: EV_FAR,
+      wellness: WELL_OK,
+      readinessBand: "ready",
+      activities: ACTS,
+      weekplans: WEEKPLANS,
+      rpe: zwareRpe,
+      todayISO: TODAY,
+      planAdaptation: true,
+    });
+    expect(metRpe.days.map((d) => d.voorgesteldType)).toEqual(
+      control.days.map((d) => d.voorgesteldType),
+    );
     expect(
-      r.days.some((d) => d.reden === "Lichter gehouden — wellness laag"),
-    ).toBe(true);
+      metRpe.days.some((d) => d.reden === "Lichter gehouden — wellness laag"),
+    ).toBe(false);
   });
 
   it("taper: nabij A-event → lichtere sessies vs controle zonder nabij event", () => {
@@ -724,9 +758,7 @@ describe("buildWeekProposal", () => {
     expect(r.days[0].sessions).toHaveLength(0);
   });
 
-  it("rpe-combine: zware RPE deze week → week gedemoot vs geen-rpe controle", () => {
-    // Voltooide dagen 03-09 (sweet_spot exp 7) + 03-10 (pendel_z2 exp 3.5); RPE zwaarder
-    // → mismatch avg ≥2 → rpeSignal_ demote. Wellness = normal → combine kiest demote.
+  it("LAAG 2 — rpe-combine muteert de week niet: mét en zonder RPE identiek", () => {
     const withRpe = buildWeekProposal({
       settings: settings(),
       plannerDays: WEEK,
@@ -739,7 +771,6 @@ describe("buildWeekProposal", () => {
         { datum: "2026-03-10", rpe: 6 },
       ],
       todayISO: TODAY,
-      // Zie hierboven: het RPE-pad is in laag 1a gegate; hier expliciet aan.
       planAdaptation: true,
     });
     const noRpe = buildWeekProposal({
@@ -752,8 +783,11 @@ describe("buildWeekProposal", () => {
     });
     const demoted = (r: ProposalWeek) =>
       r.days.some((d) => d.reden === "Lichter gehouden — wellness laag");
-    expect(demoted(withRpe)).toBe(true);
+    expect(demoted(withRpe)).toBe(false);
     expect(demoted(noRpe)).toBe(false);
+    expect(withRpe.days.map((d) => d.voorgesteldType)).toEqual(
+      noRpe.days.map((d) => d.voorgesteldType),
+    );
   });
 
   it("rpe null/onvoldoende → genegeerd, geen down-regulatie", () => {

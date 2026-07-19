@@ -197,3 +197,45 @@ export function coachNarrative(
   const idx = seedIndex(`${datum}|${redenCode}|${persona}`, pool.length);
   return pool[idx] ?? reden;
 }
+
+// ── LAAG 2 — verlicht-voorstel (per-dag, vandaag) ────────────────────────────
+// VOORWAARDELIJKE copy: het aanbod claimt de daad NIET (M55/R3-T24). De engine-varianten
+// readinessRegel_/readinessRegelDone_ (coach.ts:637/:664, 1:1 uit Coach.gs) zeggen "Ik heb je …
+// verlicht" — verleden tijd, vóór akkoord — en zijn daarom hier BEWUST niet hergebruikt.
+// De naam-mapping (readinessEaseNaam_) is wél hergebruikt: dat is een weergavenaam, geen claim.
+
+export type VerlichtBand = "caution" | "rest";
+
+/** Aanbod-regel, vóór akkoord. Biedt aan ("ik kan"), stelt niet vast. */
+export function verlichtAanbodRegel(
+  band: VerlichtBand,
+  score: number | null,
+  fromNaam: string,
+  toNaam: string,
+): string {
+  const s = score == null ? "—" : String(score);
+  if (band === "caution") {
+    return `Je gereedheid is vanochtend matig (${s}). Ik kan je ${fromNaam} verlichten naar ${toNaam} — fris train je de kwaliteit beter.`;
+  }
+  return `Je gereedheid is laag (${s}). Een zware sessie stapelt nu vooral vermoeidheid. Ik kan er een rustige rit van maken; volledige rust mag ook.`;
+}
+
+/** Resultaat-regel, ná akkoord (coachregel op de override-kaart). */
+export function verlichtResultaatRegel(
+  band: VerlichtBand,
+  toNaam: string,
+): string {
+  return band === "caution"
+    ? `Verlicht naar ${toNaam} — fris voor de kwaliteit later.`
+    : "Rustig gehouden vandaag — herstel telt nu zwaarder.";
+}
+
+/** Label van de primaire actieknop; matcht de resultaat-badge (verlichtBadgeLabel). */
+export function verlichtActieLabel(band: VerlichtBand, toNaam: string): string {
+  return band === "caution" ? `Verlicht naar ${toNaam}` : "Maak rustig";
+}
+
+/** Badge/label op de override-kaart ná akkoord — zelfde woorden als de knop. */
+export function verlichtBadgeLabel(band: VerlichtBand, toNaam: string): string {
+  return band === "caution" ? `Verlicht naar ${toNaam}` : "Rustig gehouden";
+}

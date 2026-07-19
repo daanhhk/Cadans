@@ -2,13 +2,18 @@ import {
   actualZoneMinutes_,
   coachFeedback_,
   formatDate,
+  readinessAdjust_,
+  readinessEaseNaam_,
   stripTime_,
+  workoutZones,
   zoneTimesFromCell_,
 } from "@cadans/engine";
-import type {
-  DayOverride,
-  DispositionReason,
-  SettingsInput,
+import {
+  type DayOverride,
+  type DispositionReason,
+  OVERRIDE_WORKOUT_TYPES,
+  type OverrideWorkoutType,
+  type SettingsInput,
 } from "@cadans/shared";
 import { type ActValuesRow, parseActivityRows } from "./activities";
 import {
@@ -24,6 +29,13 @@ import {
   getWellness,
   putWeekplan,
 } from "./api";
+import {
+  type VerlichtBand,
+  verlichtAanbodRegel,
+  verlichtActieLabel,
+  verlichtBadgeLabel,
+  verlichtResultaatRegel,
+} from "./coachNarrative";
 import { parseLocalDate, todayIso, weekMondayIso } from "./dates";
 import {
   buildWeekProposal,
@@ -657,6 +669,9 @@ export interface SchemaView {
   tss: LoadStat;
   minuten: LoadStat;
   dagen: LoadStat;
+  /** LAAG 2 — het per-dag verlicht-VOORSTEL voor vandaag, of null. Muteert niets; de
+   * dagkaart rendert 'm als aanbod met [Verlicht…] / [Hou origineel]. */
+  verlicht: VerlichtVoorstel | null;
 }
 
 export function toSession(w: ProposalWorkout): SchemaSession {
@@ -722,15 +737,140 @@ export function durLabel(mins: number): string {
 }
 
 /** ProposalWeek + gedane-belasting-per-datum → het Schema-view-model (puur). De override-data reist
- * nu via `proposalWeek` (ProposalDay.override, 3b) → geen aparte overrides-param meer. `_readiness`/
- * `_settings` blijven (voorlopig) ongebruikt maar positioneel behouden voor een geparkeerde fase. */
+ * nu via `proposalWeek` (ProposalDay.override, 3b) → geen aparte overrides-param meer. `readiness` +
+ * `settings` voeden sinds laag 2 het per-dag verlicht-voorstel (buildVerlichtVoorstel). */
+// ── LAAG 2 — het per-dag verlicht-VOORSTEL (meetlat: GAS WebApp.gs:1198-1226) ────────────
+// Read-side overlay op de VANDAAG-dag. Muteert het plan niet: pas bij akkoord wordt er een
+// dag-override met src:'readiness' geschreven, via de bestaande override-keten.
+
+/** Het voorstel zoals de dagkaart 'm rendert; null = geen voorstel voor vandaag. */
+export interface VerlichtVoorstel {
+  datum: string;
+  band: VerlichtBand;
+  score: number | null;
+  fromType: string;
+  toType: string;
+  fromNaam: string;
+  toNaam: string;
+  /** 'rustig' | 'tempo' — uit readinessAdjust_; voedt de free-override-variant. */
+  intensiteit: string;
+  /** Aanbod-copy (voorwaardelijk, claimt de daad niet). */
+  regel: string;
+  /** Label van de primaire actieknop. */
+  actieLabel: string;
+  /** De override die bij akkoord geschreven wordt (library als het type mag, anders free). */
+  override: DayOverride;
+}
+
+/** Mag `toType` als LIBRARY-override over de draad? Leest de gedeelde runtime-lijst
+ * (packages/shared) die de worker-validatie óók gebruikt — niet gehardcodeerd. Types buiten
+ * de lijst (o.a. combo_long_with_efforts, pendel_z2) zouden een 400 geven → free-override. */
+function isLibraryOverrideType(t: string): t is OverrideWorkoutType {
+  return (OVERRIDE_WORKOUT_TYPES as readonly string[]).includes(t);
+}
+
+/**
+ * buildVerlichtVoorstel — het voorstel voor VANDAAG, of null.
+ *
+ * Guards, 1-op-1 met GAS (WebApp.gs:1201-1215):
+ *  - alleen de kalenderdag vandaag; al gereden (state 'done') → niets;
+ *  - er moet een geplande engine-sessie zijn (geen rustdag, geen 'free');
+ *  - band moet bestaan (te weinig data → null → geen voorstel);
+ *  - een BESTAANDE override onderdrukt het voorstel (handmatig gekozen wint; een
+ *    readiness-override is het reeds gegeven akkoord → de kaart toont dan OverriddenDetail);
+ *  - multi-sessie (pendel) wordt overgeslagen — GAS doet dat ook, en het vermijdt meteen het
+ *    pendel_z2-type dat niet als library-override mag.
+ * De beslissing zelf komt uit de engine-port `readinessAdjust_` (coach.ts:595, 1:1 Coach.gs:306):
+ * ready → keep · Taper/Recovery → keep · niet-hard → keep · caution → demoteType_ · rest → recovery.
+ */
+export function buildVerlichtVoorstel(
+  day: SchemaDay,
+  fase: string,
+  band: "ready" | "caution" | "rest" | null,
+  score: number | null,
+  doel: string,
+): VerlichtVoorstel | null {
+  if (!day.isToday) return null;
+  if (day.state === "done" || day.state === "gemist") return null;
+  if (day.override) return null;
+  if (!band || band === "ready") return null;
+  const type = day.voorgesteldType;
+  if (!type || type === "free") return null;
+  if (day.sessions.length !== 1) return null; // rustdag (0) of pendel-multisessie (>1)
+
+  const zs = workoutZones(type, doel);
+  const isHard = zs.indexOf("high") >= 0 || zs.indexOf("anaerobic") >= 0;
+  const adj = readinessAdjust_({ type, isHard }, band, fase);
+  if (!adj || adj.action !== "demote") return null;
+
+  const toType = String(adj.toType);
+  const fromNaam = day.sessions[0]?.naam || "je sessie";
+  const toNaam = readinessEaseNaam_(toType);
+  const durMin = Math.max(20, Math.round(day.sessions[0]?.totaalMin || 60));
+  const label = verlichtBadgeLabel(band, toNaam);
+
+  // library als het type is toegestaan; anders free (GAS kiest altijd free).
+  const override: DayOverride = isLibraryOverrideType(toType)
+    ? {
+        type: "library",
+        workoutType: toType,
+        durMin,
+        src: "readiness",
+        label,
+      }
+    : {
+        type: "free",
+        ritType: "vrij",
+        intensiteit: adj.intensiteit === "tempo" ? "tempo" : "rustig",
+        durMin,
+        src: "readiness",
+        label,
+      };
+
+  return {
+    datum: day.datum,
+    band,
+    score,
+    fromType: type,
+    toType,
+    fromNaam,
+    toNaam,
+    intensiteit: String(adj.intensiteit),
+    regel: verlichtAanbodRegel(band, score, fromNaam, toNaam),
+    actieLabel: verlichtActieLabel(band, toNaam),
+    override,
+  };
+}
+
+/**
+ * De coach-RESULTAATregel op een reeds-geaccepteerd verlicht-voorstel (override.src ===
+ * 'readiness'). Null voor elke andere override — een handmatige keuze krijgt geen coach-regel
+ * (GAS overrideKaart_ doet dat ook niet; de pin IS de reden).
+ *
+ * De band wordt uit de OVERRIDE zelf afgeleid, niet uit de readiness-van-nu: die kan de dag
+ * erna hersteld zijn terwijl de override nog staat, en de regel beschrijft wat er is gebeurd.
+ * 'Rustig gehouden' (rest) ⟺ het aanbod ging naar een herstelrit; anders de caution-variant.
+ */
+export function verlichtResultaat(override: DayOverride | null): string | null {
+  if (!override || override.src !== "readiness") return null;
+  const toNaam =
+    override.type === "library"
+      ? readinessEaseNaam_(override.workoutType)
+      : override.intensiteit === "tempo"
+        ? "Tempo-rit"
+        : "Rustige rit";
+  const band: VerlichtBand =
+    override.label === verlichtBadgeLabel("rest", toNaam) ? "rest" : "caution";
+  return verlichtResultaatRegel(band, toNaam);
+}
+
 export function deriveSchemaView(
   proposalWeek: ProposalWeek,
   doneByDate: Record<string, DoneEntry>,
   todayISO: string,
   dispositionByDate: Record<string, DispositionReason>,
-  _readiness: ReadinessResult | null = null,
-  _settings: SettingsInput = EMPTY_SETTINGS,
+  readiness: ReadinessResult | null = null,
+  settings: SettingsInput = EMPTY_SETTINGS,
 ): SchemaView {
   const tss: LoadStat = { gepland: 0, gedaan: 0 };
   const minuten: LoadStat = { gepland: 0, gedaan: 0 };
@@ -820,6 +960,20 @@ export function deriveSchemaView(
     };
   });
 
+  // LAAG 2 — verlicht-voorstel voor VANDAAG (read-side, muteert niets). `fase` is de
+  // EFFECTIEVE fase incl. Taper/Recovery — precies wat readinessAdjust_ verwacht (die keept
+  // in een taper/herstelweek); `macroFase` zou daar de verkeerde bron zijn.
+  const todayDay = days.find((d) => d.isToday) ?? null;
+  const verlicht = todayDay
+    ? buildVerlichtVoorstel(
+        todayDay,
+        proposalWeek.fase,
+        readiness?.band ?? null,
+        readiness?.score ?? null,
+        settings.doel ?? "",
+      )
+    : null;
+
   return {
     weekMonday: proposalWeek.weekMonday,
     faseLabel: macroFaseLabel(proposalWeek.fase),
@@ -835,6 +989,7 @@ export function deriveSchemaView(
     tss,
     minuten,
     dagen,
+    verlicht,
   };
 }
 

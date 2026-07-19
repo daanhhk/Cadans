@@ -7,11 +7,12 @@
  * pre-deploy). athleteId komt uit c.env.INTERVALS_ATHLETE_ID (niet geëxposed).
  * User = CURRENT_USER_ID (vervalt in de auth-fase).
  */
-import type {
-  DayOverride,
-  DispositionReason,
-  EventInput,
-  PlannerDayInput,
+import {
+  type DayOverride,
+  type DispositionReason,
+  type EventInput,
+  OVERRIDE_WORKOUT_TYPES,
+  type PlannerDayInput,
 } from "@cadans/shared";
 import { type Context, Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
@@ -416,14 +417,8 @@ api.put("/disposition/:date", async (c) => {
   return c.json({ ok: true });
 });
 
-const OVERRIDE_WORKOUT_TYPES = [
-  "recovery",
-  "long_z2",
-  "tempo",
-  "sweet_spot",
-  "threshold",
-  "vo2max",
-] as const;
+// OVERRIDE_WORKOUT_TYPES komt uit @cadans/shared (één bron, gedeeld met de client-check in
+// het laag-2 verlicht-voorstel) — niet lokaal herhalen.
 const OVERRIDE_RIT_TYPES = ["vrij", "groep"] as const;
 const OVERRIDE_INTENSITEITEN = ["rustig", "tempo", "stevig"] as const;
 

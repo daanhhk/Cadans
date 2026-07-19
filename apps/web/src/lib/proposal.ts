@@ -4,7 +4,6 @@ import {
   assignWorkouts,
   buildOverrideWorkout_,
   buildWorkout,
-  combineSignals_,
   computeMacroPhase,
   effectiveMacroFase_,
   eventFase_,
@@ -12,7 +11,6 @@ import {
   planModeLabel_,
   recentHardDate_,
   rollingZoneCoverage_,
-  rpeSignal_,
   stripTime_,
   weekIndexFromStart_,
   weekStartDate,
@@ -32,7 +30,7 @@ import type {
 import type { ActValuesRow } from "./activities";
 import { parseLocalDate } from "./dates";
 import { PLAN_ADAPTATION_ENABLED } from "./planFlags";
-import { deriveWellnessSignalResult, type ReadinessBand } from "./readiness";
+import type { ReadinessBand } from "./readiness";
 
 // ≥15 werkelijke minuten in een bucket (deze week, voltooide dag) = gedekt.
 // Spiegelt Algorithm.gs DEKKING_MIN_MIN (de dekking-assembly :108-126).
@@ -106,15 +104,19 @@ export interface BuildProposalInput {
   /** Dag-overrides (D2): plannbare dagen worden via buildOverrideWorkout_ geswapt.
    * Optioneel + default [] → bestaande fixtures/callers ongewijzigd. */
   overrides?: OverrideEntry[];
-  /** Holistische readiness-band (getReadinessScore_-afgeleid) → stuurt het plan-signaal
-   * (ready→normal · caution→demote · rest→recovery). null/undefined → val terug op de wSig-vlag. */
+  /** LAAG 2: de readiness-band voedt het WEEK-signaal NIET meer (zie de toelichting bij
+   * het week-signaal hieronder). Het veld blijft bestaan zodat callers/fixtures ongewijzigd
+   * blijven compileren én zodat de tests kunnen vastleggen dat de band het vooruit-plan niet
+   * meer verandert; `buildWeekProposal` LEEST 'm niet. De band stuurt nu het per-dag
+   * verlicht-voorstel (schema.ts → buildVerlichtVoorstel). */
   readinessBand?: ReadinessBand | null;
   todayISO?: string;
   /** LAAG 1a-vlag-override (default = PLAN_ADAPTATION_ENABLED, zie planFlags.ts).
-   * true → de blob-gevoede BESLISSERS staan aan: `intentByDate` (dekking/zoneDebt_/
-   * recentHardDate_/catchup_*) én `plannedTypeByDate` (rpeSignal_ → demote).
-   * Bestaat zodat die engine-paden testbaar blijven zolang de vlag uit staat; laag 2
-   * zet de constante zelf om. NIET vanuit de app meegeven. */
+   * true → de blob-gevoede BESLISSER staat aan: `intentByDate` (dekking/zoneDebt_/
+   * recentHardDate_/catchup_*). Sinds laag 2 is dat de ENIGE gegate decider — het
+   * `rpeSignal_`-pad voedde uitsluitend de week-brede demote en is daarmee vervallen.
+   * Bestaat zodat dat engine-pad testbaar blijft zolang de vlag uit staat. NIET vanuit
+   * de app meegeven. */
   planAdaptation?: boolean;
 }
 
@@ -235,15 +237,10 @@ export function planModusLabel(
  * Pendel-multisession (5.3c-i.b) + RPE-combine (5.3d-iii) WEL ondersteund.
  */
 export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
-  const {
-    settings,
-    plannerDays,
-    events,
-    activities,
-    weekplans,
-    wellness,
-    rpe,
-  } = input;
+  const { settings, plannerDays, events, activities, weekplans } = input;
+  // `wellness` en `rpe` blijven op BuildProposalInput (callers/fixtures ongewijzigd), maar
+  // worden sinds laag 2 niet meer door de weekgeneratie gelezen: ze voedden uitsluitend het
+  // week-brede demote-signaal. De readiness-afleiding leeft in readiness.ts/schema.ts.
 
   // D2: dag-override-lookup (plannbare dag → buildOverrideWorkout_ i.p.v. het coach-voorstel).
   const overridesByDate = new Map<string, DayOverride>();
@@ -375,42 +372,28 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
   );
   const recentHard = recentHardDate_(activities, intentByDate);
 
-  // 6. signaal = wellness-signaal (oudste-eerst) GECOMBINEERD met het RPE-signaal van
-  //    de voltooide deze-week-dagen (combineSignals_ neemt de zwaarste). plannedTypeByDate
-  //    uit PlannerDay.voorgesteldType (dag-mirror van de weekplan-workoutType); datums
-  //    zonder type vallen weg (rpeSignal_ filtert ze via expectedRpe_ == null).
-  //    LAAG 1a: gegate op PLAN_ADAPTATION_ENABLED — leeg → rpeSignal_ filtert alles weg
-  //    (expectedRpe_ == null) en levert 'normal'. Zo zet het vullen van het plan-van-record
-  //    geen STILLE demote-beslisser aan (R3-T30/T22); laag 2 doet dat mét voorstel-en-bevestig.
-  const plannedTypeByDate: Record<string, string> = {};
-  if (planAdaptation) {
-    for (const pd of plannerDays || []) {
-      if (pd.voorgesteldType) plannedTypeByDate[pd.datum] = pd.voorgesteldType;
-    }
-  }
-  const wSig = deriveWellnessSignalResult(wellness || []);
-  const rSig = rpeSignal_(rpe || [], plannedTypeByDate, todayLocalISO);
-  // Cadans-divergentie t.o.v. GAS (bewust, CLIENT-ONLY): het week-plan-signaal leunt op de
-  // HOLISTISCHE readiness-band (getReadinessScore_ weegt vorm/HRV/slaap/check-in) i.p.v. de botte
-  // wellnessSignal_-vlag. Zo stuurt dezelfde readiness die de banner toont ook het plan, en werkt
-  // de ochtend-check-in als hendel. band ready→normal · caution→demote · rest→recovery. RPE blijft
-  // meetellen (combineSignals_, zwaarste wint). band null (te weinig data) → val terug op de botte
-  // wSig-vlag. VERVANGT de b8b7ef9 single-bad-night-patch (met de band overbodig).
-  const bandSignal =
-    input.readinessBand === "ready"
-      ? "normal"
-      : input.readinessBand === "caution"
-        ? "demote"
-        : input.readinessBand === "rest"
-          ? "recovery"
-          : null;
-  // cast: bandSignal ("normal"|"demote"|"recovery") is een geldige subset van wSig.signal
-  // (WellnessSignalState); de nested ternary widet naar string → expliciet terug-casten (type-only).
-  const baseWSig =
-    bandSignal != null
-      ? { ...wSig, signal: bandSignal as typeof wSig.signal }
-      : wSig;
-  const signal = combineSignals_(baseWSig, rSig).signal;
+  // 6. WEEK-SIGNAAL — LAAG 2: neutraal ('normal'). Er gaat GEEN week-breed demote/recovery
+  //    meer naar `assignWorkouts`; het vooruit-plan is weer het onverzwakte beste plan.
+  //
+  //    Wat hier stond: de holistische readiness-band (ae00730) én de botte
+  //    `wellnessSignal_`-vlag werden via `combineSignals_` tot één week-signaal gecombineerd
+  //    en aan `assignWorkouts` gegeven. Die demote-pass loopt met `days.forEach` over ÁLLE
+  //    te-plannen dagen (planner.ts:759-782) → één matige ochtend of één korte nacht
+  //    verzachtte stil de hele rest van de week, zonder voorstel en zonder omkeerknop
+  //    (R3-T22; schendt M10 "voorstellen, niet stil muteren" en M30).
+  //
+  //    De readiness stuurt nu uitsluitend het PER-DAG verlicht-VOORSTEL op vandaag
+  //    (schema.ts → buildVerlichtVoorstel → VerlichtCard), dat de gebruiker aanvaardt of
+  //    afwijst. De band-BEREKENING en de banner-weergave zijn ongemoeid.
+  //
+  //    RPE: het `rpeSignal_`-pad voedde ALLEEN deze week-pass en is daarmee vervallen. Een
+  //    RPE-signaal hoort per M30/M15/M18 te INFORMEREN, niet stil te beslissen; komt het
+  //    terug, dan via dezelfde voorstel-route. GEVOLG: `PLAN_ADAPTATION_ENABLED` gate't
+  //    vanaf laag 2 nog uitsluitend `intentByDate` (de zone-dekking/debt-arm).
+  //
+  //    De ENGINE is niet aangeraakt: de demote-pass bestaat nog en blijft bereikbaar voor een
+  //    caller die er wél een demote-signaal in stopt (o.a. de engine-selftest).
+  const signal = "normal";
 
   // 6b. LAAG 1b — de cross-week recency-seed.
   //

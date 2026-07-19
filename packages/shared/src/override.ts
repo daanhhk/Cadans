@@ -6,13 +6,18 @@
  * ALLEEN dagen mét een override (oudste-eerst). De rij leeft op (user_id, datum) = PK, gedeeld
  * met `disposition` (non-clobber). GAS `saveDayOverride` (WebApp.gs:1663). durMin-grenzen 20-360.
  */
-export type OverrideWorkoutType =
-  | "recovery"
-  | "long_z2"
-  | "tempo"
-  | "sweet_spot"
-  | "threshold"
-  | "vo2max";
+/** De toegestane library-override-types, als RUNTIME-lijst. Eén bron: de worker-validatie
+ * (routes/api.ts `isValidOverride`) én de client-check "mag dit type als library-override?"
+ * (laag 2 verlicht-voorstel) lezen deze lijst, zodat ze niet uit elkaar kunnen lopen. */
+export const OVERRIDE_WORKOUT_TYPES = [
+  "recovery",
+  "long_z2",
+  "tempo",
+  "sweet_spot",
+  "threshold",
+  "vo2max",
+] as const;
+export type OverrideWorkoutType = (typeof OVERRIDE_WORKOUT_TYPES)[number];
 export type OverrideRitType = "vrij" | "groep";
 export type OverrideIntensiteit = "rustig" | "tempo" | "stevig";
 
