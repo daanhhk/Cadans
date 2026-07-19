@@ -296,4 +296,82 @@ engine-vraag en hoort achter een eigen model-beslissing.
 
 ---
 
+---
+
+## §7 — ALLOCATOR-VERIFICATIE (fase 0, read-only)
+
+**Vraag.** Doet de allocator al wat de nieuwe norm eist — HERVERDELEN binnen het budget
+(M62) — of STAPELT hij belasting boven op het plan? En respecteert een tekort-gedreven
+inhaalsessie de afstand tussen harde dagen (M67)?
+
+Gemeten met een throwaway (TZ=Europe/Amsterdam), gate aan via de `planAdaptation`-input en
+`gedaan` afgeleid volgens de GAS-match. Fixture: maandag 90 min drempel gepland
+(blob-intent `{"low":0,"high":40,"anaerobic":0}`), 60 min Z2 gereden — 60 ≥ 50% van 90, dus
+de dag telt als gedaan, maar de intensiteit ontbreekt → high-debt ≈ 40, ruim boven de
+forceer-drempel. Controle: dezelfde fixture met maandag op plan gereden.
+
+### 7.1 Herverdelen of stapelen? — HERVERDELEN
+
+```
+CONTROLE (ma op plan) : 15:sweet_spot/key_session   16:long_z2/demote_recent_hard  17:sweet_spot/key_session  18:long_z2/long_weekend  19:long_z2/long_ride
+  week-TSS = 313   geplande minuten = 421   harde dagen = 2
+TEKORT (ma te licht)  : 15:sweet_spot/catchup_high  16:long_z2/demote_recent_hard  17:sweet_spot/key_session  18:long_z2/long_weekend  19:long_z2/long_ride
+  week-TSS = 313   geplande minuten = 421   harde dagen = 2
+
+Δ TSS = 0     Δ minuten = 0     Δ harde dagen = 0
+```
+
+**Uitkomst: de motor STAPELT NIET.** Weekbelasting, geplande minuten én het aantal harde
+dagen zijn identiek; het tekort verandert uitsluitend de MOTIVERING van één dag
+(`key_session` → `catchup_high`). Dat voldoet aan M62 zonder enige wijziging — de
+herverdeling is structureel, want het weekvolume komt uit de planner-minuten en de
+allocator vult die slots, hij voegt er geen toe.
+
+**Keerzijde, en die is belangrijk voor het ontwerp.** Precies omdat er niets aan het plan
+verandert, is "de coach adviseert een inhaal" hier feitelijk "de coach legt uit waarom deze
+sessie er staat". Dat bevestigt §3 op een tweede fixture. Een goedkeur-knop die niets aan
+het plan verandert, is een zwak voorstel — de voorstel-laag moet dus ofwel de uitleg als
+product nemen, ofwel wachten tot de allocator gevoeliger is voor debt (eigen fase, buiten
+deze scope).
+
+### 7.2 Harde-dagen-afstand — DE INHAAL-TAK IS VRIJGESTELD
+
+De bewaking staat in de dag-loop van `assignWorkouts`:
+
+```ts
+if (isHard && !debtForced && d.datum && lastHardDate) {   // planner.ts:730
+  // → downgrade naar long_z2 als de vorige kalenderdag hard was
+}
+```
+
+`debtForced` wordt gezet door de TWEE WEEKEND-takken (`planner.ts:669` en `:675`) — de
+`catchup_high`- en `catchup_anaerobic`-forcering. **Die slaan de bewaking over** en kunnen
+direct naast een andere harde dag landen.
+
+**Belangrijke afbakening:** de derde inhaal-tak, die op een VRIJE dag via
+`debtPreferredType_` een `catchup_<bucket>` zet (`planner.ts:696-701`), zet `debtForced`
+NIET. Die tak wordt dus wél netjes gedowngraded naast een harde dag. De schending is dus
+beperkt tot de weekend-forcering, niet tot de inhaal-laag als geheel.
+
+Mijn eigen gerichte fixture (vrijdag harde actual, zaterdag weekend met high-debt) trok de
+botsing niet: zaterdag kwam uit op `long_z2`/`long_weekend`, omdat het tekort op dat moment
+al door een eerdere dag was verbruikt (`debtWerk[bucket] = 0`). Het gedrag is echter
+onomstotelijk vastgelegd door een BESTAANDE, slagende test in de suite:
+`apps/web/src/lib/proposal.test.ts:1029` — *"B — debt-geforceerde compensatie mag TOCH hard
+blijven de dag na een harde dag (exceptie)"* — die expliciet asserteert dat de dag ná een
+harde dag een `combo_long_with_efforts` met high-zones krijgt en de downgrade-reden NIET.
+
+**Uitkomst: schending van M67**, vastgelegd als **M70 (BEVINDING)** in
+`docs/TRAININGSMODEL.md`. Per M6 is dat een bevinding en geen release-gate: de tak is
+vandaag onbereikbaar (de debt-arm staat dubbel op slot, §3), dus de schending is latent. Ze
+moet geadresseerd zijn vóórdat de inhaal-laag daadwerkelijk gaat sturen — het is een
+engine-wijziging (`packages/engine`) en dus **AUTHORISATIE-VEREIST**.
+
+### 7.3 Gevolg voor de fasering
+
+§6 blijft staan, met één toevoeging: **Fase 0 is hiermee afgesloten** (de model-beslissing
+is genomen en gelogd), en de M70-schending hoort in de fase waarin de allocator geraakt
+wordt — niet in fase 1 (`gedaan` afleiden), want daar blijft de debt nul en is de tak
+onbereikbaar.
+
 *Recon, geen bouw. Throwaway-harnesses verwijderd; `git diff --stat packages/engine` is leeg.*

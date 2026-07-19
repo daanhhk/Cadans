@@ -192,6 +192,66 @@ tegen het model -> R4 verdict-doc met "cutover-blokkerend ja/nee" per item.
 Verdict-criterium: toets aan het MODEL, niet aan GAS. Drie normen naast elkaar.
 GEEN engine-wijziging in de hele review. Findings -> verdicts -> aparte bouw-chats.
 
+## Besluit 19-07-2026: inhalen = herverdelen, en een gemiste dag telt (fase 0)
+
+Daan autoriseerde twee dingen: (1) de FORK "een gemiste dag draagt tekort" t.o.v. de
+erfenis, en (2) een aangescherpt coaching-model voor de inhaal-laag. Norm is
+coaching-deugdelijkheid; de oude app is hier herkomst zonder gezag (M1). Vastgelegd als
+M62-M69 (norm) + M70-M71 (bevindingen).
+
+**Waarom "inhalen" niet letterlijk inhalen is.** De geraadpleegde coaching-praktijk is
+opvallend eensgezind: een gemiste sessie wordt niet één-op-één ingelopen.
+- Jason Koop (CTS/TrainingPeaks, "What To Do If You Missed Training",
+  <https://trainright.com/what-to-do-if-you-missed-training/>): bij substantieel verlies
+  vervang je 50-75% van wat je miste, nooit 100% en nooit als copy-paste; de
+  interval-/sleutelsessies gaan voor; endurance-volume spreid je, met een grens rond een
+  kwart extra per dag, over vier tot zes weken. Belangrijk detail: je VERVANGT een
+  endurance-dag door de hardere sessie — je zet hem er niet naast.
+- Jim Rutberg (CTS, "Coach, I missed Tuesday's workout, I'll make it up tomorrow",
+  <https://trainright.com/coach-blogs-coach-i-missed-tuesdays-workout-ill-make-it-up-tomorrow/>):
+  er bestaat geen echte make-up; werk bovenop het plan stapelen creëert meer belasting dan
+  de renner kan verwerken.
+- NEO Endurance ("Should you make up a missed workout?",
+  <https://neoendurancesports.com/make-missed-workout/>): gemist door ziekte of
+  vermoeidheid → overslaan; een gemiste makkelijke sessie mag gewoon vervallen; een
+  herplande kwaliteitssessie hoort niet vlak naast een andere kwaliteitssessie.
+- Chris Carmichael (CTS, "Missed Workouts: guide to adjusting training",
+  <https://trainright.com/missed-workouts-guide-to-adjusting-training/>): één of twee
+  gemist → gewoon doorgaan; de interval-sessies dragen de meeste waarde.
+- Ondersteunend voor de stapel-schade (blessure/overtraining bij plotse toename):
+  Canadian Running Magazine en de Wahoo Fitness blog.
+
+Daaruit volgen M62 (herverdelen binnen budget, nooit stapelen), M64 (alleen een
+betekenisvol tekort), M65 (kwaliteit vóór volume), M66 (herstel wint van inhalen), M67
+(niet twee kwaliteitsprikkels tegen elkaar aan) en M68 (advies, goedkeuring, omkeerbaar).
+
+**De fork, en hoe hij geïmplementeerd MOET worden.** De erfenis telt alleen dagen die als
+gedaan zijn aangemerkt; een volledig gemiste dag levert daardoor nul tekort. Dat maakt de
+helft van het model onbereikbaar en is de reden voor M63.
+
+De trade-off zit in de implementatie. De naïeve vorm — "gemist ⇒ tekort = de volle
+bedoelde prikkel, actual 0" — is FOUT, want hij botst met de duur-drempel van de
+gedaan-koppeling: die merkt een dag pas als gedaan aan bij ongeveer de helft van de
+geplande duur. Een rit van net onder die drempel zou dan als volledig gemist tellen en de
+wél gereden minuten volledig negeren — een tekort dat groter is dan de werkelijkheid, en
+precies het soort overschatting dat tot stapelen leidt.
+
+BESLUIT: de poort staat op VERSTREKEN (datum vóór vandaag) en het tekort blijft
+`bedoeld − geleverd`. De drempel bepaalt dan nog wel of een dag als "afgewerkt" geldt, maar
+niet meer óf hij meetelt. Een half gereden sessie draagt zo het halve tekort. Dit is de
+vorm die M63 bedoelt.
+
+**Scope-grens (M69).** De correctie kijkt naar deze week en niet verder. Koop spreidt bij
+grote missers over vier tot zes weken; dat kan deze versie niet, en die claim wordt dus ook
+niet gedaan (M5). Bewuste v1-beperking.
+
+**Verificatie (fase 0, read-only).** De motor herverdeelt al binnen budget: bij een
+tekort-scenario bleven weekbelasting, geplande minuten en het aantal harde dagen exact
+gelijk t.o.v. de controle — alleen de motivering van één dag veranderde (M71). Maar de
+WEEKEND-inhaaltak is vrijgesteld van de bewaking op twee harde dagen op rij en kan daardoor
+naast een harde dag landen (M70) — een schending van M67, te adresseren wanneer de laag
+echt gaat sturen. De inhaaltak op een vrije dag kent die vrijstelling niet. Getallen en opzet staan in `docs/INHAAL-DEBT-RECON.md` §7.
+
 ## Open
 - docs/TRAININGSMODEL.md GESCHREVEN (juli 2026): de norm, regels M1-M61 met statuslabels.
   Dit bestand blijft de bron voor de afleiding; het model verwijst hierheen.

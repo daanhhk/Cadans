@@ -355,3 +355,68 @@ opzet meet pacing. De uitkomst bewijst niets. Niet hergebruiken.
 **M61 (INGETROKKEN) — "De losse lange rit is de schaarste-bron van de testcase."**
 Theorie-gedreven; overleeft de eigen historie niet. Niet hergebruiken. M46 en M39 blijven
 wél staan — die gaan over het model, niet over de renner.
+
+## §12 — Inhalen na een gemiste of te-licht ingevulde sessie
+
+**M62 (NORM) — Inhalen is herverdelen, niet stapelen.** Een gemiste prikkel wordt hersteld
+door de resterende week te HERVERDELEN binnen het bestaande urenbudget: een minder
+belangrijke resterende sessie wordt vervangen door de prikkel die ontbrak. Belasting boven
+op het staande plan leggen is geen inhalen maar opstapelen, en levert meer overbelasting op
+dan de gebruiker kan verwerken. Het weekbudget is de grens; wat er niet in past, vervalt
+(M64, M66).
+
+**M63 (NORM) — Een niet-geleverde verstreken dag draagt tekort.** Een trainingsdag die
+gepland stond en waarvan de prikkel niet is geleverd, telt als tekort — óók als er
+helemaal niet gereden is. Dit is een geautoriseerde afwijking van de erfenis, die alleen
+dagen meetelde die als gedaan waren aangemerkt en een volledig gemiste dag dus onzichtbaar
+liet. Het tekort is het VERSCHIL tussen wat bedoeld was en wat geleverd is; een half
+uitgevoerde sessie telt naar rato, niet als volledige misser.
+
+**M64 (NORM) — Alleen een betekenisvol tekort rechtvaardigt een inhaal-advies.** Eén
+gemiste sessie of een triviaal volume-verschil wordt niet ingehaald; de gebruiker pakt de
+draad gewoon weer op. Pas een gemiste SLEUTELSESSIE — de prikkel die de fase draagt — is
+aanleiding voor een voorstel. Een app die elke afwijking wil rechtzetten, leert de
+gebruiker dat afwijken een fout is; dat is trainingsinhoudelijk onjuist en pedagogisch
+schadelijk.
+
+**M65 (NORM) — Kwaliteit gaat vóór volume bij herverdeling.** Ontbreekt er zowel intensiteit
+als duurvolume, dan krijgt de sleutel-/kwaliteitsprikkel voorrang: die draagt de meeste
+trainingswaarde en is het slechtst vervangbaar. Een duurvolume-tekort wordt NIET geforceerd
+ingehaald — het wordt gespreid over de resterende dagen of losgelaten.
+
+**M66 (NORM) — Inhalen wijkt voor herstel.** Bij lage gereedheid of een rust-vragende reden
+(ziekte, bewuste rust) wint verlichten of loslaten van inhalen. De app stelt dan GEEN
+inhaal voor. Een tekort is geen schuld die koste wat kost moet worden ingelost; inhalen op
+een lichaam dat om rust vraagt, vergroot het gat in plaats van het te dichten.
+
+**M67 (NORM) — Twee kwaliteitsprikkels niet tegen elkaar aan.** Een herverdeelde
+kwaliteitssessie wordt niet direct naast een andere harde dag geplaatst. De afstand tussen
+zware prikkels is zelf een trainingsvariabele; ze opofferen om een tekort te dichten
+ondermijnt precies wat het inhalen moest opleveren.
+
+**M68 (NORM) — Inhalen valt onder de voorstel-regel.** Een inhaal-aanpassing wordt als
+ADVIES met uitleg getoond, pas na goedkeuring toegepast, en is omkeerbaar. Op goedkeuring
+mag de hele week her-dynamiseren — dat is dan een gevraagde herberekening, geen stille
+mutatie. Zonder goedkeuring blijft het originele plan staan (M10, M11).
+
+**M69 (NORM) — Scope-grens: de correctie is per week.** De herverdeling kijkt naar de
+huidige week en niet verder. Bij een groot verlies is spreiding over meerdere weken
+trainingsinhoudelijk beter; dat kan dit model niet en die claim wordt dus ook niet gedaan
+(M5). Bewuste beperking van de eerste versie, geen afgeleide norm.
+
+**M70 (BEVINDING) — De weekend-inhaaltak omzeilt de harde-dagen-afstand.** Gemeten op de
+bestaande motor: een tekort-gedreven inhaalsessie die in het weekend wordt geforceerd, is
+vrijgesteld van de bewaking die twee zware dagen op rij verhindert, en kan daardoor direct
+naast een andere harde dag landen. Dat is een schending van M67. Afbakening: de inhaaltak
+op een vrije dag kent die vrijstelling NIET en wordt wél gedowngraded — de bevinding geldt
+dus voor de weekend-forcering, niet voor de inhaal-laag als geheel. Opzet: bronlezing plus
+een bestaande, slagende test die precies dit gedrag vastlegt; bewijskracht hoog voor die
+tak. Per M6 is dit een bevinding, geen release-gate — te adresseren wanneer de inhaal-laag
+daadwerkelijk gaat sturen.
+
+**M71 (BEVINDING) — De motor herverdeelt al binnen budget.** Gemeten met een
+tekort-scenario tegen een op-plan-controle: weekbelasting, geplande minuten en het aantal
+harde dagen bleven exact gelijk; alleen de MOTIVERING van één dag veranderde. De motor
+voldoet dus al aan M62 en stapelt niet. Keerzijde: het verschil dat de gebruiker te zien
+zou krijgen is daarmee vaak geen ander plan maar een andere uitleg. Opzet: twee fixtures op
+één configuratie; bewijskracht indicatief, niet uitputtend.
