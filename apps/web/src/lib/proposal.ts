@@ -420,6 +420,12 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
   // week erin overschaduwt die de vorige volledig (plan identiek aan een lege blob) → de
   // cross-week-arm is dan dood, precies de arm die 1b moet toevoegen. Binnen de week roteert
   // de allocator al zelf (`rec.push`, planner.ts:420) — zie docs/RECENCY-1B-RECON.md §4.
+  //
+  // BEWUSTE GAS-DIVERGENTIE: GAS' `gatherWeekplanEntries_` (Algorithm.gs:971) loopt vanaf k=0 en
+  // neemt de HUIDIGE week dus wél mee (refISO=null); wij filteren die er bewust uit, omdat Cadans
+  // op ELKE render hergenereert én wegschrijft — anders dan GAS, waar generateProposal een
+  // expliciete trigger is — zodat de seed ongefilterd zijn eigen zojuist-weggeschreven output
+  // terugleest.
   const recencySeedEntries = (weekplans || []).filter((raw) => {
     const d = (raw as { datum?: unknown })?.datum;
     return typeof d === "string" && d < weekMonday;
