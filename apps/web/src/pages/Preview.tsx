@@ -1,14 +1,26 @@
 import { buildWorkout } from "@cadans/engine";
 import type { SettingsInput } from "@cadans/shared";
 import { useState } from "react";
+import { InhaalCard } from "../components/schema/InhaalCard";
 import { SchemaView } from "../components/schema/SchemaView";
+import { VerlichtCard } from "../components/schema/VerlichtCard";
+import {
+  inhaalAanbodRegel,
+  verlichtAanbodRegel,
+  verlichtActieLabel,
+  verlichtBadgeLabel,
+} from "../lib/coachNarrative";
 import type {
   ProposalDay,
   ProposalWeek,
   ProposalWorkout,
 } from "../lib/proposal";
 import type { ReadinessResult } from "../lib/readiness";
-import type { DoneEntry } from "../lib/schema";
+import type {
+  DoneEntry,
+  InhaalVoorstel,
+  VerlichtVoorstel,
+} from "../lib/schema";
 
 // DEV-ONLY preview-loop: voedt de ECHTE SchemaView (PeriodTimeline/WeekLoad/DayStrip + de
 // dagkaart-dispatch) met FIXTURE-data in de exacte ProposalWeek/ProposalDay/DoneEntry-shape,
@@ -265,6 +277,177 @@ const FIXTURES: Fixture[] = [
   },
 ];
 
+// ── PREVIEWONLYFIXTURE — voorstel-kaarten (fase 2b / laag 2) ──────────────────────────
+// InhaalCard en VerlichtCard renderen alleen bij een echt kwalificerend tekort resp. een lage
+// gereedheid op een harde dag; die combinatie doet zich zelden voor. Deze fixtures maken de
+// POSITIEVE weergave beoordeelbaar (layout, copy, van→naar) zonder op zo'n dag te wachten.
+// DEV-only, net als de rest van deze pagina.
+
+const inhaalFixtures: { label: string; v: InhaalVoorstel }[] = [
+  {
+    label: "Inhaal · intensiteit, 1 dag",
+    v: {
+      bucket: "high",
+      dagen: [
+        {
+          datum: "2026-07-24",
+          fromType: "long_z2",
+          toType: "sweet_spot",
+          fromNaam: "Duur",
+          toNaam: "Sweet Spot",
+          redenCode: "catchup_high",
+        },
+      ],
+      regel: inhaalAanbodRegel("high", 1),
+    },
+  },
+  {
+    label: "Inhaal · anaeroob, 1 dag",
+    v: {
+      bucket: "anaerobic",
+      dagen: [
+        {
+          datum: "2026-07-25",
+          fromType: "long_z2",
+          toType: "vo2max",
+          fromNaam: "Duur",
+          toNaam: "VO2max",
+          redenCode: "catchup_anaerobic",
+        },
+      ],
+      regel: inhaalAanbodRegel("anaerobic", 1),
+    },
+  },
+  {
+    label: "Inhaal · intensiteit, 2 dagen",
+    v: {
+      bucket: "high",
+      dagen: [
+        {
+          datum: "2026-07-24",
+          fromType: "long_z2",
+          toType: "threshold",
+          fromNaam: "Duur",
+          toNaam: "Drempel",
+          redenCode: "catchup_high",
+        },
+        {
+          datum: "2026-07-26",
+          fromType: "recovery",
+          toType: "sweet_spot",
+          fromNaam: "Herstel",
+          toNaam: "Sweet Spot",
+          redenCode: "catchup_high",
+        },
+      ],
+      regel: inhaalAanbodRegel("high", 2),
+    },
+  },
+];
+
+const verlichtFixtures: { label: string; v: VerlichtVoorstel }[] = [
+  {
+    label: "Verlicht · caution → Tempo-rit",
+    v: {
+      datum: "2026-07-22",
+      band: "caution",
+      score: 55,
+      fromType: "threshold",
+      toType: "tempo",
+      fromNaam: "Drempel 3×10",
+      toNaam: "Tempo-rit",
+      intensiteit: "tempo",
+      regel: verlichtAanbodRegel("caution", 55, "Drempel 3×10", "Tempo-rit"),
+      actieLabel: verlichtActieLabel("caution", "Tempo-rit"),
+      override: {
+        type: "library",
+        workoutType: "tempo",
+        durMin: 75,
+        src: "readiness",
+        label: verlichtBadgeLabel("caution", "Tempo-rit"),
+      },
+    },
+  },
+  {
+    label: "Verlicht · rest → Herstelrit",
+    v: {
+      datum: "2026-07-22",
+      band: "rest",
+      score: 41,
+      fromType: "vo2max",
+      toType: "recovery",
+      fromNaam: "VO2 8×2min",
+      toNaam: "Herstelrit",
+      intensiteit: "rustig",
+      regel: verlichtAanbodRegel("rest", 41, "VO2 8×2min", "Herstelrit"),
+      actieLabel: verlichtActieLabel("rest", "Herstelrit"),
+      override: {
+        type: "library",
+        workoutType: "recovery",
+        durMin: 60,
+        src: "readiness",
+        label: verlichtBadgeLabel("rest", "Herstelrit"),
+      },
+    },
+  },
+];
+
+const fixtureLabel: React.CSSProperties = {
+  fontFamily: "var(--font-sans)",
+  fontSize: "var(--fs-caption)",
+  color: "var(--text-muted)",
+  marginBottom: "var(--s-2)",
+};
+
+function VoorstelPreview() {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "var(--s-4)",
+        marginTop: "var(--s-6)",
+      }}
+    >
+      <div
+        style={{
+          fontFamily: "var(--font-sans)",
+          fontSize: "var(--fs-caption)",
+          fontWeight: 700,
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+          color: "var(--text-muted)",
+        }}
+      >
+        Voorstel-kaarten (fixtures)
+      </div>
+      {inhaalFixtures.map((f) => (
+        <div key={f.label}>
+          <div style={fixtureLabel}>{f.label}</div>
+          <InhaalCard voorstel={f.v} coachNaam="Coach" />
+        </div>
+      ))}
+      {verlichtFixtures.map((f) => (
+        <div key={f.label}>
+          <div style={fixtureLabel}>
+            {f.label} — knoppen uitgeschakeld in de preview
+          </div>
+          {/* pointer-events uit: de accept-knop van VerlichtCard schrijft een ECHTE
+              dag-override (putOverride). In een fixture-preview mag een tik nooit een
+              D1-rij aanmaken; het is hier om de weergave te beoordelen. */}
+          <div style={{ pointerEvents: "none" }}>
+            <VerlichtCard
+              voorstel={f.v}
+              coachNaam="Coach"
+              onDismiss={() => undefined}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function Preview() {
   const [idx, setIdx] = useState(0);
   const f = FIXTURES[idx] ?? FIXTURES[0];
@@ -342,6 +525,8 @@ export function Preview() {
         dispositionByDate={{}}
         settings={PREVIEW_SETTINGS}
       />
+
+      <VoorstelPreview />
     </div>
   );
 }

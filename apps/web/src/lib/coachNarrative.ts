@@ -251,19 +251,19 @@ export function verlichtBadgeLabel(band: VerlichtBand, toNaam: string): string {
 
 export type InhaalBucket = "high" | "anaerobic" | "low";
 
-/** NL-term voor de ontbrekende prikkel. */
+/** NL-naamwoordgroep voor de ontbrekende prikkel (compleet, niet met een streepje te
+ * plakken: "anaerobe" is een bijvoeglijk naamwoord, "intensiteit" een zelfstandig). */
 export function inhaalBucketTerm(bucket: InhaalBucket): string {
   return bucket === "high"
-    ? "intensiteit"
+    ? "intensiteitsprikkel"
     : bucket === "anaerobic"
-      ? "anaerobe"
-      : "duur";
+      ? "anaerobe prikkel"
+      : "duurprikkel";
 }
 
 /** Aanbod-regel voor het inhaal-voorstel; `dagen` = aantal dagen dat zou wijzigen. */
 export function inhaalAanbodRegel(bucket: InhaalBucket, dagen: number): string {
   const term = inhaalBucketTerm(bucket);
-  const wat =
-    dagen === 1 ? "verschuif ik één sessie" : `verschuif ik ${dagen} sessies`;
-  return `Voorstel: ik kan je gemiste ${term}-prikkel deze week inhalen — ${wat} binnen je bestaande uren, dus je traint niet méér, maar wel wat er miste.`;
+  const wat = dagen === 1 ? "één sessie" : `${dagen} sessies`;
+  return `Voorstel: ik kan je gemiste ${term} deze week inhalen. Ik verschuif daarvoor ${wat} binnen je bestaande uren — je traint dus niet méér, maar wel wat er miste.`;
 }

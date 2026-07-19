@@ -170,7 +170,7 @@ describe("buildInhaalVoorstel", () => {
     expect(v?.dagen[0].redenCode).toBe("catchup_high");
     // Aanbod-copy: biedt aan, claimt de daad NIET.
     expect(v?.regel).toContain(
-      "Voorstel: ik kan je gemiste intensiteit-prikkel",
+      "Voorstel: ik kan je gemiste intensiteitsprikkel deze week inhalen",
     );
     expect(v?.regel).not.toContain("Ik heb");
     // M62: expliciet binnen het bestaande budget.
