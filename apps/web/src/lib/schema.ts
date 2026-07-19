@@ -22,6 +22,7 @@ import {
   getSettings,
   getWeekplans,
   getWellness,
+  putWeekplan,
 } from "./api";
 import { parseLocalDate, todayIso, weekMondayIso } from "./dates";
 import {
@@ -31,6 +32,7 @@ import {
 } from "./proposal";
 import { deriveReadiness, type ReadinessResult } from "./readiness";
 import { presetHoursLabel } from "./settings";
+import { buildWeekplanEntries, sameForwardEntries } from "./weekplanBlob";
 
 // View-model voor de Schema-tab. ALLE derivatie hier (componenten = puur). De engine-
 // ProposalWorkout is los `any`-getypeerd; we casten 'm hier 1-op-1 naar SchemaSession
@@ -837,6 +839,24 @@ export function deriveSchemaView(
 }
 
 /**
+ * persistWeekplan — schrijf het voorstel weg als plan-van-record (laag 1a).
+ * Fire-and-forget: fouten worden gesluikt (het is een achtergrond-persistentie, geen
+ * render-afhankelijkheid). Slaat de PUT over als de vooruit-dagen al identiek opgeslagen zijn.
+ * Geëxporteerd zodat de dedup-/serialisatie-keten testbaar is zonder loadSchemaWeek te draaien.
+ */
+export function persistWeekplan(
+  proposalWeek: ProposalWeek,
+  doel: string | null,
+  storedWeekplans: unknown[],
+  todayISO: string,
+): boolean {
+  const entries = buildWeekplanEntries(proposalWeek, doel);
+  if (sameForwardEntries(entries, storedWeekplans, todayISO)) return false;
+  void putWeekplan(proposalWeek.weekMonday, entries, todayISO).catch(() => {});
+  return true;
+}
+
+/**
  * loadSchemaWeek — haalt de doelweek-data PARALLEL op, assembleert de
  * BuildProposalInput en draait buildWeekProposal + deriveReadiness client-side.
  * done-belasting = per-datum-sommen (TSS idx8 + duur idx3-minuten) uit de activities,
@@ -894,6 +914,13 @@ export async function loadSchemaWeek(): Promise<{
     readinessBand: readiness.band,
     todayISO,
   });
+
+  // PLAN-VAN-RECORD (laag 1a): persisteer de week als GAS-blob. Fire-and-forget (zoals de
+  // auto-sync) — een mislukte PUT mag het scherm nooit blokkeren. DEDUP: alleen schrijven als
+  // de NIET-BEVROREN dagen (vandaag/toekomst) afwijken van wat er al ligt; het verleden
+  // bevriest de worker toch. `weekplans` is het 8-weken-venster → sameForwardEntries filtert
+  // zelf op datum, dus geen extra fetch.
+  persistWeekplan(proposalWeek, settings?.doel ?? null, weekplans, todayISO);
 
   const weekDates = new Set(proposalWeek.days.map((d) => d.datum));
   const doneByDate: Record<string, DoneEntry> = {};

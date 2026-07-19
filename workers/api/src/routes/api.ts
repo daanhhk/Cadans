@@ -47,6 +47,7 @@ import {
   syncPowerCurve,
 } from "../integrations/powercurve";
 import { syncWellness } from "../integrations/wellness";
+import { mergeFrozenWeekplan } from "../weekplanFreeze";
 
 export const api = new Hono<{ Bindings: IntervalsEnv }>();
 
@@ -648,7 +649,26 @@ api.put("/weekplan/:monday", async (c) => {
   if (!Array.isArray(entries)) {
     throw new HTTPException(400, { message: "body.entries must be an array" });
   }
-  await writeWeekplan(db, CURRENT_USER_ID, monday, entries);
+  // todayISO is OPTIONEEL: zonder freeze-datum blijft dit de kale full-replace (bestaand
+  // gedrag, o.a. voor herstel/migratie-schrijvers). Meegestuurd → freeze-merge.
+  const todayISO = body.todayISO;
+  if (
+    todayISO != null &&
+    (typeof todayISO !== "string" || !isIsoDate(todayISO))
+  ) {
+    throw new HTTPException(400, {
+      message: "invalid todayISO, expected yyyy-MM-dd",
+    });
+  }
+  const merged =
+    typeof todayISO === "string"
+      ? mergeFrozenWeekplan(
+          await readWeekplan(db, CURRENT_USER_ID, monday),
+          entries,
+          todayISO,
+        )
+      : entries;
+  await writeWeekplan(db, CURRENT_USER_ID, monday, merged);
   return c.json({ ok: true });
 });
 

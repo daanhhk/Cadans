@@ -215,7 +215,16 @@ export async function readRecentWeekplans(
     );
   const map = new Map<string, any[] | null>();
   for (const r of rows) {
-    const parsed = r.entriesJson ? JSON.parse(r.entriesJson) : null;
+    // Per-key afvangen (GAS doet dat ook: Algorithm.gs:979 `catch → continue`, idem
+    // :283 en :1937). Eén corrupte rij mag niet het hele 8-weken-venster laten falen.
+    let parsed: unknown = null;
+    if (r.entriesJson) {
+      try {
+        parsed = JSON.parse(r.entriesJson);
+      } catch {
+        parsed = null;
+      }
+    }
     map.set(`weekplan_${r.weekMonday}`, Array.isArray(parsed) ? parsed : null);
   }
   const reader = (key: string) => map.get(key) ?? null;

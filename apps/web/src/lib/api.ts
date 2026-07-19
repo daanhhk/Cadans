@@ -142,6 +142,28 @@ export function getWeekplans(mondayISO: string): Promise<WeekplanEntries> {
   return apiGet<WeekplanEntries>(`/api/weekplans/recent?monday=${mondayISO}`);
 }
 
+/**
+ * PUT /api/weekplan/:monday — persisteer het plan-van-record van die week.
+ * `todayISO` stuurt de worker-freeze: dagen VÓÓR die datum met een bestaande entry
+ * blijven staan (snapshotDayAction_-semantiek); vandaag/toekomst wordt vers overschreven.
+ * Non-2xx → throw met de server-foutreden.
+ */
+export async function putWeekplan(
+  mondayISO: string,
+  entries: unknown[],
+  todayISO: string,
+): Promise<void> {
+  const resp = await fetch(`/api/weekplan/${mondayISO}`, {
+    method: "PUT",
+    headers: { "content-type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ entries, todayISO }),
+  });
+  if (!resp.ok) {
+    const parsed = await parseBody(resp);
+    throw new Error(errMessage(parsed, resp.status));
+  }
+}
+
 /** GET /api/power-curve?window= — genormaliseerd rijdersprofiel (of `{empty:true}`). */
 export function getPowerCurve(
   window: "90d" | "1y",

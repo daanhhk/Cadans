@@ -31,6 +31,7 @@ import type {
 } from "@cadans/shared";
 import type { ActValuesRow } from "./activities";
 import { parseLocalDate } from "./dates";
+import { PLAN_ADAPTATION_ENABLED } from "./planFlags";
 import { deriveWellnessSignalResult, type ReadinessBand } from "./readiness";
 
 // ≥15 werkelijke minuten in een bucket (deze week, voltooide dag) = gedekt.
@@ -109,6 +110,12 @@ export interface BuildProposalInput {
    * (ready→normal · caution→demote · rest→recovery). null/undefined → val terug op de wSig-vlag. */
   readinessBand?: ReadinessBand | null;
   todayISO?: string;
+  /** LAAG 1a-vlag-override (default = PLAN_ADAPTATION_ENABLED, zie planFlags.ts).
+   * true → de blob-gevoede BESLISSERS staan aan: `intentByDate` (dekking/zoneDebt_/
+   * recentHardDate_/catchup_*) én `plannedTypeByDate` (rpeSignal_ → demote).
+   * Bestaat zodat die engine-paden testbaar blijven zolang de vlag uit staat; laag 2
+   * zet de constante zelf om. NIET vanuit de app meegeven. */
+  planAdaptation?: boolean;
 }
 
 // Intern mutabel dag-element — de vorm die assignWorkouts leest (d.type = dagtype,
@@ -127,9 +134,18 @@ interface GridDay {
   archetypeId: string | null;
 }
 
-/** weekplans-blob (opaque unknown[]) → per-datum beoogde minuten (aggIntent). */
-function intentByDateFrom(weekplans: unknown[]): IntentByDate {
+/** weekplans-blob (opaque unknown[]) → per-datum beoogde minuten (aggIntent).
+ *
+ * LAAG 1a: zolang PLAN_ADAPTATION_ENABLED false is levert dit een LEGE map, óók als de blob
+ * gevuld is. Zo blijven `rollingZoneCoverage_`/`zoneDebt_`/`recentHardDate_` (en daarmee de
+ * `catchup_*`-takken) leeg-gevoed en is het vooruit-plannen byte-identiek aan vóór 1a.
+ * Laag 2 zet de vlag om — zie planFlags.ts. */
+function intentByDateFrom(
+  weekplans: unknown[],
+  planAdaptation: boolean,
+): IntentByDate {
   const out: IntentByDate = {};
+  if (!planAdaptation) return out;
   for (const raw of weekplans || []) {
     const e = raw as { datum?: unknown; intent?: unknown };
     if (typeof e?.datum !== "string") continue;
@@ -142,6 +158,56 @@ function intentByDateFrom(weekplans: unknown[]): IntentByDate {
     };
   }
   return out;
+}
+
+/** Eén weekplan-entry zoals de blob 'm draagt — structureel getypeerd zodat proposal.ts
+ * niet van weekplanBlob.ts hoeft te importeren (die importeert andersom de Proposal-types). */
+interface FrozenEntry {
+  datum?: unknown;
+  workoutType?: unknown;
+  naam?: unknown;
+  zones?: unknown;
+  totaalMin?: unknown;
+  minuten?: unknown;
+  tss?: unknown;
+  blokken?: unknown;
+  structuur?: unknown;
+  intent?: unknown;
+}
+
+/** weekplans-blob → per-datum de BEVROREN entry (V24-leesbaan; NIET gegate op
+ * PLAN_ADAPTATION_ENABLED — dit is een weergave-pad over het verleden, geen beslisser
+ * over het vooruit-plan). Latere entries voor dezelfde datum winnen (het recent-venster
+ * levert de weken oplopend aan). */
+function frozenEntryByDate(weekplans: unknown[]): Map<string, FrozenEntry> {
+  const out = new Map<string, FrozenEntry>();
+  for (const raw of weekplans || []) {
+    const e = raw as FrozenEntry;
+    if (typeof e?.datum !== "string") continue;
+    out.set(e.datum, e);
+  }
+  return out;
+}
+
+/** Bevroren entry → de ProposalWorkout-vorm die de VOLTOOID-vergelijking leest
+ * (buildDoneCompareFull → toSession/coachPlannedArg_). Geen herberekening: puur de
+ * opgeslagen waarden. Zonder bruikbare entry → null (gereduceerde kaart). */
+function workoutFromFrozenEntry(
+  e: FrozenEntry | undefined,
+): ProposalWorkout | null {
+  if (!e) return null;
+  const totaalMin = Number(e.totaalMin ?? e.minuten);
+  const naam = typeof e.naam === "string" ? e.naam : "";
+  if (!naam && !Number.isFinite(totaalMin)) return null;
+  return {
+    naam,
+    zones: Array.isArray(e.zones) ? e.zones.map(String) : [],
+    totaalMin: Number.isFinite(totaalMin) ? totaalMin : 0,
+    tss: Number(e.tss) || 0,
+    blokken: Array.isArray(e.blokken) ? e.blokken : null,
+    structuur: Array.isArray(e.structuur) ? e.structuur : null,
+    intent: e.intent ?? null,
+  };
 }
 
 /**
@@ -233,7 +299,11 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
   const mesoWeek = weekIndexFromStart_(settingsE);
 
   // 4. intentByDate uit de weekplans-blob (aggIntent-minuten per datum).
-  const intentByDate = intentByDateFrom(weekplans);
+  const planAdaptation = input.planAdaptation ?? PLAN_ADAPTATION_ENABLED;
+  const intentByDate = intentByDateFrom(weekplans, planAdaptation);
+  // V24-leesbaan: dezelfde blob, maar de HELE entry per datum — voor de bevroren
+  // plannedForDone van voorbije dagen (zie de days-loop hieronder).
+  const frozenByDate = frozenEntryByDate(weekplans);
 
   // Grid: mutabel dag-array (assignWorkouts leest d.type = dagtype + d.datum = Date).
   const grid: GridDay[] = (plannerDays || []).map((pd, i) => ({
@@ -309,9 +379,14 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
   //    de voltooide deze-week-dagen (combineSignals_ neemt de zwaarste). plannedTypeByDate
   //    uit PlannerDay.voorgesteldType (dag-mirror van de weekplan-workoutType); datums
   //    zonder type vallen weg (rpeSignal_ filtert ze via expectedRpe_ == null).
+  //    LAAG 1a: gegate op PLAN_ADAPTATION_ENABLED — leeg → rpeSignal_ filtert alles weg
+  //    (expectedRpe_ == null) en levert 'normal'. Zo zet het vullen van het plan-van-record
+  //    geen STILLE demote-beslisser aan (R3-T30/T22); laag 2 doet dat mét voorstel-en-bevestig.
   const plannedTypeByDate: Record<string, string> = {};
-  for (const pd of plannerDays || []) {
-    if (pd.voorgesteldType) plannedTypeByDate[pd.datum] = pd.voorgesteldType;
+  if (planAdaptation) {
+    for (const pd of plannerDays || []) {
+      if (pd.voorgesteldType) plannedTypeByDate[pd.datum] = pd.voorgesteldType;
+    }
   }
   const wSig = deriveWellnessSignalResult(wellness || []);
   const rSig = rpeSignal_(rpe || [], plannedTypeByDate, todayLocalISO);
@@ -413,38 +488,52 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
         if (wo) sessions.push(wo);
       }
     }
-    // Verstreken/voltooide trainingsdag (niet in tePlannen) met een intent → reconstrueer
-    // de geplande workout (deterministisch uit voorgesteldType + planner-minuten). Voedt de
-    // VOLTOOID-kaart-vergelijking; telt NIET mee in `sessions` (week-load blijft ongewijzigd).
+    // Geplande workout voor een dag die NIET te plannen is. Voedt de VOLTOOID-kaart-
+    // vergelijking; telt NIET mee in `sessions` (week-load blijft ongewijzigd).
+    //
+    // V24 (LAAG 1a): een VOORBIJE dag wordt NIET meer gereconstrueerd met de settings-van-NU
+    // (FTP/mesoWeek/fase schoven mee → de watt-targets van een gereden rit veranderden met
+    // terugwerkende kracht). In plaats daarvan leest hij zijn BEVROREN entry uit de blob
+    // (de worker-freeze houdt die vast, snapshotDayAction_-semantiek, GAS Algorithm.gs:185).
+    // Geen entry → null → gereduceerde kaart; expliciet GEEN reconstructie.
+    // VANDAAG (en een niet-te-plannen toekomstige dag) houdt het bestaande gedrag.
     let plannedForDone: ProposalWorkout | null = null;
-    if (
-      !tePlannenSet.has(d.dagIdx) &&
-      d.train &&
-      d.voorgesteldType &&
-      d.minuten
-    ) {
-      plannedForDone =
-        (buildWorkout(
-          d.voorgesteldType,
-          d.minuten,
-          settingsE,
-          mesoWeek,
-          macroFase,
-          undefined,
-          d.dagIdx,
-          d.archetypeId,
-        ) as ProposalWorkout | null) ?? null;
+    let frozenType: string | null = null;
+    const isPast = stripTime_(d.datum).getTime() < todayT;
+    if (!tePlannenSet.has(d.dagIdx)) {
+      if (isPast) {
+        const fe = frozenByDate.get(ovDISO);
+        plannedForDone = workoutFromFrozenEntry(fe);
+        // De bevroren entry draagt ook het TYPE; de dag-spiegel planner_days.voorgesteld_type
+        // is nog null (laag 2 vult 'm). Zonder type doet buildDoneCompareFull niets.
+        if (plannedForDone && typeof fe?.workoutType === "string")
+          frozenType = fe.workoutType;
+      } else if (d.train && d.voorgesteldType && d.minuten) {
+        plannedForDone =
+          (buildWorkout(
+            d.voorgesteldType,
+            d.minuten,
+            settingsE,
+            mesoWeek,
+            macroFase,
+            undefined,
+            d.dagIdx,
+            d.archetypeId,
+          ) as ProposalWorkout | null) ?? null;
+      }
     }
     return {
       datum: formatDate(stripTime_(d.datum), "yyyy-MM-dd"),
       dagIdx: d.dagIdx,
       // 3b: bij een toegepaste override komen deze dag-velden van de override i.p.v. de VERWORPEN
       // coach-tak (byte-getrouw aan overrideWeekplanEntry_, Algorithm.gs:2427/2439).
+      // V24: een voorbije dag zonder dag-spiegel valt terug op het type uit de BEVROREN
+      // entry (frozenType), zodat de VOLTOOID-vergelijking een plan-type heeft.
       voorgesteldType: appliedOverride
         ? appliedOverride.type === "free"
           ? "free"
           : appliedOverride.workoutType
-        : d.voorgesteldType,
+        : (d.voorgesteldType ?? frozenType),
       reden: appliedOverride ? "Handmatig gekozen" : d.reden,
       redenCode: appliedOverride ? null : d.redenCode,
       archetypeId: appliedOverride ? null : d.archetypeId,

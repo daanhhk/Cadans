@@ -220,24 +220,183 @@ describe("buildWeekProposal", () => {
     expect(r.days[6].sessions).toHaveLength(0);
   });
 
-  it("plannedForDone: voltooide dag reconstrueert de geplande workout; tePlannen/rust → null", () => {
+  it("V24 — voorbije dag ZONDER bevroren entry: geen reconstructie meer → gereduceerde kaart", () => {
     const r = buildWeekProposal({
       settings: settings(),
       plannerDays: WEEK,
       events: EV_FAR,
       wellness: WELL_OK,
-      ...base,
+      ...base, // WEEKPLANS draagt alleen `intent`, geen workout-entry
     });
-    // Voltooide dag 03-09 (sweet_spot, gedaan): sessions leeg, maar plannedForDone
-    // gereconstrueerd → voedt de VOLTOOID-kaart plan-vs-gedaan (2b-2).
+    // 03-09 is voorbij (TODAY = 03-11). Vóór laag 1a werd de geplande workout hier
+    // HERBOUWD met de settings-van-NU (V24: FTP/mesoWeek/fase schuiven mee). Nu geldt:
+    // geen bevroren entry → null → de VOLTOOID-kaart valt terug op de gereduceerde vorm.
     expect(r.days[0].sessions).toHaveLength(0);
-    expect(r.days[0].plannedForDone).not.toBeNull();
-    expect(r.days[0].plannedForDone?.totaalMin).toBeGreaterThan(0);
-    expect(r.days[0].plannedForDone?.tss).toBeGreaterThan(0);
+    expect(r.days[0].plannedForDone).toBeNull();
     // tePlannen-dag (03-11) draagt zijn plan in `sessions` → geen plannedForDone.
     expect(r.days[2].plannedForDone).toBeNull();
     // Rustdag (03-15, !train) → geen plannedForDone.
     expect(r.days[6].plannedForDone).toBeNull();
+  });
+
+  it("V24 — voorbije dag MÉT bevroren entry: leest de entry, herberekent niet", () => {
+    const frozen = {
+      datum: "2026-03-09",
+      workoutType: "sweet_spot",
+      naam: "Sweet Spot 3×12",
+      zones: ["low", "high"],
+      intent: { low: 30, high: 36, anaerobic: 0 },
+      blokken: [{ zone: "high", min: 36 }],
+      structuur: [["Warmup", "15 min", "150-190W", "<150bpm"]],
+      tss: 71,
+      minuten: 66,
+      totaalMin: 66,
+      reden: "",
+      sessies: [],
+    };
+    const r = buildWeekProposal({
+      settings: settings(),
+      plannerDays: WEEK,
+      events: EV_FAR,
+      wellness: WELL_OK,
+      activities: ACTS,
+      weekplans: [frozen],
+      rpe: [],
+      todayISO: TODAY,
+    });
+    const pfd = r.days[0].plannedForDone;
+    expect(pfd).not.toBeNull();
+    // Exact de OPGESLAGEN waarden — geen herberekening met de settings-van-nu.
+    expect(pfd?.naam).toBe("Sweet Spot 3×12");
+    expect(pfd?.totaalMin).toBe(66);
+    expect(pfd?.tss).toBe(71);
+    expect(pfd?.zones).toEqual(["low", "high"]);
+    // Een andere FTP verandert de bevroren waarden NIET (dat was precies V24).
+    const rHiFtp = buildWeekProposal({
+      settings: settings({ ftp: 400 }),
+      plannerDays: WEEK,
+      events: EV_FAR,
+      wellness: WELL_OK,
+      activities: ACTS,
+      weekplans: [frozen],
+      rpe: [],
+      todayISO: TODAY,
+    });
+    expect(rHiFtp.days[0].plannedForDone).toEqual(pfd);
+
+    // De bevroren entry levert ook het plan-TYPE als de dag-spiegel leeg is
+    // (planner_days.voorgesteld_type is null tot laag 2) → de VOLTOOID-vergelijking
+    // heeft dan alsnog een plan-type om mee te vergelijken.
+    const weekZonderSpiegel = WEEK.map((d, i) =>
+      i === 0 ? { ...d, voorgesteldType: null } : d,
+    );
+    const rGeenSpiegel = buildWeekProposal({
+      settings: settings(),
+      plannerDays: weekZonderSpiegel,
+      events: EV_FAR,
+      wellness: WELL_OK,
+      activities: ACTS,
+      weekplans: [frozen],
+      rpe: [],
+      todayISO: TODAY,
+    });
+    expect(rGeenSpiegel.days[0].voorgesteldType).toBe("sweet_spot");
+    expect(rGeenSpiegel.days[0].plannedForDone?.naam).toBe("Sweet Spot 3×12");
+  });
+
+  it("LAAG 1a byte-identiek: een GESCHREVEN blob verandert het vooruit-plan NIET (vlag uit)", () => {
+    // De kern-invariant van laag 1a. Een volledig gevulde weekplan-blob (intent + types,
+    // precies wat de nieuwe schrijver wegschrijft) mag met PLAN_ADAPTATION_ENABLED=false
+    // NIETS aan het vooruit-plannen veranderen t.o.v. een lege blob. Zonder de vlag zouden
+    // intentByDate (dekking/zoneDebt_/recentHardDate_/catchup_*) en plannedTypeByDate
+    // (rpeSignal_ → demote) hier wél gaan sturen.
+    const gevuldeBlob = [
+      {
+        datum: "2026-03-09",
+        workoutType: "sweet_spot",
+        naam: "Sweet Spot 3×12",
+        zones: ["low", "high"],
+        intent: { low: 30, high: 36, anaerobic: 0 },
+        tss: 71,
+        minuten: 66,
+        sessies: [],
+      },
+      {
+        datum: "2026-03-10",
+        workoutType: "pendel_z2",
+        naam: "Pendel 2× 80m",
+        zones: ["low"],
+        intent: { low: 160, high: 0, anaerobic: 0 },
+        tss: 90,
+        minuten: 160,
+        sessies: [],
+      },
+    ];
+    // Een planner-week MÉT dag-spiegel (laag 2 vult die) — voedt plannedTypeByDate.
+    const weekMetSpiegel = WEEK.map((d) =>
+      d.gedaan ? d : { ...d, voorgesteldType: "threshold" },
+    );
+    const zwareRpe = [
+      { datum: "2026-03-09", rpe: 9 },
+      { datum: "2026-03-10", rpe: 6 },
+    ];
+    const metBlob = buildWeekProposal({
+      settings: settings(),
+      plannerDays: weekMetSpiegel,
+      events: EV_FAR,
+      wellness: WELL_OK,
+      activities: ACTS,
+      weekplans: gevuldeBlob,
+      rpe: zwareRpe,
+      todayISO: TODAY,
+    });
+    const zonderBlob = buildWeekProposal({
+      settings: settings(),
+      plannerDays: weekMetSpiegel,
+      events: EV_FAR,
+      wellness: WELL_OK,
+      activities: ACTS,
+      weekplans: [],
+      rpe: zwareRpe,
+      todayISO: TODAY,
+    });
+    // Het VOORUIT-plan (vandaag/toekomst): type, reden, redenCode, archetype en de
+    // volledige sessies — byte-identiek.
+    const vooruit = (r: ProposalWeek) =>
+      r.days
+        .filter((d) => d.datum >= TODAY)
+        .map((d) => ({
+          datum: d.datum,
+          voorgesteldType: d.voorgesteldType,
+          reden: d.reden,
+          redenCode: d.redenCode,
+          archetypeId: d.archetypeId,
+          sessions: d.sessions,
+        }));
+    expect(JSON.stringify(vooruit(metBlob))).toBe(
+      JSON.stringify(vooruit(zonderBlob)),
+    );
+    // Week-niveau eveneens ongewijzigd.
+    expect(metBlob.macroFase).toBe(zonderBlob.macroFase);
+    expect(metBlob.fase).toBe(zonderBlob.fase);
+    expect(metBlob.mesoWeek).toBe(zonderBlob.mesoWeek);
+
+    // Controle dat de test niet vacuüm is: mét de vlag AAN stuurt dezelfde blob wél
+    // (rpeSignal_ vuurt op de gevulde plannedTypeByDate → demote-reden verschijnt).
+    const metVlag = buildWeekProposal({
+      settings: settings(),
+      plannerDays: weekMetSpiegel,
+      events: EV_FAR,
+      wellness: WELL_OK,
+      activities: ACTS,
+      weekplans: gevuldeBlob,
+      rpe: zwareRpe,
+      todayISO: TODAY,
+      planAdaptation: true,
+    });
+    expect(JSON.stringify(vooruit(metVlag))).not.toBe(
+      JSON.stringify(vooruit(zonderBlob)),
+    );
   });
 
   it("wellness recovery → tePlannen-dag gedemoot naar recovery", () => {
@@ -354,6 +513,8 @@ describe("buildWeekProposal", () => {
 
   it("band 'ready' + zware RPE → toch demote (RPE telt mee via combineSignals_)", () => {
     // bandSignal 'normal' + rSig 'demote' (zware RPE) → combineSignals_ neemt de zwaarste = demote.
+    // planAdaptation: true — het RPE-pad hangt aan plannedTypeByDate, dat in laag 1a gegate is
+    // (PLAN_ADAPTATION_ENABLED=false). Deze test dekt het engine-gedrag dat laag 2 aanzet.
     const r = buildWeekProposal({
       settings: settings(),
       plannerDays: WEEK,
@@ -367,6 +528,7 @@ describe("buildWeekProposal", () => {
         { datum: "2026-03-10", rpe: 6 },
       ],
       todayISO: TODAY,
+      planAdaptation: true,
     });
     expect(
       r.days.some((d) => d.reden === "Lichter gehouden — wellness laag"),
@@ -451,6 +613,8 @@ describe("buildWeekProposal", () => {
         { datum: "2026-03-10", rpe: 6 },
       ],
       todayISO: TODAY,
+      // Zie hierboven: het RPE-pad is in laag 1a gegate; hier expliciet aan.
+      planAdaptation: true,
     });
     const noRpe = buildWeekProposal({
       settings: settings(),
@@ -458,6 +622,7 @@ describe("buildWeekProposal", () => {
       events: EV_FAR,
       wellness: WELL_OK,
       ...base,
+      planAdaptation: true,
     });
     const demoted = (r: ProposalWeek) =>
       r.days.some((d) => d.reden === "Lichter gehouden — wellness laag");
@@ -674,6 +839,9 @@ describe("weekgen — actual-gedreven avoid-consecutive-hard + debt-exceptie", (
       activities: [act("2026-03-10", 0.6, hardZ1)],
       weekplans: DEBT_PLANS,
       rpe: [],
+      // debt-pad: hangt aan intentByDate, in laag 1a gegate (planFlags.ts). Expliciet aan
+      // zodat deze engine-paden gedekt blijven tot laag 2 de vlag omzet.
+      planAdaptation: true,
       todayISO: "2026-03-11",
     });
     expect(control.days[2].datum).toBe("2026-03-11");
@@ -688,6 +856,9 @@ describe("weekgen — actual-gedreven avoid-consecutive-hard + debt-exceptie", (
       activities: [act("2026-03-10", 0.9, hardZ1)],
       weekplans: DEBT_PLANS,
       rpe: [],
+      // debt-pad: hangt aan intentByDate, in laag 1a gegate (planFlags.ts). Expliciet aan
+      // zodat deze engine-paden gedekt blijven tot laag 2 de vlag omzet.
+      planAdaptation: true,
       todayISO: "2026-03-11",
     });
     expect(r.days[2].datum).toBe("2026-03-11");
@@ -717,6 +888,9 @@ describe("weekgen — actual-gedreven avoid-consecutive-hard + debt-exceptie", (
       activities: [act("2026-03-13", 0.9, hardZ1)],
       weekplans: DEBT_PLANS,
       rpe: [],
+      // debt-pad: hangt aan intentByDate, in laag 1a gegate (planFlags.ts). Expliciet aan
+      // zodat deze engine-paden gedekt blijven tot laag 2 de vlag omzet.
+      planAdaptation: true,
       todayISO: "2026-03-14",
     });
     // za 03-14 = index 2. Zelfde prev-dag-hard-conditie als A (recentHardDate 03-13), maar:
