@@ -239,3 +239,31 @@ export function verlichtActieLabel(band: VerlichtBand, toNaam: string): string {
 export function verlichtBadgeLabel(band: VerlichtBand, toNaam: string): string {
   return band === "caution" ? `Verlicht naar ${toNaam}` : "Rustig gehouden";
 }
+
+// ── FASE 2b — inhaal-voorstel (week-niveau, read-only) ───────────────────────
+// VOORWAARDELIJKE aanbod-copy: biedt aan, claimt de daad NIET (M10/M55). De catchup_*-pools
+// hierboven zijn DAAD-copy ("Ik heb je schema bijgesteld") en horen bij de TOEGEPASTE staat;
+// die worden hier bewust niet hergebruikt.
+//
+// Het "waarom" volgt M62: herverdelen binnen het bestaande budget — geen extra uren, geen
+// belasting bovenop het plan. Dat is precies wat de motor doet (gemeten in
+// docs/INHAAL-DEBT-RECON.md §7.1: week-TSS en minuten blijven gelijk).
+
+export type InhaalBucket = "high" | "anaerobic" | "low";
+
+/** NL-term voor de ontbrekende prikkel. */
+export function inhaalBucketTerm(bucket: InhaalBucket): string {
+  return bucket === "high"
+    ? "intensiteit"
+    : bucket === "anaerobic"
+      ? "anaerobe"
+      : "duur";
+}
+
+/** Aanbod-regel voor het inhaal-voorstel; `dagen` = aantal dagen dat zou wijzigen. */
+export function inhaalAanbodRegel(bucket: InhaalBucket, dagen: number): string {
+  const term = inhaalBucketTerm(bucket);
+  const wat =
+    dagen === 1 ? "verschuif ik één sessie" : `verschuif ik ${dagen} sessies`;
+  return `Voorstel: ik kan je gemiste ${term}-prikkel deze week inhalen — ${wat} binnen je bestaande uren, dus je traint niet méér, maar wel wat er miste.`;
+}

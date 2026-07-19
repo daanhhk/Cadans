@@ -5,7 +5,11 @@ import { postSyncActivities, postSyncWellness } from "../lib/api";
 import { subscribePlannerVersion } from "../lib/plannerSignal";
 import type { ProposalWeek } from "../lib/proposal";
 import type { ReadinessResult } from "../lib/readiness";
-import { type DoneEntry, loadSchemaWeek } from "../lib/schema";
+import {
+  type DoneEntry,
+  type InhaalVoorstel,
+  loadSchemaWeek,
+} from "../lib/schema";
 import {
   getLastSyncTs,
   isSyncFresh,
@@ -22,6 +26,8 @@ interface SchemaData {
   rpeByDate: Record<string, number>;
   dispositionByDate: Record<string, DispositionReason>;
   settings: SettingsInput;
+  /** FASE 2b — read-only inhaal-voorstel (null = geen voorstel). */
+  inhaal: InhaalVoorstel | null;
 }
 
 // Live container voor de Schema-tab: laadt de doelweek (loadSchemaWeek → getPlanner/
@@ -168,6 +174,7 @@ export function Schema() {
       rpeByDate={data.rpeByDate}
       dispositionByDate={data.dispositionByDate}
       settings={data.settings}
+      inhaal={data.inhaal}
     />
   );
 }

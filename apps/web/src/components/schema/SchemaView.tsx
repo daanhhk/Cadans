@@ -11,6 +11,7 @@ import {
   type DayState,
   type DoneEntry,
   deriveSchemaView,
+  type InhaalVoorstel,
   verlichtResultaat,
 } from "../../lib/schema";
 import { Card, Overline } from "../ui";
@@ -23,6 +24,7 @@ import { DispositionAffordance } from "./DispositionAffordance";
 import { DoneCompareCard } from "./DoneCompareCard";
 import { DoneDetail } from "./DoneDetail";
 import { GemistCard } from "./GemistCard";
+import { InhaalCard } from "./InhaalCard";
 import { OverriddenDetail } from "./OverriddenDetail";
 import { PeriodTimeline } from "./PeriodTimeline";
 import { isVerlichtAfgewezen, VerlichtCard } from "./VerlichtCard";
@@ -49,6 +51,7 @@ export function SchemaView({
   rpeByDate,
   dispositionByDate,
   settings,
+  inhaal = null,
 }: {
   proposalWeek: ProposalWeek;
   readiness: ReadinessResult;
@@ -57,6 +60,8 @@ export function SchemaView({
   rpeByDate: Record<string, number>;
   dispositionByDate: Record<string, DispositionReason>;
   settings: SettingsInput;
+  /** FASE 2b — read-only inhaal-voorstel op weekniveau (null = niets tonen). */
+  inhaal?: InhaalVoorstel | null;
 }) {
   const view = useMemo(
     () =>
@@ -146,6 +151,14 @@ export function SchemaView({
       />
 
       <WeekLoad tss={view.tss} minuten={view.minuten} dagen={view.dagen} />
+
+      {/* FASE 2b — inhaal-voorstel op WEEKNIVEAU (read-only). Onderdrukt zodra er een
+          verlicht-voorstel voor vandaag staat: M66 laat herstel winnen van inhalen, dus
+          die twee horen elkaar nooit te overlappen. De band-poort in buildInhaalVoorstel
+          sluit dat al uit; deze guard is de tweede grendel op de render-kant. */}
+      {inhaal && !verlichtVoorstel && (
+        <InhaalCard voorstel={inhaal} coachNaam={view.coachNaam} />
+      )}
 
       <DayStrip
         days={view.days}

@@ -1,7 +1,9 @@
 import {
   actualZoneMinutes_,
+  COACH_INTENT_LABEL_,
   coachFeedback_,
   formatDate,
+  intentFromType_,
   readinessAdjust_,
   readinessEaseNaam_,
   stripTime_,
@@ -30,6 +32,8 @@ import {
   putWeekplan,
 } from "./api";
 import {
+  type InhaalBucket,
+  inhaalAanbodRegel,
   type VerlichtBand,
   verlichtAanbodRegel,
   verlichtActieLabel,
@@ -864,6 +868,99 @@ export function verlichtResultaat(override: DayOverride | null): string | null {
   return verlichtResultaatRegel(band, toNaam);
 }
 
+// ── FASE 2b — het INHAAL-VOORSTEL (week-niveau, READ-ONLY) ─────────────────────────────
+// Toont naast het actieve plan wat er zou veranderen als het tekort van deze week wordt
+// ingehaald. Muteert NIETS: het actieve `proposalWeek` blijft het origineel, en er is in
+// deze fase geen goedkeuring en geen persistentie (M10 — voorstellen, niet stil muteren).
+
+/** Eén dag die in het voorstel zou wijzigen. */
+export interface InhaalVoorstelDag {
+  datum: string;
+  fromType: string;
+  toType: string;
+  /** NL-weergavenamen (via de engine-intentlabels) — nooit de ruwe type-keys tonen. */
+  fromNaam: string;
+  toNaam: string;
+  redenCode: string;
+}
+
+export interface InhaalVoorstel {
+  /** Dominante ontbrekende prikkel (high > anaerobic > low) — stuurt de copy. */
+  bucket: InhaalBucket;
+  /** De dagen ≥ vandaag die zouden wijzigen. */
+  dagen: InhaalVoorstelDag[];
+  /** Aanbod-copy (voorwaardelijk; claimt de daad niet). */
+  regel: string;
+}
+
+/** Ruw engine-type → NL-weergavenaam via de intent-labels (één bron, geen eigen tabel). */
+export function typeNaam(type: string | null): string {
+  if (!type) return "geen training";
+  return String(COACH_INTENT_LABEL_[intentFromType_(type)] ?? "Training");
+}
+
+const CATCHUP_BUCKET: Record<string, InhaalBucket> = {
+  catchup_high: "high",
+  catchup_anaerobic: "anaerobic",
+  catchup_low: "low",
+};
+
+/**
+ * buildInhaalVoorstel — diff tussen het ACTIEVE plan en een plan-met-inhaal.
+ *
+ * `voorgesteld` is een tweede `buildWeekProposal`-run met `planAdaptation: true`; die run is
+ * UITSLUITEND voor dit voorstel en raakt het actieve plan niet.
+ *
+ * Poorten (null zodra er één blokkeert):
+ *  - **M66** — bij band 'caution'/'rest' wint verlichten of loslaten van inhalen; dan geen
+ *    inhaal-voorstel. Dat maakt inhaal en het verlicht-voorstel wederzijds exclusief.
+ *  - **M64 + M65** — alleen een betekenisvol tekort telt, en kwaliteit gaat vóór volume: er
+ *    moet minstens één `catchup_high` of `catchup_anaerobic` in de diff zitten. Een diff met
+ *    uitsluitend `catchup_low` (duurvolume) levert geen voorstel — dat wordt gespreid of
+ *    losgelaten, niet ingehaald.
+ */
+export function buildInhaalVoorstel(
+  origineel: ProposalWeek,
+  voorgesteld: ProposalWeek | null,
+  band: "ready" | "caution" | "rest" | null,
+  todayISO: string,
+): InhaalVoorstel | null {
+  if (!voorgesteld) return null;
+  if (band === "caution" || band === "rest") return null; // M66
+
+  const originExtra = new Map<string, string | null>();
+  for (const d of origineel.days) originExtra.set(d.datum, d.redenCode);
+
+  const dagen: InhaalVoorstelDag[] = [];
+  for (const d of voorgesteld.days) {
+    if (d.datum < todayISO) continue;
+    const code = d.redenCode ?? "";
+    if (!CATCHUP_BUCKET[code]) continue;
+    if (originExtra.get(d.datum) === code) continue; // stond er al → geen wijziging
+    const from = origineel.days.find((o) => o.datum === d.datum) ?? null;
+    dagen.push({
+      datum: d.datum,
+      fromType: from?.voorgesteldType ?? "",
+      toType: d.voorgesteldType ?? "",
+      fromNaam: typeNaam(from?.voorgesteldType ?? null),
+      toNaam: typeNaam(d.voorgesteldType ?? null),
+      redenCode: code,
+    });
+  }
+  if (!dagen.length) return null;
+
+  // M64/M65: kwaliteit moet erbij zitten; alleen duurvolume is geen inhaal-aanleiding.
+  const buckets = dagen.map((d) => CATCHUP_BUCKET[d.redenCode]);
+  const bucket: InhaalBucket | null = buckets.includes("high")
+    ? "high"
+    : buckets.includes("anaerobic")
+      ? "anaerobic"
+      : null;
+  if (!bucket) return null;
+
+  return { bucket, dagen, regel: inhaalAanbodRegel(bucket, dagen.length) };
+}
+
 export function deriveSchemaView(
   proposalWeek: ProposalWeek,
   doneByDate: Record<string, DoneEntry>,
@@ -1026,6 +1123,8 @@ export async function loadSchemaWeek(): Promise<{
   rpeByDate: Record<string, number>;
   dispositionByDate: Record<string, DispositionReason>;
   settings: SettingsInput;
+  /** FASE 2b — read-only inhaal-voorstel (null = geen voorstel). Muteert niets. */
+  inhaal: InhaalVoorstel | null;
 }> {
   const monday = weekMondayIso();
   const todayISO = todayIso();
@@ -1077,6 +1176,37 @@ export async function loadSchemaWeek(): Promise<{
   // zelf op datum, dus geen extra fetch.
   persistWeekplan(proposalWeek, settings?.doel ?? null, weekplans, todayISO);
 
+  // FASE 2b — het INHAAL-VOORSTEL. Tweede weekplan-run met de deciders geforceerd aan
+  // (`planAdaptation: true`), UITSLUITEND om te tonen wát er zou veranderen. Het actieve
+  // `proposalWeek` hierboven is en blijft de originele run; deze tweede run wordt nergens
+  // anders gebruikt en niet gepersisteerd.
+  //
+  // Optimalisatie + M66: bij band 'caution'/'rest' wint verlichten van inhalen, dus dan
+  // blokkeert de poort toch — die dubbele berekening slaan we over.
+  const inhaalBandOk =
+    readiness.band !== "caution" && readiness.band !== "rest";
+  const voorgesteldeWeek = inhaalBandOk
+    ? buildWeekProposal({
+        settings: settings ?? EMPTY_SETTINGS,
+        plannerDays,
+        events,
+        activities,
+        weekplans,
+        wellness,
+        rpe,
+        overrides,
+        readinessBand: readiness.band,
+        todayISO,
+        planAdaptation: true,
+      })
+    : null;
+  const inhaal = buildInhaalVoorstel(
+    proposalWeek,
+    voorgesteldeWeek,
+    readiness.band,
+    todayISO,
+  );
+
   const weekDates = new Set(proposalWeek.days.map((d) => d.datum));
   const doneByDate: Record<string, DoneEntry> = {};
   for (const row of activities) {
@@ -1108,5 +1238,6 @@ export async function loadSchemaWeek(): Promise<{
     rpeByDate,
     dispositionByDate,
     settings: settings ?? EMPTY_SETTINGS,
+    inhaal,
   };
 }
