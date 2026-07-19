@@ -412,6 +412,19 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
       : wSig;
   const signal = combineSignals_(baseWSig, rSig).signal;
 
+  // 6b. LAAG 1b — de cross-week recency-seed.
+  //
+  // ALLEEN de weken VÓÓR deze week. `recencyFromWeekplan_` neemt de LAATSTE kwaliteitsdag als
+  // `lastIntent`; zonder deze filter zijn dat de entries die laag 1a zojuist voor DEZE week
+  // heeft weggeschreven, en leest de seed dus zijn eigen output terug. Gemeten: met de huidige
+  // week erin overschaduwt die de vorige volledig (plan identiek aan een lege blob) → de
+  // cross-week-arm is dan dood, precies de arm die 1b moet toevoegen. Binnen de week roteert
+  // de allocator al zelf (`rec.push`, planner.ts:420) — zie docs/RECENCY-1B-RECON.md §4.
+  const recencySeedEntries = (weekplans || []).filter((raw) => {
+    const d = (raw as { datum?: unknown })?.datum;
+    return typeof d === "string" && d < weekMonday;
+  });
+
   // 7. tePlannen = train, niet-gedaan, vandaag/toekomst → assignWorkouts muteert ze.
   const todayT = today.getTime();
   const tePlannen = grid.filter(
@@ -433,6 +446,14 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
     isTripEvent,
     taperCtx,
     grid,
+    // LAAG 1b — cross-week recency-seed. `weekplans` is de al-gegatherde flat entry-lijst
+    // (readRecentWeekplans eindigt op gatherWeekplanEntries_; de route geeft 'm ongewrapt
+    // door), dus we voeden 'm rechtstreeks — een reader zou alleen hergroeperen + opnieuw
+    // gatheren. BEWUST NIET gegate op PLAN_ADAPTATION_ENABLED: recency is BENIGN. Hij kiest
+    // tussen even geldige sleutelsessies (welk kwaliteits-intent/archetype vandaag aan de
+    // beurt is) en verzwaart of verlicht het plan niet — hij is dus geen beslisser over
+    // belasting, en valt buiten de reden waarom 1a de deciders uit zette (stille demote).
+    recencySeedEntries,
   );
   const tePlannenSet = new Set(tePlannen.map((d) => d.dagIdx));
 

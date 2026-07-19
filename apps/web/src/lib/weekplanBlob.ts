@@ -149,13 +149,13 @@ export function entryFromDay(
     datum: d.datum,
     workoutType: d.voorgesteldType,
     // 1b (recency-seed) leest archetypeId + variantId uit de blob → ze MOETEN mee.
-    // GEMETEN (laag 1a): `variantId` wordt gevuld (bv. "ss_2x20", "z2_cadans"), maar
-    // `archetypeId` is in de huidige engine STRUCTUREEL null — `keyIntensity` zet 'm nog
-    // niet (planner.ts:1455 "INERT tot keyIntensity een archetypeId zet (commit 2)").
-    // De blob draagt het veld dus wél, met waarde null. Laag 1b moet daarop rekenen: een
-    // recency-seed die alléén op archetypeId matcht, blijft leeg tot die engine-commit
-    // landt; `variantId` is nu de enige bruikbare rotatie-sleutel. GEFLAGD, niet opgelost
-    // (engine is read-only in 1a).
+    // `archetypeId` is LIVE: `keyIntensity` zet 'm (planner.ts:859) en de week-allocator via
+    // quotaPlan (planner.ts:626); gemeten 2-3 van de 7 dagen per week (de kwaliteitsdagen —
+    // long_z2/duurdagen houden terecht null). Zie docs/RECENCY-1B-RECON.md §3.
+    // CORRECTIE op de eerdere 1a-notitie hier ("structureel null"): dat was een MEETFOUT —
+    // de fixture had datums in het verleden, en `allocToday` (planner.ts:537) laat de
+    // allocator dan niets plaatsen. De recency roteert dus op intent ÉN archetype, niet
+    // alleen op variantId.
     archetypeId: d.archetypeId ?? strOrNull(sessions[0].archetypeId),
     naam,
     variantId: strOrNull(sessions[0].variantId),

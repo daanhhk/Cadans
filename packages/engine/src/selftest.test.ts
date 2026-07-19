@@ -18,6 +18,7 @@ import {
   actualZoneMinutes_,
   allocateQualityWeek_,
   archetypeFixtures_,
+  assignWorkouts,
   buildFreeRideWorkout_,
   buildOverrideWorkout_,
   buildWorkout,
@@ -1308,6 +1309,88 @@ describe("engine selftest", () => {
       true,
       ids.indexOf("threshold_long") >= 0,
     );
+  });
+
+  // ── Fase 1b — recencyEntries: de 13e, OPTIONELE assignWorkouts-param ──
+  // Contract: weggelaten/null → byte-identiek aan vóór 1b (lege seed via de null-reader);
+  // gevuld → de seed mijdt het laatste kwaliteits-intent (goalPickIntent_ vermijdIntent).
+  // LET OP: de week moet in de TOEKOMST liggen — assignWorkouts gebruikt
+  // allocToday = stripTime_(new Date()); een week in het verleden laat de allocator niets
+  // plaatsen en meet dan de keyIntensity-fallback (docs/RECENCY-1B-RECON.md §3).
+  it("testRecencyEntriesParam", () => {
+    const settings: any = {
+      ftp: 280,
+      lthr: 170,
+      gewicht: 75,
+      doel: "FTP",
+      doelStart: null,
+      hrMax: 190,
+      hrRest: 45,
+      pendelDuurMin: 80,
+      pendelAantal: 2,
+    };
+    // Week die MORGEN begint.
+    const start = new Date();
+    start.setDate(start.getDate() + 1);
+    function week(): any[] {
+      return [0, 1, 2, 3, 4, 5, 6].map((i) => {
+        const dt = new Date(start);
+        dt.setDate(start.getDate() + i);
+        return {
+          dagIdx: i,
+          datum: dt,
+          train: true,
+          gedaan: false,
+          minuten: i === 5 ? 120 : 75,
+          type: i === 5 ? "weekend" : "vrij",
+          voorgesteldType: null,
+          reden: null,
+          redenCode: null,
+          archetypeId: null,
+        };
+      });
+    }
+    function run(recencyEntries?: any): string {
+      const days = week();
+      assignWorkouts(
+        days,
+        settings,
+        1,
+        "Build",
+        { low: true, high: true, anaerobic: true },
+        { signal: "normal" },
+        null,
+        null,
+        null,
+        false,
+        null,
+        days,
+        recencyEntries,
+      );
+      return days.map((d: any) => d.voorgesteldType).join(",");
+    }
+    // Datum vóór de week → telt als historie.
+    const histISO = formatDate(
+      new Date(start.getFullYear(), start.getMonth(), start.getDate() - 7),
+      "yyyy-MM-dd",
+    );
+    const baseline = run();
+    // (1) weggelaten === null → byte-identiek (de bestaande, ongeseede uitkomst).
+    assert_("recency arg weggelaten == null", baseline, run(null));
+    // (2) lege lijst gedraagt zich als geen seed.
+    assert_("recency lege lijst == baseline", baseline, run([]));
+    // (3) B-geval: seed het intent dat de baseline zelf koos → de keuze moet doorschuiven.
+    const eersteType = baseline.split(",")[0];
+    const flip = run([
+      { datum: histISO, workoutType: eersteType, archetypeId: null },
+    ]);
+    assert_("recency B-geval flipt de keuze", true, flip !== baseline);
+    // (4) C-geval: een intent dat de baseline NIET koos → uitkomst ongewijzigd.
+    //     (long_z2 draagt geen kwaliteits-intent → recencyFromWeekplan_ filtert 'm weg.)
+    const geenKwaliteit = run([
+      { datum: histISO, workoutType: "long_z2", archetypeId: null },
+    ]);
+    assert_("recency niet-kwaliteitstype == baseline", baseline, geenKwaliteit);
   });
 
   // ── Pass 1 — volume-adaptieve Base-intent-weging (volumeModulatie, rauwe sort-scores) ──
@@ -3664,7 +3747,8 @@ describe("engine selftest", () => {
     assert_("combine muteert rpe niet", "demote", rIn.signal);
   });
 
-  it("exactly 957 assertions", () => {
-    expect(assertCount).toBe(957);
+  // Vloer stijgt mee met nieuwe asserts (1b: +4 voor testRecencyEntriesParam → 957 → 961).
+  it("exactly 961 assertions", () => {
+    expect(assertCount).toBe(961);
   });
 });

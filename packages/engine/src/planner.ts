@@ -485,6 +485,10 @@ export function assignWorkouts(
   isTripEvent: any,
   taperCtx: any,
   weekDays: any,
+  // 13e, OPTIONELE param (laag 1b): de al-gegatherde weekplan-entries voor de
+  // cross-week recency-seed. Weggelaten/null → byte-identiek aan vóór 1b (dezelfde
+  // lege gather via de null-reader). Zie docs/RECENCY-1B-RECON.md.
+  recencyEntries?: any,
 ): void {
   const doel = settings.doel;
   // Taper is een per-dag-overlay (Deel 2): taperCtx = { datum, venster, isTrip }
@@ -526,9 +530,12 @@ export function assignWorkouts(
     // Cross-week seed: voeg de laatste RECENCY_HORIZON_WEEKS weekplan-snapshots samen (niet enkel
     // deze week) zodat de archetype-rotatie ook over weekgrenzen heen mijdt. Een lege huidige week
     // mag de seed niet blokkeren → geen wpRaw0-guard meer (die las alleen deze week).
-    // DATA-IN: het weekplan-lees-pad is untested in de port → null-accessor (geen seed).
+    // DATA-IN (laag 1b): de caller mag de al-gegatherde entries meegeven (recencyEntries).
+    // Weggelaten/null → de oude null-accessor → lege seed → byte-identiek gedrag.
     qualityRecency = recencyFromWeekplan_(
-      gatherWeekplanEntries_(RECENCY_HORIZON_WEEKS, null, null),
+      recencyEntries != null
+        ? recencyEntries
+        : gatherWeekplanEntries_(RECENCY_HORIZON_WEEKS, null, null),
       null,
     );
   } catch (e0) {}
@@ -1452,7 +1459,9 @@ export function buildWorkout(
   archetypeId?: any,
 ): any {
   // FASE 1 deel 2b.2 — een gekozen archetype expandeert direct (overrulet de type-dispatch).
-  // INERT tot keyIntensity een archetypeId zet (commit 2). Onbekend id → val door naar de dispatch.
+  // LIVE (niet inert): keyIntensity zet de archetypeId op :859 en de week-allocator via
+  // quotaPlan op :626 — gemeten op de kwaliteitsdagen in Base/Build/Peak
+  // (docs/RECENCY-1B-RECON.md §3). Onbekend id → val door naar de dispatch.
   if (archetypeId) {
     let arec = null;
     for (let ai = 0; ai < ARCHETYPES.length; ai++) {

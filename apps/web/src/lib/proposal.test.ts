@@ -13,6 +13,7 @@ import {
   type ProposalWeek,
   planModusLabel,
 } from "./proposal";
+import { buildWeekplanEntries } from "./weekplanBlob";
 
 // TODAY vast (woensdag); week-maandag = 2026-03-09. NB: weekIndexFromStart_ +
 // computeMacroPhase lezen ambient new Date() (engine, niet todayISO-geparametreerd),
@@ -304,6 +305,11 @@ describe("buildWeekProposal", () => {
     expect(rGeenSpiegel.days[0].plannedForDone?.naam).toBe("Sweet Spot 3×12");
   });
 
+  // NA LAAG 1b nog steeds geldig, met een scherpere lezing: deze test dekt de GEGATE
+  // beslissers (intent-dekking + RPE). De blob-entries hieronder liggen binnen DEZE week
+  // (TODAY = 2026-03-11, weekMonday = 2026-03-09), en de 1b-seed neemt uitsluitend weken
+  // VÓÓR de huidige → de recency-arm wordt hier niet geraakt en blijft in beide runs leeg.
+  // De recency-arm heeft zijn eigen dekking in "LAAG 1b — cross-week recency" hieronder.
   it("LAAG 1a byte-identiek: een GESCHREVEN blob verandert het vooruit-plan NIET (vlag uit)", () => {
     // De kern-invariant van laag 1a. Een volledig gevulde weekplan-blob (intent + types,
     // precies wat de nieuwe schrijver wegschrijft) mag met PLAN_ADAPTATION_ENABLED=false
@@ -397,6 +403,126 @@ describe("buildWeekProposal", () => {
     expect(JSON.stringify(vooruit(metVlag))).not.toBe(
       JSON.stringify(vooruit(zonderBlob)),
     );
+  });
+
+  // ── LAAG 1b — cross-week recency (ONgegate: benign, kiest tussen even geldige
+  //    sleutelsessies). De week moet in de TOEKOMST liggen, anders plaatst de allocator
+  //    niets (allocToday, planner.ts:537) en meet je de keyIntensity-fallback.
+  describe("LAAG 1b — cross-week recency", () => {
+    function isoPlus(base: Date, n: number): string {
+      const d = new Date(
+        base.getFullYear(),
+        base.getMonth(),
+        base.getDate() + n,
+      );
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${d.getFullYear()}-${mm}-${dd}`;
+    }
+    // Maandag van volgende week.
+    const nextMonday = (() => {
+      const d = new Date();
+      d.setDate(d.getDate() + 7 - ((d.getDay() + 6) % 7));
+      return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    })();
+    const MON = isoPlus(nextMonday, 0);
+    const toekomstWeek: PlannerDay[] = [0, 1, 2, 3, 4, 5, 6].map((i) => ({
+      datum: isoPlus(nextMonday, i),
+      train: true,
+      dag: null,
+      minuten: i === 5 ? 120 : 75,
+      dagtype: i === 5 ? "weekend" : "vrij",
+      toelichting: null,
+      voorgesteldType: null,
+      gedaan: false,
+    }));
+    const plan = (weekplans: unknown[]) =>
+      buildWeekProposal({
+        settings: settings(),
+        plannerDays: toekomstWeek,
+        events: EV_FAR,
+        wellness: WELL_OK,
+        activities: [],
+        weekplans,
+        rpe: [],
+        todayISO: MON,
+      })
+        .days.map((d) => d.voorgesteldType ?? "-")
+        .join(",");
+
+    it("vorige-week-kwaliteitsdag → ANDER vooruit-plan dan een lege blob", () => {
+      const leeg = plan([]);
+      const eersteType = leeg.split(",")[0];
+      // Seed exact het intent dat de lege run zelf koos → de mijd-lus moet doorschuiven.
+      const metHistorie = plan([
+        {
+          datum: isoPlus(nextMonday, -5),
+          workoutType: eersteType,
+          archetypeId: null,
+        },
+      ]);
+      expect(metHistorie).not.toBe(leeg);
+    });
+
+    it("C-geval: niet-conflicterende historie laat het plan ongewijzigd", () => {
+      const leeg = plan([]);
+      // long_z2 draagt geen kwaliteits-intent → recencyFromWeekplan_ filtert 'm weg.
+      const metDuur = plan([
+        {
+          datum: isoPlus(nextMonday, -5),
+          workoutType: "long_z2",
+          archetypeId: null,
+        },
+      ]);
+      expect(metDuur).toBe(leeg);
+    });
+
+    it("entries van DEZE week voeden de seed NIET (anders leest hij zijn eigen output)", () => {
+      const leeg = plan([]);
+      const eersteType = leeg.split(",")[0];
+      // Zelfde conflicterende type, maar gedateerd BINNEN de doelweek → moet genegeerd worden.
+      const binnenWeek = plan([
+        {
+          datum: isoPlus(nextMonday, 2),
+          workoutType: eersteType,
+          archetypeId: null,
+        },
+      ]);
+      expect(binnenWeek).toBe(leeg);
+    });
+
+    it("stabiel over opeenvolgende renders (geen oscillatie plan ↔ blob)", () => {
+      // Echte round-trip: laag 1a schrijft het plan als blob weg, de volgende render leest
+      // die blob terug als recency-invoer. Zonder de deze-week-filter zou de seed zijn eigen
+      // output lezen en het plan bij elke render omklappen.
+      const historie: unknown[] = [
+        {
+          datum: isoPlus(nextMonday, -5),
+          workoutType: "threshold",
+          archetypeId: null,
+        },
+      ];
+      let blob: unknown[] = historie;
+      const gezien: string[] = [];
+      for (let r = 0; r < 4; r++) {
+        const week = buildWeekProposal({
+          settings: settings(),
+          plannerDays: toekomstWeek,
+          events: EV_FAR,
+          wellness: WELL_OK,
+          activities: [],
+          weekplans: blob,
+          rpe: [],
+          todayISO: MON,
+        });
+        gezien.push(week.days.map((d) => d.voorgesteldType ?? "-").join(","));
+        // Wat 1a zou wegschrijven, plus de bestaande historie (de worker merge't).
+        blob = [...historie, ...buildWeekplanEntries(week, "FTP")];
+      }
+      expect(gezien[1]).toBe(gezien[0]);
+      expect(gezien[2]).toBe(gezien[1]);
+      expect(gezien[3]).toBe(gezien[2]);
+    });
   });
 
   it("wellness recovery → tePlannen-dag gedemoot naar recovery", () => {
