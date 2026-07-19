@@ -13,10 +13,18 @@
  *     ALS `intent` (bucket-MINUTEN, via p.intent). Hier is de input één minuten-shape
  *     (ZoneBuckets); "bucket in de set" ⇔ `intent[bucket] > 0`. Klopt zolang het
  *     weekplan `zones = Object.keys(zoneSet)` bevat (buckets met minuten) — standaard.
- *  2. `zoneDebt_` behandelt een geplande+gedane dag ZONDER zone-data als actual=0
- *     (→ debt = intent). De GAS `computeZoneDebt_` SLAAT zo'n dag over (`if(!actual)
- *     return`, "plan gehaald") en doet bij een tab-dekkingsgat een live-API-refetch —
- *     niet porteerbaar naar een pure engine. Bewust afwijkend, per 5.3a-contract.
+ *  2. `zoneDebt_` telt een geplande dag die NIET is geleverd als VOLLE debt (intent − 0),
+ *     en de poort staat op VERSTREKEN i.p.v. op `gedaan`: de range is [maandag .. vandaag)
+ *     i.p.v. [maandag .. maandag+7). GAS' `computeZoneDebt_` (Algorithm.gs:515) slaat een
+ *     niet-gedane dag volledig over, en slaat óók een gedane dag zonder zone-data over
+ *     (`if(!actual) return`, "plan gehaald") met een live-API-refetch bij een dekkingsgat —
+ *     dat laatste is niet porteerbaar naar een pure engine. GEAUTORISEERDE divergentie
+ *     (M63, besluit 19-07-2026): zonder deze poort is een volledig gemiste sessie
+ *     onzichtbaar voor de inhaal-laag, wat de helft van het model onbereikbaar maakt.
+ *     Een dag vanaf vandaag telt niet mee — die wordt nog (her)gepland.
+ *  2b. De debt is puur `intent − actual` in MINUTEN per bucket: geen uren-budget- of
+ *     capaciteits-aanname. Daarmee staat hij orthogonaal op een toekomstig gedeclareerd
+ *     capaciteit-veld (T28) — dat kan er later bovenop, zonder deze rekenregel te raken.
  *  3. `days = 7` levert een 8-daags venster [today-7 .. today] (GAS `>= today-7d`,
  *     inclusief). Bekende misnomer, getrouw overgenomen.
  */
@@ -88,26 +96,31 @@ export function rollingZoneCoverage_(
 }
 
 /**
- * zoneDebt_ — MINUTEN-tekort per bucket over de huidige week. Voor elke planner-dag
- * met train && gedaan in [weekMonday .. weekMonday+7): debt += intent − actual (idx15-
- * zone-minuten). GEEN clamp (mag negatief). Geen zone-data → actual 0 (zie afwijking 2).
+ * zoneDebt_ — MINUTEN-tekort per bucket over de VERSTREKEN dagen van deze week. Voor elke
+ * planner-dag met train in [weekMonday .. today): debt += intent − actual (idx15-zone-
+ * minuten). GEEN clamp (mag negatief). Geen zone-data → actual 0 (zie afwijking 2).
+ *
+ * De poort staat op VERSTREKEN, niet op `gedaan` (M63): een geplande dag die NIET is
+ * geleverd draagt zijn volle intent als tekort. Een dag vanaf vandaag telt niet mee — die
+ * wordt nog gepland of herpland, dus daar valt niets in te halen.
  */
 export function zoneDebt_(
   intentByDate: IntentByDate,
   plannerDays: PlannerDayFlag[],
   actValues: any,
   weekMondayISO: string,
+  todayISO: string,
 ): ZoneBuckets {
   const debt: ZoneBuckets = { low: 0, high: 0, anaerobic: 0 };
   if (!plannerDays || !plannerDays.length) return debt;
   const wsT = isoToLocal_(weekMondayISO).getTime();
-  const weT = wsT + 7 * MS_PER_DAY;
+  const todayT = isoToLocal_(todayISO).getTime();
   const actsByDate = zoneActsByDateFromTab_(actValues);
   plannerDays.forEach((pd) => {
-    if (!pd || !pd.train || !pd.gedaan || !pd.datum) return;
+    if (!pd || !pd.train || !pd.datum) return;
     const dtDate = isoToLocal_(pd.datum);
     const dt = dtDate.getTime();
-    if (dt < wsT || dt >= weT) return; // [maandag .. maandag+7)
+    if (dt < wsT || dt >= todayT) return; // [maandag .. vandaag)
     const key = formatDate(dtDate, "yyyy-MM-dd");
     const actual: ZoneBuckets = { low: 0, high: 0, anaerobic: 0 };
     (actsByDate[key] || []).forEach((a: any) => {

@@ -3503,8 +3503,8 @@ describe("engine selftest", () => {
     const intent: any = {
       "2026-03-10": { low: 60, high: 30, anaerobic: 0 },
       "2026-03-11": { low: 40, high: 0, anaerobic: 15 }, // geen zone-data → actual 0 → debt = intent
-      "2026-03-12": { low: 100, high: 0, anaerobic: 0 }, // train maar NIET gedaan → genegeerd
-      "2026-03-20": { low: 100, high: 0, anaerobic: 0 }, // buiten week → genegeerd
+      "2026-03-12": { low: 100, high: 0, anaerobic: 0 }, // GEMIST maar verstreken → volle debt (M63)
+      "2026-03-20": { low: 100, high: 0, anaerobic: 0 }, // buiten [maandag..vandaag) → genegeerd
     };
     const days = [
       { datum: "2026-03-10", train: true, gedaan: true },
@@ -3521,8 +3521,10 @@ describe("engine selftest", () => {
         ]),
       }),
     ];
-    const debt = zoneDebt_(intent, days, acts, week);
-    assert_("debt.low (60-30 + 40)", 70, debt.low);
+    // M63: de poort staat op VERSTREKEN, niet op `gedaan`. Met vandaag = 03-13 tellen
+    // 03-10, 03-11 én het GEMISTE 03-12 mee; 03-20 valt buiten [maandag .. vandaag).
+    const debt = zoneDebt_(intent, days, acts, week, "2026-03-13");
+    assert_("debt.low (60-30 + 40 + 100 gemist)", 170, debt.low);
     assert_("debt.high (30-10 + 0)", 20, debt.high);
     assert_("debt.anaerobic (0 + 15)", 15, debt.anaerobic);
     const neg = zoneDebt_(
@@ -3535,9 +3537,59 @@ describe("engine selftest", () => {
         }),
       ],
       week,
+      "2026-03-14",
     );
     assert_("debt negatief geen clamp (20-60)", -40, neg.low);
-    assert_("debt lege plannerDays → 0", 0, zoneDebt_({}, [], [], week).low);
+    assert_(
+      "debt lege plannerDays → 0",
+      0,
+      zoneDebt_({}, [], [], week, "2026-03-14").low,
+    );
+
+    // ── M63-fork, expliciet (geautoriseerde GAS-divergentie, Algorithm.gs:515) ──
+    const wk = "2026-03-09";
+    const vandaag = "2026-03-13";
+    // (a) volledig GEMISTE verstreken train-dag met intent → volle intent als debt.
+    const gemist = zoneDebt_(
+      { "2026-03-11": { low: 45, high: 25, anaerobic: 5 } },
+      [{ datum: "2026-03-11", train: true, gedaan: false }],
+      [],
+      wk,
+      vandaag,
+    );
+    assert_("M63 gemiste dag → volle debt low", 45, gemist.low);
+    assert_("M63 gemiste dag → volle debt high", 25, gemist.high);
+    assert_("M63 gemiste dag → volle debt anaerobic", 5, gemist.anaerobic);
+    // (b) TE-LICHT gereden verstreken dag → intent − actual (deel-debt).
+    const teLicht = zoneDebt_(
+      { "2026-03-11": { low: 45, high: 25, anaerobic: 0 } },
+      [{ datum: "2026-03-11", train: true, gedaan: false }],
+      [
+        _wpRow_(new Date(2026, 2, 11), {
+          type: "Ride",
+          zoneJson: JSON.stringify([{ id: "Z1", secs: 1200 }]), // 20 min low
+        }),
+      ],
+      wk,
+      vandaag,
+    );
+    assert_("M63 te licht → intent-actual low (45-20)", 25, teLicht.low);
+    assert_("M63 te licht → high onaangeroerd", 25, teLicht.high);
+    // (c) een dag VANAF vandaag telt niet mee (wordt nog (her)gepland).
+    const toekomst = zoneDebt_(
+      {
+        "2026-03-13": { low: 99, high: 0, anaerobic: 0 },
+        "2026-03-14": { low: 99, high: 0, anaerobic: 0 },
+      },
+      [
+        { datum: "2026-03-13", train: true, gedaan: false },
+        { datum: "2026-03-14", train: true, gedaan: false },
+      ],
+      [],
+      wk,
+      vandaag,
+    );
+    assert_("M63 vandaag/toekomst → geen debt", 0, toekomst.low);
   });
 
   it("testRecentHardDate", () => {
@@ -3747,8 +3799,9 @@ describe("engine selftest", () => {
     assert_("combine muteert rpe niet", "demote", rIn.signal);
   });
 
-  // Vloer stijgt mee met nieuwe asserts (1b: +4 voor testRecencyEntriesParam → 957 → 961).
-  it("exactly 961 assertions", () => {
-    expect(assertCount).toBe(961);
+  // Vloer stijgt mee met nieuwe asserts (1b: +4 testRecencyEntriesParam 957→961;
+  // fase 2a: +6 voor de M63-fork in testZoneDebt 961→967).
+  it("exactly 967 assertions", () => {
+    expect(assertCount).toBe(967);
   });
 });

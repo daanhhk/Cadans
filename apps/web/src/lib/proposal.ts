@@ -393,6 +393,7 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
     })),
     activities,
     weekMonday,
+    todayLocalISO,
   );
   const recentHard = recentHardDate_(activities, intentByDate);
 
