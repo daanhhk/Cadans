@@ -331,11 +331,13 @@ const inhaalFixtures: { label: string; v: InhaalVoorstel }[] = [
           toNaam: "Drempel",
           redenCode: "catchup_high",
         },
+        // NB: een inhaal eet nooit een hersteldag op (M72) — de "van"-kant is dus een
+        // duur-/endurance-dag, precies wat de motor herverdeelt.
         {
           datum: "2026-07-26",
-          fromType: "recovery",
+          fromType: "long_z2",
           toType: "sweet_spot",
-          fromNaam: "Herstel",
+          fromNaam: "Duur",
           toNaam: "Sweet Spot",
           redenCode: "catchup_high",
         },

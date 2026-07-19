@@ -1,4 +1,8 @@
-import type { PlannerDay, SettingsInput } from "@cadans/shared";
+import type {
+  DispositionReason,
+  PlannerDay,
+  SettingsInput,
+} from "@cadans/shared";
 import { describe, expect, it } from "vitest";
 import type { ActValuesRow } from "./activities";
 import { buildWeekProposal, type ProposalWeek } from "./proposal";
@@ -221,5 +225,74 @@ describe("buildInhaalVoorstel", () => {
     // … en opnieuw het origineel: byte-identiek, de tweede run heeft niets gemuteerd.
     const na = buildWeekProposal(base);
     expect(JSON.stringify(na.days)).toBe(sig);
+  });
+});
+
+describe("buildInhaalVoorstel — reden-weging (M73)", () => {
+  // Één verstreken train-dag (ma) die NIET is geleverd (geen activity) → de poort kijkt
+  // naar zijn dispositie. De diff bevat een catchup_high, dus zonder de poort komt er
+  // een voorstel.
+  const plannerCtx = dagen.map((d) => ({
+    datum: d.datum,
+    train: d.train,
+    minuten: d.minuten,
+  }));
+
+  function metReden(
+    dispositionByDate: Record<string, DispositionReason>,
+    activities: ActValuesRow[] = [],
+  ) {
+    const { origineel } = runs([], []);
+    const metHigh: ProposalWeek = {
+      ...origineel,
+      days: origineel.days.map((d) =>
+        d.datum === TODAY
+          ? { ...d, redenCode: "catchup_high", voorgesteldType: "threshold" }
+          : d,
+      ),
+    };
+    return buildInhaalVoorstel(origineel, metHigh, "ready", TODAY, {
+      plannerDays: plannerCtx,
+      activities,
+      dispositionByDate,
+    });
+  }
+
+  // Alle verstreken train-dagen (ma..do) krijgen dezelfde reden.
+  const alleDagen = (r: DispositionReason): Record<string, DispositionReason> =>
+    Object.fromEntries([0, 1, 2, 3].map((n) => [iso(n), r]));
+
+  it("alles 'bewust_gerust' → null (dat was een keuze)", () => {
+    expect(metReden(alleDagen("bewust_gerust"))).toBeNull();
+  });
+
+  it("alles 'iets_anders' → null", () => {
+    expect(metReden(alleDagen("iets_anders"))).toBeNull();
+  });
+
+  it("minstens één 'geen_tijd' → voorstel blijft staan", () => {
+    const d = { ...alleDagen("bewust_gerust"), [iso(1)]: "geen_tijd" as const };
+    expect(metReden(d)).not.toBeNull();
+  });
+
+  it("één dag ZONDER dispositie → voorstel blijft staan (niets verondersteld)", () => {
+    const d = alleDagen("bewust_gerust");
+    delete d[iso(2)];
+    expect(metReden(d)).not.toBeNull();
+  });
+
+  it("geen enkele dispositie ingevuld → voorstel blijft staan", () => {
+    expect(metReden({})).not.toBeNull();
+  });
+
+  it("een GELEVERDE dag telt niet mee in de poort", () => {
+    // ma is wél gereden (90 min >= 50% van 90) → geen niet-geleverde dag met een
+    // onderdruk-reden; het tekort komt dan uit te-licht leveren, niet uit bewust rusten.
+    const gereden = [
+      act(iso(0), 90, 0.8, JSON.stringify([{ id: "Z2", secs: 5400 }])),
+    ];
+    const d: Record<string, DispositionReason> = { [iso(0)]: "bewust_gerust" };
+    // de overige verstreken dagen hebben geen dispositie → poort laat door
+    expect(metReden(d, gereden)).not.toBeNull();
   });
 });

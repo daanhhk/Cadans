@@ -420,3 +420,19 @@ harde dagen bleven exact gelijk; alleen de MOTIVERING van één dag veranderde. 
 voldoet dus al aan M62 en stapelt niet. Keerzijde: het verschil dat de gebruiker te zien
 zou krijgen is daarmee vaak geen ander plan maar een andere uitleg. Opzet: twee fixtures op
 één configuratie; bewijskracht indicatief, niet uitputtend.
+
+**M72 (NORM) — Herstel is beschermd.** Een inhaal-herverdeling mag nooit een geplande
+hersteldag opeten. Herstel is een actieve trainingscomponent — de adaptatie gebeurt daar,
+niet tijdens de prikkel — en geen leeg tijdslot dat toevallig vrij is. Een tekort dichten
+door de hersteldag om te zetten in een kwaliteitssessie is geen herverdelen maar verkapt
+stapelen: het weekvolume blijft gelijk terwijl de belasting stijgt. Dat is precies wat M62
+verbiedt. Waar de week geen ruimte biedt zonder herstel aan te tasten, vervalt de inhaal
+(M64, M65).
+
+**M73 (NORM) — De reden weegt mee.** Waarom een sessie niet is geleverd, bepaalt of inhalen
+wordt aangeboden. Bewuste rust, of bewust iets anders doen, is een KEUZE — daar valt niets
+in te halen, en een aanbod zou de keuze ondermijnen en de gebruiker leren dat afwijken een
+fout is (M64). Tijdgebrek is een omstandigheid: dáár is een aanbod op zijn plaats. Is er
+geen reden ingevuld, dan wordt niets verondersteld en blijft het aanbod open. Draagt élke
+niet-geleverde dag van de week een rust-vragende reden, dan is er geen inhaal-voorstel.
+Sluit aan op M66: waar het lichaam of de gebruiker om rust vraagt, wint rust van inhalen.

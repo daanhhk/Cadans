@@ -17,7 +17,12 @@ import {
   type OverrideWorkoutType,
   type SettingsInput,
 } from "@cadans/shared";
-import { type ActValuesRow, parseActivityRows } from "./activities";
+import {
+  type ActValuesRow,
+  derivePlannerGedaan,
+  type GedaanPlannerDay,
+  parseActivityRows,
+} from "./activities";
 import {
   getActivities,
   getCheckin,
@@ -919,15 +924,45 @@ const CATCHUP_BUCKET: Record<string, InhaalBucket> = {
  *    moet minstens één `catchup_high` of `catchup_anaerobic` in de diff zitten. Een diff met
  *    uitsluitend `catchup_low` (duurvolume) levert geen voorstel — dat wordt gespreid of
  *    losgelaten, niet ingehaald.
+ *  - **M73** — de REDEN-weging. Draagt ELKE niet-geleverde verstreken trainingsdag van deze
+ *    week een rust-vragende reden (bewuste rust, of bewust iets anders gedaan), dan is er
+ *    niets in te halen: dat was een keuze, geen gemis. Alleen tijdgebrek — of een dag zónder
+ *    ingevulde reden — houdt het aanbod open. Grove WEEK-poort: alles-onderdrukt → geen
+ *    voorstel; één open dag → het voorstel mag door.
  */
 export function buildInhaalVoorstel(
   origineel: ProposalWeek,
   voorgesteld: ProposalWeek | null,
   band: "ready" | "caution" | "rest" | null,
   todayISO: string,
+  redenCtx?: {
+    plannerDays: readonly GedaanPlannerDay[];
+    activities: readonly ActValuesRow[];
+    dispositionByDate: Record<string, DispositionReason>;
+  },
 ): InhaalVoorstel | null {
   if (!voorgesteld) return null;
   if (band === "caution" || band === "rest") return null; // M66
+
+  // M73 — reden-weging over de niet-geleverde VERSTREKEN trainingsdagen.
+  if (redenCtx) {
+    const gedaan = derivePlannerGedaan(
+      redenCtx.plannerDays,
+      redenCtx.activities,
+    );
+    const nietGeleverd = redenCtx.plannerDays.filter(
+      (d) => d.train && d.datum < todayISO && !gedaan.has(d.datum),
+    );
+    // Alleen onderdrukken als er ÉCHT zulke dagen zijn: een tekort dat uit te-licht
+    // geleverde (dus wél gedane) dagen komt, valt buiten deze poort.
+    if (nietGeleverd.length > 0) {
+      const allesOnderdrukt = nietGeleverd.every((d) => {
+        const r = redenCtx.dispositionByDate[d.datum];
+        return r === "bewust_gerust" || r === "iets_anders";
+      });
+      if (allesOnderdrukt) return null;
+    }
+  }
 
   const originExtra = new Map<string, string | null>();
   for (const d of origineel.days) originExtra.set(d.datum, d.redenCode);
@@ -1219,11 +1254,18 @@ export async function loadSchemaWeek(): Promise<{
         planAdaptation: true,
       })
     : null;
+  // disposition-per-datum (A2) voor de gemist-state-afleiding + GemistCard.
+  const dispositionByDate: Record<string, DispositionReason> = {};
+  for (const d of dispositions) {
+    dispositionByDate[d.datum] = d.reason;
+  }
+
   const inhaal = buildInhaalVoorstel(
     proposalWeek,
     voorgesteldeWeek,
     readiness.band,
     todayISO,
+    { plannerDays, activities, dispositionByDate },
   );
 
   const weekDates = new Set(proposalWeek.days.map((d) => d.datum));
@@ -1243,12 +1285,6 @@ export async function loadSchemaWeek(): Promise<{
   for (const r of rpe) {
     if (r.rpe != null) rpeByDate[r.datum] = r.rpe;
   }
-  // disposition-per-datum (A2) voor de gemist-state-afleiding + GemistCard.
-  const dispositionByDate: Record<string, DispositionReason> = {};
-  for (const d of dispositions) {
-    dispositionByDate[d.datum] = d.reason;
-  }
-
   return {
     proposalWeek,
     doneByDate,
