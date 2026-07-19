@@ -27,7 +27,7 @@ import type {
   SettingsInput,
   WellnessInput,
 } from "@cadans/shared";
-import type { ActValuesRow } from "./activities";
+import { type ActValuesRow, derivePlannerGedaan } from "./activities";
 import { parseLocalDate } from "./dates";
 import { PLAN_ADAPTATION_ENABLED } from "./planFlags";
 import type { ReadinessBand } from "./readiness";
@@ -302,13 +302,26 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
   // plannedForDone van voorbije dagen (zie de days-loop hieronder).
   const frozenByDate = frozenEntryByDate(weekplans);
 
+  // FASE 1 — de GEDANE staat wordt AFGELEID uit de activities (GAS-match
+  // `reconcilePlannerWithActivities`, Sync.gs:567-608), niet uit `pd.gedaan`: die kolom
+  // wordt door de worker altijd als 0 weggeschreven (repo.ts) en is dus betekenisloos.
+  // ÉÉN bron voor alle consumenten hieronder: grid, zoneDebt_, dekking-loop,
+  // tePlannen-filter en dayPlannable. Zie docs/INHAAL-DEBT-RECON.md §2.
+  const gedaanSet = derivePlannerGedaan(plannerDays || [], activities || []);
+  // OR, geen vervanging: een expliciet gezette `pd.gedaan` blijft gelden. In productie is
+  // die altijd false (de worker schrijft 0), dus daar telt uitsluitend de afleiding; maar zo
+  // blijft de vlag betekenisvol als hij ooit wél gevuld wordt, en blijven fixtures die een
+  // dag bewust op gedaan zetten hun betekenis houden.
+  const isGedaan = (pd: { datum: string; gedaan?: boolean }): boolean =>
+    pd.gedaan === true || gedaanSet.has(pd.datum);
+
   // Grid: mutabel dag-array (assignWorkouts leest d.type = dagtype + d.datum = Date).
   const grid: GridDay[] = (plannerDays || []).map((pd, i) => ({
     dagIdx: i,
     dag: pd.dag,
     datum: parseLocalDate(pd.datum),
     train: pd.train,
-    gedaan: pd.gedaan,
+    gedaan: isGedaan(pd),
     minuten: pd.minuten,
     type: pd.dagtype,
     voorgesteldType: pd.voorgesteldType,
@@ -331,8 +344,19 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
     high: rolling.high > 0,
     anaerobic: rolling.anaerobic > 0,
   };
+  // FASE 1-BORGING: deze dekking-VERFIJNING (per gedane dag de echte zone-minuten, of de
+  // workoutZones-fallback) hangt aan `d.gedaan`. Zolang die altijd false was, draaide de lus
+  // nooit; met de fase-1-afleiding zou hij WEL gaan draaien en de dekking-booleans
+  // veranderen — GEMETEN: een gereden Z2+Z4-drempel zet `low` van false naar true, waar
+  // `rollingZoneCoverage_` met de gate uit op de IF-fallback (één bucket) blijft.
+  //
+  // Die verfijning hoort bij de blob-gevoede deciders, niet bij fase 1: ze verandert het
+  // vooruit-plan zonder dat er een voorstel aan te pas komt. Daarom achter DEZELFDE gate als
+  // `intentByDate`. Met de gate uit is de dekking exact wat ze vóór fase 1 was (alleen
+  // `rollingZoneCoverage_`) → het vooruit-plan blijft byte-identiek. Gaat de gate aan, dan
+  // komen dekking-verfijning en debt-arm samen aan, zoals bedoeld.
   const actsByDate = zoneActsByDateFromTab_(activities);
-  for (const d of grid) {
+  for (const d of planAdaptation ? grid : []) {
     if (!d.train || !d.gedaan) continue;
     const key = formatDate(stripTime_(d.datum), "yyyy-MM-dd");
     const dayActs = actsByDate[key] || [];
@@ -365,7 +389,7 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
     (plannerDays || []).map((pd) => ({
       datum: pd.datum,
       train: pd.train,
-      gedaan: pd.gedaan,
+      gedaan: isGedaan(pd),
     })),
     activities,
     weekMonday,
