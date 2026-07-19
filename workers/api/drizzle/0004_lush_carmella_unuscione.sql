@@ -1,0 +1,1 @@
+ALTER TABLE `sync_state` ADD `debt_opt_in_week` text;

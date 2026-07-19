@@ -21,6 +21,7 @@ import { type ActValuesRow, parseActivityRows } from "./activities";
 import {
   getActivities,
   getCheckin,
+  getDebtOptIn,
   getDispositions,
   getEvents,
   getOverrides,
@@ -1123,8 +1124,12 @@ export async function loadSchemaWeek(): Promise<{
   rpeByDate: Record<string, number>;
   dispositionByDate: Record<string, DispositionReason>;
   settings: SettingsInput;
-  /** FASE 2b — read-only inhaal-voorstel (null = geen voorstel). Muteert niets. */
+  /** FASE 2b — read-only inhaal-voorstel (null = geen voorstel of al goedgekeurd). */
   inhaal: InhaalVoorstel | null;
+  /** FASE 3a — is het inhaal-plan voor DEZE week goedgekeurd? */
+  optedIn: boolean;
+  /** De maandag van de getoonde week (de sleutel van de goedkeuring). */
+  weekMonday: string;
 }> {
   const monday = weekMondayIso();
   const todayISO = todayIso();
@@ -1139,6 +1144,7 @@ export async function loadSchemaWeek(): Promise<{
     dispositions,
     overrides,
     checkin,
+    debtOptInWeek,
   ] = await Promise.all([
     getSettings(),
     getPlanner(monday),
@@ -1150,12 +1156,22 @@ export async function loadSchemaWeek(): Promise<{
     getDispositions(),
     getOverrides(),
     getCheckin(todayISO),
+    getDebtOptIn(),
   ]);
 
   const activities = parseActivityRows(activitiesRes);
   // deriveReadiness is puur → veilig vóór buildWeekProposal berekenen; de holistische band stuurt
   // het plan-signaal (band-gedreven demote). Hergebruikt voor de return (niet 2× berekend).
   const readiness = deriveReadiness(wellness, checkin);
+
+  // FASE 3a — per-week GOEDKEURING. `debtOptInWeek` is de maandag van de week waarvoor de
+  // gebruiker akkoord gaf; hij telt alleen als hij de maandag van de GETOONDE week is, dus
+  // de goedkeuring vervalt vanzelf zodra er een nieuwe week begint (M68 — geen stilzwijgend
+  // doorlopende aanpassing, en geen opruim-job).
+  const optedIn = debtOptInWeek === monday;
+
+  // Het ACTIEVE plan. Niet-goedgekeurd → planAdaptation false, exact zoals vóór 3a
+  // (byte-identiek). Goedgekeurd → het herverdeelde plan IS het plan voor deze week.
   const proposalWeek = buildWeekProposal({
     settings: settings ?? EMPTY_SETTINGS,
     plannerDays,
@@ -1167,6 +1183,7 @@ export async function loadSchemaWeek(): Promise<{
     overrides,
     readinessBand: readiness.band,
     todayISO,
+    planAdaptation: optedIn,
   });
 
   // PLAN-VAN-RECORD (laag 1a): persisteer de week als GAS-blob. Fire-and-forget (zoals de
@@ -1183,8 +1200,10 @@ export async function loadSchemaWeek(): Promise<{
   //
   // Optimalisatie + M66: bij band 'caution'/'rest' wint verlichten van inhalen, dus dan
   // blokkeert de poort toch — die dubbele berekening slaan we over.
+  // Is de week al goedgekeurd, dan is er niets meer voor te stellen — het voorstel IS het
+  // actieve plan. De wat-als-run draait dus alleen voor niet-goedgekeurde weken.
   const inhaalBandOk =
-    readiness.band !== "caution" && readiness.band !== "rest";
+    !optedIn && readiness.band !== "caution" && readiness.band !== "rest";
   const voorgesteldeWeek = inhaalBandOk
     ? buildWeekProposal({
         settings: settings ?? EMPTY_SETTINGS,
@@ -1239,5 +1258,7 @@ export async function loadSchemaWeek(): Promise<{
     dispositionByDate,
     settings: settings ?? EMPTY_SETTINGS,
     inhaal,
+    optedIn,
+    weekMonday: monday,
   };
 }

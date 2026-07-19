@@ -54,6 +54,8 @@ export function SchemaView({
   dispositionByDate,
   settings,
   inhaal = null,
+  optedIn = false,
+  weekMonday,
 }: {
   proposalWeek: ProposalWeek;
   readiness: ReadinessResult;
@@ -64,6 +66,10 @@ export function SchemaView({
   settings: SettingsInput;
   /** FASE 2b — read-only inhaal-voorstel op weekniveau (null = niets tonen). */
   inhaal?: InhaalVoorstel | null;
+  /** FASE 3a — is het inhaal-plan voor deze week goedgekeurd? */
+  optedIn?: boolean;
+  /** Maandag van de getoonde week (sleutel van de goedkeuring); default = view.weekMonday. */
+  weekMonday?: string;
 }) {
   const view = useMemo(
     () =>
@@ -164,8 +170,13 @@ export function SchemaView({
           verlicht-voorstel voor vandaag staat: M66 laat herstel winnen van inhalen, dus
           die twee horen elkaar nooit te overlappen. De band-poort in buildInhaalVoorstel
           sluit dat al uit; deze guard is de tweede grendel op de render-kant. */}
-      {inhaal && !verlichtVoorstel && (
-        <InhaalCard voorstel={inhaal} coachNaam={view.coachNaam} />
+      {(optedIn || inhaal) && !verlichtVoorstel && (
+        <InhaalCard
+          voorstel={inhaal}
+          coachNaam={view.coachNaam}
+          weekMonday={weekMonday ?? view.weekMonday}
+          optedIn={optedIn}
+        />
       )}
 
       {day && (

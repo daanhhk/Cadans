@@ -164,6 +164,26 @@ export async function putWeekplan(
   }
 }
 
+// ── FASE 3a — per-week goedkeuring van het inhaal-voorstel ──────────────
+/** GET /api/debt-optin — de goedgekeurde week-maandag, of null. */
+export async function getDebtOptIn(): Promise<string | null> {
+  const r = await apiGet<{ monday: string | null }>("/api/debt-optin");
+  return r?.monday ?? null;
+}
+
+/** PUT /api/debt-optin — zet de goedkeuring op `monday`, of wist 'm met null. */
+export async function putDebtOptIn(monday: string | null): Promise<void> {
+  const resp = await fetch("/api/debt-optin", {
+    method: "PUT",
+    headers: { "content-type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ monday }),
+  });
+  if (!resp.ok) {
+    const parsed = await parseBody(resp);
+    throw new Error(errMessage(parsed, resp.status));
+  }
+}
+
 /** GET /api/power-curve?window= — genormaliseerd rijdersprofiel (of `{empty:true}`). */
 export function getPowerCurve(
   window: "90d" | "1y",

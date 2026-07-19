@@ -23,6 +23,7 @@ import {
   type EngineSettings,
   readActivities,
   readCheckin,
+  readDebtOptIn,
   readDispositions,
   readEvents,
   readOverrides,
@@ -34,6 +35,7 @@ import {
   readWellness,
   type WellnessRecord,
   writeCheckin,
+  writeDebtOptIn,
   writeDisposition,
   writeEvents,
   writeOverride,
@@ -486,6 +488,28 @@ api.put("/override/:date", async (c) => {
     date,
     override as DayOverride | null,
   );
+  return c.json({ ok: true });
+});
+
+// ── FASE 3a — per-week goedkeuring van het inhaal-voorstel ────────────
+// GET geeft de goedgekeurde week-maandag (of null); PUT zet 'm of wist 'm (monday: null).
+// Spiegelt de override-route: één body-veld, expliciete validatie, CURRENT_USER_ID.
+api.get("/debt-optin", async (c) => {
+  const db = makeDb(c.env.DB);
+  const monday = await readDebtOptIn(db, CURRENT_USER_ID);
+  return c.json({ monday });
+});
+
+api.put("/debt-optin", async (c) => {
+  const db = makeDb(c.env.DB);
+  const body = await readJsonObject(c);
+  const monday = body.monday;
+  if (monday !== null && (typeof monday !== "string" || !isIsoDate(monday))) {
+    throw new HTTPException(400, {
+      message: "invalid monday, expected yyyy-MM-dd or null",
+    });
+  }
+  await writeDebtOptIn(db, CURRENT_USER_ID, monday);
   return c.json({ ok: true });
 });
 

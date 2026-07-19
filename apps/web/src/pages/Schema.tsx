@@ -26,8 +26,11 @@ interface SchemaData {
   rpeByDate: Record<string, number>;
   dispositionByDate: Record<string, DispositionReason>;
   settings: SettingsInput;
-  /** FASE 2b — read-only inhaal-voorstel (null = geen voorstel). */
+  /** FASE 2b — read-only inhaal-voorstel (null = geen voorstel of al goedgekeurd). */
   inhaal: InhaalVoorstel | null;
+  /** FASE 3a — goedkeuring van het inhaal-plan voor deze week. */
+  optedIn: boolean;
+  weekMonday: string;
 }
 
 // Live container voor de Schema-tab: laadt de doelweek (loadSchemaWeek → getPlanner/
@@ -175,6 +178,8 @@ export function Schema() {
       dispositionByDate={data.dispositionByDate}
       settings={data.settings}
       inhaal={data.inhaal}
+      optedIn={data.optedIn}
+      weekMonday={data.weekMonday}
     />
   );
 }

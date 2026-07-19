@@ -227,6 +227,12 @@ export const syncState = sqliteTable("sync_state", {
   loadCarry: real("load_carry"),
   ftpLastSync: text("ftp_last_sync"),
   weightLastSync: text("weight_last_sync"),
+  /** FASE 3a — per-week goedkeuring van het inhaal-voorstel: de MAANDAG (yyyy-MM-dd) van
+   * de week waarvoor de gebruiker akkoord gaf; null = geen goedkeuring. Één waarde per
+   * user: de goedkeuring geldt alleen voor die kalenderweek en vervalt vanzelf zodra de
+   * getoonde week een andere maandag heeft (M68 — omkeerbaar, en niet stilzwijgend
+   * doorlopend). */
+  debtOptInWeek: text("debt_opt_in_week"),
 });
 
 // ── power_curve_cache — RAW {list,activities}-respons per window. pcNormalize_

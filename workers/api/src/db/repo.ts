@@ -36,6 +36,7 @@ import {
   powerCurveCache,
   rpe,
   settings,
+  syncState,
   weekplans,
   wellness,
 } from "./schema";
@@ -536,6 +537,40 @@ export async function writeOverride(
     .onConflictDoUpdate({
       target: [dayState.userId, dayState.datum],
       set: { overrideJson },
+    });
+}
+
+// ── debt-opt-in (sync_state.debt_opt_in_week) — FASE 3a ────────────────────
+// De per-week goedkeuring van het inhaal-voorstel. Eén waarde per user: de MAANDAG van de
+// goedgekeurde week. De client vergelijkt 'm met de maandag van de getoonde week, dus de
+// goedkeuring vervalt vanzelf zodra er een nieuwe week begint — geen opruim-job nodig.
+
+/** De goedgekeurde week-maandag (yyyy-MM-dd), of null. */
+export async function readDebtOptIn(
+  db: Db,
+  userId: number,
+): Promise<string | null> {
+  const rows = await db
+    .select({ week: syncState.debtOptInWeek })
+    .from(syncState)
+    .where(eq(syncState.userId, userId))
+    .limit(1);
+  return rows[0]?.week ?? null;
+}
+
+/** Zet (monday) of wist (null) de goedkeuring. Upsert: sync_state heeft één rij per user,
+ * en de conflict-branch raakt ALLEEN deze kolom → de sync-velden blijven intact. */
+export async function writeDebtOptIn(
+  db: Db,
+  userId: number,
+  monday: string | null,
+): Promise<void> {
+  await db
+    .insert(syncState)
+    .values({ userId, debtOptInWeek: monday })
+    .onConflictDoUpdate({
+      target: syncState.userId,
+      set: { debtOptInWeek: monday },
     });
 }
 

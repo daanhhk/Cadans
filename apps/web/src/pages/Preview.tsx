@@ -424,9 +424,29 @@ function VoorstelPreview() {
       {inhaalFixtures.map((f) => (
         <div key={f.label}>
           <div style={fixtureLabel}>{f.label}</div>
-          <InhaalCard voorstel={f.v} coachNaam="Coach" />
+          {/* knoppen uit: de goedkeur-knop schrijft een ECHTE per-week opt-in. */}
+          <div style={{ pointerEvents: "none" }}>
+            <InhaalCard
+              voorstel={f.v}
+              coachNaam="Coach"
+              weekMonday="2026-07-20"
+            />
+          </div>
         </div>
       ))}
+      <div key="inhaal-actief">
+        <div style={fixtureLabel}>
+          Inhaal · GOEDGEKEURD (actieve toestand) — knoppen uitgeschakeld
+        </div>
+        <div style={{ pointerEvents: "none" }}>
+          <InhaalCard
+            voorstel={null}
+            coachNaam="Coach"
+            weekMonday="2026-07-20"
+            optedIn
+          />
+        </div>
+      </div>
       {verlichtFixtures.map((f) => (
         <div key={f.label}>
           <div style={fixtureLabel}>
