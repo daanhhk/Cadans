@@ -447,6 +447,28 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
       !d.gedaan &&
       (!d.datum || stripTime_(d.datum).getTime() >= todayT),
   );
+  // Anti-stapel: de allocator trekt gedane harde dagen van het kwaliteitsquotum af, maar leest
+  // daarvoor d.voorgesteldType — op gedaan-dagen null (worker schrijft 'm leeg) → aftrek inert.
+  // Leid de hardheid van een gedaan-dag af uit de WERKELIJK gereden zone-minuten en geef de
+  // allocator een afgeleid hard type. weekDays wordt in de engine UITSLUITEND gelezen (doneHard +
+  // weekvolume-som); het echte grid — en dus de UI/done-kaart — blijft ongemoeid. `minuten` blijft
+  // behouden zodat de weekvolume-som identiek is.
+  const weekDaysForAlloc = grid.map((d) => {
+    if (!d.gedaan || !d.datum) return d;
+    const k = formatDate(stripTime_(d.datum), "yyyy-MM-dd");
+    let hi = 0;
+    let ana = 0;
+    for (const a of actsByDate[k] || []) {
+      const az = actualZoneMinutes_(a, null);
+      if (az) {
+        hi += az.high;
+        ana += az.anaerobic;
+      }
+    }
+    if (hi < DEKKING_MIN_MIN && ana < DEKKING_MIN_MIN) return d;
+    return { ...d, voorgesteldType: ana >= hi ? "vo2max" : "threshold" };
+  });
+
   assignWorkouts(
     tePlannen,
     settingsE,
@@ -459,7 +481,7 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
     debt,
     isTripEvent,
     taperCtx,
-    grid,
+    weekDaysForAlloc,
     // LAAG 1b — cross-week recency-seed. `weekplans` is de al-gegatherde flat entry-lijst
     // (readRecentWeekplans eindigt op gatherWeekplanEntries_; de route geeft 'm ongewrapt
     // door), dus we voeden 'm rechtstreeks — een reader zou alleen hergroeperen + opnieuw
