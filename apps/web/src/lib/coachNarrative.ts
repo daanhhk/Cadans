@@ -215,9 +215,9 @@ export function verlichtAanbodRegel(
 ): string {
   const s = score == null ? "—" : String(score);
   if (band === "caution") {
-    return `Je gereedheid is vanochtend matig (${s}). Ik kan je ${fromNaam} verlichten naar ${toNaam} — fris train je de kwaliteit beter.`;
+    return `Je gereedheid is vanochtend matig (${s}). Ik kan je ${fromNaam} verlichten naar ${toNaam} en iets korter maken — fris train je de kwaliteit beter.`;
   }
-  return `Je gereedheid is laag (${s}). Een zware sessie stapelt nu vooral vermoeidheid. Ik kan er een rustige rit van maken; volledige rust mag ook.`;
+  return `Je gereedheid is laag (${s}). Een zware sessie stapelt nu vooral vermoeidheid. Ik kan er een rustige rit van maken, of je slaat 'm helemaal over — allebei prima vandaag.`;
 }
 
 /** Resultaat-regel, ná akkoord (coachregel op de override-kaart). */
@@ -228,6 +228,22 @@ export function verlichtResultaatRegel(
   return band === "caution"
     ? `Verlicht naar ${toNaam} — fris voor de kwaliteit later.`
     : "Rustig gehouden vandaag — herstel telt nu zwaarder.";
+}
+
+/** Resultaat-regel na akkoord op VOLLEDIGE RUST (geen rit). Bewust andere woorden dan de
+ * spin-variant ("Rustig gehouden"), zodat de kaart niet suggereert dat er gereden is. */
+export function verlichtRustResultaatRegel(): string {
+  return "Rust gehouden vandaag — dit is waar de aanpassing gebeurt.";
+}
+
+/** Label van de SECUNDAIRE actieknop: volledige rust naast de aangeboden herstelrit. */
+export function verlichtRustActieLabel(): string {
+  return "Rust vandaag";
+}
+
+/** Badge/label op de override-kaart na een rust-akkoord — zelfde woorden als de knop. */
+export function verlichtRustBadgeLabel(): string {
+  return "Rust gehouden";
 }
 
 /** Label van de primaire actieknop; matcht de resultaat-badge (verlichtBadgeLabel). */

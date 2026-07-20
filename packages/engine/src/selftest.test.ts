@@ -22,6 +22,7 @@ import {
   buildFreeRideWorkout_,
   buildOverrideWorkout_,
   buildWorkout,
+  CAUTION_DUR_FACTOR,
   CHECKIN_LEVELS,
   COACH_INTENT_ENGINE_TYPE_,
   COACH_TYPE_INTENT_,
@@ -637,6 +638,9 @@ describe("engine selftest", () => {
     assert_("rdyAdj caution threshold action", "demote", a1.action);
     assert_("rdyAdj caution threshold toType", "tempo", a1.toType);
     assert_("rdyAdj caution threshold intensiteit", "tempo", a1.intensiteit);
+    // T28 fase 2a-ii: caution maakt de dag óók iets korter.
+    assert_("rdyAdj caution durFactor", CAUTION_DUR_FACTOR, a1.durFactor);
+    assert_("rdyAdj caution geen restAllowed", undefined, a1.restAllowed);
     const a2 = adj("vo2_3015", true, "caution", "Build");
     assert_("rdyAdj caution vo2_3015 toType", "long_z2", a2.toType);
     assert_("rdyAdj caution vo2_3015 intensiteit", "rustig", a2.intensiteit);
@@ -655,6 +659,9 @@ describe("engine selftest", () => {
     assert_("rdyAdj rest toType", "recovery", a3.toType);
     assert_("rdyAdj rest intensiteit", "rustig", a3.intensiteit);
     assert_("rdyAdj rest reden", "rest_key", a3.reden);
+    // T28 fase 2a-ii: bij lage gereedheid is volledige rust een gelijkwaardige keuze
+    // NAAST de aanbevolen herstelrit (toType blijft 'recovery').
+    assert_("rdyAdj rest restAllowed", true, a3.restAllowed);
     assert_(
       "rdyAdj rest !hard keep",
       "keep",
@@ -3820,8 +3827,9 @@ describe("engine selftest", () => {
 
   // Vloer stijgt mee met nieuwe asserts (1b: +4 testRecencyEntriesParam 957→961;
   // fase 2a: +6 voor de M63-fork in testZoneDebt 961→967; T28 fase 2a-i: +2 voor de
-  // rest-tak in buildOverrideWorkout_ 967→969).
-  it("exactly 969 assertions", () => {
-    expect(assertCount).toBe(969);
+  // rest-tak in buildOverrideWorkout_ 967→969; fase 2a-ii: +3 voor durFactor/restAllowed
+  // in readinessAdjust_ 969→972).
+  it("exactly 972 assertions", () => {
+    expect(assertCount).toBe(972);
   });
 });

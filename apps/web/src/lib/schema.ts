@@ -45,6 +45,9 @@ import {
   verlichtActieLabel,
   verlichtBadgeLabel,
   verlichtResultaatRegel,
+  verlichtRustActieLabel,
+  verlichtRustBadgeLabel,
+  verlichtRustResultaatRegel,
 } from "./coachNarrative";
 import { parseLocalDate, todayIso, weekMondayIso } from "./dates";
 import {
@@ -770,6 +773,11 @@ export interface VerlichtVoorstel {
   actieLabel: string;
   /** De override die bij akkoord geschreven wordt (library als het type mag, anders free). */
   override: DayOverride;
+  /** T28 fase 2a-ii — SECUNDAIRE keuze: volledige rust i.p.v. de aangeboden herstelrit.
+   * Alleen gevuld bij band 'rest'; null = geen tweede knop. */
+  restOverride?: DayOverride | null;
+  /** Label van die tweede knop; null als er geen rust-keuze is. */
+  restActieLabel?: string | null;
 }
 
 /** Mag `toType` als LIBRARY-override over de draad? Leest de gedeelde runtime-lijst
@@ -816,7 +824,13 @@ export function buildVerlichtVoorstel(
   const toType = String(adj.toType);
   const fromNaam = day.sessions[0]?.naam || "je sessie";
   const toNaam = readinessEaseNaam_(toType);
-  const durMin = Math.max(20, Math.round(day.sessions[0]?.totaalMin || 60));
+  // T28 fase 2a-ii: caution maakt de dag óók iets korter (adj.durFactor uit de engine).
+  // Clamp op de contract-ondergrens 20 (override.durMin ∈ [20,360]).
+  const curDur = day.sessions[0]?.totaalMin || 60;
+  const durMin = Math.max(
+    20,
+    Math.round(curDur * (Number(adj.durFactor) || 1)),
+  );
   const label = verlichtBadgeLabel(band, toNaam);
 
   // library als het type is toegestaan; anders free (GAS kiest altijd free).
@@ -837,6 +851,12 @@ export function buildVerlichtVoorstel(
         label,
       };
 
+  // T28 fase 2a-ii: bij lage gereedheid is volledige rust een GELIJKWAARDIGE keuze naast
+  // de aanbevolen herstelrit. De atleet kiest; de coach dringt niets op (M10).
+  const restOverride: DayOverride | null = adj.restAllowed
+    ? { type: "rest", src: "readiness", label: verlichtRustBadgeLabel() }
+    : null;
+
   return {
     datum: day.datum,
     band,
@@ -849,6 +869,8 @@ export function buildVerlichtVoorstel(
     regel: verlichtAanbodRegel(band, score, fromNaam, toNaam),
     actieLabel: verlichtActieLabel(band, toNaam),
     override,
+    restOverride,
+    restActieLabel: restOverride ? verlichtRustActieLabel() : null,
   };
 }
 
@@ -863,6 +885,9 @@ export function buildVerlichtVoorstel(
  */
 export function verlichtResultaat(override: DayOverride | null): string | null {
   if (!override || override.src !== "readiness") return null;
+  // T28 fase 2a-ii: volledige rust heeft geen workoutType en geen intensiteit — eigen tak,
+  // vóór de library/free-afleiding, met eigen woorden (er is niet gereden).
+  if (override.type === "rest") return verlichtRustResultaatRegel();
   const toNaam =
     override.type === "library"
       ? readinessEaseNaam_(override.workoutType)

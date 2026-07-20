@@ -1,3 +1,4 @@
+import type { DayOverride } from "@cadans/shared";
 import { useState } from "react";
 import { putOverride } from "../../lib/api";
 import { bumpPlannerVersion } from "../../lib/plannerSignal";
@@ -33,11 +34,11 @@ export function VerlichtCard({
 }) {
   const [saving, setSaving] = useState(false);
 
-  async function accepteer() {
+  async function schrijf(ov: DayOverride) {
     if (saving) return;
     setSaving(true);
     try {
-      await putOverride(voorstel.datum, voorstel.override);
+      await putOverride(voorstel.datum, ov);
       bumpPlannerVersion();
     } catch {
       setSaving(false);
@@ -63,12 +64,19 @@ export function VerlichtCard({
   return (
     <div style={{ marginTop: "var(--s-4)" }}>
       <CoachCallout narrative={voorstel.regel} coachNaam={coachNaam} />
+      {/* T28 fase 2a-ii: bij lage gereedheid staan er DRIE keuzes. `wrap` laat ze op een
+          smal scherm netjes stapelen i.p.v. samen te knijpen. */}
       <div
-        style={{ display: "flex", gap: "var(--s-3)", marginTop: "var(--s-3)" }}
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "var(--s-3)",
+          marginTop: "var(--s-3)",
+        }}
       >
         <button
           type="button"
-          onClick={accepteer}
+          onClick={() => schrijf(voorstel.override)}
           disabled={saving}
           style={{
             ...knop,
@@ -79,6 +87,25 @@ export function VerlichtCard({
         >
           {voorstel.actieLabel}
         </button>
+        {voorstel.restOverride && (
+          // Gelijkwaardige tweede keuze: helemaal niet rijden. Secundaire stijl — de coach
+          // BEVEELT de herstelrit aan, maar dringt rust niet op en verstopt 'm ook niet.
+          <button
+            type="button"
+            onClick={() => {
+              if (voorstel.restOverride) schrijf(voorstel.restOverride);
+            }}
+            disabled={saving}
+            style={{
+              ...knop,
+              background: "var(--btn-secondary-bg)",
+              border: "1px solid var(--btn-secondary-border)",
+              color: "var(--btn-secondary-text)",
+            }}
+          >
+            {voorstel.restActieLabel}
+          </button>
+        )}
         <button
           type="button"
           onClick={houOrigineel}

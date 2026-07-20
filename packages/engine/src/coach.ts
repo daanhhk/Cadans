@@ -592,6 +592,11 @@ export function coachAdaptatie_(
 // macroFase = engine-fase INCL. Taper/Recovery (NIET assignWorkouts' onderliggende).
 // Hergebruikt demoteType_ (Algorithm.gs, pure map-lookup) voor de caution-stap.
 // ════════════════════════════════════════════════════════════════
+/** T28 fase 2a-ii — hoeveel korter een caution-dag mag worden. Tunebaar op één plek;
+ * bewust mild (−20%): matige gereedheid is een reden om de scherpte eraf te halen, niet om
+ * de dag te halveren. De caller clampt op de contract-ondergrens van 20 minuten. */
+export const CAUTION_DUR_FACTOR = 0.8;
+
 export function readinessAdjust_(planned: any, band: any, macroFase: any): any {
   if (band === "ready") return { action: "keep" };
   if (macroFase === "Taper" || macroFase === "Recovery")
@@ -605,6 +610,9 @@ export function readinessAdjust_(planned: any, band: any, macroFase: any): any {
       fromType: planned.type,
       toType: toType,
       intensiteit: toType === "tempo" ? "tempo" : "rustig",
+      // T28 fase 2a-ii: naast lichter óók iets korter. De caller vertaalt dit naar de
+      // override-durMin; bestaande velden blijven ongewijzigd.
+      durFactor: CAUTION_DUR_FACTOR,
       reden: "caution_key",
     };
   }
@@ -614,6 +622,10 @@ export function readinessAdjust_(planned: any, band: any, macroFase: any): any {
       fromType: planned.type,
       toType: "recovery",
       intensiteit: "rustig",
+      // T28 fase 2a-ii: bij lage gereedheid blijft de herstelrit de AANBEVELING, maar
+      // volledige rust is een gelijkwaardige keuze — de caller biedt beide aan en de
+      // atleet kiest. Vandaar een vlag naast de aanbeveling, geen vervanging ervan.
+      restAllowed: true,
       reden: "rest_key",
     };
   }

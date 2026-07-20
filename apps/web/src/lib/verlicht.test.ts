@@ -127,7 +127,8 @@ describe("buildVerlichtVoorstel — override-VORM (library vs free)", () => {
     expect(v?.override.type).toBe("library");
     if (v?.override.type === "library") {
       expect(v.override.workoutType).toBe("tempo");
-      expect(v.override.durMin).toBe(75);
+      // T28 2a-ii: caution maakt de dag óók korter → 75 × 0,8 = 60.
+      expect(v.override.durMin).toBe(60);
     }
     expect(v?.override.src).toBe("readiness");
     expect(v?.override.label).toBe("Verlicht naar Tempo-rit");
@@ -173,11 +174,68 @@ describe("buildVerlichtVoorstel — override-VORM (library vs free)", () => {
   });
 });
 
+describe("T28 2a-ii — korter (caution) + rust-keuze (rest)", () => {
+  it("caution: durMin is ~0,8× de geplande duur", () => {
+    // sessie 75 min → 75 × 0,8 = 60.
+    const v = V(day());
+    expect(v?.override.type).not.toBe("rest");
+    if (v && v.override.type !== "rest") expect(v.override.durMin).toBe(60);
+  });
+
+  it("caution: clamp op de contract-ondergrens 20", () => {
+    const s = { ...day().sessions[0], totaalMin: 22 }; // 22 × 0,8 = 17,6 → 20
+    const v = V(day({ sessions: [s] }));
+    if (v && v.override.type !== "rest") expect(v.override.durMin).toBe(20);
+  });
+
+  it("caution: GEEN rust-keuze (alleen bij lage gereedheid)", () => {
+    const v = V(day());
+    expect(v?.restOverride ?? null).toBeNull();
+    expect(v?.restActieLabel ?? null).toBeNull();
+  });
+
+  it("rest: herstelrit BLIJFT de aanbeveling + rust als tweede keuze", () => {
+    const v = V(day(), "Build", "rest");
+    // primaire aanbeveling ongewijzigd
+    expect(v?.toType).toBe("recovery");
+    expect(v?.override.type).not.toBe("rest");
+    // secundaire keuze
+    expect(v?.restOverride).toEqual({
+      type: "rest",
+      src: "readiness",
+      label: "Rust gehouden",
+    });
+    expect(v?.restActieLabel).toBe("Rust vandaag");
+  });
+
+  it("aanbod-copy noemt korter (caution) resp. de rust-optie (rest)", () => {
+    expect(V(day())?.regel).toContain("iets korter");
+    expect(V(day(), "Build", "rest")?.regel).toContain("helemaal over");
+    // nog steeds voorwaardelijk, geen daad-claim
+    expect(V(day())?.regel).not.toContain("Ik heb");
+    expect(V(day(), "Build", "rest")?.regel).not.toContain("Ik heb");
+  });
+
+  it("verlichtResultaat op een rust-override → eigen regel (er is niet gereden)", () => {
+    const v = V(day(), "Build", "rest");
+    const r = verlichtResultaat(v?.restOverride ?? null);
+    expect(r).toBe(
+      "Rust gehouden vandaag — dit is waar de aanpassing gebeurt.",
+    );
+    // en die verschilt van de spin-variant
+    expect(r).not.toBe(verlichtResultaat(v?.override ?? null));
+  });
+
+  it("rust-override zonder src 'readiness' → geen coachregel", () => {
+    expect(verlichtResultaat({ type: "rest" })).toBeNull();
+  });
+});
+
 describe("copy — voorwaardelijk (biedt aan, claimt niet)", () => {
   it("aanbod-regel caution: 'Ik kan', geen voltooide daad", () => {
     const v = V(day());
     expect(v?.regel).toBe(
-      "Je gereedheid is vanochtend matig (55). Ik kan je Drempel 3×10 verlichten naar Tempo-rit — fris train je de kwaliteit beter.",
+      "Je gereedheid is vanochtend matig (55). Ik kan je Drempel 3×10 verlichten naar Tempo-rit en iets korter maken — fris train je de kwaliteit beter.",
     );
     expect(v?.regel).not.toContain("Ik heb");
   });
@@ -185,7 +243,7 @@ describe("copy — voorwaardelijk (biedt aan, claimt niet)", () => {
   it("aanbod-regel rest", () => {
     const v = V(day(), "Build", "rest", 40);
     expect(v?.regel).toBe(
-      "Je gereedheid is laag (40). Een zware sessie stapelt nu vooral vermoeidheid. Ik kan er een rustige rit van maken; volledige rust mag ook.",
+      "Je gereedheid is laag (40). Een zware sessie stapelt nu vooral vermoeidheid. Ik kan er een rustige rit van maken, of je slaat 'm helemaal over — allebei prima vandaag.",
     );
   });
 
