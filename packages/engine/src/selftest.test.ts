@@ -59,6 +59,8 @@ import {
   GOAL_KWALITEIT_INTENTS_,
   GOAL_PROFILES_,
   gatherWeekplanEntries_,
+  genericPendelIntervals,
+  genericPendelZ2,
   getReadinessScore_,
   getTrainingLibrary_,
   goalEffWeights_,
@@ -1641,6 +1643,81 @@ describe("engine selftest", () => {
       "inplug buildWO pendel_z2 focus",
       "aerobic base",
       buildWorkout("pendel_z2", 120, S, 1, "Base", null, 0).focus,
+    );
+
+    // ── T28 fase 3b — pendel-structuur zonder de valse Heen/Terug-split ──
+    // Sinds fase 3a is pendelDuurMin de duur PER RIT; een sessie beschrijft dus één rit.
+    // Deze asserts leggen de opgeschoonde labels vast (er was géén bestaande assert die de
+    // structuur-array raakte, dus zonder dit kan het stil terugregresseren) én bewijzen dat
+    // de BELASTING ongewijzigd is gebleven.
+    const pz2 = genericPendelZ2(75, S, 1, "Base");
+    assert_("pendelZ2 één structuur-rij", 1, pz2.structuur.length);
+    assert_("pendelZ2 label 'Hele rit'", "Hele rit", pz2.structuur[0][0]);
+    assert_("pendelZ2 rij-duur = volle mins", "75 min", pz2.structuur[0][1]);
+    // belasting-invariantie (gemeten vóór de opschoning)
+    assert_("pendelZ2 totaalMin ongewijzigd", 75, pz2.totaalMin);
+    assert_("pendelZ2 tss ongewijzigd", 45, pz2.tss);
+
+    function pInt(type: string, doel: string) {
+      return genericPendelIntervals(type, 75, S, 1, "Build", doel);
+    }
+    const pFtp = pInt("pendel_ftp_intervals", "FTP");
+    assert_("pendelIntervals warmup-label", "Warming-up", pFtp.structuur[0][0]);
+    assert_(
+      "pendelIntervals werkblok FTP",
+      "Intervallen",
+      pFtp.structuur[1][0],
+    );
+    assert_(
+      "pendelIntervals cooldown blijft",
+      "Cooldown",
+      pFtp.structuur[2][0],
+    );
+    assert_("pendelIntervals FTP totaalMin ongewijzigd", 75, pFtp.totaalMin);
+    assert_("pendelIntervals FTP tss ongewijzigd", 60, pFtp.tss);
+    assert_(
+      "pendelIntervals VO2max werkblok",
+      "Intervallen",
+      pInt("pendel_vo2_intervals", "VO2max").structuur[1][0],
+    );
+    assert_(
+      "pendelIntervals VO2max tss ongewijzigd",
+      57,
+      pInt("pendel_vo2_intervals", "VO2max").tss,
+    );
+    assert_(
+      "pendelIntervals Conditie werkblok",
+      "Tempo",
+      pInt("pendel_conditie_intervals", "Conditie").structuur[1][0],
+    );
+    assert_(
+      "pendelIntervals Beklimmingen werkblok",
+      "Lage cadans",
+      pInt("pendel_climb_intervals", "Beklimmingen").structuur[1][0],
+    );
+    assert_(
+      "pendelIntervals trip werkblok",
+      "Sweet spot",
+      pInt("pendel_trip_intervals", "FTP").structuur[1][0],
+    );
+    // GEEN richting-connotatie meer in welk label dan ook.
+    const pendelCases: [string, string][] = [
+      ["pendel_ftp_intervals", "FTP"],
+      ["pendel_vo2_intervals", "VO2max"],
+      ["pendel_conditie_intervals", "Conditie"],
+      ["pendel_climb_intervals", "Beklimmingen"],
+      ["pendel_trip_intervals", "FTP"],
+    ];
+    const alleLabels = [
+      ...pz2.structuur.map((r: any) => String(r[0])),
+      ...pendelCases.flatMap(([t, d]) =>
+        pInt(t, d).structuur.map((r: any) => String(r[0])),
+      ),
+    ];
+    assert_(
+      "geen 'Heen'/'Terug' in pendel-labels",
+      false,
+      alleLabels.some((l) => l.includes("Heen") || l.includes("Terug")),
     );
     assert_(
       "inplug buildWO taper focus",
@@ -3828,8 +3905,9 @@ describe("engine selftest", () => {
   // Vloer stijgt mee met nieuwe asserts (1b: +4 testRecencyEntriesParam 957→961;
   // fase 2a: +6 voor de M63-fork in testZoneDebt 961→967; T28 fase 2a-i: +2 voor de
   // rest-tak in buildOverrideWorkout_ 967→969; fase 2a-ii: +3 voor durFactor/restAllowed
-  // in readinessAdjust_ 969→972).
-  it("exactly 972 assertions", () => {
-    expect(assertCount).toBe(972);
+  // in readinessAdjust_ 969→972; T28 fase 3b: +16 voor de opgeschoonde pendel-structuur
+  // en de belasting-invariantie 972→988).
+  it("exactly 988 assertions", () => {
+    expect(assertCount).toBe(988);
   });
 });

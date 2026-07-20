@@ -1988,8 +1988,6 @@ export function genericPendelZ2(
   const ftp = settings.ftp,
     lthr = settings.lthr;
   mins = mins || 150;
-  const heen = Math.floor(mins / 2),
-    terug = mins - heen;
   const isRecoveryWeek = mesoWeek === 4 || macroFase === "Recovery";
   return {
     naam: isRecoveryWeek
@@ -1998,17 +1996,13 @@ export function genericPendelZ2(
     focus: "aerobic base",
     zones: ["low"],
     totaalMin: mins,
+    // T28 fase 3b: ÉÉN blok. De oude "Heen"/"Terug"-splitsing beschreef twee richtingen
+    // binnen wat sinds fase 3a één RIT is (pendelDuurMin = duur per rit), en gaf twee
+    // identieke Z2-regels. Belasting ongewijzigd: totaalMin en tss staan los van de structuur.
     structuur: [
       [
-        "Heen",
-        heen + " min",
-        wattsRange(ftp, 60, 72),
-        bpmRange(lthr, 78, 86),
-        "Rustige Z2",
-      ],
-      [
-        "Terug",
-        terug + " min",
+        "Hele rit",
+        mins + " min",
         wattsRange(ftp, 60, 72),
         bpmRange(lthr, 78, 86),
         "Rustige Z2",
@@ -2040,7 +2034,7 @@ export function genericPendelIntervals(
   if (isTrip) {
     // Tocht/trip-pendel: sweet-spot/tempo (duurspecifiek), niet doel-FTP-intervallen.
     blok = [
-      "Terug-sweetspot",
+      "Sweet spot",
       "2x15min",
       wattsRange(ftp, Math.round(86 * f), Math.round(92 * f)),
       bpmRange(lthr, 90, 96),
@@ -2048,7 +2042,7 @@ export function genericPendelIntervals(
     ];
   } else if (doel === "FTP") {
     blok = [
-      "Terug-intervallen",
+      "Intervallen",
       "3-4x 8min",
       wattsRange(ftp, Math.round(88 * f), Math.round(94 * f)),
       bpmRange(lthr, 95, 102),
@@ -2056,7 +2050,7 @@ export function genericPendelIntervals(
     ];
   } else if (doel === "VO2max") {
     blok = [
-      "Terug-intervallen",
+      "Intervallen",
       "4-5x 3min",
       wattsRange(ftp, Math.round(108 * f), Math.round(115 * f)),
       bpmRange(lthr, 100, 108),
@@ -2064,7 +2058,7 @@ export function genericPendelIntervals(
     ];
   } else if (doel === "Conditie") {
     blok = [
-      "Terug-tempo",
+      "Tempo",
       "2-3x 12min",
       wattsRange(ftp, Math.round(76 * f), Math.round(85 * f)),
       bpmRange(lthr, 88, 94),
@@ -2072,7 +2066,7 @@ export function genericPendelIntervals(
     ];
   } else if (doel === "Beklimmingen") {
     blok = [
-      "Terug-low-cad",
+      "Lage cadans",
       "3-4x 8min @ 60-70rpm",
       wattsRange(ftp, Math.round(85 * f), Math.round(92 * f)),
       bpmRange(lthr, 92, 100),
@@ -2107,8 +2101,11 @@ export function genericPendelIntervals(
     zones: workoutZones(type, doel),
     totaalMin: mins,
     structuur: [
+      // T28 fase 3b: dit IS functioneel de warming-up vóór het werkblok; het oude label
+      // "Heen Z2" suggereerde een heenrit binnen wat één rit is. Duur (floor(mins/2)) en
+      // belasting ongewijzigd — puur het label.
       [
-        "Heen Z2",
+        "Warming-up",
         heen + " min",
         wattsRange(ftp, 60, 72),
         bpmRange(lthr, 78, 86),
