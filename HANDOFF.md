@@ -11,6 +11,13 @@ live tot cutover.
 
 ## Stand
 
+**INHAAL/DEBT-LAAG LIVE IN PRODUCTIE + anti-stapel-fix (juli 2026).** Fix-commit `f47ae2b`, CI success (run <https://github.com/daanhhk/Cadans/actions/runs/29719111308>). Prod Worker Version `feda7a08-6893-4ce5-9db5-dca235066a40`; remote-D1-migratie `0004_lush_carmella_unuscione` (`sync_state.debt_opt_in_week`) toegepast op REMOTE. Volgorde: schema EERST, deploy DAARNA (de veilige volgorde — de loader roept `GET /api/debt-optin` onvoorwaardelijk aan binnen zijn `Promise.all`).
+- **VLOEREN NU: vitest-totaal 429 · engine-selftest-assert-count 967 ONGEWIJZIGD.** Lees ze uit de suite; niet hardcoden in prompts.
+- **DE OPENSTAANDE BEVINDING IS AFGEHANDELD (deel 1 van 2).** `derivePlannerGedaan` kent geen `datum < vandaag`-guard → een VANDAAG gereden harde sessie markeert vandaag gedaan en valt uit de allocator-eligibility. GEVERIFIEERD (read-only): de week-allocator hoort de geleverde harde prikkel van het kwaliteitsquotum af te trekken (`allocateQualityWeek_`: `remaining = quota − doneHard`), maar `doneHard` leest `d.voorgesteldType` en de worker schrijft `planner_days.voorgesteld_type` ALTIJD null (`repo.ts` writePlannerDays) → `isHardType_(null)` = false → de aftrek was PERMANENT INERT → een hard gereden dag stapelde bovenop het weekquotum (schendt "nooit stapelen"). FIX `f47ae2b` (CLIENT-ONLY, engine byte-identiek): `buildWeekProposal` geeft de allocator een verrijkte `weekDays`-kopie (`weekDaysForAlloc`) waarin een gedaan-dag met ≥`DEKKING_MIN_MIN` (15) high/anaerobic WERKELIJK-gereden zone-minuten een afgeleid hard `voorgesteldType` krijgt — puur voor de `doneHard`-telling. `weekDays` wordt in de engine UITSLUITEND gelezen (`doneScan` :216 + `volBron` :229), dus de UI/done-kaart + de days-map houden het originele grid; `minuten` behouden → weekvolume-som identiek. Test `quotaAftrek.test.ts` (klok gepind op 2026-03-09; FAALT zonder de fix → SLAAGT ermee). Netto: een hard gereden dag kost nu een kwaliteitsslot i.p.v. bovenop het quotum te komen.
+- **DEEL 2 GEPARKEERD — post-deploy-check.** De PLAATSINGS-verschuiving (welke resterende dag het kwaliteitsslot krijgt als vandaag wegvalt) is nog NIET empirisch geverifieerd. De spreiding neemt de gereden harde dag als anchor mee via `recentHardDate_`, dat "hard" bepaalt op IF ≥ 0.85 (of intent) — een ANDER criterium dan de aftrek (zone-minuten). Randgeval: een sessie met ≥15 min high maar IF < 0.85 én lege intentByDate telt wél voor de aftrek maar mogelijk NIET als spreiding-anchor → de volgende kwaliteitsdag kan iets te dicht landen. Niet-stapelend (gaat over dag-KEUZE, niet belasting), niet blokkerend; check ná verdere prod-ervaring. Eventuele fix raakt `recentHardDate_` = ENGINE (autorisatie + selftest-vloer).
+- **OPENSTAAND — functionele round-trip op prod in-browser door Daan** (hard refresh/incognito i.v.m. SW-cache): laadt de Schema-tab, dan werkt de `/api/debt-optin`-query met de nieuwe kolom.
+- **FOCUS VOLGENDE CHAT: T28 — het uren-/capaciteit-model.** Recon-first + een plan dat Daan reviewt VÓÓR de bouw. Er is geen gedeclareerd capaciteit-veld; de weekplan-minuten dragen dubbel (intentie-sensor én de-facto limiet), waardoor M26/M29 geen referent hebben. Raakt vermoedelijk engine + schema + design → durable-review. Verse chat.
+
 **INHAAL/DEBT-LAAG KLAAR — fasen 0 t/m 3b (juli 2026).** HEAD `0185a6c`, CI groen.
 - **VLOEREN NU: vitest-totaal 426 · engine-selftest-assert-count 967** (op vanaf 391/961).
   **Dit zijn de ACTUELE vloeren — niet hardcoden in prompts;** lees ze uit de suite zelf.
@@ -37,7 +44,7 @@ live tot cutover.
   inhalen · geen twee kwaliteitsprikkels naast elkaar · advies-goedkeuring-omkeerbaar ·
   per-week scope · twee bevindingen · herstel beschermd · de reden weegt mee). Recon:
   `docs/INHAAL-DEBT-RECON.md`.
-- **NIET GEDEPLOYED.** De laag staat op main en is lokaal getest, maar draait NIET in
+- **[AFGEHANDELD — nu LIVE; zie het bovenste blok.]** **NIET GEDEPLOYED.** De laag staat op main en is lokaal getest, maar draait NIET in
   productie — prod draait tot nader order de versie zónder deze laag. Uitrollen is
   approval-gated en bestaat uit TWEE delen die BEIDE moeten: (a) `npx wrangler deploy`
   (Worker + web-assets) en (b) de forward-only D1-migratie **`0004_lush_carmella_unuscione.sql`**
@@ -45,7 +52,7 @@ live tot cutover.
   vanuit `workers/api`, **nog niet gedraaid**. Let op de volgorde: de loader roept
   `GET /api/debt-optin` onvoorwaardelijk aan binnen zijn `Promise.all`, dus deployen zónder
   de migratie laat de hele Schema-tab omvallen, niet alleen de inhaal-kaart. Migratie eerst.
-- **OPENSTAANDE BEVINDING — te verifiëren VÓÓR deploy.** `derivePlannerGedaan` kent geen
+- **[AFGEHANDELD — geverifieerd + gefixt in `f47ae2b`; zie het bovenste blok.]** **OPENSTAANDE BEVINDING — te verifiëren VÓÓR deploy.** `derivePlannerGedaan` kent geen
   `datum < vandaag`-guard. Een rit die VANDAAG gelogd is markeert vandaag dus als gedaan →
   vandaag valt uit de allocator-eligibility → de resterende quality-plaatsing van de week kan
   verschuiven. Conceptueel in lijn met adaptief plannen, maar NIET geverifieerd of het
