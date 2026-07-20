@@ -21,18 +21,18 @@ const S: SettingsInput = {
   pendelDuurMin: 80,
   pendelAantal: 2,
 };
-const MON = (() => {
-  const d = new Date();
-  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-})();
+// ABSOLUTE fixture-week (2026-03-09 = maandag) met een GEPINDE "vandaag". Niet relatief
+// aan de echte klok: de debt-poort is [maandag .. vandaag), dus een meeschuivende week
+// heeft op maandag geen verstreken dagen en dus geen tekort — de test zou dan van de
+// weekdag afhangen. Met vaste datums liggen ma/di/wo altijd vóór de gepinde vandaag.
+const MON = new Date(2026, 2, 9);
 const iso = (n: number) => {
   const d = new Date(MON.getFullYear(), MON.getMonth(), MON.getDate() + n);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
-const WEEK_MONDAY = iso(0);
+const WEEK_MONDAY = iso(0); // 2026-03-09
 const VORIGE_MAANDAG = iso(-7);
-const TODAY = iso(4);
+const TODAY = iso(4); // vr 2026-03-13 → ma/di/wo/do verstreken
 
 const dagen: PlannerDay[] = [0, 1, 2, 3, 4, 5, 6].map((n) => ({
   datum: iso(n),

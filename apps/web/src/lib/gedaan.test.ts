@@ -133,16 +133,17 @@ describe("FASE 1 — vooruit-plan blijft byte-identiek (gate UIT)", () => {
     pendelDuurMin: 80,
     pendelAantal: 2,
   };
-  const MON = (() => {
-    const d = new Date();
-    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  })();
+  // ABSOLUTE fixture-week (2026-03-09 = maandag) met een GEPINDE "vandaag". Bewust niet
+  // relatief aan de echte klok: `assignWorkouts` leest voor de week-allocator de ambient
+  // `new Date()`, dus een week die met de kalender meeschuift geeft op de ene weekdag een
+  // andere uitkomst dan op de andere. Met een vaste week ver in het verleden plaatst de
+  // allocator niets en loopt alles deterministisch via de keyIntensity-dispatch.
+  const MON = new Date(2026, 2, 9);
   const iso = (n: number) => {
     const d = new Date(MON.getFullYear(), MON.getMonth(), MON.getDate() + n);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   };
-  const TODAY = iso(3);
+  const TODAY = iso(3); // do 2026-03-12
   const dagen = [0, 1, 2, 3, 4, 5, 6].map((n) => ({
     datum: iso(n),
     train: true,
@@ -166,7 +167,9 @@ describe("FASE 1 — vooruit-plan blijft byte-identiek (gate UIT)", () => {
         })),
     );
 
-  it("een gereden multi-zone dag verandert het vooruit-plan niet", () => {
+  it("een gereden multi-zone dag (VERSTREKEN) verandert het vooruit-plan niet", () => {
+    // di 03-10 ligt vóór de gepinde vandaag (do 03-12) → een past-dated rit. Dat is de
+    // situatie waarvoor de fase-1-byte-identiteit geldt.
     const [y, m, d] = iso(1).split("-").map(Number);
     const gereden = act(new Date(y, m - 1, d, 9, 0), "Ride", 90, {
       iff: 0.88,
