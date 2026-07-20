@@ -47,6 +47,9 @@ fase 3 moet bouwen.
 
 ### 1.3 De pendel-dubbeltelling — een CLIENT-bug, geen engine-afwijking
 
+> **NB (na fase 3a):** de hieronder beschreven UI-verdubbeling is INMIDDELS GEFIXT. Deze paragraaf
+> beschrijft de staat zoals gemeten tijdens de recon en blijft staan als vindplaats/onderbouwing.
+
 Vier paden, geverifieerd:
 
 1. **Opslag/UI.** `Instellingen.tsx:791-805` toont "Pendel (enkele reis) · heen + terug = 2×" en
@@ -87,10 +90,22 @@ een factor 2:
 > - Tegelijk telt `weekV` de planner-beschikbaarheid (bv. 150) — de twee paden verschillen dan
 >   met exact dezelfde factor 2.
 
-**Extra bevinding: de comment in `settings.ts:173-174` is FEITELIJK ONJUIST.** Er staat *"The engine
-reads the round-trip value and splits it into two halves."* Een grep op `packages/engine` naar een
-halvering (`/ 2`, `* 0.5`, `roundTrip`) geeft **nul** treffers — noch in Cadans, noch in GAS. Die
-comment beschrijft een split die nooit heeft bestaan en is waarschijnlijk de oorsprong van de bug.
+**Extra bevinding: de comment in `settings.ts:173-174` was FEITELIJK ONJUIST.** Er stond *"The engine
+reads the round-trip value and splits it into two halves."*
+
+**CORRECTIE (fase 3a, na nader onderzoek).** Een eerdere versie van dit doc stelde dat "de split niet
+bestaat, niet in Cadans en niet in GAS". Dat was te sterk. De heen/terug-splitsing BESTAAT wél, maar
+uitsluitend als **STRUCTUUR-WEERGAVE binnen ÉÉN sessie**: `genericPendelZ2` (`planner.ts:1982`) en
+`genericPendelIntervals` (`:2024`) — beide 1-op-1 uit `Algorithm.gs:2801`/`:2822` — berekenen
+`heen = Math.floor(mins / 2)` en `terug = mins − heen`, en tonen die als twee structuur-regels.
+Cruciaal: `totaalMin: mins` en `tss: Math.round(mins * 0.6)` blijven op de VOLLE `mins` staan, dus de
+BELASTING wordt niet gehalveerd. Het is een geërfde GAS-eigenaardigheid (R1-C1), geen halvering van
+de opgeslagen waarde.
+
+Wat de comment fout maakte, was de suggestie dat de ENGINE de opgeslagen waarde halveert en dat de
+UI daarom mocht verdubbelen. Dat gebeurt nergens. **De kern-conclusie blijft dus onveranderd staan:
+de UI-verdubbeling was de enige echte bug.** (Gefixt in fase 3a; de comment is vervangen door een
+correcte beschrijving.)
 
 **Oordeel: BUG, geen bewuste fork.** De fix hoort in de UI/opslag (één plek, `pendelDuurMin` = duur
 per rit, zoals GAS), niet in de engine.

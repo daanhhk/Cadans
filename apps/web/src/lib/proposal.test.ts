@@ -879,6 +879,60 @@ describe("buildWeekProposal", () => {
   });
 });
 
+describe("pendel: pendelAantal sessies van duur-PER-RIT (T28 fase 3a)", () => {
+  // De UI verdubbelde de invoer; met de fix is pendelDuurMin de duur per rit en levert een
+  // pendeldag pendelAantal × die duur. Heen geforceerd pendel_z2, terug = het coach-type.
+  const pendelWeek: PlannerDay[] = [
+    pday("2026-03-11", {
+      dag: "wo",
+      dagtype: "pendel",
+      minuten: 150,
+      voorgesteldType: null,
+    }),
+  ];
+
+  it("75 min per rit × 2 ritten → 2 sessies van 75 (som 150)", () => {
+    const r = buildWeekProposal({
+      settings: settings({ pendelDuurMin: 75, pendelAantal: 2 }),
+      plannerDays: pendelWeek,
+      events: EV_FAR,
+      wellness: WELL_OK,
+      ...base,
+    });
+    const d = r.days[0];
+    expect(d.sessions).toHaveLength(2);
+    expect(d.sessions.map((x) => x.totaalMin)).toEqual([75, 75]);
+    expect(d.sessions.reduce((a, x) => a + x.totaalMin, 0)).toBe(150);
+  });
+
+  it("de vroege rit is pendel_z2, de laatste draagt het coach-type", () => {
+    const r = buildWeekProposal({
+      settings: settings({ pendelDuurMin: 75, pendelAantal: 2 }),
+      plannerDays: pendelWeek,
+      events: EV_FAR,
+      wellness: WELL_OK,
+      ...base,
+    });
+    const d = r.days[0];
+    // heen = geforceerd rustig; terug = de dag-intent (niet per se pendel_z2)
+    expect(d.sessions[0]?.zones).toEqual(["low"]);
+    expect(d.voorgesteldType).toBeTruthy();
+  });
+
+  it("3 ritten van 60 → 3 sessies, som 180 (geen verdubbeling)", () => {
+    const r = buildWeekProposal({
+      settings: settings({ pendelDuurMin: 60, pendelAantal: 3 }),
+      plannerDays: pendelWeek,
+      events: EV_FAR,
+      wellness: WELL_OK,
+      ...base,
+    });
+    const d = r.days[0];
+    expect(d.sessions).toHaveLength(3);
+    expect(d.sessions.reduce((a, x) => a + x.totaalMin, 0)).toBe(180);
+  });
+});
+
 describe("buildWeekProposal — dag-override (3b)", () => {
   // 03-11 (wo) = plannbare vrij-dag (≥ today, !gedaan); 03-09 (ma) = voltooide dag (gedaan).
   const run = (overrides: { datum: string; override: DayOverride }[]) =>

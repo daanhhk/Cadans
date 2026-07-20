@@ -170,11 +170,17 @@ export const FASE_OPTIONS: { value: string; label: string }[] = [
   { value: "maintain", label: "Onderhoud (maintain)" },
 ];
 
-// Pendel duration is STORED as the full round-trip (heen + terug); the settings UI presents it as one leg
-// (enkele reis). The engine reads the round-trip value and splits it into two halves.
-export function legToRoundTrip(legMin: number): number {
-  return legMin * 2;
-}
-export function roundTripToLeg(roundTripMin: number): number {
-  return Math.round(roundTripMin / 2);
-}
+// `pendelDuurMin` is de duur PER RIT — niet de round-trip. De engine leest 'm ONGEHALVEERD
+// en vermenigvuldigt met `pendelAantal` (proposal.ts: sessieCount × sessieMin; byte-identiek
+// aan GAS Algorithm.gs:189/193 en :943). Zo staat het ook in de GAS-instellingen:
+// `PENDEL_DUUR` heet daar letterlijk "Pendel duur per rit" (Settings.gs:39), default 80 bij
+// pendelAantal 2.
+//
+// Er BESTAAT wel een heen/terug-splitsing, maar uitsluitend als STRUCTUUR-WEERGAVE binnen
+// ÉÉN sessie: `genericPendelZ2`/`genericPendelIntervals` (planner.ts:1982/:2024, 1-op-1 uit
+// Algorithm.gs:2801/:2822) tonen "Heen" = floor(mins/2) en "Terug" = de rest. `totaalMin` en
+// `tss` blijven op de VOLLE mins staan → de belasting wordt níét gehalveerd. Dat is een
+// geërfde GAS-eigenaardigheid (R1-C1), geen halvering van de opgeslagen waarde.
+//
+// Een eerdere UI-laag verdubbelde de invoer vóór opslag (legToRoundTrip); dat was de enige
+// echte bug en is verwijderd — de invoer gaat nu rechtstreeks als duur-per-rit naar D1.

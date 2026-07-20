@@ -9,9 +9,7 @@ import {
   DOEL_OPTIONS,
   EMPTY_FORM,
   FASE_OPTIONS,
-  legToRoundTrip,
   PROFIEL_PRESET_OPTIONS,
-  roundTripToLeg,
   type SettingsForm,
   settingsFormToBody,
   settingsToForm,
@@ -788,18 +786,13 @@ export function Instellingen() {
             </Section>
 
             <Section title="Geavanceerd · pendel & fase">
-              <Row label="Pendel (enkele reis)" sub="heen + terug = 2×">
+              <Row
+                label="Pendel — duur per rit"
+                sub="Eén rit; het aantal ritten per pendeldag staat apart."
+              >
                 <NumInput
-                  value={
-                    form.pendelDuurMin.trim()
-                      ? String(roundTripToLeg(Number(form.pendelDuurMin)))
-                      : ""
-                  }
-                  onChange={(v) =>
-                    set("pendelDuurMin")(
-                      v.trim() ? String(legToRoundTrip(Number(v))) : "",
-                    )
-                  }
+                  value={form.pendelDuurMin}
+                  onChange={set("pendelDuurMin")}
                   unit="min"
                 />
               </Row>
