@@ -602,6 +602,25 @@ describe("engine selftest", () => {
     );
     assert_("override lib tss>0", true, wo.tss > 0);
     assert_("override lib resolved", true, !!wo.naam);
+    // T28 fase 2a-i: een REST-override levert bewust GEEN workout. null is hier de
+    // betekenis ("rustdag"), niet een fout-pad — de caller zet de pin en laat sessies leeg.
+    assert_(
+      "override rest → null",
+      null,
+      buildOverrideWorkout_({ type: "rest" }, settings, 1, "Peak", null, 0),
+    );
+    assert_(
+      "override rest negeert meta-velden",
+      null,
+      buildOverrideWorkout_(
+        { type: "rest", src: "readiness", label: "Rustdag" },
+        settings,
+        1,
+        "Peak",
+        null,
+        0,
+      ),
+    );
   });
 
   // ── STAP 2 — readinessAdjust_ (puur) — band×fase×isHard → keep/demote ──
@@ -3800,8 +3819,9 @@ describe("engine selftest", () => {
   });
 
   // Vloer stijgt mee met nieuwe asserts (1b: +4 testRecencyEntriesParam 957→961;
-  // fase 2a: +6 voor de M63-fork in testZoneDebt 961→967).
-  it("exactly 967 assertions", () => {
-    expect(assertCount).toBe(967);
+  // fase 2a: +6 voor de M63-fork in testZoneDebt 961→967; T28 fase 2a-i: +2 voor de
+  // rest-tak in buildOverrideWorkout_ 967→969).
+  it("exactly 969 assertions", () => {
+    expect(assertCount).toBe(969);
   });
 });

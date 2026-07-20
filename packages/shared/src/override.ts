@@ -2,7 +2,8 @@
  * override — HTTP-contract voor een dag-override ("kies een andere training"). WIRE-vorm:
  * `datum` = RAUWE ISO-datumstring "yyyy-MM-dd". De veldnamen zijn BYTE-GETROUW aan wat de engine
  * LEEST (`buildOverrideWorkout_`/`buildFreeRideWorkout_`, planner.ts): library → workoutType +
- * optionele variantId + durMin; free → ritType + intensiteit + durMin. GET /api/overrides geeft
+ * optionele variantId + durMin; free → ritType + intensiteit + durMin; rest → GEEN verdere
+ * velden (een rustdag heeft geen duur). GET /api/overrides geeft
  * ALLEEN dagen mét een override (oudste-eerst). De rij leeft op (user_id, datum) = PK, gedeeld
  * met `disposition` (non-clobber). GAS `saveDayOverride` (WebApp.gs:1663). durMin-grenzen 20-360.
  */
@@ -45,7 +46,14 @@ export interface FreeOverride extends OverrideMeta {
   intensiteit: OverrideIntensiteit;
   durMin: number;
 }
-export type DayOverride = LibraryOverride | FreeOverride;
+/** Bewuste RUSTDAG (T28 fase 2a-i). Geen `durMin`: rust heeft geen duur, en de
+ * durMin-ondergrens (20) sluit "0 minuten" sowieso uit. De engine bouwt hier geen workout
+ * voor (`buildOverrideWorkout_` → null); de dag rendert als rustdag mét de override-pin,
+ * dus terugdraaibaar via "Terug naar voorstel". */
+export interface RestOverride extends OverrideMeta {
+  type: "rest";
+}
+export type DayOverride = LibraryOverride | FreeOverride | RestOverride;
 
 export interface OverrideEntry {
   /** ISO-datum "yyyy-MM-dd" (rauw). */

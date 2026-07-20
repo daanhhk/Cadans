@@ -147,7 +147,24 @@ export function OverriddenDetail({
           style={{ marginTop: "var(--s-3)" }}
         />
       )}
-      {override.type === "free" ? (
+      {override.type === "rest" ? (
+        // T28 fase 2a-i: bewuste rustdag. Geen workout, geen duur — dezelfde copy als een
+        // gewone rustdag, maar mét de pin + "Terug naar voorstel" hieromheen, zodat
+        // zichtbaar is dat dit een KEUZE was en hij terug te draaien is.
+        <div
+          style={{
+            marginTop: "var(--s-3)",
+            fontFamily: "var(--font-sans)",
+            fontSize: "var(--fs-label)",
+            color: "var(--text-muted)",
+            textAlign: "center",
+            padding: "var(--s-5) var(--s-2) var(--s-2)",
+            lineHeight: "var(--lh-body)",
+          }}
+        >
+          Rustdag — van herstel word je beter.
+        </div>
+      ) : override.type === "free" ? (
         <FreeRideCard override={override} session={session} />
       ) : session ? (
         <div style={{ marginTop: "var(--s-3)" }}>

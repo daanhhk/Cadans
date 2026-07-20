@@ -425,17 +425,22 @@ const OVERRIDE_RIT_TYPES = ["vrij", "groep"] as const;
 const OVERRIDE_INTENSITEITEN = ["rustig", "tempo", "stevig"] as const;
 
 // Valideer de DayOverride-union (byte-getrouw aan @cadans/shared): library {type,workoutType,
-// variantId?,durMin} | free {type,ritType,intensiteit,durMin}; durMin ∈ [20,360].
+// variantId?,durMin} | free {type,ritType,intensiteit,durMin} | rest {type}; durMin ∈ [20,360]
+// (niet van toepassing op rest).
 function isValidOverride(o: unknown): o is DayOverride {
   if (typeof o !== "object" || o === null) return false;
   const ov = o as Record<string, unknown>;
-  const dur = ov.durMin;
-  if (typeof dur !== "number" || !Number.isFinite(dur) || dur < 20 || dur > 360)
-    return false;
   // Idempotentie/display-metadata (from/src/label) — accepteer los; de engine leest ze niet.
+  // Deze gelden voor ALLE varianten en staan daarom vóór de type-dispatch.
   if (ov.from != null && typeof ov.from !== "string") return false;
   if (ov.src != null && ov.src !== "readiness") return false;
   if (ov.label != null && typeof ov.label !== "string") return false;
+  // T28 fase 2a-i: een bewuste RUSTDAG draagt géén durMin/workoutType/ritType — de
+  // durMin-controle hieronder mag er dus niet overheen lopen.
+  if (ov.type === "rest") return true;
+  const dur = ov.durMin;
+  if (typeof dur !== "number" || !Number.isFinite(dur) || dur < 20 || dur > 360)
+    return false;
   if (ov.type === "library") {
     if (
       !(OVERRIDE_WORKOUT_TYPES as readonly string[]).includes(
@@ -479,7 +484,7 @@ api.put("/override/:date", async (c) => {
   if (override !== null && !isValidOverride(override)) {
     throw new HTTPException(400, {
       message:
-        "invalid override, expected {type:library,workoutType,durMin} | {type:free,ritType,intensiteit,durMin} | null (durMin 20-360)",
+        "invalid override, expected {type:library,workoutType,durMin} | {type:free,ritType,intensiteit,durMin} | {type:rest} | null (durMin 20-360)",
     });
   }
   await writeOverride(

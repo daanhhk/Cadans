@@ -1313,6 +1313,9 @@ export function buildOverrideWorkout_(
   dagIdx: any,
 ): any {
   if (!ov) return null;
+  // T28 fase 2a-i: een bewuste RUSTDAG levert geen workout. null is hier geen fout-pad maar
+  // de betekenis zelf — de caller zet de override-pin en laat de sessies leeg.
+  if (ov.type === "rest") return null;
   if (ov.type === "free") return buildFreeRideWorkout_(ov, settings);
   const dur = Math.max(20, Math.round(ov.durMin || 60));
   if (ov.variantId) {

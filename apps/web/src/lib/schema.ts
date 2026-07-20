@@ -866,7 +866,7 @@ export function verlichtResultaat(override: DayOverride | null): string | null {
   const toNaam =
     override.type === "library"
       ? readinessEaseNaam_(override.workoutType)
-      : override.intensiteit === "tempo"
+      : override.type === "free" && override.intensiteit === "tempo"
         ? "Tempo-rit"
         : "Rustige rit";
   const band: VerlichtBand =

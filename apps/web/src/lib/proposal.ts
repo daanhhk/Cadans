@@ -519,6 +519,10 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
       if (woOv) {
         sessions.push(woOv);
         appliedOverride = ov;
+      } else if (ov.type === "rest") {
+        // Bewuste rustdag: GEEN workout, maar de override telt wél als toegepast — anders
+        // rendert de dag als een anonieme rustdag zonder pin en zonder "Terug naar voorstel".
+        appliedOverride = ov;
       }
     } else if (tePlannenSet.has(d.dagIdx) && d.voorgesteldType) {
       const isPendel = d.type === "pendel";
@@ -589,7 +593,9 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
       voorgesteldType: appliedOverride
         ? appliedOverride.type === "free"
           ? "free"
-          : appliedOverride.workoutType
+          : appliedOverride.type === "rest"
+            ? "rest"
+            : appliedOverride.workoutType
         : (d.voorgesteldType ?? frozenType),
       reden: appliedOverride ? "Handmatig gekozen" : d.reden,
       redenCode: appliedOverride ? null : d.redenCode,

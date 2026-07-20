@@ -911,6 +911,27 @@ describe("buildWeekProposal — dag-override (3b)", () => {
     expect(d.sessions).toHaveLength(1);
   });
 
+  it("rest-override op een plannbare dag → 0 sessies MAAR override wél gezet", () => {
+    // T28 fase 2a-i: een bewuste rustdag levert geen workout. Zonder de guard-splitsing
+    // bleef `override` null en was de dag niet van een gewone rustdag te onderscheiden —
+    // dus geen pin en geen "Terug naar voorstel".
+    const r = run([{ datum: "2026-03-11", override: { type: "rest" } }]);
+    const d = r.days[2];
+    expect(d.sessions).toHaveLength(0);
+    expect(d.override).toEqual({ type: "rest" });
+    expect(d.voorgesteldType).toBe("rest");
+    expect(d.reden).toBe("Handmatig gekozen");
+    expect(d.redenCode).toBeNull();
+    expect(d.archetypeId).toBeNull();
+  });
+
+  it("rest-override op een NIET-plannbare (voltooide) dag → geen swap", () => {
+    const r = run([{ datum: "2026-03-09", override: { type: "rest" } }]);
+    const d = r.days[0];
+    expect(d.override).toBeNull();
+    expect(d.reden).not.toBe("Handmatig gekozen");
+  });
+
   it("free-override op een plannbare dag → voorgesteldType 'free'", () => {
     const r = run([
       {

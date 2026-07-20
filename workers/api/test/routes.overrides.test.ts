@@ -135,3 +135,51 @@ describe("Fase B — override D1 (PUT /api/override/:date, GET /api/overrides)",
     expect(await rowFor("2026-03-14")).toBeNull();
   });
 });
+
+describe("PUT /api/override/:date — rest-override (T28 fase 2a-i)", () => {
+  it("{type:'rest'} zonder durMin → 200 + round-trip", async () => {
+    const r = await put("/api/override/2026-03-11", {
+      override: { type: "rest" },
+    });
+    expect(r.status).toBe(200);
+    const g = await get("/api/overrides");
+    expect(g.status).toBe(200);
+    expect(g.body).toEqual([
+      { datum: "2026-03-11", override: { type: "rest" } },
+    ]);
+  });
+
+  it("rest mét meta-velden (src/label/from) → 200", async () => {
+    const r = await put("/api/override/2026-03-11", {
+      override: {
+        type: "rest",
+        src: "readiness",
+        label: "Rustdag",
+        from: "2026-03-11",
+      },
+    });
+    expect(r.status).toBe(200);
+  });
+
+  it("rest met een ONGELDIG meta-veld → 400", async () => {
+    const r = await put("/api/override/2026-03-11", {
+      override: { type: "rest", src: "gokje" },
+    });
+    expect(r.status).toBe(400);
+    expect(r.body.error).toBeDefined();
+  });
+
+  it("onbekend type / lege body blijft 400 (rest opent geen achterdeur)", async () => {
+    for (const bad of [{ type: "rustdag" }, { type: "" }, {}]) {
+      const r = await put("/api/override/2026-03-11", { override: bad });
+      expect(r.status).toBe(400);
+    }
+  });
+
+  it("library zónder durMin blijft 400 (rest-tak lekt niet)", async () => {
+    const r = await put("/api/override/2026-03-11", {
+      override: { type: "library", workoutType: "tempo" },
+    });
+    expect(r.status).toBe(400);
+  });
+});

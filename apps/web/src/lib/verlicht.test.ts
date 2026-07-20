@@ -167,7 +167,9 @@ describe("buildVerlichtVoorstel — override-VORM (library vs free)", () => {
   it("durMin volgt de geplande sessieduur, met de contract-ondergrens 20", () => {
     const s = { ...day().sessions[0], totaalMin: 5 };
     const v = V(day({ sessions: [s] }));
-    expect(v?.override.durMin).toBe(20);
+    // caution op een threshold-dag → library-override (tempo); die draagt durMin.
+    expect(v?.override.type).not.toBe("rest");
+    if (v && v.override.type !== "rest") expect(v.override.durMin).toBe(20);
   });
 });
 
