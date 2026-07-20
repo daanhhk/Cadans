@@ -16,6 +16,7 @@ const NUM_KEYS = [
   "hrMax",
   "hrRest",
   "doelDuur",
+  "weekUren",
   "pendelDuurMin",
   "pendelAantal",
 ] as const satisfies readonly (keyof SettingsInput)[];
@@ -38,6 +39,7 @@ export const EMPTY_FORM: SettingsForm = {
   hrMax: "",
   hrRest: "",
   doelDuur: "",
+  weekUren: "",
   fase: "",
   profielPreset: "",
   coachNaam: "",
@@ -60,6 +62,7 @@ export function settingsToForm(s: SettingsInput | null): SettingsForm {
     hrMax: v(s?.hrMax),
     hrRest: v(s?.hrRest),
     doelDuur: v(s?.doelDuur),
+    weekUren: v(s?.weekUren),
     fase: v(s?.fase),
     profielPreset: v(s?.profielPreset),
     coachNaam: v(s?.coachNaam),

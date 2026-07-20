@@ -93,6 +93,30 @@ describe("Fase 4c — D1-write-routes (PUT, SELF.fetch)", () => {
     expect(g.body.coachPersona).toBe("warm");
   });
 
+  it("ROUND-TRIP weekUren (T28 capaciteit) → GET geeft het getal exact terug", async () => {
+    const r = await put("/api/settings", { ftp: 280, weekUren: 7 });
+    expect(r.status).toBe(200);
+    expect((await repo.readSettings(db, U))?.weekUren).toBe(7);
+    const g = await call("/api/settings");
+    expect(g.status).toBe(200);
+    expect(g.body.weekUren).toBe(7);
+  });
+
+  it("weekUren weggelaten → FULL-REPLACE cleart naar null", async () => {
+    await put("/api/settings", { ftp: 280, weekUren: 7 });
+    expect((await repo.readSettings(db, U))?.weekUren).toBe(7);
+    // tweede write zónder weekUren: FULL-REPLACE → de kolom wordt gewist.
+    await put("/api/settings", { ftp: 280 });
+    expect((await repo.readSettings(db, U))?.weekUren).toBeNull();
+    expect((await call("/api/settings")).body.weekUren).toBeNull();
+  });
+
+  it("PUT /api/settings weekUren verkeerd type (string) → 400", async () => {
+    const r = await put("/api/settings", { weekUren: "7" });
+    expect(r.status).toBe(400);
+    expect(r.body.error).toBeDefined();
+  });
+
   it("PUT /api/settings doelStart '2026-13-99' → 400", async () => {
     const r = await put("/api/settings", { doelStart: "2026-13-99" });
     expect(r.status).toBe(400);

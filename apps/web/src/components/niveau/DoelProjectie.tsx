@@ -390,8 +390,9 @@ export function DoelProjectie({
   testWeken,
   weeklyHoursDefault,
 }: DoelProjectieProps) {
-  // Slider-default = echt recent weekvolume (afgerond), geclampt op de slider-range 4..14; GAS-parity
-  // Script.html:1673-1675. null → val terug op 8.
+  // Slider-default (afgerond), geclampt op de slider-range 4..14. De caller bepaalt de bron:
+  // sinds T28 de INGESTELDE weekuren indien opgegeven, anders het recent gereden weekvolume
+  // (GAS-parity Script.html:1673-1675). null → val terug op 8.
   const [hours, setHours] = useState(() =>
     Math.min(
       14,

@@ -175,3 +175,21 @@ describe("presetHoursLabel (§2 Volume-stat)", () => {
     expect(presetHoursLabel("")).toBeNull();
   });
 });
+
+describe("weekUren (T28 gedeclareerde capaciteit)", () => {
+  it("settingsToForm neemt weekUren over; null → lege string", () => {
+    expect(settingsToForm({ weekUren: 7 } as never).weekUren).toBe("7");
+    expect(settingsToForm({ weekUren: null } as never).weekUren).toBe("");
+    expect(settingsToForm(null).weekUren).toBe("");
+  });
+
+  it("settingsFormToBody serialiseert weekUren als getal", () => {
+    expect(settingsFormToBody(form({ weekUren: "7" })).weekUren).toBe(7);
+  });
+
+  it("leeg weekUren wordt WEGGELATEN → FULL-REPLACE cleart naar null", () => {
+    expect("weekUren" in settingsFormToBody(form({ weekUren: "" }))).toBe(
+      false,
+    );
+  });
+});

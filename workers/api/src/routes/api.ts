@@ -596,6 +596,7 @@ api.put("/settings", async (c) => {
   if ("hrMax" in body) patch.hrMax = numField(body.hrMax, "hrMax");
   if ("hrRest" in body) patch.hrRest = numField(body.hrRest, "hrRest");
   if ("doelDuur" in body) patch.doelDuur = numField(body.doelDuur, "doelDuur");
+  if ("weekUren" in body) patch.weekUren = numField(body.weekUren, "weekUren");
   if ("pendelDuurMin" in body) {
     patch.pendelDuurMin = numField(body.pendelDuurMin, "pendelDuurMin");
   }

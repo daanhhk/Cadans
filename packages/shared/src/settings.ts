@@ -27,6 +27,10 @@ export interface SettingsInput {
   coachPersona?: string | null;
   /** Presentatie-only (user-naam → avatar-initialen), GEEN engine-input. Optioneel. */
   naam?: string | null;
+  /** T28 fase 1 — globaal beschikbare weekuren (gedeclareerde capaciteit). Voedt de
+   * FTP-projectie-baseline; GEEN engine-input. Optioneel → engine + bestaande fixtures
+   * ongemoeid. */
+  weekUren?: number | null;
   pendelDuurMin: number | null;
   pendelAantal: number | null;
 }

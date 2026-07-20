@@ -57,6 +57,9 @@ export const settings = sqliteTable("settings", {
   coachNaam: text("coach_naam"), // presentatie: header-wordmark (geen engine-input)
   coachPersona: text("coach_persona"), // presentatie: coach-narrative-stijl (geen engine-input)
   naam: text("naam"), // presentatie: user-naam → avatar-initialen (geen engine-input)
+  /** T28 fase 1 — globaal beschikbare weekuren (gedeclareerde capaciteit). Voedt in fase 1
+   * de FTP-projectie-baseline; GEEN engine-input. */
+  weekUren: integer("week_uren"),
   pendelDuurMin: integer("pendel_duur_min"),
   pendelAantal: integer("pendel_aantal"),
   ftpAutoUpdate: integer("ftp_auto_update"), // bool 0/1

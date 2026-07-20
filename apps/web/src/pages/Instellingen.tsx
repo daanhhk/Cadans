@@ -611,7 +611,7 @@ export function Instellingen() {
             </Section>
 
             <Section title="Trainingsprofiel">
-              <Row label="Volume-profiel" sub="wekelijkse belasting" last>
+              <Row label="Volume-profiel" sub="wekelijkse belasting">
                 <div style={{ width: 168 }}>
                   <SelectInput
                     value={form.profielPreset}
@@ -619,6 +619,19 @@ export function Instellingen() {
                     onChange={set("profielPreset")}
                   />
                 </div>
+              </Row>
+              {/* T28 — gedeclareerde capaciteit. Voedt (fase 1) de baseline van de
+                  FTP-projectie-schuif; leeg laten = terugvallen op gereden volume. */}
+              <Row
+                label="Beschikbare uren per week"
+                sub="globaal richtgetal"
+                last
+              >
+                <NumInput
+                  value={form.weekUren}
+                  onChange={set("weekUren")}
+                  unit="u"
+                />
               </Row>
             </Section>
 
