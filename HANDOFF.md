@@ -11,6 +11,58 @@ live tot cutover.
 
 ## Stand
 
+**INHAAL/DEBT-LAAG KLAAR — fasen 0 t/m 3b (juli 2026).** HEAD `0185a6c`, CI groen.
+- **VLOEREN NU: vitest-totaal 426 · engine-selftest-assert-count 967** (op vanaf 391/961).
+  **Dit zijn de ACTUELE vloeren — niet hardcoden in prompts;** lees ze uit de suite zelf.
+- **WAT DE LAAG DOET.** Een geplande-maar-niet-geleverde VERSTREKEN dag draagt tekort — de
+  M63-fork in `zoneDebt_`: de poort staat op verstreken (`[maandag .. vandaag)`) in plaats van
+  op `gedaan`, met `debt = intent − actual`. Volledig gemist → volle intent; te licht →
+  deel-debt. Dat is een GEAUTORISEERDE GAS-divergentie (`Algorithm.gs:515` slaat een
+  niet-gedane dag over). De coach toont daarop een per-week **INHAAL-VOORSTEL**
+  (`buildInhaalVoorstel`, `apps/web/src/lib/schema.ts`) — een tweede "wat-als"-run van
+  `buildWeekProposal` met `planAdaptation: true`, gediff't tegen het actieve plan. Vier
+  poorten: een betekenisvol high/anaerobic-tekort (M64/M65 — alleen `catchup_low` telt niet),
+  voldoende frisheid (band ≠ caution/rest, M66), en geen rust-vragende reden (M73 —
+  `bewust_gerust`/`iets_anders` onderdrukken; `geen_tijd` of geen reden laat door). De
+  gebruiker keurt **per kalenderweek** goed (`sync_state.debt_opt_in_week` = de maandag);
+  daarna is het herverdeelde plan het ACTIEVE plan voor die week, terugdraaibaar met één tik,
+  en de goedkeuring vervalt vanzelf de maandag erna. Herstel is beschermd (M72) — structureel,
+  want de week-allocator-eligibility laat een `recovery`-dagtype niet toe.
+- **MECHANISME-PUNT.** `PLAN_ADAPTATION_ENABLED` (`planFlags.ts`) staat nog **false**, maar de
+  inhaal-flow hangt daar NIET meer aan: de loader stuurt `planAdaptation` expliciet — via de
+  per-week opt-in voor het actieve plan, en hard `true` voor de wat-als-run. De vlag gate't nu
+  alleen nog het pad dat `intentByDate` buiten die twee routes voedt.
+- **NORM.** `docs/TRAININGSMODEL.md` draagt de regels **M62 t/m M73** (herverdelen niet
+  stapelen · gemist telt · betekenisvol tekort · kwaliteit vóór volume · herstel wint van
+  inhalen · geen twee kwaliteitsprikkels naast elkaar · advies-goedkeuring-omkeerbaar ·
+  per-week scope · twee bevindingen · herstel beschermd · de reden weegt mee). Recon:
+  `docs/INHAAL-DEBT-RECON.md`.
+- **NIET GEDEPLOYED.** De laag staat op main en is lokaal getest, maar draait NIET in
+  productie — prod draait tot nader order de versie zónder deze laag. Uitrollen is
+  approval-gated en bestaat uit TWEE delen die BEIDE moeten: (a) `npx wrangler deploy`
+  (Worker + web-assets) en (b) de forward-only D1-migratie **`0004_lush_carmella_unuscione.sql`**
+  (`debt_opt_in_week`) op REMOTE/prod-D1 — `wrangler d1 migrations apply cadans --remote`
+  vanuit `workers/api`, **nog niet gedraaid**. Let op de volgorde: de loader roept
+  `GET /api/debt-optin` onvoorwaardelijk aan binnen zijn `Promise.all`, dus deployen zónder
+  de migratie laat de hele Schema-tab omvallen, niet alleen de inhaal-kaart. Migratie eerst.
+- **OPENSTAANDE BEVINDING — te verifiëren VÓÓR deploy.** `derivePlannerGedaan` kent geen
+  `datum < vandaag`-guard. Een rit die VANDAAG gelogd is markeert vandaag dus als gedaan →
+  vandaag valt uit de allocator-eligibility → de resterende quality-plaatsing van de week kan
+  verschuiven. Conceptueel in lijn met adaptief plannen, maar NIET geverifieerd of het
+  deugdelijk uitpakt: telt de allocator de al-geleverde sessie mee, of ontstaat er dubbele
+  belasting? Blootgelegd doordat een datum-relatieve testfixture omviel toen de kalender
+  doorliep (fixtures staan nu op absolute datums). Onderzoeken vóór uitrol; geen regressie
+  van deze laag.
+- **GEPARKEERD.** M70 — de weekend-inhaaltak is vrijgesteld van avoid-consecutive-hard en kan
+  naast een harde dag landen; randgeval dat Daans huidige config niet raakt, hoort bij een
+  latere allocator-fase. Per-dag-debt-uitsluiting op dispositie (engine, buiten scope; M73 is
+  bewust een grove week-poort). De wat-als-run draait per render voor niet-goedgekeurde weken
+  — puur en client-side, maar het is wél twee keer het weekplan doorrekenen.
+- **VOLGENDE HORIZON (Daan-doel): het uren-/capaciteit-model (T28).** Er is geen gedeclareerd
+  capaciteit-veld; de weekplan-minuten dragen nu dubbel (intentie-sensor én de facto limiet),
+  waardoor M26/M29 geen referent hebben. Expliciet "hoeveel uur heb ik" invoeren dient het
+  pendel-optimalisatie-doel het meest direct.
+
 **LAAG 2 KLAAR — het per-dag VERLICHT-VOORSTEL + de week-brede stille demote ERUIT (T22 opgelost).** HEAD `6799c7a`, CI success (run <https://github.com/daanhhk/Cadans/actions/runs/29684618388>).
 - **VLOEREN NU: vitest-totaal 391** (op vanaf 371; +20 via `verlicht.test.ts` + `proposal.test.ts`) · **engine-selftest-assert-count 961 ONGEWIJZIGD** (engine niet aangeraakt; `git diff --stat packages/engine` leeg). **Dit zijn de ACTUELE vloeren — niet hardcoden in prompts.**
 - **WAT LAAG 2 DOET.** Op een doordeweekse VANDAAG met een HARDE sessie (`isHard` via `workoutZones` high/anaerobic) ÉN band ∈ {caution, rest} ÉN fase NIET Taper/Recovery → een `VerlichtCard` (`apps/web/src/components/schema/VerlichtCard.tsx`) in het CoachCallout-formaat met VOORWAARDELIJKE aanbod-copy ("Ik kan…", geen daad-claim, M55-safe) + `[Verlicht…]` / `[Hou origineel]`. Akkoord → dag-override `src:'readiness'` via de BESTAANDE keten (`putOverride` → `PUT /api/override/:date` → `ProposalDay.override` → `OverriddenDetail` → "Terug naar voorstel", omkeerbaar). Transformatie = `readinessAdjust_` (`coach.ts:595`, geport, ONGEWIJZIGD): caution → `demoteType_(type)`, rest → `recovery`. Override-vorm: `tempo`/`recovery`/`long_z2` → library; `combo_long_with_efforts` + `pendel_z2` → free (staan niet in `OVERRIDE_WORKOUT_TYPES`); pendel-multisessie overgeslagen (`sessions.length !== 1`). "Hou origineel" = sessie-scoped dismissal (module-level Set, GEEN D1-persistentie) → komt terug bij de volgende app-open zolang de band caution/rest is. Copy in `coachNarrative.ts` (`verlichtAanbodRegel`/`verlichtResultaatRegel`/`verlichtActieLabel`/`verlichtBadgeLabel`).
