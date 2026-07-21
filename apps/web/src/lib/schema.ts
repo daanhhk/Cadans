@@ -1062,7 +1062,17 @@ export function deriveSchemaView(
       tss.gepland += s.tss;
       minuten.gepland += s.totaalMin;
     }
-    if (hasSessions) dagen.gepland += 1;
+    // "Dagen"-noemer: tel elke dag met GEPLANDE trainingsduur > 0 (GAS-parity,
+    // weekPlanSummary_ WebApp.gs:973: geplandDagen = weekplan-entries met minuten > 0; een
+    // rustdag telt niet, een pendel/multi-sessie-dag is al één entry → telt 1). Bron-getrouw
+    // over de HELE week: vooruit-dagen dragen hun duur in `sessions`, maar verstreken/gedane
+    // dagen krijgen sessions=[] (assignWorkouts bouwt sessions alleen voor tePlannen) → val
+    // daar terug op `plannedForDone`, anders krimpt de noemer terwijl de week vordert (5 → 1/4).
+    // Conditie = duur > 0 (NIET louter `!= null`): een naar-rust-gezette dag (0 min) telt niet.
+    const plannedMinDay = hasSessions
+      ? sessions.reduce((sum, s) => sum + s.totaalMin, 0)
+      : (d.plannedForDone?.totaalMin ?? 0);
+    if (plannedMinDay > 0) dagen.gepland += 1;
     tss.gedaan += doneTss;
     minuten.gedaan += done?.minuten ?? 0;
     if (isDone) dagen.gedaan += 1;

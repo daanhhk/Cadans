@@ -552,6 +552,59 @@ describe("deriveSchemaView dispatch (flip + doneCompare)", () => {
     );
     expect(v.days[0].override).toBe(ov);
   });
+  it("WeekLoad dagen-noemer: telt ALLE geplande trainingsdagen (verleden incl.); pendel=1, rust=0", () => {
+    // Week ma 2026-03-09 .. zo 2026-03-15; TODAY = wo 2026-03-11 (midweek → verstreken én toekomst;
+    // deriveSchemaView is klok-geïnjecteerd via todayISO, dus dat pint de klok deterministisch).
+    // 5 trainingsdagen: ma verstreken-done · di verstreken-gemist · wo vandaag · vr pendel · za toekomst;
+    // 2 rustdagen (do, zo). Pipeline-getrouw: verstreken/gedane dagen dragen sessions=[] + plannedForDone.
+    const pendelWo: ProposalWorkout = {
+      naam: "Pendel + Z2 (75 min)",
+      zones: ["low"],
+      totaalMin: 75,
+      tss: 45,
+    };
+    const week = pweek([
+      pday("2026-03-09", {
+        dagIdx: 0,
+        voorgesteldType: "sweet_spot",
+        plannedForDone: plannedSS,
+      }), // ma — verstreken + GEDAAN (sessions=[])
+      pday("2026-03-10", {
+        dagIdx: 1,
+        voorgesteldType: "sweet_spot",
+        plannedForDone: plannedSS,
+      }), // di — verstreken + GEMIST (sessions=[])
+      pday("2026-03-11", {
+        dagIdx: 2,
+        voorgesteldType: "threshold",
+        sessions: [plannedSS],
+      }), // wo — VANDAAG trainingsdag
+      pday("2026-03-12", { dagIdx: 3 }), // do — rustdag
+      pday("2026-03-13", {
+        dagIdx: 4,
+        voorgesteldType: "pendel_z2",
+        sessions: [pendelWo, pendelWo],
+      }), // vr — PENDEL toekomst (2 sessies)
+      pday("2026-03-14", {
+        dagIdx: 5,
+        voorgesteldType: "vo2max",
+        sessions: [plannedSS],
+      }), // za — toekomst trainingsdag
+      pday("2026-03-15", { dagIdx: 6 }), // zo — rustdag
+    ]);
+    const v = deriveSchemaView(
+      week,
+      { "2026-03-09": doneSS }, // alleen ma gereden
+      "2026-03-11",
+      { "2026-03-10": "geen_tijd" }, // di gemist
+    );
+    // Zonder de fix telde de oude hasSessions-tak enkel wo+vr+za = 3. Nu: alle 5.
+    expect(v.dagen.gepland).toBe(5);
+    // Pendel-dag (vr, 2 sessies) telt 1; rustdagen (do/zo) tellen niet → geen dubbeltelling.
+    expect(v.dagen.gedaan).toBe(1); // alleen ma gereden
+    // Teller ≤ noemer; de gedane-set is een subset van de geplande-set.
+    expect(v.dagen.gedaan).toBeLessThanOrEqual(v.dagen.gepland);
+  });
 });
 
 describe("durLabel (GAS trnDurLabel_-port)", () => {
