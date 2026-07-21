@@ -41,6 +41,8 @@ import {
   type InhaalBucket,
   inhaalAanbodRegel,
   type VerlichtBand,
+  verlengBadgeLabel,
+  verlengResultaatRegel,
   verlichtAanbodRegel,
   verlichtActieLabel,
   verlichtBadgeLabel,
@@ -897,6 +899,22 @@ export function verlichtResultaat(override: DayOverride | null): string | null {
   const band: VerlichtBand =
     override.label === verlichtBadgeLabel("rest", toNaam) ? "rest" : "caution";
   return verlichtResultaatRegel(band, toNaam);
+}
+
+/** 3d stap 2b — coach-resultaatregel bij een geaccepteerd VERLENG-voorstel. Herkent de override
+ * aan het "Verlengd naar … min"-label (verlengBadgeLabel); een handmatig gekozen long_z2 draagt
+ * dat label NIET → geen coach-regel (GAS overrideKaart_-parity, net als verlichtResultaat op een
+ * manuele keuze). Los van verlichtResultaat: die gate't op src==='readiness', dat de verleng
+ * bewust NIET zet (anders zou de verlicht-copy de verleng kapen). */
+export function verlengResultaat(override: DayOverride | null): string | null {
+  if (
+    !override ||
+    override.type !== "library" ||
+    override.workoutType !== "long_z2" ||
+    override.label !== verlengBadgeLabel(override.durMin)
+  )
+    return null;
+  return verlengResultaatRegel(override.durMin);
 }
 
 // ── FASE 2b — het INHAAL-VOORSTEL (week-niveau, READ-ONLY) ─────────────────────────────

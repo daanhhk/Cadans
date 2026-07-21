@@ -1,3 +1,4 @@
+import { mesoFactor } from "@cadans/engine";
 import type { DispositionReason, SettingsInput } from "@cadans/shared";
 import { useMemo, useState } from "react";
 import {
@@ -12,6 +13,7 @@ import {
   type DoneEntry,
   deriveSchemaView,
   type InhaalVoorstel,
+  verlengResultaat,
   verlichtResultaat,
 } from "../../lib/schema";
 import { Card, Overline } from "../ui";
@@ -27,6 +29,7 @@ import { GemistCard } from "./GemistCard";
 import { InhaalCard } from "./InhaalCard";
 import { OverriddenDetail } from "./OverriddenDetail";
 import { PeriodTimeline } from "./PeriodTimeline";
+import { isVerlengAfgewezen, VerlengCard } from "./VerlengCard";
 import { isVerlichtAfgewezen, VerlichtCard } from "./VerlichtCard";
 import { WeekLoad } from "./WeekLoad";
 import { WorkoutDetail } from "./WorkoutDetail";
@@ -96,6 +99,9 @@ export function SchemaView({
   // VerlichtCard (module-level set, per datum) zodat ze een remount na sync overleeft; deze
   // state dwingt alleen de her-evaluatie af. Geen D1, geen localStorage.
   const [, setVerlichtDismissed] = useState(0);
+  // 3d stap 2b: idem voor het VERLENG-aanbod ("Nee, hou X") — sessie-scoped afwijzing leeft in
+  // VerlengCard; deze teller dwingt de her-evaluatie af.
+  const [, setVerlengDismissed] = useState(0);
   const day = view.days.find((d) => d.datum === selected) ?? view.days[0];
   // dag >= vandaag: het knoppen-blok toont alleen op vandaag/toekomst (verleden kun je niet meer plannen).
   const dayFuture = !!day && day.datum >= todayISO;
@@ -129,6 +135,26 @@ export function SchemaView({
     !isVerlichtAfgewezen(view.verlicht.datum)
       ? view.verlicht
       : null;
+
+  // 3d stap 2b — VERLENG-aanbod op een opbouwweek-duurrit. De motor capt de lange rit op de
+  // ingestelde dag-minuten; in mesoweek 2/3 (Base/Build/Peak) biedt de coach aan 'm te
+  // verlengen als er meer tijd is. Alleen op een plánbare, toekomstige, niet-overschreven
+  // long_z2-dag; de verleng-duur = huidige duur × mesoFactor (dezelfde bron als de motor-cap).
+  const verlengVanMin = day?.sessions[0]?.totaalMin ?? 0;
+  const verlengNaarMin = Math.round(
+    verlengVanMin * mesoFactor(proposalWeek.mesoWeek),
+  );
+  const toonVerleng =
+    !!day &&
+    (proposalWeek.mesoWeek === 2 || proposalWeek.mesoWeek === 3) &&
+    (view.fase === "Base" || view.fase === "Build" || view.fase === "Peak") &&
+    day.voorgesteldType === "long_z2" &&
+    dayPlannable &&
+    dayFuture &&
+    !day.done &&
+    day.override == null &&
+    verlengNaarMin > verlengVanMin &&
+    !isVerlengAfgewezen(day.datum);
 
   const coachText =
     day?.reden && !day.override
@@ -251,7 +277,10 @@ export function SchemaView({
               date={day.datum}
               // LAAG 2: alleen een GEACCEPTEERD verlicht-voorstel (src:'readiness') krijgt een
               // coach-resultaatregel; een handmatige keuze niet (GAS overrideKaart_ ook niet).
-              coachRegel={verlichtResultaat(day.override)}
+              coachRegel={
+                verlichtResultaat(day.override) ??
+                verlengResultaat(day.override)
+              }
               coachNaam={view.coachNaam}
             />
           ) : day.sessions.length === 0 ? (
@@ -311,6 +340,16 @@ export function SchemaView({
               voorstel={verlichtVoorstel}
               coachNaam={view.coachNaam}
               onDismiss={() => setVerlichtDismissed((n) => n + 1)}
+            />
+          )}
+          {/* 3d stap 2b — VERLENG-aanbod op een opbouwweek-duurrit (spiegelt VerlichtCard). */}
+          {toonVerleng && day && (
+            <VerlengCard
+              datum={day.datum}
+              vanMin={verlengVanMin}
+              naarMin={verlengNaarMin}
+              coachNaam={view.coachNaam}
+              onDismiss={() => setVerlengDismissed((n) => n + 1)}
             />
           )}
           {/* Disposition-affordance (A2, GAS canDispose_): "Niet gedaan?" onder een plannbare,

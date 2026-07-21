@@ -256,6 +256,31 @@ export function verlichtBadgeLabel(band: VerlichtBand, toNaam: string): string {
   return band === "caution" ? `Verlicht naar ${toNaam}` : "Rustig gehouden";
 }
 
+// ── 3d STAP 2b — verleng-aanbod (opbouwweek-duurrit, per-dag) ─────────────────
+// De motor capt de lange rit op de ingestelde dag-minuten (3d stap 2). In een opbouwweek
+// biedt de coach VOORWAARDELIJK aan die rit te verlengen als er meer tijd is — biedt aan
+// ("ik kan"), claimt de daad NIET (M10/M55). Accept schrijft een long_z2-override met de
+// langere duur via de bestaande override-keten. {vanMin} = huidige/gecapte duur, {naarMin} =
+// de voorgestelde langere duur.
+export function verlengAanbodRegel(vanMin: number, naarMin: number): string {
+  return `Opbouwweek — dit is dé week waarin extra duur het meest oplevert. Heb je dit weekend wat meer tijd? Ik kan je duurrit verlengen van ${vanMin} naar ${naarMin} min. Zo niet, dan blijft-ie op je ingestelde ${vanMin}.`;
+}
+
+/** Label van de accept-knop. */
+export function verlengActieLabel(naarMin: number): string {
+  return `Verleng naar ${naarMin} min`;
+}
+
+/** Resultaat-regel, ná akkoord (coachregel op de override-kaart). */
+export function verlengResultaatRegel(naarMin: number): string {
+  return `Verlengd naar ${naarMin} min — de volle opbouw-prikkel dit weekend.`;
+}
+
+/** Badge/label op de override-kaart ná akkoord — markeert tevens een verleng-override. */
+export function verlengBadgeLabel(naarMin: number): string {
+  return `Verlengd naar ${naarMin} min`;
+}
+
 // ── FASE 2b — inhaal-voorstel (week-niveau, read-only) ───────────────────────
 // VOORWAARDELIJKE aanbod-copy: biedt aan, claimt de daad NIET (M10/M55). De catchup_*-pools
 // hierboven zijn DAAD-copy ("Ik heb je schema bijgesteld") en horen bij de TOEGEPASTE staat;
