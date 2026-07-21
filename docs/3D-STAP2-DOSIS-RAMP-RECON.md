@@ -20,13 +20,14 @@ byte-precies uit wát de bouw-stap gaat veranderen — de bouw is een aparte, ge
 - **KWALITEIT → tijd-in-zone.** Fill-absorb: schaal de core-werktijd ×f, de bestaande endurance-fill
   absorbeert het verschil → sessie-totaal blijft = `doelMin` (= beschikbare minuten). Meer
   tijd-in-zone, zelfde totaalduur, hogere TSS. Availability-respecterend.
-- **ENDURANCE → volume.** `genericLongZ2` groeit de lange rit al ×f (blokweek 2/3 langer, deload
-  ×0.60). Al live → GEEN change in STAP 2; dit is de volume-helft, hier gedocumenteerd.
+- **ENDURANCE → volume.** `genericLongZ2` wordt GECAPT op `plannerMin`. In opbouwweken (f ≥ 1) is de
+  lange rit = `plannerMin` (GEEN ×f-overschrijding meer); de deload-week (f < 1) blijft korter (×f).
+  GEVOLG: de week-op-week opbouw in Base/Build/Peak komt VOLLEDIG uit de kwaliteits-tijd-in-zone, niet
+  meer uit langere ritten. De COACH ADVISEERT de lange rit te verlengen als er meer tijd is (opt-in,
+  surfaced) — dat is STAP 2b (coach-copy, aparte bouw), NIET deze motor-stap.
 - **weekTSS** = het gevolg van beide.
-- **STELLINGNAME (Daan te bevestigen):** `plannerMin` = NOMINAAL (de basis waar de ramp omheen
-  beweegt), geen hard plafond. Consistent met hoe `genericLongZ2` nu al voorbij `plannerMin` groeit
-  op opbouwweken. Raakt T28 (geen gedeclareerd capaciteit-veld); een echte capaciteit-scheiding is
-  een latere fase.
+- **STELLINGNAME (Daan-akkoord, DEFINITIEF):** `plannerMin` = HARDE BOVENGRENS. Niets loopt over de
+  ingestelde per-dag-minuten. (Vervangt de eerdere "nominaal, groeit voorbij `plannerMin`"-stelling.)
 
 ## Byte-precieze mechanica
 
@@ -37,13 +38,24 @@ byte-precies uit wát de bouw-stap gaat veranderen — de bouw is een aparte, ge
   `durMin`). `nominalRest` (int `offMin` × reps) + warmup + cooldown = de vaste, NIET-geschaalde
   overhead. `fillNominal = doelMin − (warmup + nominalWork + nominalRest + cooldown)` = de huidige
   endurance-fill.
-- `addedWork = min( nominalWork × (f − 1) , max(0, fillNominal) )` — converteer fill → werk, cap op
-  de beschikbare fill.
+- `addedWork = min( nominalWork × (f − 1) , max(0, room) )` — converteer beschikbare ruimte → werk.
+- **OVERHEAD-TRIM (krappe/volle dagen).** Als `fillNominal < nominalWork × (f − 1)` (te weinig fill om
+  de gewenste overload op te vangen), wordt extra ruimte vrijgemaakt door de overhead in te korten:
+  EERST cooldown → `minCooldown`, DAN warmup → `minWarmup`. `trimbaar = (cooldown − minCooldown) +
+  (warmup − minWarmup)`; `room = fillNominal + trimbaar`; `addedWork = min(nominalWork × (f − 1),
+  max(0, room))`. De minimale warmup blijft altijd behouden (veilig de intervallen in); de cooldown
+  wordt eerder ingekort dan de warmup. **Vloeren (gepind): `minWarmup = 8`, `minCooldown = 5`** —
+  consistent met de bestaande pack-short-trim in `renderVariant_` (planner.ts:1002-1004:
+  `warm ≤ 10`, `cool ≤ 8` op ≤75-min dagen); 8/5 gaat één stap lager voor de ramp-trim maar houdt een
+  veilige warmup. Overhead wordt NOOIT onder deze vloeren getrimd → totaal blijft ≤ `plannerMin`
+  (harde bovengrens). `f = 1` → geen ramp, geen trim → byte-identiek.
 - `schaalFactor = nominalWork > 0 ? (nominalWork + addedWork) / nominalWork : 1`.
 - Schaal ELK werk-blok (int `onMin`, steady core `durMin`) met `schaalFactor`; `offMin`/warmup/
   cooldown ONgemoeid.
-- `fill = fillNominal − addedWork` (≥ 0). Totaal blijft `doelMin` exact. Kan NOOIT overlopen (geen
-  `tooLong` uit de ramp).
+- `fill = max(0, fillNominal − addedWork)`. Als `addedWork > fillNominal`, komt het tekort uit de
+  getrimde overhead (cooldown eerst, dan warmup, tot de vloeren); fill is dan 0. Sessie-totaal
+  (getrimde warmup + geschaald werk + rust + getrimde cooldown + fill) blijft ≤ `plannerMin` — de ramp
+  overloopt NOOIT (geen `tooLong` uit de ramp).
 - **Afronding:** de geschaalde werk-blok-minuten → rond op de bestaande `r1`-stijl (`Math.round(x*10)/10`
   = 0,1 min) in beide paden, zodat de display-strings de geschaalde waarde tonen zonder een nieuwe
   afrond-conventie te introduceren. (De 0,5-min-variant uit de opdracht is bewust NIET gekozen: `r1`
@@ -61,10 +73,14 @@ byte-precies uit wát de bouw-stap gaat veranderen — de bouw is een aparte, ge
   `renderVariant_`. Een type dat naar een library doorvalt ramp't dus niet (acceptabel; niet
   geselecteerd).
 
-### ENDURANCE-RAMP
+### ENDURANCE-RAMP (WIJZIGT — was "geen change")
 
-`genericLongZ2` ongewijzigd (×f al aanwezig, planner.ts:1567). Pendel (`genericPendelZ2`,
-planner.ts:1971) ongewijzigd (vaste woon-werkrit, schaalt fysiek niet).
+`genericLongZ2` (planner.ts:1567): `requested = Math.max(60, Math.min(mins, Math.round(mins × f)))`.
+Opbouwweek (f ≥ 1) → `mins` (gecapt op `plannerMin`); deload (f < 1) → `mins × f`. Dit IS nu een change:
+de ×f-groei VOORBIJ `plannerMin` op opbouwweken vervalt (de lange rit was blokweek 2/3 langer dan
+`plannerMin`; nu = `plannerMin`). De week-op-week opbouw komt daardoor uit de kwaliteits-tijd-in-zone,
+niet uit langere ritten. Pendel (`genericPendelZ2`, planner.ts:1971) blijft ongewijzigd (vaste
+woon-werkrit, schaalt fysiek niet).
 
 ### TAPER-GUARD (deload block-anchoring) — in `assignWorkouts`
 
@@ -78,6 +94,14 @@ planner.ts:1971) ongewijzigd (vaste woon-werkrit, schaalt fysiek niet).
   overlay :557/:574-591; het onderdrukken her-activeert hooguit `allocActive`, onschadelijk.)
   `weekMaandag` = `days[0].datum` (planner.ts:476, chronologische week-grid).
 - **Dormant** voor Daans huidige datums (event ~9 mnd weg); borgt de toekomst.
+
+### COACH-ADVIES (STAP 2b, coach-copy — NIET in deze motor-stap)
+
+In opbouwweken (mesoWeek 1/2/3, GEEN deload/taper) met een lange endurance-dag toont de coach een
+OPT-IN nudge: "meer tijd? rek de duurrit uit voor de beste impact". Omdat de lange rit nu op
+`plannerMin` is gecapt (endurance groeit niet meer automatisch), is dit de manier waarop extra
+beschikbare tijd tóch volume oplevert — als ADVIES, geen automatische wijziging. Leeft in
+`coachNarrative.ts`. Aparte bouw ná de motor-stap; hier alleen vastgelegd.
 
 ## Character-invariantie (bewijs + test)
 
@@ -116,12 +140,17 @@ De ramp kan alleen kwaliteit toevoegen zolang er endurance-fill is om naar werk 
 
 - De kwaliteits-QUOTA (`kwaliteitPerWeek` per fase) — de meso voegt GEEN harde dagen toe.
 - De deload-INHOUD (STAP 3). Fatigue-awareness (STAP 4). De client / `proposal.ts` (`mesoWeek` is al
-  correct samengesteld via STAP 1). Pendel-load. `long_z2` (ramp't al).
+  correct samengesteld via STAP 1). Pendel-load.
+- **De COACH-COPY (de duurrit-nudge) = STAP 2b**, buiten deze motor-stap.
 
 ## Verwachte byte-impact
 
-- Alleen blokweek 2/3-kwaliteitssessies MÉT fill-headroom wijzigen (+ de al-bestaande `long_z2`-groei).
-  Blokweek 1 en de deload-week byte-identiek. De taper-guard is alleen zichtbaar via een fixture.
+- **Lange rit VERANDERT** op opbouwweek 2/3 (gecapt op `plannerMin` i.p.v. ×1.08/1.15 → korter dan nu);
+  opbouwweek 1 identiek (= `plannerMin`); deload-week ongewijzigd (×0.60).
+- **Kwaliteit verandert** op opbouwweek 2/3 (meer tijd-in-zone), NU ook op krappe/volle dagen via de
+  overhead-trim. Blokweek 1 blijft byte-identiek (f = 1 → geen ramp, geen trim, geen cap-effect).
+- De taper-guard is alleen zichtbaar via een fixture (dormant op Daans datums).
+- Coach-copy = STAP 2b, buiten deze motor-stap.
 - Engine-selftest-assert-count stijgt bij de bouw (nieuwe asserts); vitest-totaal stijgt. Exacte
   getallen komen uit de BOUW, niet hier hardcoden. Huidige vloeren staan in de HANDOFF-STAND
   (vitest 456 · engine-selftest 1024).
@@ -143,8 +172,11 @@ De ramp kan alleen kwaliteit toevoegen zolang er endurance-fill is om naar werk 
     positioneel door).
   - `assignWorkouts` def :475; `mesoWeek` :478; `taperCtx` :486; `days` :476; `isMesoRecovery =
     mesoWeek === 4` :498; `isRecovery = isMesoRecovery` :499 (→ `&& !nearTaper`).
-  - `genericLongZ2` def :1554; `×mesoFactor(mesoWeek)` op de DUUR :1567 (GEEN change).
+  - `genericLongZ2` def :1554; `×mesoFactor(mesoWeek)` op de DUUR :1567 (**CHANGE — cap op
+    `plannerMin`:** `Math.max(60, Math.min(mins, Math.round(mins × f)))`).
   - `genericPendelZ2` def :1971 (GEEN change).
+- `apps/web/src/lib/coachNarrative.ts` — de duurrit-verleng-nudge (**STAP 2b, coach-copy, BUITEN deze
+  motor-stap**; hier alleen genoemd als vervolg-touch-point).
 
 ---
 
