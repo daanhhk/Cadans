@@ -436,3 +436,29 @@ fout is (M64). Tijdgebrek is een omstandigheid: dáár is een aanbod op zijn pla
 geen reden ingevuld, dan wordt niets verondersteld en blijft het aanbod open. Draagt élke
 niet-geleverde dag van de week een rust-vragende reden, dan is er geen inhaal-voorstel.
 Sluit aan op M66: waar het lichaam of de gebruiker om rust vraagt, wint rust van inhalen.
+
+**M74 (NORM) — Het karakter van een training is invariant onder meso- en fase-modulatie.**
+Het karakter van een training — de vermogenszone waarin de hoofdblokken liggen — is invariant
+onder meso- en fase-modulatie. Modulatie mag een blok nooit uit de zone tillen die zijn nominale
+type voorschrijft; een sweetspot blijft sweetspot, een endurance-rit blijft endurance.
+
+**M75 (NORM) — De meso-cyclus bouwt op via de dosis, niet de intensiteit per blok.**
+De meso-cyclus bouwt op via de DOSIS, niet via de intensiteit per blok: langere of meer
+intervallen op dezelfde relatieve intensiteit plus meer endurance-volume. De op te bouwen
+grootheid is de tijd-in-zone, en daarmee de weekbelasting (TSS).
+
+**M76 (NORM) — De recovery-week verlaagt de dosis, niet het karakter.**
+De recovery-week van een meso-cyclus verlaagt de dosis (tijd-in-zone/TSS), niet het karakter;
+de relatieve intensiteiten blijven gelijk.
+
+**M77 (NORM) — De mix verschuift op macro-niveau, niet als week-op-week meso-hendel.**
+De verhouding tussen trainingstypen (de mix, bijvoorbeeld het aandeel VO2max tegenover
+sweetspot) verschuift op MACRO-niveau richting het doel of event (base→build→peak), niet als
+week-op-week meso-hendel.
+
+**M78 (BEVINDING) — De huidige intensiteits-modulatie schendt de karakter-invariantie.**
+De huidige implementatie moduleert intensiteit door het %FTP per blok te vermenigvuldigen met
+een meso-factor plus een fase-offset. Dat schendt de karakter-invariantie: in de piek-mesoweek
+verschuift elk blok een zone omhoog (endurance→tempo, sweetspot→threshold). Geërfd uit de
+referentie-implementatie. De duur-schaling van de lange rit is dosis-gedreven en correct; de
+pct-schaling is de te verwijderen hendel.
