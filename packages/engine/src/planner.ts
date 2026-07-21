@@ -1460,6 +1460,9 @@ export function buildWorkout(
   eventCtx?: any,
   slot?: any,
   archetypeId?: any,
+  // T28 fase 3b-copy: richting van de pendelrit ('heen'/'terug'), alleen relevant voor
+  // pendel_z2. Optioneel, default 'heen' → byte-identiek voor alle bestaande callers.
+  leg: "heen" | "terug" = "heen",
 ): any {
   // FASE 1 deel 2b.2 — een gekozen archetype expandeert direct (overrulet de type-dispatch).
   // LIVE (niet inert): keyIntensity zet de archetypeId op :859 en de week-allocator via
@@ -1518,7 +1521,7 @@ export function buildWorkout(
 
   if (type === "recovery") return genericRecovery(mins, settings);
   if (type === "pendel_z2")
-    return genericPendelZ2(mins, settings, mesoWeek, macroFase);
+    return genericPendelZ2(mins, settings, mesoWeek, macroFase, leg);
   if (type.indexOf("pendel_") === 0 && type.indexOf("_intervals") > 0) {
     return genericPendelIntervals(
       type,
@@ -1984,6 +1987,9 @@ export function genericPendelZ2(
   settings: any,
   mesoWeek: any,
   macroFase: any,
+  // T28 fase 3b-copy: welke rit van de pendeldag dit is. 'heen' is de default zodat élke
+  // bestaande caller (buildWorkout zonder de nieuwe arg, de selftest) byte-identiek blijft.
+  leg: "heen" | "terug" = "heen",
 ): any {
   const ftp = settings.ftp,
     lthr = settings.lthr;
@@ -2011,7 +2017,9 @@ export function genericPendelZ2(
     tss: Math.round(mins * 0.6),
     eindopmerking: isRecoveryWeek
       ? "Recovery-week pendel — geen intensiteit, alleen volume."
-      : "Rustige pendel — fris op werk aankomen.",
+      : leg === "terug"
+        ? "Rustige pendel — ontspannen naar huis."
+        : "Rustige pendel — fris op werk aankomen.",
   };
 }
 
@@ -2109,14 +2117,15 @@ export function genericPendelIntervals(
         heen + " min",
         wattsRange(ftp, 60, 72),
         bpmRange(lthr, 78, 86),
-        "Aanrijden naar werk, rustig",
+        // Deze generic bouwt ALTIJD de terugrit; "naar werk" zou hier de verkeerde
+        // richting impliceren.
+        "Rustig op gang",
       ],
       blok,
       ["Cooldown", "5 min", wattsRange(ftp, 45, 55), "—", "Uitrijden"],
     ],
     tss: tssFromZoneMinutes_(pendelBuckets),
-    eindopmerking:
-      "Pendel-dag — heen rustig, terug doel-specifieke intensiteit.",
+    eindopmerking: "Terugrit — pak je blok op de weg naar huis.",
   };
 }
 

@@ -1719,6 +1719,58 @@ describe("engine selftest", () => {
       false,
       alleLabels.some((l) => l.includes("Heen") || l.includes("Terug")),
     );
+
+    // ── T28 fase 3b-copy — richting-bewuste notes ──
+    // genericPendelZ2 default (heen) = byte-identiek aan vóór deze fix.
+    assert_(
+      "pendelZ2 heen-eindopmerking (default)",
+      "Rustige pendel — fris op werk aankomen.",
+      genericPendelZ2(75, S, 1, "Base").eindopmerking,
+    );
+    assert_(
+      "pendelZ2 heen expliciet",
+      "Rustige pendel — fris op werk aankomen.",
+      genericPendelZ2(75, S, 1, "Base", "heen").eindopmerking,
+    );
+    const pz2terug = genericPendelZ2(75, S, 1, "Base", "terug");
+    assert_(
+      "pendelZ2 terug → naar huis",
+      "Rustige pendel — ontspannen naar huis.",
+      pz2terug.eindopmerking,
+    );
+    assert_(
+      "pendelZ2 terug bevat geen 'werk'",
+      false,
+      pz2terug.eindopmerking.includes("werk"),
+    );
+    // belasting-invariantie: de richting mag totaalMin/tss niet raken.
+    assert_("pendelZ2 terug totaalMin ongewijzigd", 75, pz2terug.totaalMin);
+    assert_("pendelZ2 terug tss ongewijzigd", 45, pz2terug.tss);
+
+    // genericPendelIntervals is ALTIJD de terugrit.
+    const pIntFtp = genericPendelIntervals(
+      "pendel_ftp_intervals",
+      75,
+      S,
+      1,
+      "Build",
+      "FTP",
+    );
+    assert_(
+      "pendelIntervals eindopmerking → naar huis",
+      "Terugrit — pak je blok op de weg naar huis.",
+      pIntFtp.eindopmerking,
+    );
+    assert_(
+      "pendelIntervals warmup-note niet 'naar werk'",
+      false,
+      String(pIntFtp.structuur[0][4]).includes("naar werk"),
+    );
+    assert_(
+      "pendelIntervals warmup-note = 'Rustig op gang'",
+      "Rustig op gang",
+      pIntFtp.structuur[0][4],
+    );
     assert_(
       "inplug buildWO taper focus",
       "sharpness",
@@ -3906,8 +3958,9 @@ describe("engine selftest", () => {
   // fase 2a: +6 voor de M63-fork in testZoneDebt 961→967; T28 fase 2a-i: +2 voor de
   // rest-tak in buildOverrideWorkout_ 967→969; fase 2a-ii: +3 voor durFactor/restAllowed
   // in readinessAdjust_ 969→972; T28 fase 3b: +16 voor de opgeschoonde pendel-structuur
-  // en de belasting-invariantie 972→988).
-  it("exactly 988 assertions", () => {
-    expect(assertCount).toBe(988);
+  // en de belasting-invariantie 972→988; fase 3b-copy: +9 voor de richting-bewuste notes
+  // 988→997).
+  it("exactly 997 assertions", () => {
+    expect(assertCount).toBe(997);
   });
 });

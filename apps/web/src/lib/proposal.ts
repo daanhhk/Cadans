@@ -536,6 +536,10 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
         const last = si === sessieCount - 1;
         const sessieType = isPendel && !last ? "pendel_z2" : d.voorgesteldType;
         const sessieArch = isPendel && !last ? null : d.archetypeId;
+        // T28 fase 3b-copy: op een pendeldag is de laatste rit de TERUGrit, de eerdere
+        // ritten zijn heen. Zo krijgt een pendel_z2 de juiste richting-note; niet-pendel
+        // valt op de default 'heen' (irrelevant, het is geen pendel-generic).
+        const leg: "heen" | "terug" = isPendel && last ? "terug" : "heen";
         const wo = buildWorkout(
           sessieType,
           sessieMin,
@@ -545,6 +549,7 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
           undefined,
           d.dagIdx,
           sessieArch,
+          leg,
         ) as ProposalWorkout | null;
         if (wo) sessions.push(wo);
       }
