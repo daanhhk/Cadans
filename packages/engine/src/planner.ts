@@ -183,12 +183,17 @@ export function allocateQualityWeek_(
   taperActief: any,
   taperCtx: any,
   weekDays?: any,
+  // 3d stap 3: deload-flag (= isRecovery). true → precies ÉÉN lichte kwaliteitsprikkel op een
+  // weekdag; geen langerit/debt-slot. Default false → bestaande callers byte-identiek.
+  isDeload?: any,
 ): any {
   const plan: any = {};
   if (!profiel) return plan;
   const doel = settings.doel;
-  const quota =
+  let quota =
     (profiel.kwaliteitPerWeek && profiel.kwaliteitPerWeek[macroFase]) || 0;
+  // 3d stap 3 — deload: reduceer het quotum tot 1 (één prikkel), ongeacht de fase-dosering.
+  if (isDeload && quota > 1) quota = 1;
   if (quota <= 0) return plan;
 
   const todayT = stripTime_(today).getTime();
@@ -207,7 +212,10 @@ export function allocateQualityWeek_(
       !d.gedaan &&
       d.datum &&
       stripTime_(d.datum).getTime() >= todayT &&
-      !dayTapers_(d)
+      !dayTapers_(d) &&
+      // 3d stap 3 — deload: alleen weekdagen zijn eligible, zodat de ene prikkel op een weekdag
+      // landt en het weekend (long_z2 ×0.60 via de isRecovery-tak + long_z2-cap) niet claimt.
+      !(isDeload && d.type !== "vrij")
     );
   }
 
@@ -338,7 +346,9 @@ export function allocateQualityWeek_(
   }
 
   // 1. lange rit — langste eligible niet-pendel dag (tie: hoogste dagIdx).
-  if ((profiel.langeRitPerWeek || 0) >= 1) {
+  // 3d stap 3 — deload: GEEN langerit-slot (het weekend is al long_z2 ×0.60 via de isRecovery-tak;
+  // een longride_efforts zou bovendien het ene quality-slot opeten via remaining--).
+  if (!isDeload && (profiel.langeRitPerWeek || 0) >= 1) {
     let lr: any = null;
     elig.forEach((d: any) => {
       if (d.type === "pendel") return;
@@ -376,7 +386,9 @@ export function allocateQualityWeek_(
 
   // 2. debt pre-claim (één slot met de debt-type). Fase 2: profiel.debtEnabled:false (Onderhoud)
   //    zet 'm uit — de week-allocator krijgt raw debt (regel ~1020), dus hier apart gaten.
-  if (remaining > 0 && debt && profiel.debtEnabled !== false) {
+  // 3d stap 3 — deload: GEEN debt-pre-claim; de ene prikkel is fase-passend (goalWorkout_), geen
+  //    inhaal-forcering (herstel respecteren, M72/M73).
+  if (!isDeload && remaining > 0 && debt && profiel.debtEnabled !== false) {
     const dp = debtPreferredType_(debt, doel, macroFase);
     if (dp && dp !== "long_z2" && dp !== "recovery") {
       const anc2 = hardAnchors_();
@@ -525,10 +537,12 @@ export function assignWorkouts(
   const debtWerk: any = debtActief
     ? { low: debt.low, high: debt.high, anaerobic: debt.anaerobic }
     : null;
-  // C4: week-brede kwaliteitsplaatsing actief in Base/Build/Peak (NIET Recovery/Test/event-recovery).
+  // C4: week-brede kwaliteitsplaatsing actief in Base/Build/Peak (NIET Test/event-recovery).
+  // 3d stap 3: `!isRecovery` is HIER weggehaald zodat de meso-deload óók een allocator-run krijgt —
+  // allocateQualityWeek_ plaatst dan (via `isRecovery` als deload-flag) precies ÉÉN lichte
+  // kwaliteitsprikkel op een weekdag; de overige deload-dagen blijven via de isRecovery-tak.
   const allocActive =
     !isEventRecovery &&
-    !isRecovery &&
     !isTestWeek &&
     (macroFase === "Base" || macroFase === "Build" || macroFase === "Peak");
 
@@ -568,6 +582,7 @@ export function assignWorkouts(
         taperActief,
         taperCtx,
         weekDays,
+        isRecovery, // 3d stap 3: deload-flag → quotum 1, weekdag-only, geen langerit/debt
       )
     : {};
 
@@ -622,8 +637,17 @@ export function assignWorkouts(
           redenCode = "taper_race_short";
         }
       }
-    } else if (isRecovery) {
-      // Recovery week: alleen lichte sessies
+    } else if (
+      isRecovery &&
+      !(
+        allocActive &&
+        quotaPlan[d.dagIdx] &&
+        quotaPlan[d.dagIdx].role === "quality"
+      )
+    ) {
+      // Recovery week: alleen lichte sessies. 3d stap 3 — de ENE gekozen quality-weekdag valt
+      // hier DOORHEEN (guard) naar de quality-plaatsing hieronder; de dosis wordt ×0.60 verlaagd
+      // door de f<1-ramp. Alle andere deload-dagen blijven recovery / long_z2 / pendel_z2.
       if (d.type === "pendel") type = "pendel_z2";
       else if (d.type === "weekend") type = "long_z2";
       else type = "recovery";
@@ -1049,6 +1073,19 @@ export function renderVariant_(
           cool -= coolTrim;
         }
       }
+    } else if (f < 1 && mins) {
+      // 3d stap 3 — DOSIS-SPIEGEL (deload). Spiegel van de f>1-tak: de core-werktijd KRIMPT
+      // ×f; warm/cool blijven nominaal en de endurance-fill (gap = mins − warm − cool − mainMin)
+      // absorbeert de vrijgekomen tijd vanzelf. %FTP nominaal → karakter-invariant, dosis omlaag.
+      let nomWork = 0;
+      blocks.forEach((b: any) => {
+        if (b.kind === "int") {
+          nomWork += b.reps * (b.onMin != null ? b.onMin : b.onSec / 60);
+        } else {
+          nomWork += b.durMin;
+        }
+      });
+      if (nomWork > 0) workScale = f;
     }
   }
 

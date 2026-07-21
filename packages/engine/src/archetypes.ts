@@ -98,6 +98,12 @@ export function expandArchetype_(rec: any, ctx: any): any {
       effWarmup = warmupMin0 - warmTrim;
       effCooldown = cooldownMin0 - coolTrim;
     }
+  } else if (f < 1 && nominalWork > 0) {
+    // 3d stap 3 — DOSIS-SPIEGEL (deload). Letterlijke spiegel van de f>1-tak: de core-werktijd
+    // KRIMPT (workScale = f); warmup/cooldown blijven nominaal en de endurance-fill absorbeert de
+    // vrijgekomen tijd vanzelf (fillMin = doelMin − fixed groeit mee omdat het werk korter is).
+    // %FTP nominaal, structuur intact → karakter-invariant, dosis omlaag.
+    workScale = f;
   }
 
   const blokken: any[] = [],

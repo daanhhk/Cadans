@@ -1113,12 +1113,12 @@ describe("engine selftest", () => {
     }
     const fasen = ["Base", "Build", "Peak"];
     // renderVariant_-pad (variant-pool long_z2, geen eventCtx) — invariant over mesoWeek 1..4
-    const refRV = pctSig(buildWorkout("long_z2", 90, S, 1, "Build", null, 0));
+    const refRV = pctSig(buildWorkout("long_z2", 150, S, 1, "Build", null, 0));
     for (let mw = 1; mw <= 4; mw++) {
       assert_(
         "renderVariant meso" + mw + " pct-invariant",
         refRV,
-        pctSig(buildWorkout("long_z2", 90, S, mw, "Build", null, 0)),
+        pctSig(buildWorkout("long_z2", 150, S, mw, "Build", null, 0)),
       );
     }
     // … én over fase Base/Build/Peak
@@ -1126,7 +1126,7 @@ describe("engine selftest", () => {
       assert_(
         "renderVariant fase " + fase + " pct-invariant",
         refRV,
-        pctSig(buildWorkout("long_z2", 90, S, 1, fase, null, 0)),
+        pctSig(buildWorkout("long_z2", 150, S, 1, fase, null, 0)),
       );
     });
     // expandArchetype_-pad (archetypeId threshold_2x20) — zelfde invariantie
@@ -1281,15 +1281,137 @@ describe("engine selftest", () => {
           d.voorgesteldType && isHardType_(d.voorgesteldType, settings.doel),
       ).length;
     }
-    // deload-week ZONDER taper → geen harde kwaliteitsprikkel (allocActive=false).
+    // 3d stap 3 — deload-week ZONDER taper: precies ÉÉN lichte kwaliteitsprikkel (i.p.v. de
+    // vroegere 0). De reduced-load-week houdt de renner scherp; de overige dagen blijven herstel.
     const deload = hardCount(null);
-    assert_("deload zonder taper: geen harde dag", 0, deload);
+    assert_("deload zonder taper: precies 1 harde prikkel", 1, deload);
     // taper 10 dagen na de week-maandag (∈ [0..7+venster=10]) → guard onderdrukt de deload →
-    // kwaliteit keert terug. venster 3 houdt de per-dag-taper van déze week af (dichtstbij 4 > 3).
+    // de VOLLE quality-quota keert terug. venster 3 houdt de per-dag-taper van déze week af
+    // (dichtstbij 4 > 3). Meer harde dagen dan de deload-1.
     const taperDatum = new Date(start);
     taperDatum.setDate(start.getDate() + 10);
     const guarded = hardCount({ datum: taperDatum, venster: 3, isTrip: false });
-    assert_("taper-guard heractiveert kwaliteit", true, guarded > 0);
+    assert_("taper-guard heractiveert de volle quota", true, guarded > deload);
+  });
+
+  // ── 3d stap 3 — deload-inhoud: reduced-load-week met ÉÉN lichte prikkel (dosis-spiegel f<1) ──
+  it("testDeloadInhoud3d", () => {
+    const S: any = { ftp: 280, lthr: 170, doel: "FTP" };
+    // (1)+(3) DOSIS-SPIEGEL: threshold_2x20 op mesoWeek 4 (f=0.60) → tijd-in-zone ×0.60 (40→24),
+    //          %FTP nominaal (pct-signatuur identiek aan mesoWeek 1) → karakter-invariant onder f<1.
+    // biome-ignore format: compacte test-call
+    const q1 = buildWorkout("threshold", 100, S, 1, "Build", null, 0, "threshold_2x20");
+    // biome-ignore format: compacte test-call
+    const q4 = buildWorkout("threshold", 100, S, 4, "Build", null, 0, "threshold_2x20");
+    const pctSig = (wo: any) =>
+      (wo.blokken || []).map((b: any) => `${b.pctLo}-${b.pctHi}`).join("|");
+    assert_("deload dosis: bw1 high=40", 40, q1.intent.high);
+    assert_("deload dosis: bw4 high=24 (×0.60)", 24, q4.intent.high);
+    assert_(
+      "deload dosis: tijd-in-zone daalt",
+      true,
+      q4.intent.high < q1.intent.high,
+    );
+    assert_(
+      "deload dosis: %FTP nominaal (pct-invariant)",
+      pctSig(q1),
+      pctSig(q4),
+    );
+    assert_("deload dosis: totaal ≤ doelMin", true, q4.totaalMin <= 100);
+
+    // (2),(4),(5) PLAATSING: een deload-week heeft precies 1 quality-slot op een weekdag; weekend
+    //             = long_z2; overige weekdagen = recovery; pendel = pendel_z2.
+    const settings: any = {
+      ftp: 280,
+      lthr: 170,
+      gewicht: 75,
+      doel: "FTP",
+      doelStart: null,
+      hrMax: 190,
+      hrRest: 45,
+      pendelDuurMin: 80,
+      pendelAantal: 2,
+    };
+    const start = new Date();
+    start.setDate(start.getDate() + 1); // toekomst → allocator plaatst
+    function week(): any[] {
+      // 0-4 vrij (weekdagen), 5 weekend, 6 pendel.
+      return [0, 1, 2, 3, 4, 5, 6].map((i) => {
+        const dt = new Date(start);
+        dt.setDate(start.getDate() + i);
+        const type = i === 5 ? "weekend" : i === 6 ? "pendel" : "vrij";
+        return {
+          dagIdx: i,
+          datum: dt,
+          train: true,
+          gedaan: false,
+          minuten: i === 5 ? 120 : 75,
+          type,
+          voorgesteldType: null,
+          reden: null,
+          redenCode: null,
+          archetypeId: null,
+        };
+      });
+    }
+    function run(mesoWeek: number, macroFase: string): any[] {
+      const days = week();
+      assignWorkouts(
+        days,
+        settings,
+        mesoWeek,
+        macroFase,
+        { low: true, high: true, anaerobic: true },
+        { signal: "normal" },
+        null,
+        null,
+        null,
+        false,
+        null,
+        days,
+      );
+      return days;
+    }
+    const dl = run(4, "Build");
+    const hardDl = dl.filter(
+      (d: any) =>
+        d.voorgesteldType && isHardType_(d.voorgesteldType, settings.doel),
+    );
+    assert_("deload: precies 1 quality-slot", 1, hardDl.length);
+    assert_("deload: het slot ligt op een weekdag", "vrij", hardDl[0]?.type);
+    assert_(
+      "deload: weekend = long_z2",
+      "long_z2",
+      dl.find((d: any) => d.type === "weekend")?.voorgesteldType,
+    );
+    assert_(
+      "deload: pendel = pendel_z2",
+      "pendel_z2",
+      dl.find((d: any) => d.type === "pendel")?.voorgesteldType,
+    );
+    const vrijNietQuality = dl.filter(
+      (d: any) =>
+        d.type === "vrij" && !isHardType_(d.voorgesteldType, settings.doel),
+    );
+    assert_(
+      "deload: overige weekdagen = recovery",
+      true,
+      vrijNietQuality.length > 0 &&
+        vrijNietQuality.every((d: any) => d.voorgesteldType === "recovery"),
+    );
+
+    // (6) ONGEMOEID: een normale Build-week (mesoWeek 1) plaatst de VOLLE quota (>1); een
+    //     event-recovery-week (macroFase Recovery) stript nog steeds ALLES (0 harde dagen).
+    const normaal = run(1, "Build").filter(
+      (d: any) =>
+        d.voorgesteldType && isHardType_(d.voorgesteldType, settings.doel),
+    ).length;
+    assert_("ongemoeid: normale week volle quota (>1)", true, normaal > 1);
+    const eventRec = run(4, "Recovery").filter(
+      (d: any) =>
+        d.voorgesteldType && isHardType_(d.voorgesteldType, settings.doel),
+    ).length;
+    assert_("ongemoeid: event-recovery stript alles", 0, eventRec);
   });
 
   // ── Fase 1 deel 2b.1 — profiel-laag + goalWorkout_-selector (deterministisch) ──
@@ -4174,8 +4296,10 @@ describe("engine selftest", () => {
   // meso-/fase-invariant + nominaal werk-pct) en +14 in testKarakterInvariantie (4 meso +
   // 3 fase × 2 paden) 997→1013; 3d stap 1: +11 voor testMesoCycleWeek (mapping + recovery-
   // uitlijning + defensief negatief) 1013→1024; 3d stap 2: +14 voor testDosisRamp3d
-  // (fill-headroom-ramp + overhead-trim + long_z2-cap) en +2 voor testTaperGuard3d 1024→1040).
-  it("exactly 1040 assertions", () => {
-    expect(assertCount).toBe(1040);
+  // (fill-headroom-ramp + overhead-trim + long_z2-cap) en +2 voor testTaperGuard3d 1024→1040;
+  // 3d stap 3: +12 voor testDeloadInhoud3d (dosis-spiegel f<1 + één-prikkel-plaatsing +
+  // ongemoeid-cases) 1040→1052).
+  it("exactly 1052 assertions", () => {
+    expect(assertCount).toBe(1052);
   });
 });
