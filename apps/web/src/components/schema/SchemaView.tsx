@@ -279,7 +279,8 @@ export function SchemaView({
             >
               {day.sessions.map((s, i) => (
                 <div
-                  key={`${s.naam}-${s.tss}`}
+                  // biome-ignore lint/suspicious/noArrayIndexKey: statische read-only per-dag-sessielijst (geen reorder) → index-key is veilig. `${s.naam}-${s.tss}` was NIET uniek: pendel heen+terug zijn in een Base-week identiek (beide pendel_z2, zelfde naam én tss) → dubbele keys → React-reconciliatie-fout (duplicaat "SESSIE 1/2" + cross-day-fantoom). `day.datum` forceert een schone remount bij dag-wissel.
+                  key={`${day.datum}-${i}`}
                   style={
                     i > 0
                       ? {

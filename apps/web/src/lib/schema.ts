@@ -100,15 +100,15 @@ export function macroFaseLabel(fase: string): string {
 }
 
 // Engine-naam-suffix (planner.ts renderVariant_): "<naam> (<Fase>[, ingekort])".
-// Gerichte, end-anchored strip met ALLEEN bekende fase-tokens — "ingekort" blijft,
-// lege haakjes verdwijnen. GEEN globale replace (voorkomt false positives).
+// Gerichte, end-anchored strip met ALLEEN bekende fase-tokens → het HELE door-de-engine
+// toegevoegde trailing haakje verdwijnt, inclusief ", ingekort" (display-only; de engine-naam
+// blijft ongewijzigd). Een haakje dat deel is van de basis-naam ("Pendel + Z2 (75 min)") blijft
+// staan: "75 min" is geen fase-token, dus de regex raakt 'm niet. GEEN globale replace.
 const FASE_SUFFIX_RE = new RegExp(
-  `\\s*\\((?:${Object.keys(MACRO_FASE_NL).join("|")})(,\\s*ingekort)?\\)\\s*$`,
+  `\\s*\\((?:${Object.keys(MACRO_FASE_NL).join("|")})(?:,\\s*ingekort)?\\)\\s*$`,
 );
 export function stripFaseSuffix(naam: string): string {
-  return naam.replace(FASE_SUFFIX_RE, (_m, ingekort) =>
-    ingekort ? " (ingekort)" : "",
-  );
+  return naam.replace(FASE_SUFFIX_RE, "");
 }
 
 const ZONE_ORDER: ZoneKey[] = ["low", "high", "anaerobic"];

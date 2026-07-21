@@ -35,9 +35,10 @@ function Indicator({ day }: { day: SchemaDay }) {
   }
   return (
     <span style={{ display: "flex", gap: 2 }}>
-      {day.sessions.map((s) => (
+      {day.sessions.map((s, i) => (
         <span
-          key={`${s.naam}-${s.tss}`}
+          // biome-ignore lint/suspicious/noArrayIndexKey: statische read-only per-dag-sessielijst (geen reorder) → index-key is veilig. `${s.naam}-${s.tss}` was NIET uniek voor twee identieke pendel_z2-sessies (heen+terug in Base) → dubbele keys.
+          key={`${day.datum}-${i}`}
           style={{
             width: 6, // zone-dot per sessie (grafische maat)
             height: 6,

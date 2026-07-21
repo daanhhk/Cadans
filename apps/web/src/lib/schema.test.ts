@@ -51,13 +51,28 @@ describe("macroFaseLabel", () => {
 });
 
 describe("stripFaseSuffix", () => {
-  it("verwijdert het fase-token maar behoudt 'ingekort'", () => {
+  it("strip't het HELE fase-haakje, inclusief ', ingekort'", () => {
+    expect(stripFaseSuffix("Lange Z2 steady (Base, ingekort)")).toBe(
+      "Lange Z2 steady",
+    );
     expect(stripFaseSuffix("Z2 progressief (Build, ingekort)")).toBe(
-      "Z2 progressief (ingekort)",
+      "Z2 progressief",
     );
     expect(stripFaseSuffix("Z2 progressief (Base)")).toBe("Z2 progressief");
     expect(stripFaseSuffix("Sweet Spot lang 3×20 (Peak)")).toBe(
       "Sweet Spot lang 3×20",
+    );
+  });
+  it("behoudt een haakje dat deel is van de basis-naam (pendel-duur)", () => {
+    // "75 min" is geen fase-token → het regex-anker raakt het niet.
+    expect(stripFaseSuffix("Pendel + Z2 (75 min) (Base)")).toBe(
+      "Pendel + Z2 (75 min)",
+    );
+    expect(stripFaseSuffix("Pendel + Z2 (75 min)")).toBe(
+      "Pendel + Z2 (75 min)",
+    );
+    expect(stripFaseSuffix("Pendel + Z2 (75 min) (Build, ingekort)")).toBe(
+      "Pendel + Z2 (75 min)",
     );
   });
   it("laat een naam zonder fase-suffix ongemoeid (geen false positive)", () => {
