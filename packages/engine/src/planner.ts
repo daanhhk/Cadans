@@ -496,7 +496,19 @@ export function assignWorkouts(
   const taperActief = !!(taperCtx && taperCtx.datum && taperCtx.venster > 0);
   const isEventRecovery = macroFase === "Recovery";
   const isMesoRecovery = mesoWeek === 4;
-  const isRecovery = isMesoRecovery;
+  // 3d stap 2 — TAPER-GUARD (blok-anchoring): onderdruk de kalender-deload IN de taper-week ÉN de
+  // week ervoor (dagen(weekMaandag → taperdatum) ∈ [0 .. 7 + venster]). Zo is de pre-taper-week een
+  // normale (belaste) opbouwweek en is de taper zélf de deload; taper-dagen overrulen sowieso per dag.
+  let nearTaper = false;
+  if (taperCtx?.datum && days?.length && days[0]?.datum) {
+    const daysToTaper = Math.floor(
+      (stripTime_(taperCtx.datum).getTime() -
+        stripTime_(days[0].datum).getTime()) /
+        86400000,
+    );
+    nearTaper = daysToTaper >= 0 && daysToTaper <= 7 + (taperCtx.venster || 0);
+  }
+  const isRecovery = isMesoRecovery && !nearTaper;
   const isTestWeek = macroFase === "Test";
   let testGedaan = false;
   let openersGedaan = false;
@@ -974,7 +986,7 @@ export function selectVariant_(type: any, weekIndex: any, slot: any): any {
 export function renderVariant_(
   variant: any,
   settings: any,
-  _mesoWeek: any,
+  mesoWeek: any,
   macroFase: any,
   mins?: any,
 ): any {
@@ -995,6 +1007,51 @@ export function renderVariant_(
     warm = Math.min(warm, 10);
     cool = Math.min(cool, 8);
   }
+
+  const rawBlocks = variant.blocks(adj);
+  const blocks = scaleBlocksToFit_(rawBlocks, mins, warm, cool);
+  const ingekort = blocks !== rawBlocks;
+
+  // 3d stap 2 — KWALITEITS-RAMP (tijd-in-zone). Zelfde mechaniek als expandArchetype_: in
+  // opbouwweken (f>1) rekt de core-WERKtijd ×workScale; de ruimte komt EERST uit de endurance-
+  // fill (gap), DAN uit de cooldown (tot 5), DAN uit de warmup (tot 8). %FTP ONgemoeid
+  // (adj=identiteit) → karakter-invariant. Totaal blijft ≤ mins. f=1 → byte-identiek.
+  let workScale = 1;
+  {
+    const f = mesoWeek != null ? mesoFactor(mesoWeek) : 1;
+    if (f > 1 && mins) {
+      let nomWork = 0,
+        nomRest = 0;
+      blocks.forEach((b: any) => {
+        if (b.kind === "int") {
+          const onM = b.onMin != null ? b.onMin : b.onSec / 60;
+          const offM = b.offMin != null ? b.offMin : b.offSec / 60;
+          nomWork += b.reps * onM;
+          nomRest += b.reps * offM;
+        } else {
+          nomWork += b.durMin;
+        }
+      });
+      if (nomWork > 0) {
+        const fillNominal = mins - (warm + nomWork + nomRest + cool);
+        const coolTrimMax = Math.max(0, cool - 5);
+        const warmTrimMax = Math.max(0, warm - 8);
+        const room = Math.max(0, fillNominal) + coolTrimMax + warmTrimMax;
+        const addedWork = Math.min(nomWork * (f - 1), room);
+        if (addedWork > 0) {
+          workScale = (nomWork + addedWork) / nomWork;
+          const fillUsed = Math.min(addedWork, Math.max(0, fillNominal));
+          let rem = addedWork - fillUsed;
+          const coolTrim = Math.min(rem, coolTrimMax);
+          rem -= coolTrim;
+          const warmTrim = Math.min(rem, warmTrimMax);
+          warm -= warmTrim;
+          cool -= coolTrim;
+        }
+      }
+    }
+  }
+
   const structuur: any[] = [
     [
       "Warmup",
@@ -1010,14 +1067,14 @@ export function renderVariant_(
     { minuten: warm, zone: "rust", pctLo: 50, pctHi: 68 },
   ]; // warmup laag-intensief
 
-  const rawBlocks = variant.blocks(adj);
-  const blocks = scaleBlocksToFit_(rawBlocks, mins, warm, cool);
-  const ingekort = blocks !== rawBlocks;
   blocks.forEach((b: any) => {
     if (b.kind === "int") {
-      const onMin = b.onMin != null ? b.onMin : b.onSec / 60;
+      const onMin = (b.onMin != null ? b.onMin : b.onSec / 60) * workScale;
       const offMin = b.offMin != null ? b.offMin : b.offSec / 60;
-      const onStr = b.onMin != null ? b.onMin + " min" : b.onSec + " sec";
+      const onStr =
+        b.onMin != null
+          ? Math.round(b.onMin * workScale * 10) / 10 + " min"
+          : Math.round(b.onSec * workScale) + " sec";
       const offStr = b.offMin != null ? b.offMin + " min" : b.offSec + " sec";
       structuur.push([
         b.label,
@@ -1049,19 +1106,20 @@ export function renderVariant_(
           });
       }
     } else {
-      // steady
+      // steady — 3d stap 2: ramp de core-werktijd (durMin ×workScale).
       const z = b.zone || variant.zone;
+      const dm = Math.round(b.durMin * workScale * 10) / 10;
       structuur.push([
         b.label,
-        b.durMin + " min",
+        dm + " min",
         wattsRange(ftp, b.pct - 2, b.pct + 2),
         bpmRange(lthr, 78, 92),
         b.note || "Stabiel",
       ]);
-      intent[z] += b.durMin;
-      mainMin += b.durMin;
+      intent[z] += dm;
+      mainMin += dm;
       blokken.push({
-        minuten: b.durMin,
+        minuten: dm,
         zone: pctZoneBucket_(b.pct),
         pctLo: b.pct - 2,
         pctHi: b.pct + 2,
@@ -1473,6 +1531,8 @@ export function buildWorkout(
         ftp: settings.ftp,
         lthr: settings.lthr,
         doelMin: mins,
+        // 3d stap 2: mesoWeek voedt de kwaliteits-ramp (mesoFactor) in expandArchetype_.
+        mesoWeek,
       });
       if (awo) {
         awo.archetypeId = archetypeId;
@@ -1562,9 +1622,12 @@ export function genericLongZ2(
   // Beschikbaarheid (d.minuten via mins) is leidend; meso-factor mag nog
   // krimpen voor recovery-week. EventCtx geeft alleen het hilly-profiel,
   // NIET een duur-override (eerder werd 120 → 163 gepusht, fout).
+  // 3d stap 2 — ENDURANCE-CAP: plannerMin (mins) is de HARDE bovengrens. Opbouwweek (f≥1) →
+  // mins (geen ×f-overschrijding meer); deload (f<1) → mins×f. De week-op-week opbouw komt uit
+  // de kwaliteits-tijd-in-zone, niet meer uit langere ritten (coach adviseert verlengen = 2b).
   const requested = Math.max(
     60,
-    Math.round((mins || 90) * mesoFactor(mesoWeek)),
+    Math.min(mins || 90, Math.round((mins || 90) * mesoFactor(mesoWeek))),
   );
 
   const hilly = !!(

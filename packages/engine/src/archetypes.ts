@@ -5,7 +5,7 @@
  * bindings → the planner↔archetypes↔coach cycle resolves at call time).
  */
 import { COACH_INTENT_ENGINE_TYPE_, intentFromType_ } from "./coach";
-import { bpmBelow, bpmRange, wattsRange } from "./utils";
+import { bpmBelow, bpmRange, mesoFactor, wattsRange } from "./utils";
 import { pctZoneBucket_, tssFromZoneMinutes_ } from "./zones";
 
 export const ARCHETYPE_STRUCTUURTYPES = [
@@ -56,6 +56,50 @@ export function expandArchetype_(rec: any, ctx: any): any {
     return Math.round(x * 10) / 10;
   }
 
+  // 3d stap 2 — KWALITEITS-RAMP (dosis-gedreven, tijd-in-zone). In opbouwweken (f>1) rekt de
+  // core-WERKtijd ×workScale; de vrijgekomen ruimte komt EERST uit de endurance-fill, DAN uit de
+  // cooldown (tot minCooldown), DAN uit de warmup (tot minWarmup). Totaal blijft ≤ doelMin (harde
+  // bovengrens); %FTP per blok ONgemoeid (adj=identiteit) → karakter-invariant. f=1 → byte-identiek.
+  const MIN_WARMUP = 8,
+    MIN_COOLDOWN = 5;
+  const f = ctx.mesoWeek != null ? mesoFactor(ctx.mesoWeek) : 1;
+  const warmupMin0 = rec.warmup.durMin;
+  const cooldownMin0 = rec.cooldown.durMin;
+  let nominalWork = 0,
+    nominalRest = 0;
+  rec.core.forEach((c: any) => {
+    if (c.kind === "steady") {
+      nominalWork += c.durMin;
+    } else {
+      const onM = c.onMin != null ? c.onMin : c.onSec / 60;
+      const offM = c.offMin != null ? c.offMin : c.offSec / 60;
+      nominalWork += c.reps * onM;
+      nominalRest += c.reps * offM;
+    }
+  });
+  let workScale = 1,
+    effWarmup = warmupMin0,
+    effCooldown = cooldownMin0;
+  if (f > 1 && nominalWork > 0) {
+    const fillNominal =
+      doelMin - (warmupMin0 + nominalWork + nominalRest + cooldownMin0);
+    const coolTrimMax = Math.max(0, cooldownMin0 - MIN_COOLDOWN);
+    const warmTrimMax = Math.max(0, warmupMin0 - MIN_WARMUP);
+    const room = Math.max(0, fillNominal) + coolTrimMax + warmTrimMax;
+    const addedWork = Math.min(nominalWork * (f - 1), room);
+    if (addedWork > 0) {
+      workScale = (nominalWork + addedWork) / nominalWork;
+      // consumptie-volgorde: fill → cooldown → warmup.
+      const fillUsed = Math.min(addedWork, Math.max(0, fillNominal));
+      let rem = addedWork - fillUsed;
+      const coolTrim = Math.min(rem, coolTrimMax);
+      rem -= coolTrim;
+      const warmTrim = Math.min(rem, warmTrimMax);
+      effWarmup = warmupMin0 - warmTrim;
+      effCooldown = cooldownMin0 - coolTrim;
+    }
+  }
+
   const blokken: any[] = [],
     structuur: any[] = [];
   function emit(
@@ -91,8 +135,8 @@ export function expandArchetype_(rec: any, ctx: any): any {
   const wHi = w.pctHi != null ? adj(w.pctHi) : adj(w.pct);
   let preMin = emit(
     "Warmup",
-    w.durMin,
-    `${w.durMin} min`,
+    effWarmup,
+    `${effWarmup} min`,
     wLo,
     wHi,
     "warmup",
@@ -103,22 +147,26 @@ export function expandArchetype_(rec: any, ctx: any): any {
   rec.core.forEach((c: any) => {
     if (c.kind === "steady") {
       const p = adj(c.pct);
+      const sd = r1(c.durMin * workScale); // 3d stap 2: ramp de core-werktijd
       preMin += emit(
         c.label,
-        c.durMin,
-        `${c.durMin} min`,
+        sd,
+        `${sd} min`,
         p,
         p,
         "work",
         c.note || "Stabiel",
       );
     } else {
-      // int
-      const onMin = c.onMin != null ? c.onMin : c.onSec / 60;
+      // int — 3d stap 2: ramp de WERKtijd (onMin/onSec ×workScale); rust (offMin) ONgemoeid.
+      const onMin = (c.onMin != null ? c.onMin : c.onSec / 60) * workScale;
       const offMin = c.offMin != null ? c.offMin : c.offSec / 60;
       const onUnit = c.onMin != null ? "min" : "sec";
       const offUnit = c.offMin != null ? "min" : "sec";
-      const onVal = c.onMin != null ? c.onMin : c.onSec;
+      const onVal =
+        c.onMin != null
+          ? r1(c.onMin * workScale)
+          : Math.round(c.onSec * workScale);
       const offVal = c.offMin != null ? c.offMin : c.offSec;
       let onLo: number, onHi: number;
       if (c.onPctLo != null && c.onPctHi != null) {
@@ -165,7 +213,7 @@ export function expandArchetype_(rec: any, ctx: any): any {
   const cd = rec.cooldown;
   const cLo = cd.pctLo != null ? adj(cd.pctLo) : adj(cd.pct);
   const cHi = cd.pctHi != null ? adj(cd.pctHi) : adj(cd.pct);
-  const fixed = preMin + cd.durMin;
+  const fixed = preMin + effCooldown;
   const fillMin = Math.round(doelMin - fixed);
   const tooLong =
     doelMin < fixed ? { available: doelMin, needed: fixed } : null;
@@ -183,8 +231,8 @@ export function expandArchetype_(rec: any, ctx: any): any {
   }
   emit(
     "Cooldown",
-    cd.durMin,
-    `${cd.durMin} min`,
+    effCooldown,
+    `${effCooldown} min`,
     cLo,
     cHi,
     "cooldown",

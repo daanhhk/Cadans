@@ -59,6 +59,7 @@ import {
   GOAL_KWALITEIT_INTENTS_,
   GOAL_PROFILES_,
   gatherWeekplanEntries_,
+  genericLongZ2,
   genericPendelIntervals,
   genericPendelZ2,
   getReadinessScore_,
@@ -72,6 +73,7 @@ import {
   intentFromIF_,
   intentFromType_,
   intentHaalbaar_,
+  isHardType_,
   keyIntensity,
   maxRecentRideH_,
   mergeById_,
@@ -1179,6 +1181,115 @@ describe("engine selftest", () => {
     assert_("mesoCycle herstelt na deload", 1, mesoCycleWeek_(4));
     // defensief tegen negatieve index (nooit uit de app, wél contract-eis)
     assert_("mesoCycle negatief -1", 4, mesoCycleWeek_(-1));
+  });
+
+  // ── 3d stap 2 — dosis-ramp (kwaliteits-tijd-in-zone + long_z2-cap + overhead-trim) ──
+  it("testDosisRamp3d", () => {
+    const S: any = { ftp: 280, lthr: 170, doel: "FTP" };
+    // (A) FILL-HEADROOM: threshold_2x20 @ 100 min (fixed 75 → 25 fill). Werk-tijd-in-zone (high)
+    //     + TSS stijgen blokweek 1<2<3; blokweek 1 = nominaal (geen ramp, byte-identiek).
+    // biome-ignore format: compacte test-call
+    const a1 = buildWorkout("threshold", 100, S, 1, "Build", null, 0, "threshold_2x20");
+    // biome-ignore format: compacte test-call
+    const a2 = buildWorkout("threshold", 100, S, 2, "Build", null, 0, "threshold_2x20");
+    // biome-ignore format: compacte test-call
+    const a3 = buildWorkout("threshold", 100, S, 3, "Build", null, 0, "threshold_2x20");
+    assert_("ramp bw1 nominaal high=40", 40, a1.intent.high);
+    assert_("ramp high 1<2", true, a2.intent.high > a1.intent.high);
+    assert_("ramp high 2<3", true, a3.intent.high > a2.intent.high);
+    assert_("ramp tss 1<3", true, a3.tss > a1.tss);
+    assert_("ramp totaal <= doelMin bw3", true, a3.totaalMin <= 100);
+    assert_("ramp totaal bw1 == 100", 100, a1.totaalMin);
+    // (B) OVERHEAD-TRIM: threshold_2x20 @ 75 (fill 0) — ramp't tóch via cooldown->5, warmup>=8.
+    // biome-ignore format: compacte test-call
+    const t1 = buildWorkout("threshold", 75, S, 1, "Build", null, 0, "threshold_2x20");
+    // biome-ignore format: compacte test-call
+    const t3 = buildWorkout("threshold", 75, S, 3, "Build", null, 0, "threshold_2x20");
+    assert_("trim bw1 nominaal high=40", 40, t1.intent.high);
+    assert_(
+      "trim high stijgt bij fill 0",
+      true,
+      t3.intent.high > t1.intent.high,
+    );
+    assert_("trim warmup >= 8", true, t3.blokken[0].minuten >= 8);
+    assert_(
+      "trim cooldown < 10 (ingekort)",
+      true,
+      t3.blokken[t3.blokken.length - 1].minuten < 10,
+    );
+    assert_("trim totaal <= 75", true, t3.totaalMin <= 75);
+    // (C) LONG_Z2-CAP: opbouwweek gecapt op mins; deload ×f.
+    const l1 = genericLongZ2(120, S, 1);
+    const l3 = genericLongZ2(120, S, 3);
+    const l4 = genericLongZ2(120, S, 4);
+    assert_("longz2 bw1 == 120", 120, l1.totaalMin);
+    assert_("longz2 bw3 gecapt == 120 (niet 138)", 120, l3.totaalMin);
+    assert_("longz2 deload < 120", true, l4.totaalMin < 120);
+  });
+
+  // ── 3d stap 2 — taper-guard: kalender-deload onderdrukt in/vlak vóór de taper ──
+  it("testTaperGuard3d", () => {
+    const settings: any = {
+      ftp: 280,
+      lthr: 170,
+      gewicht: 75,
+      doel: "FTP",
+      doelStart: null,
+      hrMax: 190,
+      hrRest: 45,
+      pendelDuurMin: 80,
+      pendelAantal: 2,
+    };
+    const start = new Date();
+    start.setDate(start.getDate() + 1); // week begint MORGEN (toekomst → allocator plaatst)
+    function week(): any[] {
+      return [0, 1, 2, 3, 4, 5, 6].map((i) => {
+        const dt = new Date(start);
+        dt.setDate(start.getDate() + i);
+        return {
+          dagIdx: i,
+          datum: dt,
+          train: true,
+          gedaan: false,
+          minuten: i === 5 ? 120 : 75,
+          type: i === 5 ? "weekend" : "vrij",
+          voorgesteldType: null,
+          reden: null,
+          redenCode: null,
+          archetypeId: null,
+        };
+      });
+    }
+    function hardCount(taperCtx: any): number {
+      const days = week();
+      assignWorkouts(
+        days,
+        settings,
+        4, // mesoWeek 4 = kalender-deload
+        "Build",
+        { low: true, high: true, anaerobic: true },
+        { signal: "normal" },
+        null,
+        null,
+        null,
+        false,
+        taperCtx,
+        days,
+      );
+      return days.filter(
+        (d: any) =>
+          d.voorgesteldType && isHardType_(d.voorgesteldType, settings.doel),
+      ).length;
+    }
+    // deload-week ZONDER taper → geen harde kwaliteitsprikkel (allocActive=false).
+    const deload = hardCount(null);
+    assert_("deload zonder taper: geen harde dag", 0, deload);
+    // taper 10 dagen na de week-maandag (∈ [0..7+venster=10]) → guard onderdrukt de deload →
+    // kwaliteit keert terug. venster 3 houdt de per-dag-taper van déze week af (dichtstbij 4 > 3).
+    const taperDatum = new Date(start);
+    taperDatum.setDate(start.getDate() + 10);
+    const guarded = hardCount({ datum: taperDatum, venster: 3, isTrip: false });
+    assert_("taper-guard heractiveert kwaliteit", true, guarded > 0);
   });
 
   // ── Fase 1 deel 2b.1 — profiel-laag + goalWorkout_-selector (deterministisch) ──
@@ -4062,8 +4173,9 @@ describe("engine selftest", () => {
   // 988→997; T28 karakter-invariantie M74-M78: +2 in testArchetype (meso-richting →
   // meso-/fase-invariant + nominaal werk-pct) en +14 in testKarakterInvariantie (4 meso +
   // 3 fase × 2 paden) 997→1013; 3d stap 1: +11 voor testMesoCycleWeek (mapping + recovery-
-  // uitlijning + defensief negatief) 1013→1024).
-  it("exactly 1024 assertions", () => {
-    expect(assertCount).toBe(1024);
+  // uitlijning + defensief negatief) 1013→1024; 3d stap 2: +14 voor testDosisRamp3d
+  // (fill-headroom-ramp + overhead-trim + long_z2-cap) en +2 voor testTaperGuard3d 1024→1040).
+  it("exactly 1040 assertions", () => {
+    expect(assertCount).toBe(1040);
   });
 });
