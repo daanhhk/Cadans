@@ -1,5 +1,5 @@
 /** workouts/beklimmingen.ts — Beklimmingen-doel workout library (port of Workouts/Beklimmingen.gs). */
-import { bpmBelow, bpmRange, mesoFactor, watts, wattsRange } from "../utils";
+import { bpmBelow, bpmRange, watts, wattsRange } from "../utils";
 
 export function climbPools_(): any {
   return {
@@ -80,12 +80,11 @@ export function workoutForBeklimmingen(
   type: string,
   mins: any,
   settings: any,
-  mesoWeek: number,
+  _mesoWeek: number,
   macroFase: string,
 ): any {
   const ftp = settings.ftp,
     lthr = settings.lthr;
-  const f = mesoFactor(mesoWeek);
 
   if (type === "ss_lang") {
     let reps: number, len: number;
@@ -119,7 +118,7 @@ export function workoutForBeklimmingen(
         [
           "SS lang",
           reps + "x " + len + " min",
-          wattsRange(ftp, Math.round(pctLow * f), Math.round(pctHigh * f)),
+          wattsRange(ftp, pctLow, pctHigh),
           bpmRange(lthr, 92, 98),
           "6 min rust tussen reps — simuleert lange klim",
         ],
@@ -174,7 +173,7 @@ export function workoutForBeklimmingen(
         [
           "Low-cad",
           reps2 + "x " + len2 + " min @ " + rpm,
-          wattsRange(ftp, Math.round(pctLow * f), Math.round(pctHigh * f)),
+          wattsRange(ftp, pctLow, pctHigh),
           bpmRange(lthr, 88, 95),
           "Druk laag houden, focus op zware halen — buitendijks of zwaar verzet binnen",
         ],
@@ -211,7 +210,7 @@ export function workoutForBeklimmingen(
         [
           "Big gear",
           reps3 + "x 6 min @ 55-60 rpm",
-          wattsRange(ftp, Math.round(88 * f), Math.round(92 * f)),
+          wattsRange(ftp, 88, 92),
           bpmRange(lthr, 88, 95),
           "5 min spinnen rust @ 90+ rpm tussen reps",
         ],
@@ -244,7 +243,7 @@ export function workoutForBeklimmingen(
         [
           "Klim",
           len3 + " min",
-          wattsRange(ftp, Math.round(pctLow * f), Math.round(pctHigh * f)),
+          wattsRange(ftp, pctLow, pctHigh),
           bpmRange(lthr, 90, 98),
           "Continu zonder pauzes — pacing als bij een echte klim. Wissel zit/dans.",
         ],

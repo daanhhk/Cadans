@@ -955,7 +955,8 @@ describe("engine selftest", () => {
         wo.tss,
       );
     });
-    // (7) richting: mesoFactor 1.1 > 1.0 → hogere werk-pct (drempel-fixture)
+    // (7) M74 karakter-invariantie — expandArchetype_-pad: het werk-pct is INVARIANT
+    // onder meso-/fase-modulatie (de %FTP-hendel is verwijderd; adj = identiteit).
     function workPct(wo: any) {
       let m = 0;
       wo.blokken.forEach((b: any) => {
@@ -969,13 +970,23 @@ describe("engine selftest", () => {
       mesoFactor: 1.0,
       faseOffset: 0,
     });
-    const b11 = expandArchetype_(fx[1], {
+    const bMeso = expandArchetype_(fx[1], {
       ftp: 275,
       doelMin: 80,
-      mesoFactor: 1.1,
+      mesoFactor: 1.15,
       faseOffset: 0,
     });
-    assert_("arch meso-richting", true, workPct(b11) > workPct(b10));
+    const bFase = expandArchetype_(fx[1], {
+      ftp: 275,
+      doelMin: 80,
+      mesoFactor: 1.0,
+      faseOffset: 2,
+    });
+    // gelijk over mesoFactor 1.0 vs 1.15 én over faseOffset 0 vs +2 → M74 verankerd.
+    assert_("arch meso-invariant pct", workPct(b10), workPct(bMeso));
+    assert_("arch fase-invariant pct", workPct(b10), workPct(bFase));
+    // nominaal: de drempel-fixture houdt zijn onPct 98 (niet opgeschaald naar 108).
+    assert_("arch nominaal werk-pct", 98, workPct(b10));
     // onPct-fallback (geen werk-range op de fixture): leidt nog pctLo/pctHi af (collapsed onLo==onHi).
     const foBlk = b10.blokken.filter(
       (b: any) => b.pctLo === 98 && b.pctHi === 98,
@@ -1078,6 +1089,73 @@ describe("engine selftest", () => {
           );
         }
       });
+    });
+  });
+
+  // ── T28 — karakter-invariantie (M74-M78): meso/fase raken het blok-%FTP niet ──
+  // Regressie-vanger tegen herintroductie van de meso-/fase-%FTP-hendel. Zelfde input,
+  // alleen mesoWeek/macroFase variëren → identieke blok-pct-signatuur, op BEIDE paden
+  // (renderVariant_ via de variant-pool én expandArchetype_ via archetypeId).
+  it("testKarakterInvariantie", () => {
+    const S: any = {
+      ftp: 275,
+      lthr: 178,
+      doel: "FTP",
+      doelStart: new Date(2026, 0, 5),
+    };
+    function pctSig(wo: any): string {
+      return (wo.blokken || [])
+        .map((b: any) => b.pctLo + "-" + b.pctHi)
+        .join("|");
+    }
+    const fasen = ["Base", "Build", "Peak"];
+    // renderVariant_-pad (variant-pool long_z2, geen eventCtx) — invariant over mesoWeek 1..4
+    const refRV = pctSig(buildWorkout("long_z2", 90, S, 1, "Build", null, 0));
+    for (let mw = 1; mw <= 4; mw++) {
+      assert_(
+        "renderVariant meso" + mw + " pct-invariant",
+        refRV,
+        pctSig(buildWorkout("long_z2", 90, S, mw, "Build", null, 0)),
+      );
+    }
+    // … én over fase Base/Build/Peak
+    fasen.forEach((fase) => {
+      assert_(
+        "renderVariant fase " + fase + " pct-invariant",
+        refRV,
+        pctSig(buildWorkout("long_z2", 90, S, 1, fase, null, 0)),
+      );
+    });
+    // expandArchetype_-pad (archetypeId threshold_2x20) — zelfde invariantie
+    const refAT = pctSig(
+      buildWorkout("threshold", 100, S, 1, "Build", null, 0, "threshold_2x20"),
+    );
+    for (let mw = 1; mw <= 4; mw++) {
+      assert_(
+        "expandArchetype meso" + mw + " pct-invariant",
+        refAT,
+        pctSig(
+          buildWorkout(
+            "threshold",
+            100,
+            S,
+            mw,
+            "Build",
+            null,
+            0,
+            "threshold_2x20",
+          ),
+        ),
+      );
+    }
+    fasen.forEach((fase) => {
+      assert_(
+        "expandArchetype fase " + fase + " pct-invariant",
+        refAT,
+        pctSig(
+          buildWorkout("threshold", 100, S, 1, fase, null, 0, "threshold_2x20"),
+        ),
+      );
     });
   });
 
@@ -3959,8 +4037,10 @@ describe("engine selftest", () => {
   // rest-tak in buildOverrideWorkout_ 967→969; fase 2a-ii: +3 voor durFactor/restAllowed
   // in readinessAdjust_ 969→972; T28 fase 3b: +16 voor de opgeschoonde pendel-structuur
   // en de belasting-invariantie 972→988; fase 3b-copy: +9 voor de richting-bewuste notes
-  // 988→997).
-  it("exactly 997 assertions", () => {
-    expect(assertCount).toBe(997);
+  // 988→997; T28 karakter-invariantie M74-M78: +2 in testArchetype (meso-richting →
+  // meso-/fase-invariant + nominaal werk-pct) en +14 in testKarakterInvariantie (4 meso +
+  // 3 fase × 2 paden) 997→1013).
+  it("exactly 1013 assertions", () => {
+    expect(assertCount).toBe(1013);
   });
 });

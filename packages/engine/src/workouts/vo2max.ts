@@ -1,5 +1,5 @@
 /** workouts/vo2max.ts — VO2max-doel workout library (port of Workouts/Vo2max.gs). */
-import { bpmBelow, bpmRange, mesoFactor, watts, wattsRange } from "../utils";
+import { bpmBelow, bpmRange, watts, wattsRange } from "../utils";
 
 export function vo2Pools_(): any {
   return {
@@ -142,12 +142,11 @@ export function workoutForVo2max(
   type: string,
   mins: any,
   settings: any,
-  mesoWeek: number,
+  _mesoWeek: number,
   macroFase: string,
 ): any {
   const ftp = settings.ftp,
     lthr = settings.lthr;
-  const f = mesoFactor(mesoWeek);
 
   if (type === "vo2_short") {
     mins = mins || 60;
@@ -167,7 +166,7 @@ export function workoutForVo2max(
         [
           "VO2",
           "4x 3 min",
-          wattsRange(ftp, Math.round(106 * f), Math.round(110 * f)),
+          wattsRange(ftp, 106, 110),
           bpmRange(lthr, 100, 106),
           "3 min rust @ 50% tussen reps",
         ],
@@ -197,7 +196,7 @@ export function workoutForVo2max(
         [
           "VO2",
           "5x 4 min",
-          wattsRange(ftp, Math.round(108 * f), Math.round(112 * f)),
+          wattsRange(ftp, 108, 112),
           bpmRange(lthr, 100, 108),
           "4 min rust @ 50%",
         ],
@@ -226,7 +225,7 @@ export function workoutForVo2max(
         [
           "VO2",
           "4x 5 min",
-          wattsRange(ftp, Math.round(110 * f), Math.round(115 * f)),
+          wattsRange(ftp, 110, 115),
           bpmRange(lthr, 102, 108),
           "5 min rust @ 50%",
         ],

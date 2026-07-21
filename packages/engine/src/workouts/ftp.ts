@@ -1,5 +1,5 @@
 /** workouts/ftp.ts — FTP-doel workout library (port of Workouts/Ftp.gs). */
-import { bpmBelow, bpmRange, mesoFactor, watts, wattsRange } from "../utils";
+import { bpmBelow, bpmRange, watts, wattsRange } from "../utils";
 
 export function ftpPools_(): any {
   return {
@@ -193,12 +193,11 @@ export function workoutForFtp(
   type: string,
   mins: any,
   settings: any,
-  mesoWeek: number,
+  _mesoWeek: number,
   macroFase: string,
 ): any {
   const ftp = settings.ftp,
     lthr = settings.lthr;
-  const f = mesoFactor(mesoWeek);
 
   if (type === "sweet_spot") {
     let reps: number, len: number, pctLow: number, pctHigh: number;
@@ -235,7 +234,7 @@ export function workoutForFtp(
         [
           "Sweet Spot",
           `${reps}x ${len} min`,
-          wattsRange(ftp, Math.round(pctLow * f), Math.round(pctHigh * f)),
+          wattsRange(ftp, pctLow, pctHigh),
           bpmRange(lthr, 92, 98),
           "5 min rust @ 50% tussen reps",
         ],
@@ -279,7 +278,7 @@ export function workoutForFtp(
         [
           "Threshold",
           `${reps2}x ${len2} min`,
-          wattsRange(ftp, Math.round((pct - 2) * f), Math.round((pct + 2) * f)),
+          wattsRange(ftp, pct - 2, pct + 2),
           bpmRange(lthr, 96, 100),
           "5 min rust tussen reps",
         ],

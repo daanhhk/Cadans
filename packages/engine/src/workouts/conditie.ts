@@ -91,7 +91,6 @@ export function workoutForConditie(
 ): any {
   const ftp = settings.ftp,
     lthr = settings.lthr;
-  const f = mesoFactor(mesoWeek);
 
   if (type === "long_z2") {
     let target: number;
@@ -158,7 +157,7 @@ export function workoutForConditie(
         [
           "Tempo",
           reps + "x " + len + " min",
-          wattsRange(ftp, Math.round(pctLow * f), Math.round(pctHigh * f)),
+          wattsRange(ftp, pctLow, pctHigh),
           bpmRange(lthr, 88, 94),
           "4 min rust tussen reps",
         ],
@@ -195,7 +194,7 @@ export function workoutForConditie(
         [
           "Tempo",
           "3x 10min",
-          wattsRange(ftp, Math.round(78 * f), Math.round(85 * f)),
+          wattsRange(ftp, 78, 85),
           bpmRange(lthr, 88, 94),
           "5 min Z2 rust tussen reps",
         ],

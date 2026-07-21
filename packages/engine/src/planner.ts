@@ -909,17 +909,6 @@ export function climbTypeWorkout_(
 // VARIANT-ENGINE (DEEL 3) — pools + selectie + renderer
 // ════════════════════════════════════════════════════════════════
 
-// Fase past %FTP-offset toe bovenop de meso-factor (variant = vorm,
-// fase/meso = intensiteit/volume).
-export const VARIANT_FASE_OFFSET: any = {
-  Base: -2,
-  Build: 0,
-  Peak: 2,
-  Taper: 0,
-  Recovery: 0,
-  Test: 0,
-};
-
 /** Weken sinds doel-startdatum (deterministisch, reproduceerbaar). */
 export function weekIndexFromStart_(settings: any): number {
   const start = settings.doelStart || new Date();
@@ -972,7 +961,8 @@ export function selectVariant_(type: any, weekIndex: any, slot: any): any {
 
 /**
  * Rendert een variant-spec naar een workout-object met intent.
- * adj(basePct) = round(basePct * mesoFactor) + fase-offset.
+ * adj(basePct) = basePct — identiteit sinds T28 (karakter-invariantie M74-M78);
+ * meso/fase raken het %FTP per blok niet meer, alleen duur (mins) en mix.
  * intent = target tijd-in-zone (min) per load-focus bucket.
  * mins (optioneel) = beschikbare minuten — als gegeven, krimpen blocks
  * via scaleBlocksToFit_ zodat totaalMin onder mins blijft waar mogelijk.
@@ -984,15 +974,17 @@ export function selectVariant_(type: any, weekIndex: any, slot: any): any {
 export function renderVariant_(
   variant: any,
   settings: any,
-  mesoWeek: any,
+  _mesoWeek: any,
   macroFase: any,
   mins?: any,
 ): any {
   const ftp = settings.ftp,
     lthr = settings.lthr;
-  const f = mesoFactor(mesoWeek);
-  const off = VARIANT_FASE_OFFSET[macroFase] || 0;
-  const adj = (p: number): number => Math.round(p * f) + off;
+  // T28: karakter-invariantie (M74-M78). De meso-/fase-%FTP-hendel is verwijderd —
+  // adj is de identiteit, dus elk blok houdt zijn nominale %FTP over álle mesoweken en
+  // fasen. mesoWeek/macroFase blijven in de signatuur (macroFase voedt de naam; de
+  // duur-inpassing loopt via mins/scaleBlocksToFit_ en is ongewijzigd).
+  const adj = (p: number): number => p;
 
   let warm = variant.warmup || 12,
     cool = variant.cooldown || 10;
@@ -1481,8 +1473,6 @@ export function buildWorkout(
         ftp: settings.ftp,
         lthr: settings.lthr,
         doelMin: mins,
-        mesoFactor: mesoFactor(mesoWeek),
-        faseOffset: VARIANT_FASE_OFFSET[macroFase] || 0,
       });
       if (awo) {
         awo.archetypeId = archetypeId;
@@ -1837,11 +1827,10 @@ export function genericTourTaperZ2(
 export function genericVo2HillRepeats(
   mins: any,
   settings: any,
-  mesoWeek: any,
+  _mesoWeek: any,
 ): any {
   const ftp = settings.ftp,
     lthr = settings.lthr;
-  const f = mesoFactor(mesoWeek);
   mins = mins || 70;
   return {
     naam: "VO2 Hill Repeats 9x90s",
@@ -1859,7 +1848,7 @@ export function genericVo2HillRepeats(
       [
         "Hill reps",
         "9x 90 sec",
-        wattsRange(ftp, Math.round(112 * f), Math.round(118 * f)),
+        wattsRange(ftp, 112, 118),
         bpmRange(lthr, 100, 108),
         "2 min rust @ 50% — sta op bij de steile stukken",
       ],
@@ -1874,11 +1863,10 @@ export function genericVo2HillRepeats(
 export function genericAnaerobicCapacity(
   mins: any,
   settings: any,
-  mesoWeek: any,
+  _mesoWeek: any,
 ): any {
   const ftp = settings.ftp,
     lthr = settings.lthr;
-  const f = mesoFactor(mesoWeek);
   mins = mins || 60;
   return {
     naam: "Anaerobic Capacity 10x 30/30s",
@@ -1896,7 +1884,7 @@ export function genericAnaerobicCapacity(
       [
         "30/30s",
         "10x 30 sec",
-        wattsRange(ftp, Math.round(120 * f), Math.round(130 * f)),
+        wattsRange(ftp, 120, 130),
         bpmRange(lthr, 100, 110),
         "30 sec rust @ 50% — maximaal herhaalbaar",
       ],
@@ -1911,11 +1899,10 @@ export function genericAnaerobicCapacity(
 export function genericThresholdLong(
   mins: any,
   settings: any,
-  mesoWeek: any,
+  _mesoWeek: any,
 ): any {
   const ftp = settings.ftp,
     lthr = settings.lthr;
-  const f = mesoFactor(mesoWeek);
   mins = mins || 80;
   return {
     naam: "Threshold Long 3x14min",
@@ -1933,7 +1920,7 @@ export function genericThresholdLong(
       [
         "Threshold",
         "3x 14 min",
-        wattsRange(ftp, Math.round(95 * f), Math.round(102 * f)),
+        wattsRange(ftp, 95, 102),
         bpmRange(lthr, 96, 100),
         "5 min rust @ 55% — pacing als een lange col",
       ],
@@ -1948,11 +1935,10 @@ export function genericThresholdLong(
 export function genericSweetSpotLong(
   mins: any,
   settings: any,
-  mesoWeek: any,
+  _mesoWeek: any,
 ): any {
   const ftp = settings.ftp,
     lthr = settings.lthr;
-  const f = mesoFactor(mesoWeek);
   mins = mins || 85;
   return {
     naam: "Sweet Spot Long 3x20min",
@@ -1970,7 +1956,7 @@ export function genericSweetSpotLong(
       [
         "Sweet Spot",
         "3x 20 min",
-        wattsRange(ftp, Math.round(88 * f), Math.round(93 * f)),
+        wattsRange(ftp, 88, 93),
         bpmRange(lthr, 92, 98),
         "6 min rust @ 50% — duurzame klim-belasting",
       ],
@@ -2027,7 +2013,7 @@ export function genericPendelIntervals(
   type: any,
   mins: any,
   settings: any,
-  mesoWeek: any,
+  _mesoWeek: any,
   _macroFase: any,
   doel: any,
 ): any {
@@ -2035,7 +2021,6 @@ export function genericPendelIntervals(
     lthr = settings.lthr;
   mins = mins || 150;
   const heen = Math.floor(mins / 2);
-  const f = mesoFactor(mesoWeek);
 
   let blok = ["—", "—", "—", "—", "—"];
   const isTrip = type === "pendel_trip_intervals";
@@ -2044,7 +2029,7 @@ export function genericPendelIntervals(
     blok = [
       "Sweet spot",
       "2x15min",
-      wattsRange(ftp, Math.round(86 * f), Math.round(92 * f)),
+      wattsRange(ftp, 86, 92),
       bpmRange(lthr, 90, 96),
       "Sweet spot / tempo — tocht-specifieke duurkracht",
     ];
@@ -2052,7 +2037,7 @@ export function genericPendelIntervals(
     blok = [
       "Intervallen",
       "3-4x 8min",
-      wattsRange(ftp, Math.round(88 * f), Math.round(94 * f)),
+      wattsRange(ftp, 88, 94),
       bpmRange(lthr, 95, 102),
       "Sweet Spot blokken met 4 min rust ertussen",
     ];
@@ -2060,7 +2045,7 @@ export function genericPendelIntervals(
     blok = [
       "Intervallen",
       "4-5x 3min",
-      wattsRange(ftp, Math.round(108 * f), Math.round(115 * f)),
+      wattsRange(ftp, 108, 115),
       bpmRange(lthr, 100, 108),
       "VO2 reps, 3 min rust — sluit aan op verkeerslichten",
     ];
@@ -2068,7 +2053,7 @@ export function genericPendelIntervals(
     blok = [
       "Tempo",
       "2-3x 12min",
-      wattsRange(ftp, Math.round(76 * f), Math.round(85 * f)),
+      wattsRange(ftp, 76, 85),
       bpmRange(lthr, 88, 94),
       "Tempo blokken, 5 min rust ertussen",
     ];
@@ -2076,7 +2061,7 @@ export function genericPendelIntervals(
     blok = [
       "Lage cadans",
       "3-4x 8min @ 60-70rpm",
-      wattsRange(ftp, Math.round(85 * f), Math.round(92 * f)),
+      wattsRange(ftp, 85, 92),
       bpmRange(lthr, 92, 100),
       "Lage cadans op een vals plat — kracht-uithouding",
     ];
@@ -2138,7 +2123,6 @@ export function genericCombo(
 ): any {
   const ftp = settings.ftp,
     lthr = settings.lthr;
-  const f = mesoFactor(mesoWeek);
 
   if (type === "combo_long_with_efforts") {
     // Beschikbaarheid leidend (zelfde patroon als genericLongZ2).
@@ -2175,7 +2159,7 @@ export function genericCombo(
         [
           "Efforts",
           "3x 10min",
-          wattsRange(ftp, Math.round(85 * f), Math.round(92 * f)),
+          wattsRange(ftp, 85, 92),
           bpmRange(lthr, 92, 99),
           "Tempo/SS blokken, 5 min rust",
         ],
@@ -2215,7 +2199,7 @@ export function genericCombo(
         [
           "Tempo",
           "3x 10min",
-          wattsRange(ftp, Math.round(76 * f), Math.round(85 * f)),
+          wattsRange(ftp, 76, 85),
           bpmRange(lthr, 88, 94),
           "3 min rust",
         ],
@@ -2251,7 +2235,7 @@ export function genericCombo(
         [
           "VO2",
           "4x 3min",
-          wattsRange(ftp, Math.round(108 * f), Math.round(115 * f)),
+          wattsRange(ftp, 108, 115),
           bpmRange(lthr, 100, 108),
           "3 min rust",
         ],
@@ -2280,7 +2264,7 @@ export function genericCombo(
         [
           "Sweet Spot",
           "2x 15min",
-          wattsRange(ftp, Math.round(88 * f), Math.round(93 * f)),
+          wattsRange(ftp, 88, 93),
           bpmRange(lthr, 92, 98),
           "5 min rust",
         ],
@@ -2323,14 +2307,14 @@ export function genericCombo(
         [
           "Sweet Spot",
           "2x 10min",
-          wattsRange(ftp, Math.round(88 * f), Math.round(92 * f)),
+          wattsRange(ftp, 88, 92),
           bpmRange(lthr, 92, 98),
           "3 min rust",
         ],
         [
           "VO2",
           "4x 2min",
-          wattsRange(ftp, Math.round(110 * f), Math.round(115 * f)),
+          wattsRange(ftp, 110, 115),
           bpmRange(lthr, 100, 108),
           "2 min rust",
         ],

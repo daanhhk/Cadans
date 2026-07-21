@@ -46,11 +46,11 @@ export function expandArchetype_(rec: any, ctx: any): any {
   ctx = ctx || {};
   const ftp = ctx.ftp,
     lthr = ctx.lthr || null;
-  const mf = ctx.mesoFactor != null ? ctx.mesoFactor : 1.0;
-  const fo = ctx.faseOffset || 0;
   const doelMin = ctx.doelMin != null ? ctx.doelMin : rec.duurRange[0];
+  // T28: karakter-invariantie (M74-M78). adj is de identiteit — geen meso-/fase-%FTP-
+  // schaling meer; elk archetype-blok houdt zijn nominale %FTP. doelMin (duur) blijft leidend.
   function adj(p: number): number {
-    return Math.round(p * mf) + fo;
+    return p;
   }
   function r1(x: number): number {
     return Math.round(x * 10) / 10;
