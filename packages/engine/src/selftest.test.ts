@@ -75,6 +75,7 @@ import {
   keyIntensity,
   maxRecentRideH_,
   mergeById_,
+  mesoCycleWeek_,
   niveauProgressie_,
   niveauTier_,
   PROFILES,
@@ -1157,6 +1158,27 @@ describe("engine selftest", () => {
         ),
       );
     });
+  });
+
+  // ── 3d stap 1 — mesoCycleWeek_ (cyclische 1..4-mesoweek, 3:1-mesocyclus) ──
+  // Verankert de off-by-one-fix: 0-gebaseerde weekindex → cyclische mesoweek, en de
+  // deload (mesoweek 4) HERSTELT elke blokcyclus i.p.v. eenmalig te vuren.
+  it("testMesoCycleWeek", () => {
+    // mapping 0→1, 1→2, 2→3, 3→4, 4→1, 7→4, 8→1
+    assert_("mesoCycle 0", 1, mesoCycleWeek_(0));
+    assert_("mesoCycle 1", 2, mesoCycleWeek_(1));
+    assert_("mesoCycle 2", 3, mesoCycleWeek_(2));
+    assert_("mesoCycle 3", 4, mesoCycleWeek_(3));
+    assert_("mesoCycle 4", 1, mesoCycleWeek_(4));
+    assert_("mesoCycle 7", 4, mesoCycleWeek_(7));
+    assert_("mesoCycle 8", 1, mesoCycleWeek_(8));
+    // recovery-uitlijning: blokweek 4 én 8 = deload (4); w0===4 herstelt naar 1 (geen
+    // permanente recovery — de kern van de bug-fix).
+    assert_("mesoCycle deload wk4", 4, mesoCycleWeek_(3));
+    assert_("mesoCycle deload wk8", 4, mesoCycleWeek_(7));
+    assert_("mesoCycle herstelt na deload", 1, mesoCycleWeek_(4));
+    // defensief tegen negatieve index (nooit uit de app, wél contract-eis)
+    assert_("mesoCycle negatief -1", 4, mesoCycleWeek_(-1));
   });
 
   // ── Fase 1 deel 2b.1 — profiel-laag + goalWorkout_-selector (deterministisch) ──
@@ -4039,8 +4061,9 @@ describe("engine selftest", () => {
   // en de belasting-invariantie 972→988; fase 3b-copy: +9 voor de richting-bewuste notes
   // 988→997; T28 karakter-invariantie M74-M78: +2 in testArchetype (meso-richting →
   // meso-/fase-invariant + nominaal werk-pct) en +14 in testKarakterInvariantie (4 meso +
-  // 3 fase × 2 paden) 997→1013).
-  it("exactly 1013 assertions", () => {
-    expect(assertCount).toBe(1013);
+  // 3 fase × 2 paden) 997→1013; 3d stap 1: +11 voor testMesoCycleWeek (mapping + recovery-
+  // uitlijning + defensief negatief) 1013→1024).
+  it("exactly 1024 assertions", () => {
+    expect(assertCount).toBe(1024);
   });
 });

@@ -8,6 +8,7 @@ import {
   effectiveMacroFase_,
   eventFase_,
   formatDate,
+  mesoCycleWeek_,
   planModeLabel_,
   recentHardDate_,
   rollingZoneCoverage_,
@@ -292,8 +293,10 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
     typeof macro?.wekenTot === "number" ? macro.wekenTot : null;
   const planModus: string | null = planModusLabel(settings, macro != null);
 
-  // 3. mesoWeek uit settings.doelStart (vaste keuze; geen DocProp).
-  const mesoWeek = weekIndexFromStart_(settingsE);
+  // 3. mesoWeek uit settings.doelStart (vaste keuze; geen DocProp). weekIndexFromStart_
+  // is 0-gebaseerd + monotoon; mesoCycleWeek_ mapt naar de cyclische 1..4-mesoweek die
+  // MESO_MOD/isMesoRecovery verwachten (3d stap 1 — fixt off-by-one + nooit-meer-herstel).
+  const mesoWeek = mesoCycleWeek_(weekIndexFromStart_(settingsE));
 
   // 4. intentByDate uit de weekplans-blob (aggIntent-minuten per datum).
   const planAdaptation = input.planAdaptation ?? PLAN_ADAPTATION_ENABLED;

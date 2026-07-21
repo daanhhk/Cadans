@@ -5,7 +5,7 @@ import type {
   SettingsInput,
   WellnessInput,
 } from "@cadans/shared";
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { ActValuesRow } from "./activities";
 import {
   buildWeekProposal,
@@ -1162,5 +1162,45 @@ describe("planModusLabel (plan-mode-pill, planModeLabel_-mirror)", () => {
     expect(planModusLabel(settings({ doel: "FTP", fase: null }), false)).toBe(
       "Opbouw",
     );
+  });
+});
+
+// 3d STAP 1 — COMPOSITIE-bewijs: ProposalWeek.mesoWeek is de CYCLISCHE 1..4-mesoweek
+// (mesoCycleWeek_ ∘ weekIndexFromStart_), niet meer de rauwe monotone index. De klok
+// wordt gepind zodat de engine-ambient new Date() (weekIndexFromStart_/weekStartDate)
+// EN input.todayISO SAMENVALLEN in dezelfde week (ma 2026-03-09) — anders meet de test
+// een pad dat de app niet draait. doelStart is een MAANDAG zodat w0 exact klopt.
+describe("mesoWeek cyclische compositie (3d stap 1)", () => {
+  const MAANDAG = new Date(2026, 2, 9, 8, 0, 0); // 2026-03-09, ma — huidige week
+  beforeAll(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(MAANDAG);
+  });
+  afterAll(() => {
+    vi.useRealTimers();
+  });
+
+  it("w0=3 → mesoWeek 4 (deload); w0=4 → mesoWeek 1 (geen permanente recovery)", () => {
+    // w0=3: doelStart = ma 2026-02-16 = huidige-week-ma − 21 d → weekIndex 3 → mesoweek 4.
+    const wDeload = buildWeekProposal({
+      settings: settings({ doelStart: "2026-02-16" }),
+      plannerDays: WEEK,
+      events: EV_FAR,
+      wellness: WELL_OK,
+      ...base,
+    });
+    // w0=4: doelStart = ma 2026-02-09 = huidige-week-ma − 28 d → weekIndex 4 → mesoweek 1.
+    // Oude (buggy) code gaf hier de rauwe 4 (permanente recovery); nu herstelt hij naar 1.
+    const wHerstel = buildWeekProposal({
+      settings: settings({ doelStart: "2026-02-09" }),
+      plannerDays: WEEK,
+      events: EV_FAR,
+      wellness: WELL_OK,
+      ...base,
+    });
+    expect(wDeload.mesoWeek).toBe(4); // oude code: 3
+    expect(wHerstel.mesoWeek).toBe(1); // oude code: 4
+    // de twee weken verschillen aantoonbaar in mesoweek → cyclus werkt.
+    expect(wDeload.mesoWeek).not.toBe(wHerstel.mesoWeek);
   });
 });

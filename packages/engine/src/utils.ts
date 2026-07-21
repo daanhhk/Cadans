@@ -49,6 +49,18 @@ export function mesoFactor(week: number): number {
   return MESO_MOD[week] || 1.0;
 }
 
+// Mapt een 0-gebaseerde weekindex (weken sinds doelStart, monotoon) naar de
+// cyclische 1..4-mesoweek die MESO_MOD en isMesoRecovery verwachten (GAS getMesoWeek-
+// pariteit: clamp/cyclus 1..4, advanceMeso wrapt >4 → 1). 3:1-mesocyclus = 3 opbouw-
+// weken (1,2,3) + 1 deload (4); elke 4e blokweek is deload en herstelt daarna (→1),
+// i.p.v. de bug waarbij isMesoRecovery eenmalig op w0===4 vuurde en daarna nooit meer.
+// Pure int→int (bewust GEEN (settings)-signatuur): deterministisch testbaar; de
+// datum-afleiding blijft in weekIndexFromStart_, dat als monotone variant-rotatie-index
+// (selectVariant_) ONgemoeid blijft. Defensief tegen negatieve index.
+export function mesoCycleWeek_(weekIndex: number): number {
+  return (((weekIndex % 4) + 4) % 4) + 1;
+}
+
 export function weekStartDate(today?: Date): Date {
   today = today || new Date();
   const d = new Date(today.getFullYear(), today.getMonth(), today.getDate());
