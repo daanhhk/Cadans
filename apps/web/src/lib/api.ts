@@ -211,6 +211,32 @@ export async function putFatigueShift(
   }
 }
 
+/** Eén te-pushen dag: datum + type + de ACTIEVE sessies (SchemaSession-shape; los getypeerd
+ * om een schema↔api-importcyclus te vermijden). */
+export interface PushDayInput {
+  dateISO: string;
+  type?: string;
+  sessions: unknown[];
+}
+export interface PushResult {
+  pushedCount: number;
+  skipped: { dateISO: string; sessionIndex: number; message: string }[];
+  errors: string[];
+}
+
+/** FASE-C C3 — POST /api/push: stuur de geplande sessies naar intervals.icu (C2-route). Bij een
+ * niet-2xx-respons gooit de server-message (401/429/400/502-tekst) zodat de UI 'm kan tonen. */
+export async function pushWorkouts(days: PushDayInput[]): Promise<PushResult> {
+  const resp = await fetch("/api/push", {
+    method: "POST",
+    headers: { "content-type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ days }),
+  });
+  const parsed = await parseBody(resp);
+  if (!resp.ok) throw new Error(errMessage(parsed, resp.status));
+  return parsed as PushResult;
+}
+
 /** GET /api/power-curve?window= — genormaliseerd rijdersprofiel (of `{empty:true}`). */
 export function getPowerCurve(
   window: "90d" | "1y",

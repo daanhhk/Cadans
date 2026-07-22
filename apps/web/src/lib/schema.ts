@@ -967,6 +967,40 @@ export function weekPlannedMinuten(week: ProposalWeek): number {
   );
 }
 
+/** FASE-C C3 — de PUSH-waardige dagen uit de schema-view: VOORUIT + niet-gedaan (incl. vandaag als
+ * die nog niet gereden is), mét sessies. Byte-parity met GAS' pushAllPending_ (toekomst incl.
+ * vandaag). state 'today'/'planned' = een geplande, niet-voltooide dag; 'done'/'gemist'/'rest'
+ * vallen af. De extra `datum >= todayISO`-gate sluit een verleden-dag met sessies (kan niet, maar
+ * defensief) uit. Pure functie → testbaar zonder de fetch/UI. */
+export function collectPushDays(
+  days: SchemaDay[],
+  todayISO: string,
+): { dateISO: string; type: string; sessions: SchemaSession[] }[] {
+  return days
+    .filter(
+      (d) =>
+        (d.state === "today" || d.state === "planned") &&
+        d.sessions.length > 0 &&
+        d.datum >= todayISO,
+    )
+    .map((d) => ({ dateISO: d.datum, type: "Ride", sessions: d.sessions }));
+}
+
+/** FASE-C C3 — pure poort vóór de push: geen FTP → geen push (de stille-0-watt-hoek); geen
+ * push-waardige dagen → niets te doen. Zo is de guard testbaar zonder de React-component. */
+export interface PushGuard {
+  ok: boolean;
+  reason?: "no-ftp" | "no-days";
+}
+export function pushGuard(
+  ftp: number | null | undefined,
+  pushDayCount: number,
+): PushGuard {
+  if (ftp == null) return { ok: false, reason: "no-ftp" };
+  if (pushDayCount === 0) return { ok: false, reason: "no-days" };
+  return { ok: true };
+}
+
 /** Ruw engine-type → NL-weergavenaam via de intent-labels (één bron, geen eigen tabel). */
 export function typeNaam(type: string | null): string {
   if (!type) return "geen training";

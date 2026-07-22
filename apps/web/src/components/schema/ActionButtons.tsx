@@ -86,9 +86,3 @@ export function ActionButtons({
     </div>
   );
 }
-
-// Tab-niveau "Push naar Garmin" — GAS zet deze knop EEN keer onderaan de hele Schema-tab
-// (Index.html:37, act-row), NIET per-dag. Blijft "binnenkort" tot de Garmin-integratie er is.
-export function GarminPushButton() {
-  return <SoonButton label="Push naar Garmin" />;
-}

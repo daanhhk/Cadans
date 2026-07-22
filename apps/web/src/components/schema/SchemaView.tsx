@@ -18,7 +18,7 @@ import {
   verlichtResultaat,
 } from "../../lib/schema";
 import { Card, Overline } from "../ui";
-import { ActionButtons, GarminPushButton } from "./ActionButtons";
+import { ActionButtons } from "./ActionButtons";
 import { AlignChip } from "./AlignChip";
 import { CoachCallout } from "./CoachCallout";
 import { CoachReadinessBanner } from "./CoachReadinessBanner";
@@ -27,6 +27,7 @@ import { DispositionAffordance } from "./DispositionAffordance";
 import { DoneCompareCard } from "./DoneCompareCard";
 import { DoneDetail } from "./DoneDetail";
 import { FatigueCard, isFatigueAfgewezen } from "./FatigueCard";
+import { GarminPushButton } from "./GarminPushButton";
 import { GemistCard } from "./GemistCard";
 import { InhaalCard } from "./InhaalCard";
 import { OverriddenDetail } from "./OverriddenDetail";
@@ -400,7 +401,11 @@ export function SchemaView({
       )}
       {/* Tab-niveau "Push naar Garmin" (GAS Index.html:37, act-row): EEN keer onderaan de
           Schema-tab, NIET per-dag. Blijft "binnenkort" tot de Garmin-integratie er is. */}
-      <GarminPushButton />
+      <GarminPushButton
+        days={view.days}
+        todayISO={todayISO}
+        ftp={settings.ftp ?? null}
+      />
       {/* 3b: workout-picker-sheet (opent via "Andere training kiezen"); voed met de week-context zodat
           de preview == de dagkaart (WYSIWYG). */}
       {day && (
