@@ -30,6 +30,11 @@ export type {
   PowerCurveProfile,
   PowerCurveResponse,
 } from "./powercurve";
+export type {
+  RideDetailModel,
+  RideInterval,
+  RideStreams,
+} from "./ride";
 export type { RpeEntry } from "./rpe";
 export type { SettingsInput } from "./settings";
 export type {

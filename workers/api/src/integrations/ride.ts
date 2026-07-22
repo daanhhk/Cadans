@@ -14,6 +14,11 @@
  *  - /activity/{id}/streams   = ARRAY van {type,data}-entries, parallelle 1Hz-arrays met een
  *                            expliciete time-stream; gaten als null.
  */
+import type {
+  RideDetailModel,
+  RideInterval,
+  RideStreams,
+} from "@cadans/shared";
 import type { Activity } from "../db/schema";
 import {
   BASE_URL,
@@ -21,6 +26,10 @@ import {
   type IntervalsEnv,
   intervalsBasicAuth,
 } from "./intervals";
+
+// De model-types wonen nu in @cadans/shared (client + worker delen ze). Re-export zodat
+// bestaande type-imports uit ../integrations/ride blijven werken; runtime-code ongewijzigd.
+export type { RideDetailModel, RideInterval, RideStreams };
 
 const num_ = (v: unknown): number | null =>
   typeof v === "number" && Number.isFinite(v) ? v : null;
@@ -110,44 +119,6 @@ function downsampleSeries_(
     h.push(meanOrNull_(hr, i, end));
   }
   return { t, watts: w, hr: h, n: t.length };
-}
-
-export interface RideInterval {
-  label: string; // label ?? type ?? "Blok"
-  zone: number | null;
-  durationSec: number; // moving_time ?? elapsed_time
-  avgHr: number | null;
-  pctFtp: number | null; // intervals.intensity
-  watts: number | null; // intervals.average_watts
-}
-export interface RideStreams {
-  t: number[]; // seconden (gedeelde tijd-as)
-  watts: (number | null)[]; // primair
-  hr: (number | null)[]; // secundair
-  n: number; // aantal punten (na downsample)
-}
-export interface RideDetailModel {
-  id: string;
-  datum: string;
-  naam: string | null;
-  type: string | null;
-  afstandKm: number | null;
-  duurMin: number | null;
-  zoneTimesJson: string | null; // zonebalk-bron RAUW (client parset met zoneTimesFromCell_)
-  np: number | null;
-  ifPct: number | null;
-  tss: number | null;
-  gemW: number | null;
-  wPerKg: number | null;
-  gemHr: number | null;
-  maxHr: number | null;
-  hoogtewinstM: number | null;
-  cadans: number | null;
-  arbeidKj: number | null;
-  ftp: number | null;
-  gewicht: number | null;
-  intervallen: RideInterval[];
-  streams: RideStreams | null; // null = rit zonder streams (geen fout)
 }
 
 /** Assembleert het model: D1-"gratis" velden (voorrang) + gefetchte fallback/extra's + streams. */

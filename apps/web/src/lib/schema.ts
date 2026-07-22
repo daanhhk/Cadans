@@ -272,6 +272,9 @@ export interface DoneEntry {
    * de gepland-vs-gedaan-vergelijking én de coachFeedback_-aanroep (GAS-parity). */
   zoneMin5: Zone5 | null;
   ifReal: number | null;
+  /** intervals.icu activity-id (idx16 = activity_id_ext); leeg = pre-migratie rit → geen
+   * ritdetail-affordance. Voedt de "Bekijk ritdetails"-knop → GET /api/ride/:idExt. */
+  idExt: string;
 }
 
 // ── Done-rit-afleidingen (fase 2a): PURE, getest ──────────────────────────
@@ -348,11 +351,12 @@ export function buildDoneEntry(row: ActValuesRow): DoneEntry {
     zoneMin5: actualZone5_(iczt),
     ifReal:
       row[7] !== "" && row[7] != null && Number.isFinite(rawIf) ? rawIf : null,
+    idExt: String(row[16] ?? ""),
   };
 }
 
-/** Aggregeer twee done-objecten van dezelfde dag: som tss/min/zones, houd naam/type van de langste. */
-function mergeDone(a: DoneEntry, b: DoneEntry): DoneEntry {
+/** Aggregeer twee done-objecten van dezelfde dag: som tss/min/zones, houd naam/type/idExt van de langste. */
+export function mergeDone(a: DoneEntry, b: DoneEntry): DoneEntry {
   const primary = b.minuten > a.minuten ? b : a;
   const zoneMinutes =
     a.zoneMinutes || b.zoneMinutes
@@ -381,6 +385,7 @@ function mergeDone(a: DoneEntry, b: DoneEntry): DoneEntry {
     zoneMinutes,
     zoneMin5,
     ifReal: primary.ifReal,
+    idExt: primary.idExt,
   };
 }
 

@@ -74,6 +74,7 @@ const done = (o: Partial<DoneEntry>): DoneEntry => ({
   zoneMinutes: null,
   zoneMin5: null,
   ifReal: null,
+  idExt: "",
   ...o,
 });
 

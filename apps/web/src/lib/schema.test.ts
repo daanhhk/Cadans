@@ -17,6 +17,7 @@ import {
   formatIf,
   MACRO_FASE_NL,
   macroFaseLabel,
+  mergeDone,
   silhouetSegments,
   stripFaseSuffix,
   ZONE_META,
@@ -186,6 +187,7 @@ describe("buildDoneEntry (fase 2a done-object)", () => {
     tss?: number;
     zt?: string;
     iff?: number;
+    idExt?: string;
   }): ActValuesRow => {
     const r: ActValuesRow = new Array(17).fill("");
     r[0] = new Date(2026, 6, 6);
@@ -195,6 +197,7 @@ describe("buildDoneEntry (fase 2a done-object)", () => {
     if (o.iff != null) r[7] = o.iff;
     r[8] = o.tss ?? 0;
     r[15] = o.zt ?? "";
+    r[16] = o.idExt ?? "";
     return r;
   };
 
@@ -236,6 +239,35 @@ describe("buildDoneEntry (fase 2a done-object)", () => {
     expect(d.minuten).toBe(60);
     expect(d.naam).toBe("Rit");
   });
+  it("neemt idx16 over als idExt (activity_id_ext); leeg → ''", () => {
+    expect(buildDoneEntry(doneRow({ idExt: "i123456" })).idExt).toBe("i123456");
+    expect(buildDoneEntry(doneRow({ naam: "Rit" })).idExt).toBe("");
+  });
+});
+
+describe("mergeDone", () => {
+  const mk = (o: Partial<DoneEntry>): DoneEntry => ({
+    tss: 0,
+    minuten: 0,
+    type: "Ride",
+    naam: "",
+    zoneMinutes: null,
+    zoneMin5: null,
+    ifReal: null,
+    idExt: "",
+    ...o,
+  });
+  it("houdt naam/type/idExt van de LANGSTE rit; sommeert tss/minuten", () => {
+    const kort = mk({ minuten: 40, tss: 30, naam: "Ochtend", idExt: "iKORT" });
+    const lang = mk({ minuten: 90, tss: 70, naam: "Avond", idExt: "iLANG" });
+    const m = mergeDone(kort, lang);
+    expect(m.minuten).toBe(130);
+    expect(m.tss).toBe(100);
+    expect(m.naam).toBe("Avond");
+    expect(m.idExt).toBe("iLANG");
+    // volgorde-onafhankelijk: langste blijft primary
+    expect(mergeDone(lang, kort).idExt).toBe("iLANG");
+  });
 });
 
 describe("doneLabel + formatDuurU", () => {
@@ -249,6 +281,7 @@ describe("doneLabel + formatDuurU", () => {
         zoneMinutes: null,
         zoneMin5: { rust: 0, z2: 20, tempo: 40, drempel: 5, anaeroob: 0 },
         ifReal: null,
+        idExt: "",
       }),
     ).toBe("Tempo"); // het 3-bucket-model lumpte dit als "Drempel"
   });
@@ -260,6 +293,7 @@ describe("doneLabel + formatDuurU", () => {
       zoneMinutes: null,
       zoneMin5: null,
       ifReal: null,
+      idExt: "",
     };
     expect(doneLabel({ ...base, type: "Ride" })).toBe("Ride");
     expect(doneLabel({ ...base, type: "" })).toBe("Rit");
@@ -295,6 +329,7 @@ const doneSS: DoneEntry = {
   zoneMinutes: { low: 18, high: 43, anaerobic: 0 },
   zoneMin5: { rust: 0, z2: 18, tempo: 0, drempel: 43, anaeroob: 0 },
   ifReal: 0.89,
+  idExt: "",
 };
 
 describe("formatIf", () => {
@@ -388,6 +423,7 @@ describe("buildDoneCompare (coachFeedback_-brug)", () => {
       zoneMinutes: { low: 70, high: 5, anaerobic: 0 },
       zoneMin5: { rust: 0, z2: 70, tempo: 0, drempel: 5, anaeroob: 0 },
       ifReal: 0.68,
+      idExt: "",
     };
     const plannedVo2: ProposalWorkout = {
       naam: "VO2max 5×4",
@@ -449,6 +485,7 @@ describe("deriveSchemaView dispatch (flip + doneCompare)", () => {
     zoneMinutes: null,
     zoneMin5: null,
     ifReal: null,
+    idExt: "",
     ...o,
   });
 
