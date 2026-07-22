@@ -285,6 +285,7 @@ export function SchemaView({
                 coachNaam={view.coachNaam}
                 date={day.datum}
                 rpe={rpeByDate[day.datum] ?? null}
+                idExt={day.done?.idExt ?? ""}
               />
             ) : (
               // §5d voltooid-verleden (gereduceerde kaart-inhoud, bewust geparkeerd).

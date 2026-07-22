@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import type { DoneCompare } from "../../lib/schema";
-import { SoonButton } from "./ActionButtons";
 import { CoachCallout } from "./CoachCallout";
+import { RideDetailLink } from "./RideDetailLink";
 import { RpeRating } from "./RpeRating";
 import { ZoneCompare } from "./ZoneCompare";
 import { ZonePill } from "./ZonePill";
@@ -206,11 +206,13 @@ export function DoneCompareCard({
   coachNaam,
   date,
   rpe,
+  idExt,
 }: {
   card: DoneCompare;
   coachNaam: string | null;
   date: string;
   rpe: number | null;
+  idExt: string;
 }) {
   return (
     <div style={{ marginTop: "var(--s-3)" }}>
@@ -236,8 +238,8 @@ export function DoneCompareCard({
         <AlignBar pct={card.scorePct} />
       )}
       <Reading card={card} />
-      {/* §5c-volgorde (STAP 1): "Bekijk ritdetails ›" NA de zone-vergelijking, VÓÓR de coach-impact-
-          box. Zelfde "binnenkort"-staat als het gedeelde knoppen-blok (leidt straks naar 2d). */}
+      {/* §5c-volgorde: "Bekijk ritdetails ›" NA de zone-vergelijking, VÓÓR de coach-impact-box.
+          RITDETAILS fase 2 — gedeelde RideDetailLink (leeg idExt → rendert niets). */}
       <div
         style={{
           marginTop: "var(--s-4)",
@@ -245,7 +247,7 @@ export function DoneCompareCard({
           flexDirection: "column",
         }}
       >
-        <SoonButton label="Bekijk ritdetails ›" />
+        <RideDetailLink idExt={idExt} />
       </div>
       {/* RPE-rating (1-10) op de voltooide rit — GAS rpeRatingHtml_. key={date} herinitialiseert
           de highlight bij dag-wissel. */}

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   type DoneEntry,
   doneBadge,
@@ -6,7 +5,7 @@ import {
   doneZoneBlokken,
   formatDuurU,
 } from "../../lib/schema";
-import { RideDetailSheet } from "./RideDetailSheet";
+import { RideDetailLink } from "./RideDetailLink";
 import { ZoneBars } from "./ZoneBars";
 import { ZonePill } from "./ZonePill";
 
@@ -16,7 +15,6 @@ import { ZonePill } from "./ZonePill";
 export function DoneDetail({ done }: { done: DoneEntry }) {
   const blokken = doneZoneBlokken(done.zoneMin5);
   const badge = doneBadge(done);
-  const [detailOpen, setDetailOpen] = useState(false);
   return (
     <div
       style={{
@@ -56,30 +54,8 @@ export function DoneDetail({ done }: { done: DoneEntry }) {
         </div>
       </div>
       {blokken.length > 0 && <ZoneBars blokken={blokken} />}
-      {/* RITDETAILS fase 2 — affordance (GAS "Bekijk ritdetails ›", Script.html:664). Alleen als
-          de rit een intervals-id draagt (pre-migratie ritten hebben leeg idExt → geen knop). */}
-      {done.idExt !== "" && (
-        <button
-          type="button"
-          onClick={() => setDetailOpen(true)}
-          style={{
-            alignSelf: "flex-start",
-            border: "none",
-            background: "none",
-            padding: 0,
-            cursor: "pointer",
-            fontFamily: "var(--font-sans)",
-            fontSize: "var(--fs-label)",
-            fontWeight: 600,
-            color: "var(--accent)",
-          }}
-        >
-          Bekijk ritdetails ›
-        </button>
-      )}
-      {detailOpen && (
-        <RideDetailSheet id={done.idExt} onClose={() => setDetailOpen(false)} />
-      )}
+      {/* RITDETAILS fase 2 — gedeelde affordance (GAS "Bekijk ritdetails ›", Script.html:664). */}
+      <RideDetailLink idExt={done.idExt} />
     </div>
   );
 }
