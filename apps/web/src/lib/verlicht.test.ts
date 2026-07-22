@@ -309,6 +309,7 @@ describe("deriveSchemaView — verlicht op de view", () => {
     wekenTotEvent: null,
     planModus: null,
     profielPreset: null,
+    nearTaper: false,
     days,
   });
   const rdy = (band: any, score: number | null) =>

@@ -236,6 +236,12 @@ export const syncState = sqliteTable("sync_state", {
    * getoonde week een andere maandag heeft (M68 — omkeerbaar, en niet stilzwijgend
    * doorlopend). */
   debtOptInWeek: text("debt_opt_in_week"),
+  /** 3d stap 4 — per-week goedkeuring van de FATIGUE-shift (mesoWeek-substitutie): de MAANDAG
+   * (yyyy-MM-dd) van de goedgekeurde week + de RICHTING. Beide null = geen shift. Spiegelt
+   * `debtOptInWeek` (per kalenderweek, vervalt vanzelf, omkeerbaar). */
+  fatigueShiftWeek: text("fatigue_shift_week"),
+  /** 'up' (deload→normale week, doortrainen) | 'down' (opbouwweek→reduced-load-deload) | null. */
+  fatigueShiftDir: text("fatigue_shift_dir"),
 });
 
 // ── power_curve_cache — RAW {list,activities}-respons per window. pcNormalize_

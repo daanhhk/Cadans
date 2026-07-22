@@ -26,6 +26,7 @@ import {
   readDebtOptIn,
   readDispositions,
   readEvents,
+  readFatigueShift,
   readOverrides,
   readPlannerDays,
   readRecentWeekplans,
@@ -38,6 +39,7 @@ import {
   writeDebtOptIn,
   writeDisposition,
   writeEvents,
+  writeFatigueShift,
   writeOverride,
   writePlannerDays,
   writeRpe,
@@ -515,6 +517,39 @@ api.put("/debt-optin", async (c) => {
     });
   }
   await writeDebtOptIn(db, CURRENT_USER_ID, monday);
+  return c.json({ ok: true });
+});
+
+// 3d stap 4 — FATIGUE-SHIFT-opt-in (spiegelt /debt-optin). GET geeft de goedgekeurde maandag +
+// richting (of null,null); PUT zet/wist beide samen (monday null of ISO; dir null of 'up'|'down').
+api.get("/fatigue-shift", async (c) => {
+  const db = makeDb(c.env.DB);
+  const { monday, dir } = await readFatigueShift(db, CURRENT_USER_ID);
+  return c.json({ monday, dir });
+});
+
+api.put("/fatigue-shift", async (c) => {
+  const db = makeDb(c.env.DB);
+  const body = await readJsonObject(c);
+  const monday = body.monday;
+  const dir = body.dir;
+  if (monday !== null && (typeof monday !== "string" || !isIsoDate(monday))) {
+    throw new HTTPException(400, {
+      message: "invalid monday, expected yyyy-MM-dd or null",
+    });
+  }
+  if (dir !== null && dir !== "up" && dir !== "down") {
+    throw new HTTPException(400, {
+      message: "invalid dir, expected 'up' | 'down' | null",
+    });
+  }
+  // Beide samen: een maandag zonder richting (of omgekeerd) is nooit een geldige shift.
+  await writeFatigueShift(
+    db,
+    CURRENT_USER_ID,
+    monday,
+    dir as "up" | "down" | null,
+  );
   return c.json({ ok: true });
 });
 

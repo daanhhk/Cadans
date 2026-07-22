@@ -117,6 +117,7 @@ const FULL_WEEK: ProposalWeek = {
   planModus: "Doel-gericht",
   profielPreset: "gemiddeld", // → §2 Volume-stat toont "5u"
   coachNaam: "Coach Stelvio", // → §6 coach-box-kop "COACH STELVIO · IMPACT"
+  nearTaper: false,
   days: [
     // Ma — VOLTOOID-VERLEDEN: gedaan, GEEN plan-bron → kale DoneDetail
     day("2026-07-06", 0),
@@ -204,6 +205,7 @@ const EMPTY_WEEK: ProposalWeek = {
   wekenTotEvent: null,
   planModus: "Opbouw", // geen event + geen maintain → planModeLabel_-tak "Opbouw"
   profielPreset: null, // → Volume-stat lege staat (stat weggelaten, zoals event/ModeChip)
+  nearTaper: false,
   days: [
     day("2026-07-06", 0),
     day("2026-07-07", 1),
@@ -238,6 +240,7 @@ const TAPER_WEEK: ProposalWeek = {
   planModus: "Doel-gericht",
   profielPreset: "gevorderd", // → §2 Volume-stat toont "7u"
   coachNaam: "Coach Stelvio",
+  nearTaper: false,
   days: FULL_WEEK.days,
 };
 

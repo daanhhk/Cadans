@@ -91,6 +91,10 @@ export interface ProposalWeek {
    * Recovery/Test). Voedt het ACTIEVE segment van de periodisering-balk (Taper licht hierop op);
    * `macroFase` blijft de onderliggende macro voor de kop/label. */
   fase: string;
+  /** 3d stap 4 — client-side gespiegelde engine-conditie (planner.ts:510-523): een deload die
+   * IN/vlak vóór de taper valt wordt onderdrukt. Voedt de fatigue-trigger (geen voorstel bij
+   * nearTaper). Puur informatief; de engine berekent 'm zelf ongewijzigd. */
+  nearTaper: boolean;
   days: ProposalDay[];
 }
 
@@ -119,6 +123,11 @@ export interface BuildProposalInput {
    * Bestaat zodat dat engine-pad testbaar blijft zolang de vlag uit staat. NIET vanuit
    * de app meegeven. */
   planAdaptation?: boolean;
+  /** 3d stap 4 — OPTIONELE mesoWeek-substitutie (client-only, fatigue-aware). Vervangt de
+   * kalender-mesoWeek zodat een wat-als-run een frisse deloadweek als normale week (→1) of een
+   * opbouwweek als reduced-load-deload (→4) doorrekent. Weggelaten → de gewone kalender-mesoWeek.
+   * De ENGINE blijft byte-identiek: hij leest de doorgegeven mesoWeek zonder wijziging. */
+  mesoWeekOverride?: number;
 }
 
 // Intern mutabel dag-element — de vorm die assignWorkouts leest (d.type = dagtype,
@@ -296,7 +305,26 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
   // 3. mesoWeek uit settings.doelStart (vaste keuze; geen DocProp). weekIndexFromStart_
   // is 0-gebaseerd + monotoon; mesoCycleWeek_ mapt naar de cyclische 1..4-mesoweek die
   // MESO_MOD/isMesoRecovery verwachten (3d stap 1 — fixt off-by-one + nooit-meer-herstel).
-  const mesoWeek = mesoCycleWeek_(weekIndexFromStart_(settingsE));
+  // 3d stap 4: een fatigue-wat-als mag de kalender-mesoWeek substitueren (client-only; de engine
+  // krijgt de gesubstitueerde waarde ongewijzigd door → dosis mesoFactor + deload-flag isMesoRecovery).
+  const mesoWeek =
+    input.mesoWeekOverride != null
+      ? input.mesoWeekOverride
+      : mesoCycleWeek_(weekIndexFromStart_(settingsE));
+
+  // 3d stap 4 — nearTaper client-side, EXACT de engine-logica (planner.ts:510-523): een deload
+  // (isMesoRecovery = mesoWeek===4) die 0..7+venster dagen vóór de taper valt wordt onderdrukt.
+  // Lokale datum-rekenkunde (parseLocalDate + stripTime_ = midnight-local, GEEN UTC-round-trip),
+  // identiek aan de engine; voedt uitsluitend de fatigue-trigger.
+  let nearTaper = false;
+  if (taperCtx?.datum) {
+    const daysToTaper = Math.floor(
+      (stripTime_(parseLocalDate(taperCtx.datum)).getTime() -
+        stripTime_(weekMondayDate).getTime()) /
+        86400000,
+    );
+    nearTaper = daysToTaper >= 0 && daysToTaper <= 7 + (taperCtx.venster || 0);
+  }
 
   // 4. intentByDate uit de weekplans-blob (aggIntent-minuten per datum).
   const planAdaptation = input.planAdaptation ?? PLAN_ADAPTATION_ENABLED;
@@ -624,6 +652,7 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
     // FASE 2 Brok 1: exact de engine-'fase' (overlay incl. "Taper"); geen event/macro → val terug op
     // de (effectieve) macroFase. Voedt de balk-actieve-fase; macroFase blijft voor kop/label.
     fase: (macro?.fase as string | undefined) ?? macroFase,
+    nearTaper,
     profielPreset: settings.profielPreset ?? null,
     coachNaam: settings.coachNaam ?? null,
     days,

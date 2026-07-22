@@ -576,6 +576,43 @@ export async function writeDebtOptIn(
     });
 }
 
+/** 3d stap 4 — lees de goedgekeurde fatigue-shift (maandag + richting), of {null,null}. */
+export async function readFatigueShift(
+  db: Db,
+  userId: number,
+): Promise<{ monday: string | null; dir: "up" | "down" | null }> {
+  const rows = await db
+    .select({
+      week: syncState.fatigueShiftWeek,
+      dir: syncState.fatigueShiftDir,
+    })
+    .from(syncState)
+    .where(eq(syncState.userId, userId))
+    .limit(1);
+  const dir = rows[0]?.dir;
+  return {
+    monday: rows[0]?.week ?? null,
+    dir: dir === "up" || dir === "down" ? dir : null,
+  };
+}
+
+/** Zet (monday+dir) of wist (null,null) de fatigue-shift. Upsert: raakt ALLEEN deze twee
+ * kolommen → de sync-velden + debt-opt-in blijven intact. */
+export async function writeFatigueShift(
+  db: Db,
+  userId: number,
+  monday: string | null,
+  dir: "up" | "down" | null,
+): Promise<void> {
+  await db
+    .insert(syncState)
+    .values({ userId, fatigueShiftWeek: monday, fatigueShiftDir: dir })
+    .onConflictDoUpdate({
+      target: syncState.userId,
+      set: { fatigueShiftWeek: monday, fatigueShiftDir: dir },
+    });
+}
+
 // ── wellness (WELL_HEADERS 12-kol) — DTO = WellnessInput (@cadans/shared) ─
 // WellnessInput = de WIRE-vorm (datum als ISO-string); de repo-vorm heeft datum
 // als Date. vorm = ctl−atl (bij sync).

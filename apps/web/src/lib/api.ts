@@ -184,6 +184,33 @@ export async function putDebtOptIn(monday: string | null): Promise<void> {
   }
 }
 
+/** 3d stap 4 — GET /api/fatigue-shift — de goedgekeurde maandag + richting (of {null,null}). */
+export async function getFatigueShift(): Promise<{
+  monday: string | null;
+  dir: "up" | "down" | null;
+}> {
+  const r = await apiGet<{ monday: string | null; dir: "up" | "down" | null }>(
+    "/api/fatigue-shift",
+  );
+  return { monday: r?.monday ?? null, dir: r?.dir ?? null };
+}
+
+/** 3d stap 4 — PUT /api/fatigue-shift — zet (monday+dir) of wist (null,null) de shift. */
+export async function putFatigueShift(
+  monday: string | null,
+  dir: "up" | "down" | null,
+): Promise<void> {
+  const resp = await fetch("/api/fatigue-shift", {
+    method: "PUT",
+    headers: { "content-type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ monday, dir }),
+  });
+  if (!resp.ok) {
+    const parsed = await parseBody(resp);
+    throw new Error(errMessage(parsed, resp.status));
+  }
+}
+
 /** GET /api/power-curve?window= — genormaliseerd rijdersprofiel (of `{empty:true}`). */
 export function getPowerCurve(
   window: "90d" | "1y",

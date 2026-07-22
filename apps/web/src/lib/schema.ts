@@ -29,6 +29,7 @@ import {
   getDebtOptIn,
   getDispositions,
   getEvents,
+  getFatigueShift,
   getOverrides,
   getPlanner,
   getRpe,
@@ -52,6 +53,7 @@ import {
   verlichtRustResultaatRegel,
 } from "./coachNarrative";
 import { parseLocalDate, todayIso, weekMondayIso } from "./dates";
+import { computeTsbTrend, fatigueMinDataOk, fatigueTrigger } from "./fatigue";
 import {
   buildWeekProposal,
   type ProposalWeek,
@@ -942,6 +944,19 @@ export interface InhaalVoorstel {
   regel: string;
 }
 
+/** 3d stap 4 — het FATIGUE-voorstel (laag-1 data; laag-2 rendert de kaart). `offer` = de trigger
+ * vuurde, nog niet goedgekeurd → `preview` is de wat-als-week voor de delta. `applied` = de
+ * gebruiker gaf akkoord voor deze week → de ACTIEVE proposalWeek draagt de shift al. */
+export interface FatigueVoorstel {
+  state: "offer" | "applied";
+  /** 'up' = doortrainen (deload→normale week) · 'down' = vervroegde deload (opbouwweek→deload). */
+  dir: "up" | "down";
+  /** De TSB-trend die de trigger dreef (offer); null in 'applied'. */
+  tsbTrend: number | null;
+  /** De wat-als-week (mesoWeek gesubstitueerd) — voedt de laag-2-kaart-delta. null in 'applied'. */
+  preview: ProposalWeek | null;
+}
+
 /** Ruw engine-type → NL-weergavenaam via de intent-labels (één bron, geen eigen tabel). */
 export function typeNaam(type: string | null): string {
   if (!type) return "geen training";
@@ -1214,6 +1229,8 @@ export async function loadSchemaWeek(): Promise<{
   settings: SettingsInput;
   /** FASE 2b — read-only inhaal-voorstel (null = geen voorstel of al goedgekeurd). */
   inhaal: InhaalVoorstel | null;
+  /** 3d stap 4 — fatigue-voorstel (offer/applied), of null. Laag-2 rendert de kaart. */
+  fatigue: FatigueVoorstel | null;
   /** FASE 3a — is het inhaal-plan voor DEZE week goedgekeurd? */
   optedIn: boolean;
   /** De maandag van de getoonde week (de sleutel van de goedkeuring). */
@@ -1233,6 +1250,7 @@ export async function loadSchemaWeek(): Promise<{
     overrides,
     checkin,
     debtOptInWeek,
+    fatigueShift,
   ] = await Promise.all([
     getSettings(),
     getPlanner(monday),
@@ -1245,6 +1263,7 @@ export async function loadSchemaWeek(): Promise<{
     getOverrides(),
     getCheckin(todayISO),
     getDebtOptIn(),
+    getFatigueShift(),
   ]);
 
   const activities = parseActivityRows(activitiesRes);
@@ -1258,8 +1277,21 @@ export async function loadSchemaWeek(): Promise<{
   // doorlopende aanpassing, en geen opruim-job).
   const optedIn = debtOptInWeek === monday;
 
+  // 3d stap 4 — FATIGUE-shift opt-in (spiegelt de inhaal-opt-in, M68): geldt alleen voor DEZE
+  // maandag + een geldige richting, vervalt vanzelf de week erna. Goedgekeurd → de ACTIEVE
+  // proposalWeek krijgt de mesoWeek-substitutie (up→1 doortrainen, down→4 vervroegde deload).
+  const fatigueOptIn =
+    fatigueShift.monday === monday &&
+    (fatigueShift.dir === "up" || fatigueShift.dir === "down");
+  const fatigueOverride: number | undefined = fatigueOptIn
+    ? fatigueShift.dir === "up"
+      ? 1
+      : 4
+    : undefined;
+
   // Het ACTIEVE plan. Niet-goedgekeurd → planAdaptation false, exact zoals vóór 3a
-  // (byte-identiek). Goedgekeurd → het herverdeelde plan IS het plan voor deze week.
+  // (byte-identiek; mesoWeekOverride undefined → de kalender-mesoWeek). Goedgekeurd (inhaal en/of
+  // fatigue) → het aangepaste plan IS het plan voor deze week.
   const proposalWeek = buildWeekProposal({
     settings: settings ?? EMPTY_SETTINGS,
     plannerDays,
@@ -1272,7 +1304,51 @@ export async function loadSchemaWeek(): Promise<{
     readinessBand: readiness.band,
     todayISO,
     planAdaptation: optedIn,
+    mesoWeekOverride: fatigueOverride,
   });
+
+  // 3d stap 4 — het FATIGUE-VOORSTEL. Bij opt-in: `applied` (de shift zit al in proposalWeek).
+  // Anders: bereken de TSB-trend uit de LOAD (wellness `vorm`, NIET de readiness-band) en toets de
+  // trigger tegen de KALENDER-context van proposalWeek (mesoWeek/macroFase/nearTaper zijn hier
+  // ongesubstitueerd). Vuurt de trigger → `offer` met een wat-als-preview. Geen her-trigger bij
+  // opt-in (de opt-in IS de weekbeslissing).
+  let fatigue: FatigueVoorstel | null = null;
+  if (fatigueOptIn) {
+    fatigue = {
+      state: "applied",
+      dir: fatigueShift.dir as "up" | "down",
+      tsbTrend: null,
+      preview: null,
+    };
+  } else {
+    const { trend } = computeTsbTrend(wellness, todayISO);
+    const dir = fatigueTrigger({
+      calendarMesoWeek: proposalWeek.mesoWeek,
+      macroFase: proposalWeek.macroFase,
+      nearTaper: proposalWeek.nearTaper,
+      tsbTrend: trend,
+      minDataOk: fatigueMinDataOk(wellness, todayISO),
+    });
+    if (dir) {
+      const preview = buildWeekProposal({
+        settings: settings ?? EMPTY_SETTINGS,
+        plannerDays,
+        events,
+        activities,
+        weekplans,
+        wellness,
+        rpe,
+        overrides,
+        readinessBand: readiness.band,
+        todayISO,
+        planAdaptation: optedIn,
+        mesoWeekOverride: dir === "up" ? 1 : 4,
+      });
+      fatigue = { state: "offer", dir, tsbTrend: trend, preview };
+    }
+  }
+  // DOWN (vervroegde deload) onderdrukt de inhaal-kaart: herstel wint van inhalen (M66/M72).
+  const fatigueDownActive = fatigue?.dir === "down";
 
   // PLAN-VAN-RECORD (laag 1a): persisteer de week als GAS-blob. Fire-and-forget (zoals de
   // auto-sync) — een mislukte PUT mag het scherm nooit blokkeren. DEDUP: alleen schrijven als
@@ -1291,7 +1367,10 @@ export async function loadSchemaWeek(): Promise<{
   // Is de week al goedgekeurd, dan is er niets meer voor te stellen — het voorstel IS het
   // actieve plan. De wat-als-run draait dus alleen voor niet-goedgekeurde weken.
   const inhaalBandOk =
-    !optedIn && readiness.band !== "caution" && readiness.band !== "rest";
+    !optedIn &&
+    !fatigueDownActive &&
+    readiness.band !== "caution" &&
+    readiness.band !== "rest";
   const voorgesteldeWeek = inhaalBandOk
     ? buildWeekProposal({
         settings: settings ?? EMPTY_SETTINGS,
@@ -1313,13 +1392,19 @@ export async function loadSchemaWeek(): Promise<{
     dispositionByDate[d.datum] = d.reason;
   }
 
-  const inhaal = buildInhaalVoorstel(
-    proposalWeek,
-    voorgesteldeWeek,
-    readiness.band,
-    todayISO,
-    { plannerDays, activities, dispositionByDate },
-  );
+  const inhaal = fatigueDownActive
+    ? null
+    : buildInhaalVoorstel(
+        proposalWeek,
+        voorgesteldeWeek,
+        readiness.band,
+        todayISO,
+        {
+          plannerDays,
+          activities,
+          dispositionByDate,
+        },
+      );
 
   const weekDates = new Set(proposalWeek.days.map((d) => d.datum));
   const doneByDate: Record<string, DoneEntry> = {};
@@ -1347,6 +1432,7 @@ export async function loadSchemaWeek(): Promise<{
     dispositionByDate,
     settings: settings ?? EMPTY_SETTINGS,
     inhaal,
+    fatigue,
     optedIn,
     weekMonday: monday,
   };
