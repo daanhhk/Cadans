@@ -22,6 +22,9 @@ import {
   buildFreeRideWorkout_,
   buildOverrideWorkout_,
   buildWorkout,
+  buildWorkoutDescription_,
+  buildWorkoutDsl_,
+  buildWorkoutZwo_,
   CAUTION_DUR_FACTOR,
   CHECKIN_LEVELS,
   COACH_INTENT_ENGINE_TYPE_,
@@ -1412,6 +1415,56 @@ describe("engine selftest", () => {
         d.voorgesteldType && isHardType_(d.voorgesteldType, settings.doel),
     ).length;
     assert_("ongemoeid: event-recovery stript alles", 0, eventRec);
+  });
+
+  // ── FASE-C C1 — ZWO/DSL/description-wrappers (byte-faithful GAS @ 3e8090a) ──
+  it("testWorkoutWrappers", () => {
+    const W: any = {
+      naam: "Drempel 3×10",
+      focus: "threshold",
+      totaalMin: 60,
+      tss: 80,
+      eindopmerking: "Pacen als een col.",
+      structuur: [
+        ["Warmup", "12 min", "138-186W", "<153", "Inrijden, opbouwend"],
+        ["Drempel", "3x 10 min", "245-270W", "165-172", "5 min rust @ 55%"],
+        ["Cooldown", "8 min", "124-152W", "—", "Easy uit"],
+      ],
+    };
+    // ZWO-XML byte-exact (warmup/cooldown = ramp, interval = IntervalsT; <name>, sportType bike).
+    assert_(
+      "wrapper ZWO",
+      '<workout_file>\n  <author>Coach</author>\n  <name>Drempel 3×10</name>\n  <description>threshold</description>\n  <sportType>bike</sportType>\n  <tags/>\n  <workout>\n    <Warmup Duration="720" PowerLow="0.50" PowerHigh="0.68"/>\n    <IntervalsT Repeat="3" OnDuration="600" OnPower="0.94" OffDuration="300" OffPower="0.55"/>\n    <Cooldown Duration="480" PowerLow="0.45" PowerHigh="0.55"/>\n  </workout>\n</workout_file>',
+      buildWorkoutZwo_(W, 275),
+    );
+    // DSL byte-exact (blocks door dubbele newline; repeat-blok "3x").
+    assert_(
+      "wrapper DSL",
+      "- 12m 50-68% Warmup\n\n3x\n- 10m 94%\n- 5m 55%\n\n- 8m 50% Cooldown",
+      buildWorkoutDsl_(W, 275),
+    );
+    // Plain-text-description byte-exact (kop + Focus + segmenten + eindopmerking).
+    assert_(
+      "wrapper DESC",
+      "Drempel 3×10 — 60min (TSS 80)\nFocus: threshold\n\nWarmup 12 min @ 138-186W\nDrempel 3x 10 min @ 245-270W\nCooldown 8 min @ 124-152W\n\nPacen als een col.",
+      buildWorkoutDescription_(W),
+    );
+    // Null-pad: geen structuur → ZWO/DSL null; description levert altijd de kop-regel.
+    assert_(
+      "wrapper ZWO no-struct",
+      null,
+      buildWorkoutZwo_({ naam: "x" }, 275),
+    );
+    assert_(
+      "wrapper DSL no-struct",
+      null,
+      buildWorkoutDsl_({ naam: "x" }, 275),
+    );
+    assert_(
+      "wrapper DESC no-struct",
+      "Rustdag — ?min\n",
+      buildWorkoutDescription_({ naam: "Rustdag", totaalMin: 0, tss: 0 }),
+    );
   });
 
   // ── Fase 1 deel 2b.1 — profiel-laag + goalWorkout_-selector (deterministisch) ──
@@ -4298,8 +4351,9 @@ describe("engine selftest", () => {
   // uitlijning + defensief negatief) 1013→1024; 3d stap 2: +14 voor testDosisRamp3d
   // (fill-headroom-ramp + overhead-trim + long_z2-cap) en +2 voor testTaperGuard3d 1024→1040;
   // 3d stap 3: +12 voor testDeloadInhoud3d (dosis-spiegel f<1 + één-prikkel-plaatsing +
-  // ongemoeid-cases) 1040→1052).
-  it("exactly 1052 assertions", () => {
-    expect(assertCount).toBe(1052);
+  // ongemoeid-cases) 1040→1052; FASE-C C1: +6 voor testWorkoutWrappers (ZWO/DSL/description
+  // byte-exact + null-pad) 1052→1058).
+  it("exactly 1058 assertions", () => {
+    expect(assertCount).toBe(1058);
   });
 });

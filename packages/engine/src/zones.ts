@@ -424,3 +424,95 @@ export function xmlEscape_(s: any): string {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&apos;");
 }
+
+// ── FASE-C C1 — workout-ASSEMBLER-WRAPPERS (byte-faithful port van GAS @ 3e8090a) ──
+// Itereren over `workout.structuur` (5-tuples [label, duur, watt-range, hr-range, note]) en
+// bouwen de ZWO-XML / DSL / plain-text-description die intervals.icu → structured FIT verwacht.
+// ENIGE bewuste GAS-afwijking: `ftp` komt als PARAMETER binnen (GAS las `getDocProp('ftp','275')`);
+// pure dependency-injection, geen logica-wijziging. De naam-tag is `<name>` — exact zoals de GAS-bron
+// (Algorithm.gs:1742), NIET `<n>`.
+
+/** ZWO-XML (primary push-format). null → één rij niet parsebaar → caller valt terug op DSL. */
+export function buildWorkoutZwo_(workout: any, ftp: number): string | null {
+  if (
+    !workout ||
+    !Array.isArray(workout.structuur) ||
+    !workout.structuur.length
+  )
+    return null;
+
+  const stepXmls: string[] = [];
+  for (let i = 0; i < workout.structuur.length; i++) {
+    const xml = zwoStepFromRow_(workout.structuur[i], ftp);
+    if (!xml) return null; // GAS-parity: terugval op DSL
+    stepXmls.push(xml);
+  }
+
+  const name = xmlEscape_(workout.naam || "Workout");
+  const desc = xmlEscape_(workout.focus || workout.eindopmerking || "");
+
+  return [
+    "<workout_file>",
+    "  <author>Coach</author>",
+    "  <name>" + name + "</name>",
+    "  <description>" + desc + "</description>",
+    "  <sportType>bike</sportType>",
+    "  <tags/>",
+    "  <workout>",
+    "    " + stepXmls.join("\n    "),
+    "  </workout>",
+    "</workout_file>",
+  ].join("\n");
+}
+
+/** DSL-string (fallback in de event-description als ZWO faalt). null → één blok niet parsebaar. */
+export function buildWorkoutDsl_(workout: any, ftp: number): string | null {
+  if (
+    !workout ||
+    !Array.isArray(workout.structuur) ||
+    !workout.structuur.length
+  )
+    return null;
+
+  const blocks: string[] = [];
+  for (let i = 0; i < workout.structuur.length; i++) {
+    const block = dslBlockFromRow_(workout.structuur[i], ftp);
+    if (!block) return null; // GAS-parity: terugval op description-only
+    blocks.push(block);
+  }
+
+  // Blocks gescheiden door dubbele newline — sluit ook impliciet repeat-blokken.
+  return blocks.join("\n\n");
+}
+
+/** Plain-text-description (laatste fallback). Levert ALTIJD een string (kop-regel + segmenten). */
+export function buildWorkoutDescription_(workout: any): string {
+  const lines: string[] = [];
+  lines.push(
+    workout.naam +
+      " — " +
+      (workout.totaalMin || "?") +
+      "min" +
+      (workout.tss ? " (TSS " + workout.tss + ")" : ""),
+  );
+  if (workout.focus) lines.push("Focus: " + workout.focus);
+  lines.push("");
+
+  if (Array.isArray(workout.structuur)) {
+    workout.structuur.forEach((seg: any) => {
+      // seg = [Segment, Duur, Vermogen, Hartslag, Toelichting]
+      const label = seg[0] || "";
+      const dur = seg[1] || "";
+      const pow = seg[2] || "";
+      lines.push(label + " " + dur + (pow ? " @ " + pow : ""));
+    });
+  }
+
+  if (workout.eindopmerking) {
+    lines.push("");
+    const note = String(workout.eindopmerking);
+    lines.push(note.length > 200 ? note.substring(0, 197) + "..." : note);
+  }
+
+  return lines.join("\n");
+}
