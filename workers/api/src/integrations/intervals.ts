@@ -13,7 +13,7 @@ import { CURRENT_USER_ID, makeDb } from "../db/client";
 import { toD1Date } from "../db/dates";
 import { upsertActivity } from "../db/repo";
 
-const BASE_URL = "https://intervals.icu/api/v1";
+export const BASE_URL = "https://intervals.icu/api/v1";
 
 export function intervalsBasicAuth(apiKey: string): string {
   return `Basic ${btoa(`API_KEY:${apiKey}`)}`;

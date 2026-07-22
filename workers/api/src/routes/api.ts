@@ -51,6 +51,7 @@ import {
   readNormalizedPowerCurve,
   syncPowerCurve,
 } from "../integrations/powercurve";
+import { type PushDay, pushWorkouts } from "../integrations/push";
 import { syncWellness } from "../integrations/wellness";
 import { mergeFrozenWeekplan } from "../weekplanFreeze";
 
@@ -600,6 +601,35 @@ api.post("/sync/power-curve", async (c) => {
   } catch (e) {
     console.error("sync power-curve failed", e);
     throw new HTTPException(502, { message: "intervals sync failed" });
+  }
+});
+
+// FASE-C C2 — workout-PUSH naar intervals.icu. Client-driven: de client stuurt de ACTIEVE
+// sessies mee (na overrides/fatigue-shift/debt), de worker assembleert de ZWO (C1-wrappers) +
+// pusht in één bulk-call. FTP uit de D1-settings (single source, matcht de client-watts).
+api.post("/push", async (c) => {
+  const body = await readJsonObject(c);
+  const days = body.days;
+  if (!Array.isArray(days)) {
+    throw new HTTPException(400, {
+      message:
+        "invalid body, expected { days: [{ dateISO, type?, sessions }] }",
+    });
+  }
+  const db = makeDb(c.env.DB);
+  const s = await readSettings(db, CURRENT_USER_ID);
+  // Geen aparte DEFAULT_FTP-constante in de app → de GAS-geërfde default 275 als settings.ftp leeg is.
+  const ftp = s?.ftp ?? 275;
+  try {
+    const r = await pushWorkouts(c.env, days as PushDay[], ftp);
+    return c.json(r);
+  } catch (e) {
+    // pushWorkouts gooit alleen bij ontbrekende key/athlete (config) → 400; upstream-fouten
+    // zitten al in het `errors`-veld van het resultaat (200). Onverwacht → 502.
+    const msg = e instanceof Error ? e.message : "push failed";
+    throw new HTTPException(/ontbreekt/.test(msg) ? 400 : 502, {
+      message: msg,
+    });
   }
 });
 
