@@ -3,7 +3,11 @@ import type { RideDetailModel, RideInterval } from "@cadans/shared";
 import { useEffect, useState } from "react";
 import { apiGet } from "../../lib/api";
 import { parseLocalDate } from "../../lib/dates";
-import { rideBadgeFromIf, secToClock } from "../../lib/rideDetail";
+import {
+  intervalZoneName,
+  rideBadgeFromIf,
+  secToClock,
+} from "../../lib/rideDetail";
 import {
   actualZone5_,
   doneZoneBlokken,
@@ -532,7 +536,7 @@ function IntervalRow({ iv }: { iv: RideInterval }) {
               textOverflow: "ellipsis",
             }}
           >
-            {iv.label}
+            {intervalZoneName(iv.zone)}
           </span>
         </div>
         <div

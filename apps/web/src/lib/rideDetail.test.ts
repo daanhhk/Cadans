@@ -1,14 +1,19 @@
 import type { RideStreams } from "@cadans/shared";
 import { describe, expect, it } from "vitest";
-import { rideBadgeFromIf, rideChartGeometry } from "./rideDetail";
+import {
+  intervalZoneName,
+  nearestSampleIndex,
+  rideBadgeFromIf,
+  rideChartGeometry,
+} from "./rideDetail";
 
 const OPTS = {
   width: 320,
   height: 150,
   padTop: 12,
   padBottom: 22,
-  padLeft: 30,
-  padRight: 30,
+  padLeft: 34,
+  padRight: 34,
 };
 
 describe("rideBadgeFromIf (byte-exact GAS intentFromIF_ + cfNormIf_)", () => {
@@ -73,7 +78,61 @@ describe("rideChartGeometry", () => {
     };
     const g = rideChartGeometry(s, OPTS);
     expect(g.maxWatts).toBe(200); // ceil(200/50)*50
-    // eerste punt: t=0 → x=padLeft=30, watts=200=maxWatts → y=padTop=12
-    expect(g.wattsSegments[0]?.startsWith("30,12")).toBe(true);
+    // eerste punt: t=0 → x=padLeft=34, watts=200=maxWatts → y=padTop=12
+    expect(g.wattsSegments[0]?.startsWith("34,12")).toBe(true);
+  });
+
+  it("plot-scalars: gevuld op een serie, 0 op een lege serie", () => {
+    const s: RideStreams = {
+      t: [0, 30, 60, 90],
+      watts: [100, 120, 140, 110],
+      hr: [130, 135, 140, 132],
+      n: 4,
+    };
+    const g = rideChartGeometry(s, OPTS);
+    expect(g.plotLeft).toBe(OPTS.padLeft); // 34
+    expect(g.plotWidth).toBe(OPTS.width - OPTS.padLeft - OPTS.padRight); // 252
+    expect(g.plotTop).toBe(OPTS.padTop); // 12
+    expect(g.plotHeight).toBe(OPTS.height - OPTS.padTop - OPTS.padBottom); // 116
+    expect(g.t0).toBe(0);
+    expect(g.span).toBe(90); // laatste t − eerste t
+
+    const g0 = rideChartGeometry(null, OPTS);
+    expect([
+      g0.plotLeft,
+      g0.plotWidth,
+      g0.plotTop,
+      g0.plotHeight,
+      g0.t0,
+      g0.span,
+    ]).toEqual([0, 0, 0, 0, 0, 0]);
+  });
+});
+
+describe("nearestSampleIndex", () => {
+  it("lege array → -1", () => {
+    expect(nearestSampleIndex([], 42)).toBe(-1);
+  });
+  it("exacte sample → die index", () => {
+    expect(nearestSampleIndex([0, 10, 20, 30], 20)).toBe(2);
+  });
+  it("tussen twee samples → de dichtstbijzijnde", () => {
+    expect(nearestSampleIndex([0, 10, 20, 30], 12)).toBe(1); // dichter bij 10
+    expect(nearestSampleIndex([0, 10, 20, 30], 17)).toBe(2); // dichter bij 20
+  });
+});
+
+describe("intervalZoneName", () => {
+  it("1..5 → de vijf namen; 6/7 → VO2max; null/out-of-range → —", () => {
+    expect(intervalZoneName(1)).toBe("Herstel");
+    expect(intervalZoneName(2)).toBe("Duur");
+    expect(intervalZoneName(3)).toBe("Tempo");
+    expect(intervalZoneName(4)).toBe("Drempel");
+    expect(intervalZoneName(5)).toBe("VO2max");
+    expect(intervalZoneName(6)).toBe("VO2max");
+    expect(intervalZoneName(7)).toBe("VO2max");
+    expect(intervalZoneName(null)).toBe("—");
+    expect(intervalZoneName(0)).toBe("—");
+    expect(intervalZoneName(9)).toBe("—");
   });
 });

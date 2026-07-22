@@ -38,6 +38,51 @@ export interface RideChartGeometry {
   minHr: number; // rechter-as ondergrens
   maxHr: number; // rechter-as bovengrens
   xTicks: { x: number; label: string }[];
+  // Plot-rechthoek + tijd-as (viewBox-coördinaten) — de component mapt hiermee pointer↔data.
+  plotLeft: number;
+  plotWidth: number;
+  plotTop: number;
+  plotHeight: number;
+  t0: number;
+  span: number;
+}
+
+/** Index van de sample waarvan t[i] het dichtst bij targetT ligt (lineaire scan); leeg → -1. */
+export function nearestSampleIndex(t: number[], targetT: number): number {
+  if (t.length === 0) return -1;
+  let best = 0;
+  let bestD = Number.POSITIVE_INFINITY;
+  for (let i = 0; i < t.length; i++) {
+    const ti = t[i];
+    if (ti == null) continue;
+    const d = Math.abs(ti - targetT);
+    if (d < bestD) {
+      bestD = d;
+      best = i;
+    }
+  }
+  return best;
+}
+
+/** intervals.icu-zone → onze NL zone-naam (exact DONE5_META in schema.ts): 1 Herstel · 2 Duur ·
+ * 3 Tempo · 4 Drempel · 5/6/7 VO2max; null of buiten 1..7 → "—". */
+export function intervalZoneName(zone: number | null): string {
+  switch (zone) {
+    case 1:
+      return "Herstel";
+    case 2:
+      return "Duur";
+    case 3:
+      return "Tempo";
+    case 4:
+      return "Drempel";
+    case 5:
+    case 6:
+    case 7:
+      return "VO2max";
+    default:
+      return "—";
+  }
 }
 
 const round1 = (v: number): number => Math.round(v * 10) / 10;
@@ -98,6 +143,12 @@ export function rideChartGeometry(
     minHr: 0,
     maxHr: 0,
     xTicks: [],
+    plotLeft: 0,
+    plotWidth: 0,
+    plotTop: 0,
+    plotHeight: 0,
+    t0: 0,
+    span: 0,
   };
   if (!streams) return empty;
   const t = streams.t ?? [];
@@ -145,5 +196,18 @@ export function rideChartGeometry(
     return { x: round1(xOf(tt)), label: secToClock(tt - t0, hourMode) };
   });
 
-  return { wattsSegments, hrSegments, maxWatts, minHr, maxHr, xTicks };
+  return {
+    wattsSegments,
+    hrSegments,
+    maxWatts,
+    minHr,
+    maxHr,
+    xTicks,
+    plotLeft: opts.padLeft,
+    plotWidth: plotW,
+    plotTop: opts.padTop,
+    plotHeight: plotH,
+    t0,
+    span,
+  };
 }
