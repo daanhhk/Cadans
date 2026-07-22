@@ -27,6 +27,7 @@ import type {
 import { and, asc, eq, gte, isNotNull, lte } from "drizzle-orm";
 import type { Db } from "./client";
 import { fromD1, toD1Date, toD1DateTime } from "./dates";
+import type { Activity } from "./schema";
 import {
   activities,
   checkins,
@@ -314,6 +315,24 @@ export async function readActivities(
     .where(and(...conds))
     .orderBy(asc(activities.datum));
   return rows.map(rowFromAct);
+}
+
+/** RITDETAILS fase 1 — één activiteit op het intervals-id (= activity_id_ext). Levert de
+ * volledige Drizzle-rij (camelCase) zodat de ritdetail-route de "gratis" D1-velden kan
+ * meenemen; geen rij → null (route → 404). */
+export async function readActivityByExtId(
+  db: Db,
+  userId: number,
+  extId: string,
+): Promise<Activity | null> {
+  const rows = await db
+    .select()
+    .from(activities)
+    .where(
+      and(eq(activities.userId, userId), eq(activities.activityIdExt, extId)),
+    )
+    .limit(1);
+  return rows[0] ?? null;
 }
 
 // ── planner_days + events (weekgen-read-laag, Fase 5.3b) ─────────────────

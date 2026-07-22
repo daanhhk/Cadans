@@ -22,6 +22,7 @@ import {
   type CheckinInput,
   type EngineSettings,
   readActivities,
+  readActivityByExtId,
   readCheckin,
   readDebtOptIn,
   readDispositions,
@@ -52,6 +53,7 @@ import {
   syncPowerCurve,
 } from "../integrations/powercurve";
 import { type PushDay, pushWorkouts } from "../integrations/push";
+import { fetchRideDetail } from "../integrations/ride";
 import { syncWellness } from "../integrations/wellness";
 import { mergeFrozenWeekplan } from "../weekplanFreeze";
 
@@ -170,6 +172,25 @@ api.get("/activities", async (c) => {
     from !== undefined || to !== undefined ? { from, to } : undefined;
   const rows = await readActivities(db, CURRENT_USER_ID, range);
   return c.json(serializeActivities(rows));
+});
+
+// ── RITDETAILS fase 1 — GET /api/ride/:id (:id = intervals-id = activity_id_ext) ──
+// Stap A (D1, geen netwerk): rij op activity_id_ext → 404 als afwezig, levert de gratis velden.
+// Stap B (on-demand fetch): fetchRideDetail vult metrics + interval-breakdown + gedownsamplede
+// streams. /activity + /activity/{id}/intervals upstream-fout → 502; streams-fout → streams:null.
+api.get("/ride/:id", async (c) => {
+  const id = c.req.param("id");
+  if (!id) throw new HTTPException(400, { message: "missing ride id" });
+  const db = makeDb(c.env.DB);
+  const row = await readActivityByExtId(db, CURRENT_USER_ID, id);
+  if (!row) throw new HTTPException(404, { message: `ride ${id} not found` });
+  try {
+    const model = await fetchRideDetail(c.env, id, row);
+    return c.json(model);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "ride detail failed";
+    throw new HTTPException(502, { message: msg });
+  }
 });
 
 api.get("/weekplans/recent", async (c) => {
