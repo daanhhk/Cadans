@@ -281,6 +281,53 @@ export function verlengBadgeLabel(naarMin: number): string {
   return `Verlengd naar ${naarMin} min`;
 }
 
+// ── 3d STAP 4 — fatigue-aware deload/dose (week-niveau) ───────────────────────
+// VOORWAARDELIJKE aanbod-copy: biedt aan ("ik kan…"), claimt de daad NIET (M10/M55). Het signaal
+// komt uit de LOAD (TSB = CTL−ATL), niet uit de ochtend-check-in. De applied-copy is FEITELIJK
+// (wat er deze week gebeurt), geen belofte over de uitkomst (M5/M18 — geen "je wordt er sterker van").
+
+/** Getekende TSB als geheel getal (min-teken U+2212, zoals tsb.ts/de gauge). */
+function tsbLabel_(tsbTrend: number | null): string {
+  if (tsbTrend == null) return "—";
+  const r = Math.round(tsbTrend);
+  return r > 0 ? `+${r}` : r < 0 ? `−${Math.abs(r)}` : "0";
+}
+/** "+N min deze week" / "−N min deze week" (hele minuten); leeg bij ~0. */
+function deltaMinLabel_(deltaMin: number): string {
+  const r = Math.round(deltaMin);
+  if (r === 0) return "";
+  return r > 0 ? ` (+${r} min deze week)` : ` (−${Math.abs(r)} min deze week)`;
+}
+
+/** UP-aanbod (kalender-deload + fris → doortrainen). */
+export function fatigueUpAanbodRegel(
+  tsbTrend: number | null,
+  deltaMin: number,
+): string {
+  return `Je vorm is fris (TSB ${tsbLabel_(tsbTrend)}). De kalender plant deze week een deload — ik kan gewoon doortrainen${deltaMinLabel_(deltaMin)}.`;
+}
+/** DOWN-aanbod (opbouwweek + diep/aanhoudend vermoeid → vervroegde deload). */
+export function fatigueDownAanbodRegel(
+  tsbTrend: number | null,
+  deltaMin: number,
+): string {
+  return `Je vorm zakt weg (TSB ${tsbLabel_(tsbTrend)}) en blijft laag. Ik kan een vervroegde deload inplannen om je te laten herstellen${deltaMinLabel_(deltaMin)}.`;
+}
+/** Primaire actieknop (accept). */
+export function fatigueActieLabel(dir: "up" | "down"): string {
+  return dir === "up" ? "Doortrainen" : "Vervroegde deload";
+}
+/** Secundaire knop (de kalender volgen; dismiss). */
+export function fatigueAlternatiefLabel(dir: "up" | "down"): string {
+  return dir === "up" ? "Volg de deload" : "Hou de opbouw";
+}
+/** Bevestigingsregel in de applied-state — FEITELIJK, geen uitkomst-belofte. */
+export function fatigueAppliedRegel(dir: "up" | "down"): string {
+  return dir === "up"
+    ? "Je traint deze week door in plaats van de deload."
+    : "Deze week is een vervroegde deload.";
+}
+
 // ── FASE 2b — inhaal-voorstel (week-niveau, read-only) ───────────────────────
 // VOORWAARDELIJKE aanbod-copy: biedt aan, claimt de daad NIET (M10/M55). De catchup_*-pools
 // hierboven zijn DAAD-copy ("Ik heb je schema bijgesteld") en horen bij de TOEGEPASTE staat;

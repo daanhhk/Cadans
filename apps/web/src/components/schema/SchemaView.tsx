@@ -12,6 +12,7 @@ import {
   type DayState,
   type DoneEntry,
   deriveSchemaView,
+  type FatigueVoorstel,
   type InhaalVoorstel,
   verlengResultaat,
   verlichtResultaat,
@@ -25,6 +26,7 @@ import { DayStrip } from "./DayStrip";
 import { DispositionAffordance } from "./DispositionAffordance";
 import { DoneCompareCard } from "./DoneCompareCard";
 import { DoneDetail } from "./DoneDetail";
+import { FatigueCard, isFatigueAfgewezen } from "./FatigueCard";
 import { GemistCard } from "./GemistCard";
 import { InhaalCard } from "./InhaalCard";
 import { OverriddenDetail } from "./OverriddenDetail";
@@ -57,6 +59,7 @@ export function SchemaView({
   dispositionByDate,
   settings,
   inhaal = null,
+  fatigue = null,
   optedIn = false,
   weekMonday,
 }: {
@@ -69,6 +72,8 @@ export function SchemaView({
   settings: SettingsInput;
   /** FASE 2b — read-only inhaal-voorstel op weekniveau (null = niets tonen). */
   inhaal?: InhaalVoorstel | null;
+  /** 3d stap 4 — fatigue-voorstel op weekniveau (offer/applied), of null. */
+  fatigue?: FatigueVoorstel | null;
   /** FASE 3a — is het inhaal-plan voor deze week goedgekeurd? */
   optedIn?: boolean;
   /** Maandag van de getoonde week (sleutel van de goedkeuring); default = view.weekMonday. */
@@ -102,6 +107,9 @@ export function SchemaView({
   // 3d stap 2b: idem voor het VERLENG-aanbod ("Nee, hou X") — sessie-scoped afwijzing leeft in
   // VerlengCard; deze teller dwingt de her-evaluatie af.
   const [, setVerlengDismissed] = useState(0);
+  // 3d stap 4: idem voor het FATIGUE-aanbod ("Volg de deload" / "Hou de opbouw") — sessie-scoped
+  // afwijzing leeft in FatigueCard; deze teller dwingt de her-evaluatie af.
+  const [, setFatigueDismissed] = useState(0);
   const day = view.days.find((d) => d.datum === selected) ?? view.days[0];
   // dag >= vandaag: het knoppen-blok toont alleen op vandaag/toekomst (verleden kun je niet meer plannen).
   const dayFuture = !!day && day.datum >= todayISO;
@@ -134,6 +142,16 @@ export function SchemaView({
     day?.datum === view.verlicht.datum &&
     !isVerlichtAfgewezen(view.verlicht.datum)
       ? view.verlicht
+      : null;
+
+  // 3d stap 4 — FATIGUE-voorstel op weekniveau. 'applied' toont altijd (de shift is actief);
+  // 'offer' alleen als het deze sessie niet is weggeklikt. De maandag is de goedkeur-sleutel.
+  const fatigueMonday = weekMonday ?? view.weekMonday;
+  const fatigueVoorstel =
+    fatigue &&
+    (fatigue.state === "applied" ||
+      !isFatigueAfgewezen(fatigueMonday, fatigue.dir))
+      ? fatigue
       : null;
 
   // 3d stap 2b — VERLENG-aanbod op een opbouwweek-duurrit. De motor capt de lange rit op de
@@ -192,11 +210,25 @@ export function SchemaView({
         onSelect={setSelected}
       />
 
+      {/* 3d stap 4 — FATIGUE-voorstel op WEEKNIVEAU (offer/applied). Staat vóór de inhaal-kaart;
+          een DOWN-voorstel onderdrukt de inhaal al in laag-1 (inhaal=null), en de render-guard
+          hieronder houdt ze sowieso uit elkaar (één week-kaart tegelijk). */}
+      {fatigueVoorstel && (
+        <FatigueCard
+          fatigue={fatigueVoorstel}
+          baseline={proposalWeek}
+          coachNaam={view.coachNaam}
+          weekMonday={fatigueMonday}
+          onDismiss={() => setFatigueDismissed((n) => n + 1)}
+        />
+      )}
+
       {/* FASE 2b — inhaal-voorstel op WEEKNIVEAU (read-only). Onderdrukt zodra er een
           verlicht-voorstel voor vandaag staat: M66 laat herstel winnen van inhalen, dus
           die twee horen elkaar nooit te overlappen. De band-poort in buildInhaalVoorstel
-          sluit dat al uit; deze guard is de tweede grendel op de render-kant. */}
-      {(optedIn || inhaal) && !verlichtVoorstel && (
+          sluit dat al uit; deze guard is de tweede grendel op de render-kant. Ook onderdrukt
+          zodra een fatigue-week-kaart staat (één week-kaart tegelijk). */}
+      {(optedIn || inhaal) && !verlichtVoorstel && !fatigueVoorstel && (
         <InhaalCard
           voorstel={inhaal}
           coachNaam={view.coachNaam}

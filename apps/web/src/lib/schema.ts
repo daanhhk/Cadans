@@ -957,6 +957,16 @@ export interface FatigueVoorstel {
   preview: ProposalWeek | null;
 }
 
+/** Σ geplande sessie-minuten van een week — DEZELFDE som die `deriveSchemaView` als `minuten.gepland`
+ * (de WeekLoad-"Uren"-stat) berekent (Σ `sessions[].totaalMin`). Geëxporteerd zodat de fatigue-delta
+ * (preview − baseline) dezelfde reken-basis gebruikt zonder de logica te dupliceren. */
+export function weekPlannedMinuten(week: ProposalWeek): number {
+  return week.days.reduce(
+    (acc, d) => acc + d.sessions.reduce((a, s) => a + s.totaalMin, 0),
+    0,
+  );
+}
+
 /** Ruw engine-type → NL-weergavenaam via de intent-labels (één bron, geen eigen tabel). */
 export function typeNaam(type: string | null): string {
   if (!type) return "geen training";

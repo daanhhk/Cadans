@@ -1,6 +1,7 @@
 import { buildWorkout } from "@cadans/engine";
 import type { SettingsInput } from "@cadans/shared";
 import { useState } from "react";
+import { FatigueCard } from "../components/schema/FatigueCard";
 import { InhaalCard } from "../components/schema/InhaalCard";
 import { SchemaView } from "../components/schema/SchemaView";
 import { VerlichtCard } from "../components/schema/VerlichtCard";
@@ -18,6 +19,7 @@ import type {
 import type { ReadinessResult } from "../lib/readiness";
 import type {
   DoneEntry,
+  FatigueVoorstel,
   InhaalVoorstel,
   VerlichtVoorstel,
 } from "../lib/schema";
@@ -397,6 +399,44 @@ const verlichtFixtures: { label: string; v: VerlichtVoorstel }[] = [
   },
 ];
 
+// 3d stap 4 — FatigueCard-fixtures (beide states + richtingen). De preview-week is FULL_WEEK ×0.6
+// (down, minder minuten → −delta) resp. ×1.4 (up, meer → +delta) t.o.v. de baseline FULL_WEEK.
+const scaleWeek = (w: ProposalWeek, factor: number): ProposalWeek => ({
+  ...w,
+  days: w.days.map((d) => ({
+    ...d,
+    sessions: d.sessions.map((s) => ({
+      ...s,
+      totaalMin: Math.round(s.totaalMin * factor),
+    })),
+  })),
+});
+const fatigueFixtures: { label: string; v: FatigueVoorstel }[] = [
+  {
+    label: "Vorm · UP-voorstel (fris op een kalender-deload → doortrainen)",
+    v: {
+      state: "offer",
+      dir: "up",
+      tsbTrend: 9,
+      preview: scaleWeek(FULL_WEEK, 1.4),
+    },
+  },
+  {
+    label:
+      "Vorm · DOWN-voorstel (diep vermoeid in een opbouwweek → vervroegde deload)",
+    v: {
+      state: "offer",
+      dir: "down",
+      tsbTrend: -27,
+      preview: scaleWeek(FULL_WEEK, 0.6),
+    },
+  },
+  {
+    label: "Vorm · TOEGEPAST (up) — knop 'Terug naar de kalender'",
+    v: { state: "applied", dir: "up", tsbTrend: null, preview: null },
+  },
+];
+
 const fixtureLabel: React.CSSProperties = {
   fontFamily: "var(--font-sans)",
   fontSize: "var(--fs-caption)",
@@ -464,6 +504,23 @@ function VoorstelPreview() {
             <VerlichtCard
               voorstel={f.v}
               coachNaam="Coach"
+              onDismiss={() => undefined}
+            />
+          </div>
+        </div>
+      ))}
+      {fatigueFixtures.map((f) => (
+        <div key={f.label}>
+          <div style={fixtureLabel}>
+            {f.label} — knoppen uitgeschakeld in de preview
+          </div>
+          {/* pointer-events uit: accept/revert schrijven een ECHTE per-week fatigue-shift. */}
+          <div style={{ pointerEvents: "none" }}>
+            <FatigueCard
+              fatigue={f.v}
+              baseline={FULL_WEEK}
+              coachNaam="Coach"
+              weekMonday="2026-07-20"
               onDismiss={() => undefined}
             />
           </div>

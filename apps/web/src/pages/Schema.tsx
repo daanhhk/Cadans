@@ -7,6 +7,7 @@ import type { ProposalWeek } from "../lib/proposal";
 import type { ReadinessResult } from "../lib/readiness";
 import {
   type DoneEntry,
+  type FatigueVoorstel,
   type InhaalVoorstel,
   loadSchemaWeek,
 } from "../lib/schema";
@@ -28,6 +29,8 @@ interface SchemaData {
   settings: SettingsInput;
   /** FASE 2b — read-only inhaal-voorstel (null = geen voorstel of al goedgekeurd). */
   inhaal: InhaalVoorstel | null;
+  /** 3d stap 4 — fatigue-voorstel (offer/applied), of null. */
+  fatigue: FatigueVoorstel | null;
   /** FASE 3a — goedkeuring van het inhaal-plan voor deze week. */
   optedIn: boolean;
   weekMonday: string;
@@ -178,6 +181,7 @@ export function Schema() {
       dispositionByDate={data.dispositionByDate}
       settings={data.settings}
       inhaal={data.inhaal}
+      fatigue={data.fatigue}
       optedIn={data.optedIn}
       weekMonday={data.weekMonday}
     />
