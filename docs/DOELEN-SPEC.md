@@ -95,6 +95,27 @@ GAS-PARITY. GAS draagt hetzelfde quotum en dezelfde tussenruimte en noemt het pr
 eigen commentaar "Fase 1 (scaffolding)" met gedrag dat naar een nooit gebouwde fase 2 werd
 doorgeschoven. Dit is dus het afmaken van een gedeclareerd onaf profiel, geen willekeurige fork.
 BOUWLAST. Klein: twee waarden in `PROFILES.onderhoud`, plus de meso-uitzondering.
+OPEN — DE HERSTELROUTE LEVERT NOG DE ZACHTE WEEK. EIGEN BOUW, VOOR STAP 2. De kalender-deload is
+weg, maar de vermoeidheidskaart (DOWN) substitueert mesoweek 4 en dat dwingt de deload-inhoud af.
+Voor een opbouwblok klopt die inhoud; voor Onderhoud is het exact de zachte week die M38 verbiedt —
+frequentie is juist wat je in de winter beschermt.
+MECHANISME, GELEZEN (`allocateQualityWeek_`, `packages/engine/src/planner.ts`). Vier klemmen hangen
+aan de deload-vlag. Twee zijn bij Onderhoud AL inert: de lange-rit-klem (`langeRitPerWeek` 0) en de
+debt-klem (`debtEnabled` false). Er bijten er dus twee: het quotum wordt naar 1 geklemd, en de
+eligibility laat alleen doordeweekse `vrij`-dagen toe. De dosis-verlaging (mesoFactor 0,60) zit
+NIET in de allocator maar in de f<1-ramp, en die willen we juist HOUDEN — dat is de verlichting.
+RICHTING. Een profiel-vlag die de twee klemmen overslaat, in dezelfde lijn als `debtEnabled !== false`
+en `mesoCyclus`. Gesimuleerd op een gepatchte bundel gaat de winterweek daarmee van 1 naar 3
+kwaliteitsdagen met de 0,60-dosis erop. Structureel gemeten; de belastingcijfers uit die simulatie
+zijn NIET betrouwbaar (proxy-opbouw, niet de volledige pijplijn) en moeten in de bouw-recon opnieuw.
+OPEN ONTWERPVRAAG, BESLISSEN VOOR DE BOUW. "Volume snijden" haalt de app maar half: de dagminuten uit
+de weekplanner zijn een harde bovengrens en de endurance-fill groeit aan tot `doelMin`, dus een
+0,60-dosis verlaagt de tijd-in-zone maar verkort de week nauwelijks. Kiezen tussen (a) accepteren dat
+de verlichting alleen in tijd-in-zone zit, of (b) een week-brede duurverkorting toevoegen — dat is het
+`durCapMin`-mechanisme dat in T28 fase 2 BEWUST niet is gebouwd omdat er geen consument was. Meten
+voor je kiest.
+De precedentie-test in `ea567e5` legt bewust alleen vast DAT de override de week verandert, niet
+WELKE week eruit komt, zodat die test deze fix niet blokkeert.
 
 ### 3.3 Korte beklimmingen — VASTGESTELD, moet gebouwd
 
@@ -208,7 +229,8 @@ daarmee geen los doel maar een dragende laag.
 
 ## 6. Bouwvolgorde
 
-1. Onderhoud-profiel (quotum 3, tussenruimte 1, meso-uitzondering). Klein, gemeten, winterfix.
+1. Onderhoud-profiel (quotum 3, tussenruimte 1, meso-uitzondering). Klein, gemeten, winterfix. **AF** — commit `09e6a07`, precedentie-test `ea567e5`.
+1b. Onderhoud-herstelweek (§3.2 OPEN): de twee deload-klemmen in `allocateQualityWeek_` overslaan voor Onderhoud, met de dosis-verlaging behouden. Recon-first, de open ontwerpvraag (dagminuten als hard plafond) eerst meten. VOOR stap 2.
 2. Archetypes 33-68 erbij. Zonder deze stap wordt stap 1 monotoon.
 3. Doel-lijst herzien: VO2max eruit, Beklimmingen splitsen in kort en lang.
 4. Duurvermogen-meetlat, samen met prikkel-in-de-rit fase 2.
@@ -217,8 +239,9 @@ Elke stap eigen bouw, stop-en-verifieer ertussen, gate en CI groen, vloeren niet
 
 ## 7. Te autoriseren engine-plekken (nog NIET gegeven)
 
-- `PROFILES.onderhoud` in `packages/engine/src/archetypes.ts` — quotum en tussenruimte.
-- De meso-uitzondering voor Onderhoud (`mesoFactor`-consument in `planner.ts`/`archetypes.ts`).
+- ~~`PROFILES.onderhoud` in `packages/engine/src/archetypes.ts` — quotum en tussenruimte.~~ **GEBRUIKT** (commit `09e6a07`).
+- ~~De meso-uitzondering voor Onderhoud.~~ **GEBRUIKT** — landde NIET bij de `mesoFactor`-consumenten maar als aparte pure helper `effectiveMesoWeek_` aan de bron (`planner.ts`, zet de mesoweek op 1), zodat GEEN dosis-site is geraakt.
+- NOG NIET GEGEVEN: de twee deload-klemmen in `allocateQualityWeek_` (`planner.ts`) — het quotum-naar-1 en de weekdag-only-eligibility, over te slaan voor Onderhoud (§3.2 OPEN, stap 1b).
 - `ARCHETYPES` in `packages/engine/src/archetypes.ts` — de nieuwe sjablonen.
 - `DOEL_OPTIONS` en `profileForDoel_` — doel-lijst.
 - `climbTypeWorkout_` en de dode tak in `planner.ts` — klim-splitsing.
