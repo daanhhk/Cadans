@@ -76,23 +76,8 @@ describe("coachNarrative", () => {
 });
 
 describe("faseOvergangRegel", () => {
-  it("event_overname: opent met 'naar het event toe in plaats van je doel-cyclus' + event + weken", () => {
+  it("naar taper: noemt taper + fris aan de start; M55-veilig", () => {
     const r = faseOvergangRegel({
-      soort: "event_overname",
-      naar: "Build",
-      eventNaam: "Marmotte",
-      wekenTotEvent: 7,
-    });
-    expect(r).toContain("Marmotte");
-    expect(r).toContain("in plaats van naar je doel-cyclus");
-    expect(r).toContain("7 weken");
-    expect(r).toContain("opbouw"); // "wat je merkt" (Build-strekking)
-    expect(r).not.toMatch(/Ik heb/i); // M55: geen daad-claim
-  });
-
-  it("fase_wissel naar taper: noemt taper + fris aan de start; M55-veilig", () => {
-    const r = faseOvergangRegel({
-      soort: "fase_wissel",
       naar: "Taper",
       eventNaam: "Marmotte",
       wekenTotEvent: 1,
@@ -105,9 +90,8 @@ describe("faseOvergangRegel", () => {
     expect(r).not.toMatch(/Ik heb/i);
   });
 
-  it("fase_wissel zonder event: de regel loopt en laat het event-deel weg", () => {
+  it("zonder event: de regel loopt en laat het event-deel weg", () => {
     const r = faseOvergangRegel({
-      soort: "fase_wissel",
       naar: "Build",
       eventNaam: null,
       wekenTotEvent: null,
@@ -115,5 +99,18 @@ describe("faseOvergangRegel", () => {
     expect(r).toContain("opbouw");
     expect(r).not.toContain("richting");
     expect(r.startsWith("Vanaf deze week")).toBe(true);
+  });
+
+  it("naar herstel: noemt het event bij naam, ZONDER countdown ('nog 0 weken')", () => {
+    const r = faseOvergangRegel({
+      naar: "Recovery",
+      eventNaam: "Doelrace",
+      wekenTotEvent: 0,
+    });
+    expect(r).toContain("Doelrace zit erop");
+    expect(r).toContain("herstel");
+    expect(r).not.toContain("weken");
+    expect(r).not.toContain("(nog");
+    expect(r).not.toMatch(/Ik heb/i);
   });
 });

@@ -360,8 +360,10 @@ export function inhaalAanbodRegel(bucket: InhaalBucket, dagen: number): string {
 // Vooruitkijkend, GEEN daad-claim (M55: "vanaf deze week", nooit "Ik heb ..."). De regel noemt
 // ALTIJD drie dingen: wat verandert, waarom (het event + het aantal weken, als er een event is),
 // en wat de renner gaat merken. Zonder event valt het event-deel weg; de regel loopt dan nog.
+// De detectie onderdrukt "Test" al (tellerartefact) → geen testweek-regel meer.
 
-/** Toonbare fase (Base/Build/Peak/Taper/Recovery/Test) → {verandering, merk}. */
+/** Toonbare fase (Base/Build/Peak/Taper) → {verandering, merk}. "Recovery" is een aparte vorm
+ * (herstelt, noemt het event bij naam zonder countdown — zie hieronder). */
 const FASE_STREKKING_: Record<string, { verandering: string; merk: string }> = {
   Build: {
     verandering: "schakel je van basis naar opbouw",
@@ -375,17 +377,9 @@ const FASE_STREKKING_: Record<string, { verandering: string; merk: string }> = {
     verandering: "begin je te taperen",
     merk: "minder volume, de scherpte blijft — zo kom je fris aan de start",
   },
-  Recovery: {
-    verandering: "kom je in een herstelweek",
-    merk: "het event zit erop; deze week draait om herstel",
-  },
   Base: {
     verandering: "ga je terug naar rustig basiswerk",
     merk: "de opbouw komt later",
-  },
-  Test: {
-    verandering: "staat er een testweek gepland",
-    merk: "we meten je FTP opnieuw zodat het plan bijblijft",
   },
 };
 
@@ -393,13 +387,18 @@ function wekenLabel_(n: number): string {
   return n === 1 ? "1 week" : `${n} weken`;
 }
 
-/** De aankondigingsregel voor een fase-overgang (soort/naar/eventNaam/wekenTotEvent). */
+/** De aankondigingsregel voor een fase-overgang (naar/eventNaam/wekenTotEvent). Eén vorm: het
+ * plan kantelt van fase naar fase (event_overname bestaat niet — zie detectFaseOvergang). */
 export function faseOvergangRegel(o: {
-  soort: "event_overname" | "fase_wissel";
   naar: string;
   eventNaam: string | null;
   wekenTotEvent: number | null;
 }): string {
+  // Herstelweek: noem het event bij naam, GEEN countdown ("nog 0 weken" is ruis — de race is net af).
+  if (o.naar === "Recovery") {
+    const naam = o.eventNaam ?? "je event";
+    return `Vanaf deze week kom je in een herstelweek: ${naam} zit erop, deze week draait om herstel.`;
+  }
   const s = FASE_STREKKING_[o.naar] ?? {
     verandering: "verandert je trainingsfase",
     merk: "je plan wordt hierop aangepast",
@@ -411,10 +410,5 @@ export function faseOvergangRegel(o: {
     ev != null
       ? ` richting ${ev}${wk != null ? ` (nog ${wekenLabel_(wk)})` : ""}`
       : "";
-  if (o.soort === "event_overname") {
-    const wkDeel = wk != null ? `, nog ${wekenLabel_(wk)}` : "";
-    // Tweede zin met "Vanaf nu" zodat de verandering-frase (werkwoord-inversie) grammaticaal loopt.
-    return `Vanaf deze week werkt je plan naar ${ev ?? "je event"} toe in plaats van naar je doel-cyclus${wkDeel}. Vanaf nu ${s.verandering}: ${s.merk}.`;
-  }
   return `Vanaf deze week ${s.verandering}${waarom}: ${s.merk}.`;
 }

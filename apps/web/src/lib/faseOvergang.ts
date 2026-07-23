@@ -14,17 +14,14 @@ import { parseLocalDate } from "./dates";
 // en vergelijken. We vergelijken op de TOONBARE fase (macro?.fase ?? macroFase), niet op macroFase:
 // de taper leeft alléén daar en is juist de belangrijkste overgang.
 
-export type FaseOvergangSoort = "event_overname" | "fase_wissel";
-
 export interface FaseOvergang {
-  soort: FaseOvergangSoort;
   van: string; // toonbare fase vorige week
   naar: string; // toonbare fase deze week
   eventNaam: string | null;
   wekenTotEvent: number | null;
 }
 
-interface FaseBundel {
+export interface FaseBundel {
   fase: string; // toonbare fase = macro?.fase ?? effectieve macroFase
   eventDriven: boolean;
   eventNaam: string | null;
@@ -56,17 +53,12 @@ function faseVoor_(
   };
 }
 
-/**
- * Detecteert of DEZE week een fase-overgang is t.o.v. vorige week (today − 7). Geen verschil in de
- * toonbare fase → null. Anders: soort = "event_overname" als vorige week GÉÉN event-gedreven fase
- * was en nu wél (het plan werkt vanaf nu naar het event toe — het grotere nieuws), anders
- * "fase_wissel". Gelden beide, dan wint event_overname.
- */
-export function detectFaseOvergang(
+/** Publieke, testbare seam: de fase-bundel voor één `today` (converteert settings/events zelf). */
+export function faseBundelVoor_(
   settings: SettingsInput,
   events: EventItem[],
   todayISO: string,
-): FaseOvergang | null {
+): FaseBundel {
   const settingsE = {
     ...settings,
     doelStart: settings.doelStart ? parseLocalDate(settings.doelStart) : null,
@@ -75,23 +67,46 @@ export function detectFaseOvergang(
     ...e,
     datum: parseLocalDate(e.datum),
   }));
+  return faseVoor_(settingsE, eventsD, stripTime_(parseLocalDate(todayISO)));
+}
+
+/**
+ * Detecteert of DEZE week een fase-overgang is t.o.v. vorige week (today − 7). Geen verschil in de
+ * toonbare fase → null. Er is maar ÉÉN soort overgang: "event_overname" (plan wisselt van doel- naar
+ * event-gedreven) kan NIET door tijdsverloop ontstaan — pickMainEvent_ slaat events vóór de
+ * referentiedatum over, dus de kandidatenlijst van vorige week is altijd een superset van die van
+ * deze week; dat moment hoort bij het INVOEREN van een event (Events-pagina), niet bij een weekgrens.
+ * Een wissel NAAR "Test" wordt onderdrukt (→ null): die fase is een tellerartefact (computeMacroPhase
+ * blijft na blokweek 12 voorgoed op Test), geen geplande meting — aankondigen zou een valse belofte zijn.
+ */
+export function detectFaseOvergang(
+  settings: SettingsInput,
+  events: EventItem[],
+  todayISO: string,
+): FaseOvergang | null {
   const today = stripTime_(parseLocalDate(todayISO));
   const vorigeDatum = new Date(today);
   vorigeDatum.setDate(today.getDate() - 7);
-  const vorige = stripTime_(vorigeDatum);
+  const vorigeISO = formatVorigeISO_(vorigeDatum);
 
-  const nu = faseVoor_(settingsE, eventsD, today);
-  const prev = faseVoor_(settingsE, eventsD, vorige);
+  const nu = faseBundelVoor_(settings, events, todayISO);
+  const prev = faseBundelVoor_(settings, events, vorigeISO);
 
   if (nu.fase === prev.fase) return null;
+  if (nu.fase === "Test") return null;
 
-  const soort: FaseOvergangSoort =
-    nu.eventDriven && !prev.eventDriven ? "event_overname" : "fase_wissel";
   return {
-    soort,
     van: prev.fase,
     naar: nu.fase,
     eventNaam: nu.eventNaam,
     wekenTotEvent: nu.wekenTotEvent,
   };
+}
+
+/** Date → yyyy-MM-dd (lokaal), zodat de vorige-week-run door dezelfde faseBundelVoor_-seam loopt. */
+function formatVorigeISO_(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }

@@ -445,20 +445,8 @@ const fatigueFixtures: { label: string; v: FatigueVoorstel }[] = [
 const faseOvergangFixtures: { label: string; o: FaseOvergang }[] = [
   {
     label:
-      "Fase-overgang · EVENT-OVERNAME (plan werkt vanaf nu naar het event toe)",
-    o: {
-      soort: "event_overname",
-      van: "Base",
-      naar: "Build",
-      eventNaam: "Marmotte",
-      wekenTotEvent: 7,
-    },
-  },
-  {
-    label:
       "Fase-overgang · WISSEL naar OPBOUW (doel-cyclus, met naderend event)",
     o: {
-      soort: "fase_wissel",
       van: "Base",
       naar: "Build",
       eventNaam: "Marmotte",
@@ -468,11 +456,20 @@ const faseOvergangFixtures: { label: string; o: FaseOvergang }[] = [
   {
     label: "Fase-overgang · WISSEL naar TAPER (fris aan de start)",
     o: {
-      soort: "fase_wissel",
       van: "Peak",
       naar: "Taper",
       eventNaam: "Marmotte",
       wekenTotEvent: 1,
+    },
+  },
+  {
+    label:
+      "Fase-overgang · WISSEL naar HERSTEL (event zit erop, geen countdown)",
+    o: {
+      van: "Taper",
+      naar: "Recovery",
+      eventNaam: "Marmotte",
+      wekenTotEvent: 0,
     },
   },
 ];
