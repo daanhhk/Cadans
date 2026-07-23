@@ -100,6 +100,22 @@ export function effectiveMacroFase_(
 }
 
 /**
+ * Fase-2b winterfix (DOELEN-SPEC 3.2) — een onderhoudsblok draait GEEN 3:1-mesocyclus. De ramp bestaat
+ * om progressieve overbelasting te verwerken; in een onderhoudsblok is er geen overbelasting, dus geen
+ * dosis-ramp (`mesoFactor`) en geen kalender-deload (`isMesoRecovery`). Herstel komt uit de
+ * vermoeidheidskaart (voorstel-en-bevestig), niet uit de kalender. Zet de mesoweek AAN DE BRON op 1
+ * zodra het profiel van het doel `mesoCyclus === false` draagt; een profiel zonder het veld levert
+ * `undefined !== false` → valt door → mesoweek ONgewijzigd (de vier andere doelen byte-identiek). PUUR;
+ * gate via `profileForDoel_` op de profiel-vlag, dezelfde lijn als de `debtEnabled`-gate.
+ */
+export function effectiveMesoWeek_(mesoWeek: any, settings: any): any {
+  if (!settings) return mesoWeek;
+  const prof = profileForDoel_(settings.doel);
+  if (!prof || prof.mesoCyclus !== false) return mesoWeek;
+  return 1;
+}
+
+/**
  * Kiest een workout-categorie die de grootste positieve debt-bucket
  * aanpakt. Null als er geen significant tekort (<5 min) is.
  */

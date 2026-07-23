@@ -1264,15 +1264,21 @@ export const PROFILES: any = {
     soort: "capaciteit",
     intentGewichten: { drempel: 0.4, sweetspot: 0.4, vo2: 0.2 },
     faseModulatie: GOAL_FASE_MOD_,
-    kwaliteitPerWeek: { Base: 2, Build: 2, Peak: 2 },
+    // DOELEN-SPEC 3.2 (winterfix): onderhouden is een INTENSITEITS-opgave bij minder uren, geen zachte
+    // week. Quotum 3 in elke fase + tussenruimte 1 zijn SAMEN bindend; een vast quotum 3 is bewijsbaar
+    // identiek aan min(3, aantal beschikbare dagen) → de dagen en de gap toppen zelf af. mesoCyclus:false
+    // schakelt de 3:1-ramp + kalender-deload uit (geen overbelasting om te verwerken); herstel komt uit
+    // de vermoeidheidskaart. Zie effectiveMesoWeek_ in planner.ts.
+    kwaliteitPerWeek: { Base: 3, Build: 3, Peak: 3 },
     spreiding: {
-      midweekMinGap: 2,
+      midweekMinGap: 1,
       weekendBlok: false,
       effortsInLangeRit: false,
     },
     langeRitPerWeek: 0,
     volumeResponse: { vo2Slope: 0, vo2Cap: 0 },
     debtEnabled: false,
+    mesoCyclus: false,
   },
 };
 

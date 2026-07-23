@@ -52,6 +52,7 @@ import {
   dslBlockFromRow_,
   dslPowerRange_,
   effectiveMacroFase_,
+  effectiveMesoWeek_,
   eftpFromActivities_,
   eventFase_,
   expandArchetype_,
@@ -3556,10 +3557,30 @@ describe("engine selftest", () => {
       p.intentGewichten.vo2 < p.intentGewichten.drempel &&
         p.intentGewichten.vo2 < p.intentGewichten.sweetspot,
     );
-    assert_("onderhoud kwaliteitPerWeek.Base 2", 2, p.kwaliteitPerWeek.Base);
+    // DOELEN-SPEC 3.2 winterfix: quotum 3 in elke fase, tussenruimte 1, geen mesocyclus.
+    assert_("onderhoud kwaliteitPerWeek.Base 3", 3, p.kwaliteitPerWeek.Base);
+    assert_("onderhoud kwaliteitPerWeek.Build 3", 3, p.kwaliteitPerWeek.Build);
+    assert_("onderhoud kwaliteitPerWeek.Peak 3", 3, p.kwaliteitPerWeek.Peak);
+    assert_("onderhoud midweekMinGap 1", 1, p.spreiding.midweekMinGap);
+    assert_("onderhoud mesoCyclus false", false, p.mesoCyclus);
     assert_("onderhoud langeRitPerWeek 0", 0, p.langeRitPerWeek);
     assert_("onderhoud vo2Slope 0", 0, p.volumeResponse.vo2Slope);
     assert_("onderhoud vo2Cap 0", 0, p.volumeResponse.vo2Cap);
+    // effectiveMesoWeek_: Onderhoud (mesoCyclus:false) → altijd 1; de vier andere doelen ongewijzigd.
+    for (const mw of [1, 2, 3, 4]) {
+      assert_(
+        `effMeso Onderhoud mw${mw} → 1`,
+        1,
+        effectiveMesoWeek_(mw, { doel: "Onderhoud" }),
+      );
+      for (const d of ["FTP", "Conditie", "Beklimmingen", "VO2max"]) {
+        assert_(
+          `effMeso ${d} mw${mw} ongewijzigd`,
+          mw,
+          effectiveMesoWeek_(mw, { doel: d }),
+        );
+      }
+    }
     // REGRESSIE-guard: de 4 bestaande doel→profiel-mappings ongewijzigd.
     assert_("regr FTP → ftp", "ftp", profileForDoel_("FTP").id);
     assert_(
@@ -3894,7 +3915,8 @@ describe("engine selftest", () => {
     );
 
     const qKeys = Object.keys(plan).filter((k) => plan[k].role === "quality");
-    assert_("onderhoud exact 2 quality", 2, qKeys.length);
+    // DOELEN-SPEC 3.2 winterfix: quotum 3 (was 2). 5 weekdagen + gap 1 → 3 kwaliteitsdagen.
+    assert_("onderhoud exact 3 quality", 3, qKeys.length);
     let typesOk = true,
       fitOk = true,
       archOk = true;
@@ -4553,8 +4575,11 @@ describe("engine selftest", () => {
   // dag"-assert, netto ±0) 1058→1064; prikkel-in-de-rit fase 1: +14 voor testPrikkelInRitFase1
   // (B ≥52min-invariant + C nieuwe 40min-werking + D overloop-borging). Herijkt zonder telling-effect
   // (1:1): max-45→51-asserts, testOnderhoudArchetypeScope (profiel-hek→tijd-hek), en twee
-  // recency-asserts in testGoalWorkout/-Rotatie (51 niet meer vo2-only → non-vo2-sentinel) 1064→1078).
-  it("exactly 1078 assertions", () => {
-    expect(assertCount).toBe(1078);
+  // recency-asserts in testGoalWorkout/-Rotatie (51 niet meer vo2-only → non-vo2-sentinel) 1064→1078;
+  // Onderhoud-profiel (DOELEN-SPEC 3.2): +24 in testOnderhoudProfiel (quotum Build/Peak 3 + midweekMinGap 1
+  // + mesoCyclus false = +4, plus 20 effectiveMesoWeek_-asserts: 4 mesoweken × 5 doelen). Herijkt zonder
+  // telling-effect (1:1): kwaliteitPerWeek.Base 2→3 en testOnderhoudWeekSim "2 quality"→"3 quality" 1078→1102).
+  it("exactly 1102 assertions", () => {
+    expect(assertCount).toBe(1102);
   });
 });

@@ -6,6 +6,7 @@ import {
   buildWorkout,
   computeMacroPhase,
   effectiveMacroFase_,
+  effectiveMesoWeek_,
   eventFase_,
   formatDate,
   mesoCycleWeek_,
@@ -319,10 +320,15 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
   // MESO_MOD/isMesoRecovery verwachten (3d stap 1 — fixt off-by-one + nooit-meer-herstel).
   // 3d stap 4: een fatigue-wat-als mag de kalender-mesoWeek substitueren (client-only; de engine
   // krijgt de gesubstitueerde waarde ongewijzigd door → dosis mesoFactor + deload-flag isMesoRecovery).
+  // De fatigue-override HOUDT VOORRANG (dat is de herstelroute voor Onderhoud); de KALENDER-mesoweek
+  // loopt door effectiveMesoWeek_ zodat Onderhoud (mesoCyclus:false) geen ramp/deload krijgt (DOELEN-SPEC 3.2).
   const mesoWeek =
     input.mesoWeekOverride != null
       ? input.mesoWeekOverride
-      : mesoCycleWeek_(weekIndexFromStart_(settingsE));
+      : effectiveMesoWeek_(
+          mesoCycleWeek_(weekIndexFromStart_(settingsE)),
+          settingsE,
+        );
 
   // 3d stap 4 — nearTaper client-side, EXACT de engine-logica (planner.ts:510-523): een deload
   // (isMesoRecovery = mesoWeek===4) die 0..7+venster dagen vóór de taper valt wordt onderdrukt.
