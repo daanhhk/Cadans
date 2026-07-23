@@ -413,7 +413,8 @@ export function faseOvergangRegel(o: {
       : "";
   if (o.soort === "event_overname") {
     const wkDeel = wk != null ? `, nog ${wekenLabel_(wk)}` : "";
-    return `Vanaf deze week werkt je plan naar ${ev ?? "je event"} toe in plaats van naar je doel-cyclus${wkDeel}. Je ${s.verandering}: ${s.merk}.`;
+    // Tweede zin met "Vanaf nu" zodat de verandering-frase (werkwoord-inversie) grammaticaal loopt.
+    return `Vanaf deze week werkt je plan naar ${ev ?? "je event"} toe in plaats van naar je doel-cyclus${wkDeel}. Vanaf nu ${s.verandering}: ${s.merk}.`;
   }
   return `Vanaf deze week ${s.verandering}${waarom}: ${s.merk}.`;
 }
