@@ -53,7 +53,12 @@ function plannerDays(min: Record<number, number>): PlannerDay[] {
   }));
 }
 
-function plan(doel: string, doelStart: string, min: Record<number, number>) {
+function plan(
+  doel: string,
+  doelStart: string,
+  min: Record<number, number>,
+  mesoWeekOverride?: number,
+) {
   return buildWeekProposal({
     settings: settings(doel, doelStart),
     plannerDays: plannerDays(min),
@@ -63,8 +68,21 @@ function plan(doel: string, doelStart: string, min: Record<number, number>) {
     wellness: [],
     rpe: [],
     todayISO: TODAY,
+    mesoWeekOverride,
   });
 }
+// Vooruit-plan-vingerafdruk (sessie-dragende velden) — voor het VERSCHIL, niet de inhoud.
+const vooruit = (r: ProposalWeek) =>
+  JSON.stringify(
+    r.days.map((d) => {
+      const s = d.sessions[0];
+      return {
+        vt: d.voorgesteldType,
+        naam: s?.naam ?? null,
+        min: s?.totaalMin ?? null,
+      };
+    }),
+  );
 const hardDagen = (r: ProposalWeek, doel: string) =>
   r.days.filter((d) => isHardType_(d.voorgesteldType, doel)).length;
 const isHard = (r: ProposalWeek, dagIdx: number, doel: string) =>
@@ -101,5 +119,22 @@ describe("Onderhoud-profiel winterfix", () => {
     expect(hardDagen(rOnd, "Onderhoud")).toBeGreaterThan(
       hardDagen(rFtp, "FTP"),
     );
+  });
+
+  // HERSTELROUTE-VOORRANG (DOELEN-SPEC 3.2, stap 1b nog open). We leggen de VOORRANG vast, niet de
+  // deload-INHOUD — die inhoud gaat nog veranderen, dus een inhoud-assert zou onterecht afgaan.
+  it("Onderhoud zonder override op een would-be-deload-blokweek = normale week (geen deload-inhoud)", () => {
+    const r = plan("Onderhoud", DS_DELOAD, { 1: 45, 3: 45, 5: 90, 6: 60 });
+    expect(r.mesoWeek).toBe(1); // effectiveMesoWeek_ → geen kalender-deload
+    expect(hardDagen(r, "Onderhoud")).toBe(3); // volle quota, niet de één-prikkel-deload
+  });
+
+  it("Onderhoud MET mesoWeekOverride 4 wijkt af van diezelfde week zonder override (override bereikt de engine)", () => {
+    const week = { 1: 45, 3: 45, 5: 90, 6: 60 };
+    const zonder = plan("Onderhoud", DS_BASE, week);
+    const met = plan("Onderhoud", DS_BASE, week, 4);
+    // De fatigue-override HOUDT VOORRANG (proposal.ts checkt hem vóór effectiveMesoWeek_): de mesoweek-4
+    // wat-als bereikt de engine en verandert de week. We asserteren HET VERSCHIL, niet welke week.
+    expect(vooruit(met)).not.toBe(vooruit(zonder));
   });
 });
