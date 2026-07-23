@@ -1,6 +1,11 @@
 // Bottom-nav-iconen — natgetrokken uit design/src/app.jsx NavIcon (schema =
 // kalender, vorm = trend-lijn, trainingen = gestapelde rijen, niveau = staven).
-export type TabKey = "schema" | "vorm" | "trainingen" | "niveau";
+export type TabKey =
+  | "schema"
+  | "vorm"
+  | "trainingen"
+  | "niveau"
+  | "activiteiten";
 
 export function NavIcon({ k }: { k: TabKey }) {
   const c = "currentColor";
@@ -83,6 +88,26 @@ export function NavIcon({ k }: { k: TabKey }) {
           rx="1.4"
           stroke={c}
           strokeWidth="1.5"
+        />
+      </svg>
+    );
+  }
+  if (k === "activiteiten") {
+    return (
+      <svg
+        width="21"
+        height="21"
+        viewBox="0 0 20 20"
+        fill="none"
+        aria-hidden="true"
+      >
+        <circle cx="10" cy="10" r="7" stroke={c} strokeWidth="1.5" />
+        <path
+          d="M10 6v4.2l2.8 1.7"
+          stroke={c}
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
         />
       </svg>
     );

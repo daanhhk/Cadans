@@ -6,6 +6,7 @@ const TABS: { key: TabKey; path: string; label: string }[] = [
   { key: "vorm", path: "/vorm", label: "Vorm" },
   { key: "trainingen", path: "/trainingen", label: "Trainingen" },
   { key: "niveau", path: "/niveau", label: "Niveau" },
+  { key: "activiteiten", path: "/activiteiten", label: "Activiteiten" },
 ];
 
 // Vaste onderbalk — natgetrokken uit design/src/app.jsx BottomNav: actief =
@@ -66,6 +67,7 @@ export function BottomNav() {
                     fontWeight: 600,
                     letterSpacing: "0.01em",
                     color: col,
+                    whiteSpace: "nowrap",
                   }}
                 >
                   {t.label}

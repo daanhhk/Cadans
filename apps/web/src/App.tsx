@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
+import { Activiteiten } from "./pages/Activiteiten";
 import { Events } from "./pages/Events";
 import { Instellingen } from "./pages/Instellingen";
 import { Niveau } from "./pages/Niveau";
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="/vorm" element={<Vorm />} />
           <Route path="/trainingen" element={<Trainingen />} />
           <Route path="/niveau" element={<Niveau />} />
+          <Route path="/activiteiten" element={<Activiteiten />} />
           {import.meta.env.DEV && PreviewPage && (
             <Route
               path="/preview"
