@@ -1511,10 +1511,18 @@ describe("engine selftest", () => {
       { intent: "drempel", archetypeId: "threshold_overunder" },
     ]);
     assert_("goalWO recency intent-avoid", true, gr.type !== "threshold");
-    // per-intent id-avoid: bij 51 min is ALLEEN vo2 haalbaar → intent blijft vo2 ondanks de vermijd;
-    // 't recency-VENSTER mijdt 't laatst-gebruikte vo2-id → rotatie naar vo2_pyramid.
-    const ga = goalWorkout_(klim, "Build", 51, [
+    // per-intent id-avoid: sinds prikkel-in-de-rit fase 1 is 51 min NIET meer vo2-only (threshold_2x8/
+    // sweetspot_2x10 passen óók) → forceer vo2 via een vo2-profiel + een non-vo2 SENTINEL als laatste
+    // recency-entry (vermijdIntent≠vo2). Het recency-VENSTER mijdt het laatst-gebruikte vo2-id → rotatie.
+    const vo2Prof: any = {
+      id: "v",
+      soort: "capaciteit",
+      intentGewichten: { drempel: 0, sweetspot: 0, vo2: 1 },
+      archetypeVoorkeuren: {},
+    };
+    const ga = goalWorkout_(vo2Prof, "Build", 51, [
       { intent: "vo2", archetypeId: "vo2_microburst" },
+      { intent: "drempel", archetypeId: "SENT" },
     ]);
     assert_(
       "goalWO recency id-avoid same-intent",
@@ -1561,11 +1569,16 @@ describe("engine selftest", () => {
         klimOnly = false;
     });
     assert_("goalWO klim klim-only-intents", true, klimOnly);
-    // C1 (a) duur-haalbaar-eerst: bij 40 min heeft de top-intent (drempel, min 54) GEEN archetype, maar
-    // vo2 (vo2_microburst[35,70]) wel → kiest vo2, NIET null (oud intent-vóór-duur-gedrag was null).
+    // C1 (a) duur-haalbaar-eerst: bij 40 min krijgt de top-intent (drempel) sinds prikkel-in-de-rit
+    // fase 1 WEL een archetype (threshold_2x8[33,51]) → kiest drempel, niet meer vo2 (was: drempel min
+    // 54 → geen drempel-archetype → viel terug op vo2). Nog steeds NIET null.
     const gShort = goalWorkout_(klim, "Build", 40, []);
     assert_("goalWO duur-haalbaar niet-null", true, gShort != null);
-    assert_("goalWO duur-haalbaar vo2", "vo2max", gShort && gShort.type);
+    assert_(
+      "goalWO duur-haalbaar drempel@40",
+      "threshold",
+      gShort && gShort.type,
+    );
     // C1b coverage-bias = MODULATIE, niet override (COVERAGE_BOOST_ 0.10):
     // klim NAUWE keuze (vo2 0.35+0.10=0.45 > drempel 0.40) → anaerobic-gat tipt naar vo2.
     assert_(
@@ -1611,10 +1624,14 @@ describe("engine selftest", () => {
 
   // ── Fase 1b — per-intent recency-VENSTER rotatie (goalWorkout_) ──
   it("testGoalWorkoutRotatie", () => {
-    // Duur-isolatie: bij 51 min is ALLEEN vo2 haalbaar (drempel min 54 / sweetspot min 52 buiten
-    // bereik) → goalPickIntent_ houdt vo2 vast ongeacht de recency-vermijd. M = vo2-archetypes ⊇ 51.
+    // vo2-rotatie-isolatie. Sinds prikkel-in-de-rit fase 1 passen threshold_2x8/sweetspot_2x10 óók @51,
+    // dus 51 is niet langer vo2-only; goalPickIntent_ zou na een vo2-recency wegschakelen naar drempel.
+    // We forceren vo2 via het profiel (vo2:1) ÉN een non-vo2 SENTINEL als LAATSTE recency-entry, zodat
+    // vermijdIntent≠vo2 en vo2 (hoogste score) gekozen blijft — terwijl de vo2-ids het id-avoid-venster
+    // vullen. M = vo2-archetypes ⊇ 51.
     const TIJD = 51,
       INTENT = "vo2";
+    const SENT = { intent: "drempel", archetypeId: "SENT" };
     const fitting = ARCHETYPES.filter(
       (a: any) =>
         a.effectTags.indexOf(INTENT) >= 0 &&
@@ -1636,7 +1653,7 @@ describe("engine selftest", () => {
     let first: any = null,
       distinct = true;
     for (let i = 0; i < M; i++) {
-      const g = goalWorkout_(prof, "Build", TIJD, rec);
+      const g = goalWorkout_(prof, "Build", TIJD, [...rec, SENT]);
       if (i === 0) first = g.archetypeId;
       if (seen[g.archetypeId]) distinct = false;
       seen[g.archetypeId] = true;
@@ -1650,7 +1667,7 @@ describe("engine selftest", () => {
     assert_(
       "rot call M+1 == call 1",
       first,
-      goalWorkout_(prof, "Build", TIJD, rec).archetypeId,
+      goalWorkout_(prof, "Build", TIJD, [...rec, SENT]).archetypeId,
     );
 
     // Bias: één vorm voorkeur 0.5 → komt >= zo vaak als elke andere; élke fitting vorm >= 1x.
@@ -1669,7 +1686,7 @@ describe("engine selftest", () => {
       count[id] = 0;
     });
     for (let j = 0; j < 3 * M; j++) {
-      const gb = goalWorkout_(profB, "Build", TIJD, recB);
+      const gb = goalWorkout_(profB, "Build", TIJD, [...recB, SENT]);
       count[gb.archetypeId] = (count[gb.archetypeId] || 0) + 1;
       recB.push({ intent: INTENT, archetypeId: gb.archetypeId });
     }
@@ -3571,7 +3588,7 @@ describe("engine selftest", () => {
       true,
       !!t28 && t28.effectTags.indexOf("drempel") >= 0,
     );
-    assert_("threshold_2x8 max 45", 45, t28.duurRange[1]);
+    assert_("threshold_2x8 max 51", 51, t28.duurRange[1]);
     assert_(
       "threshold_2x8 min in [30,34]",
       true,
@@ -3583,7 +3600,7 @@ describe("engine selftest", () => {
       true,
       !!s210 && s210.effectTags.indexOf("sweetspot") >= 0,
     );
-    assert_("sweetspot_2x10 max 45", 45, s210.duurRange[1]);
+    assert_("sweetspot_2x10 max 51", 51, s210.duurRange[1]);
     assert_(
       "sweetspot_2x10 min in [32,37]",
       true,
@@ -3623,7 +3640,7 @@ describe("engine selftest", () => {
       true,
       woS.blokken.some((b: any) => b.pctLo === 88 && b.pctHi === 92),
     );
-    // DRIFT-guard: bij bt=80 kiest goalWorkout_ NIET de korte archetypes (duurRange sluit ze uit).
+    // DRIFT-guard: bij bt=80 kiest goalWorkout_ NIET de korte archetypes (80 > plafond 51 → uitgesloten).
     const g = goalWorkout_(profileForDoel_("FTP"), "Build", 80, []);
     assert_(
       "geen korte-arch bij bt=80",
@@ -3634,36 +3651,40 @@ describe("engine selftest", () => {
     );
   });
 
-  // ── Fase 2b: korte archetypes profiel-gescoped (restrictTo → onderhoud) ──
+  // ── Prikkel-in-de-rit fase 1: het korte-sjabloon-hek ging van PROFIEL naar TIJD ──
+  // (was: testOnderhoudArchetypeScope; restrictTo ['onderhoud'] is weg — de twee korte sjablonen
+  //  zijn nu voor alle vijf profielen beschikbaar en het is de beschikbare TIJD die ze begrenst.)
   it("testOnderhoudArchetypeScope", () => {
     const shortIds = ["threshold_2x8", "sweetspot_2x10"];
     function byId_(id: any) {
       return ARCHETYPES.filter((a: any) => a.id === id)[0];
     }
+    // GEEN restrictTo meer op de twee korte sjablonen (tijd-hek, niet profiel-hek).
     assert_(
-      "threshold_2x8 restrictTo onderhoud",
+      "threshold_2x8 geen restrictTo",
       true,
-      byId_("threshold_2x8").restrictTo.indexOf("onderhoud") >= 0,
+      byId_("threshold_2x8").restrictTo == null,
     );
     assert_(
-      "sweetspot_2x10 restrictTo onderhoud",
+      "sweetspot_2x10 geen restrictTo",
       true,
-      byId_("sweetspot_2x10").restrictTo.indexOf("onderhoud") >= 0,
+      byId_("sweetspot_2x10").restrictTo == null,
     );
     assert_(
       "threshold_2x20 geen restrictTo",
       true,
       byId_("threshold_2x20").restrictTo == null,
     );
-    // intentHaalbaar_ EENS met de pool: onderhoud ziet kort drempel/sweetspot @40, klim NIET.
+    // intentHaalbaar_ EENS met de pool: kort drempel/sweetspot @40 is nu voor ELK profiel haalbaar
+    // (was: alleen onderhoud, klim NIET) — het profiel-hek is een tijd-hek geworden.
     assert_(
       "haalbaar drempel@40 onderhoud",
       true,
       intentHaalbaar_("drempel", 40, "onderhoud"),
     );
     assert_(
-      "haalbaar drempel@40 klim NIET",
-      false,
+      "haalbaar drempel@40 klim (nu WEL, was NIET)",
+      true,
       intentHaalbaar_("drempel", 40, "klim"),
     );
     assert_(
@@ -3672,11 +3693,12 @@ describe("engine selftest", () => {
       intentHaalbaar_("sweetspot", 40, "onderhoud"),
     );
     assert_(
-      "haalbaar sweetspot@40 klim NIET",
-      false,
+      "haalbaar sweetspot@40 klim (nu WEL, was NIET)",
+      true,
       intentHaalbaar_("sweetspot", 40, "klim"),
     );
-    // integratie: onderhoud@40 → kort quality-archetype (niet null/recovery); ftp/klim@40 → niet de korte.
+    // integratie: onderhoud@40 → kort quality-archetype (niet null/recovery); ftp/klim@40 krijgen nu
+    // ÓÓK een kort archetype (was: null → duurrit). Dat is het gat 35-51 dat dichtgaat.
     const gO = goalWorkout_(profileForDoel_("Onderhoud"), "Base", 40, []);
     assert_(
       "onderhoud@40 → kort archetype",
@@ -3685,16 +3707,102 @@ describe("engine selftest", () => {
     );
     const gF = goalWorkout_(profileForDoel_("FTP"), "Build", 40, []);
     assert_(
-      "ftp@40 geen kort archetype",
+      "ftp@40 → kort archetype (nu WEL)",
       true,
-      !gF || shortIds.indexOf(gF.archetypeId) < 0,
+      !!gF && shortIds.indexOf(gF.archetypeId) >= 0,
     );
     const gK = goalWorkout_(profileForDoel_("Beklimmingen"), "Build", 40, []);
     assert_(
-      "klim@40 geen kort archetype",
+      "klim@40 → kort archetype (nu WEL)",
       true,
-      !gK || shortIds.indexOf(gK.archetypeId) < 0,
+      !!gK && shortIds.indexOf(gK.archetypeId) >= 0,
     );
+  });
+
+  // ── Prikkel-in-de-rit fase 1: invarianten B/C/D (BEWIJS, geen steekproef) ──
+  it("testPrikkelInRitFase1", () => {
+    function byId_(id: any) {
+      return ARCHETYPES.filter((a: any) => a.id === id)[0];
+    }
+    const shortIds = ["threshold_2x8", "sweetspot_2x10"];
+    const doelen = ["FTP", "Conditie", "Beklimmingen", "VO2max", "Onderhoud"];
+
+    // B — dragend bewijs: vanaf 52 t/m 135 min levert goalWorkout_ voor ELK doel NOOIT een kort
+    // sjabloon en nooit null. Omdat deze wijziging enkel de beschikbaarheid van die twee sjablonen
+    // (plafond 51) raakt, is dat het bewijs dat het gedrag vanaf 52 min ongewijzigd is.
+    let shortSeen52 = false;
+    let nullSeen52 = false;
+    for (const d of doelen) {
+      const p = profileForDoel_(d);
+      for (let bt = 52; bt <= 135; bt++) {
+        const g = goalWorkout_(p, "Build", bt, []);
+        if (!g) nullSeen52 = true;
+        else if (shortIds.indexOf(g.archetypeId) >= 0) shortSeen52 = true;
+      }
+    }
+    assert_("B: ≥52min nooit een kort sjabloon", false, shortSeen52);
+    assert_("B: ≥52min nooit null", false, nullSeen52);
+
+    // C — nieuwe werking: bij 40 min (band 33-51), fase Build, lege recency.
+    const c40 = (d: any) =>
+      goalWorkout_(profileForDoel_(d), "Build", 40, [])?.archetypeId ?? null;
+    assert_("C: FTP@40 → threshold_2x8", "threshold_2x8", c40("FTP"));
+    assert_(
+      "C: Conditie@40 → sweetspot_2x10",
+      "sweetspot_2x10",
+      c40("Conditie"),
+    );
+    assert_(
+      "C: Beklimmingen@40 → threshold_2x8",
+      "threshold_2x8",
+      c40("Beklimmingen"),
+    );
+    assert_("C: VO2max@40 → vo2_microburst", "vo2_microburst", c40("VO2max"));
+    assert_(
+      "C: Onderhoud@40 → threshold_2x8",
+      "threshold_2x8",
+      c40("Onderhoud"),
+    );
+    // geen vo2-archetype opgedrongen aan een capaciteitsdoel in 35-51 (VO2max zelf uitgezonderd).
+    let vo2Opgedrongen = false;
+    for (const d of ["FTP", "Conditie", "Beklimmingen", "Onderhoud"]) {
+      const p = profileForDoel_(d);
+      for (let bt = 35; bt <= 51; bt++) {
+        const id = String(goalWorkout_(p, "Build", bt, [])?.archetypeId ?? "");
+        if (id.indexOf("vo2") >= 0) vo2Opgedrongen = true;
+      }
+    }
+    assert_(
+      "C: geen vo2 opgedrongen aan capaciteitsdoelen 35-51",
+      false,
+      vo2Opgedrongen,
+    );
+
+    // D — overloop-borging: expandArchetype_ levert totaalMin EXACT gelijk aan doelMin binnen de
+    // duurRange; de ondergrens mag NIET worden opgerekt (onder het minimum loopt de sessie over).
+    const ctx = (dm: number) => ({
+      ftp: 275,
+      lthr: 178,
+      doelMin: dm,
+      mesoFactor: 1.0,
+      faseOffset: 0,
+    });
+    const t28 = byId_("threshold_2x8");
+    const s210 = byId_("sweetspot_2x10");
+    for (const dm of [33, 45, 51]) {
+      assert_(
+        `D: threshold_2x8 totaalMin==doelMin @${dm}`,
+        dm,
+        expandArchetype_(t28, ctx(dm)).totaalMin,
+      );
+    }
+    for (const dm of [35, 45, 51]) {
+      assert_(
+        `D: sweetspot_2x10 totaalMin==doelMin @${dm}`,
+        dm,
+        expandArchetype_(s210, ctx(dm)).totaalMin,
+      );
+    }
   });
 
   // ── Fase 2: Onderhoud gedrag-kern (event-bewuste fase-pin + quota 2 + debt-off; 45-cap verwijderd) ──
@@ -4442,8 +4550,11 @@ describe("engine selftest", () => {
   // ongemoeid-cases) 1040→1052; FASE-C C1: +6 voor testWorkoutWrappers (ZWO/DSL/description
   // byte-exact + null-pad) 1052→1058; Onderhoud-soft: +6 in testOnderhoudWeekSim (5 event-bewuste
   // effectiveMacroFase_-asserts + de event-herstelweek-sim; de 45-cap-assert werd de "past-bij-de-
-  // dag"-assert, netto ±0) 1058→1064).
-  it("exactly 1064 assertions", () => {
-    expect(assertCount).toBe(1064);
+  // dag"-assert, netto ±0) 1058→1064; prikkel-in-de-rit fase 1: +14 voor testPrikkelInRitFase1
+  // (B ≥52min-invariant + C nieuwe 40min-werking + D overloop-borging). Herijkt zonder telling-effect
+  // (1:1): max-45→51-asserts, testOnderhoudArchetypeScope (profiel-hek→tijd-hek), en twee
+  // recency-asserts in testGoalWorkout/-Rotatie (51 niet meer vo2-only → non-vo2-sentinel) 1064→1078).
+  it("exactly 1078 assertions", () => {
+    expect(assertCount).toBe(1078);
   });
 });

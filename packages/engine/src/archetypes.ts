@@ -524,8 +524,11 @@ export const ARCHETYPES: any[] = [
     structuurtype: "intervals",
     effectTags: ["sweetspot"],
     zone: 4,
-    restrictTo: ["onderhoud"],
-    duurRange: [35, 45],
+    // BEWUSTE GAS-FORK: GAS scheidt dit korte sjabloon af met restrictTo ['onderhoud'] ("Fase 2b …
+    // 4 doelen byte-identiek") = poort-voorzichtigheid uit een migratiefase, geen trainingsbesluit.
+    // Zonder het hek forceert elke dag van 35-51 min alle doelen naar VO2max. duurRange[1] 45→51 sluit
+    // naadloos aan op sweetspot_short (52). Zie docs/PRIKKEL-IN-DE-RIT-RECON.md.
+    duurRange: [35, 51],
     warmup: { durMin: 6, pctLo: 55, pctHi: 70 },
     core: [
       {
@@ -835,8 +838,11 @@ export const ARCHETYPES: any[] = [
     structuurtype: "intervals",
     effectTags: ["drempel"],
     zone: 4,
-    restrictTo: ["onderhoud"],
-    duurRange: [33, 45],
+    // BEWUSTE GAS-FORK: GAS scheidt dit korte sjabloon af met restrictTo ['onderhoud'] ("Fase 2b …
+    // 4 doelen byte-identiek") = poort-voorzichtigheid uit een migratiefase, geen trainingsbesluit.
+    // Zonder het hek forceert elke dag van 35-51 min alle doelen naar VO2max; 33-34 min kreeg zelfs
+    // niets. duurRange[1] 45→51 sluit naadloos aan op sweetspot_short (52). Zie docs/PRIKKEL-IN-DE-RIT-RECON.md.
+    duurRange: [33, 51],
     warmup: { durMin: 7, pctLo: 55, pctHi: 78 },
     core: [
       {
@@ -1304,6 +1310,9 @@ export function volumeModulatie(V: any, fase: string, profiel: any): any {
   return z;
 }
 
+// Seam blijft bruikbaar maar GEEN archetype zet `restrictTo` meer (verwijderd op de twee korte
+// sjablonen, prikkel-in-de-rit fase 1) → geeft voortaan altijd true. Vergelijk de maxDuurMin-seam
+// in planner.ts, die na de Onderhoud-soft-fix ook altijd Infinity teruggeeft.
 export function archetypeAllowedForProfile_(a: any, profielId: any): boolean {
   return !a.restrictTo || a.restrictTo.indexOf(profielId) !== -1;
 }
