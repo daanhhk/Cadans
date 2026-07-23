@@ -90,9 +90,11 @@ Nederlands voor uitwisseling en UI-strings; Engels voor code, commit messages en
 
 De HANDOFF-update is **altijd een aparte docs-only commit**, nooit gebundeld met code. CC committe, pusht en print de gepinde RAW-URL op de commit-hash. Een chat is pas klaar voor overgang als die push gedaan is. Nieuwe of gewijzigde werkwijze-afspraken uit die chat gaan in dezelfde close-out naar dit document.
 
+Na het close-out-rapport schrijft de chat de opener voor de volgende chat uit, verbatim uit *§ Opener-sjabloon*.
+
 ## Opener-sjabloon
 
-Kopieer dit bij een nieuwe chat en vul `<hash>`, STAND en FOCUS in. Neem de werkwijze **niet** over in de opener — die staat hier.
+**De afsluitende chat schrijft de opener uit** — verbatim uit dit sjabloon, in één code-blok, ná het close-out-rapport (dan pas is de hash bekend). Invullen: `<hash>` (beide URL's op de close-out-hash), STAND uit de HANDOFF, en FOCUS. Verder niets toevoegen: de werkwijze staat hier, niet in de opener. Daan hoeft niets samen te stellen — hij krijgt één kant-en-klaar blok.
 
 --- BEGIN OPENER ---
 Lees eerst deze twee via web_fetch (RAW, gepind op commit-hash — NIET de blob-URL, die is stale):
@@ -112,3 +114,4 @@ FOCUS DEZE CHAT: <vul in>
 
 - 2026-07-23 — document aangemaakt. Werkwijze verhuisd uit de opener-ketting en uit de verspreide secties in `HANDOFF.md`. Aanleiding: de werkwijze stond op drie plekken die elk per chat muteerden, waardoor afspraken erodeerden (onder meer de regel dat Claude's advies expliciet in de proza bij een popup hoort).
 - 2026-07-23 — aangevuld na een gap-check tegen de levende HANDOFF. Prompt-inhoud is spec-gedreven (stond als "exacte implementatiedetails" — een oudere conventie die bij de verhuizing per ongeluk terugkwam). Sectie *Recon en bewijslast* toegevoegd: chat leest zelf, draai het, klok als fixture-variabele, mechanische locatie-ankers.
+- 2026-07-23 — expliciet gemaakt dat de afsluitende chat de opener uitschrijft (verbatim uit het sjabloon, na het close-out-rapport). Voorkomt zowel handwerk als een uit het geheugen gereconstrueerde opener.
