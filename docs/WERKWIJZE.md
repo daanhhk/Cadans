@@ -6,6 +6,7 @@ Canoniek document voor hoe we werken. Wordt bij elke nieuwe chat gelezen via een
 
 - **Werkwijze** → dit document. Wint van `HANDOFF.md`, van `CLAUDE.md` en van elke opener.
 - **Projectstand** → `HANDOFF.md`.
+- **Doel-laag (wat elk doel moet leveren)** → `docs/DOELEN-SPEC.md`. Een besluit dat daar als VASTGESTELD staat wordt niet opnieuw ter discussie gesteld; wijzigen gebeurt door dat document te wijzigen, niet in een chat.
 - **Parity (wat de oude app doet)** → de bevroren GAS-bron `daanhhk/training` @ `3e8090a`. Die wint van élke samenvatting, inclusief dit document, `HANDOFF.md` en `docs/VORMGEVING-SPEC.md`.
 - `CLAUDE.md` is de CC-kant en is afgeleid van dit document.
 
@@ -117,3 +118,4 @@ FOCUS DEZE CHAT: <vul in>
 - 2026-07-23 — aangevuld na een gap-check tegen de levende HANDOFF. Prompt-inhoud is spec-gedreven (stond als "exacte implementatiedetails" — een oudere conventie die bij de verhuizing per ongeluk terugkwam). Sectie *Recon en bewijslast* toegevoegd: chat leest zelf, draai het, klok als fixture-variabele, mechanische locatie-ankers.
 - 2026-07-23 — expliciet gemaakt dat de afsluitende chat de opener uitschrijft (verbatim uit het sjabloon, na het close-out-rapport). Voorkomt zowel handwerk als een uit het geheugen gereconstrueerde opener.
 - 2026-07-23 — les toegevoegd in *Recon en bewijslast*: een tijd-verschoven herberekening meet alleen tijd-gedreven verandering. Aanleiding: een spec beschreef een fase-"overgang" (`event_overname`) die door tijdsverloop niet kan ontstaan — de tak kon niet vuren en is verwijderd.
+- 2026-07-23 — `docs/DOELEN-SPEC.md` toegevoegd aan de voorrangslijst. Aanleiding: de verwachting bij een doel — met name Onderhoud — werd chat na chat opnieuw uitgevraagd, omdat er geen document was waarin het besluit stond. Nu is een doel-besluit een `git diff`, geen gevoel.
