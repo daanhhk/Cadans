@@ -128,7 +128,12 @@ DEEL 2 — KORTE DAGEN. `restrictTo: ['onderhoud']` vervalt op `sweetspot_2x10` 
 `threshold_2x8`, en hun `duurRange[1]` gaat van 45 naar 51 zodat het gat 46-51 dicht is en
 naadloos aansluit op `sweetspot_short` (52). Dat is consistent met de eigen conventie in de
 tabel (plafond = ondergrens plus ongeveer 30-40 minuten fill), waar deze twee met +10 juist
-krap stonden. Onderhoud verandert hierdoor niet: het houdt dezelfde twee sjablonen.
+krap stonden. Onderhoud verandert hier WEL, en dat is gemeten: in de band 46-51 minuten kreeg Onderhoud tot nu
+toe `vo2_microburst` en krijgt het na de wijziging `threshold_2x8`; onder de 46 houdt Onderhoud
+dezelfde twee sjablonen als nu. Er is bovendien een tweede, bedoelde verbreding: in de band 33-34
+minuten kregen de vier capaciteitsdoelen tot nu toe HELEMAAL geen kwaliteit (null, dus de dag viel
+naar de duurrit); na de wijziging krijgen ze `threshold_2x8`. De volledige veranderband is dus
+33-51 minuten, niet 35-51. Vanaf 52 minuten is het gedrag voor alle vijf doelen ongewijzigd.
 
 INVARIANTEN DIE DE BOUW MOET BORGEN.
 - Karakter-invariantie (M74-M78): alleen de dosis beweegt, nooit het %FTP.
