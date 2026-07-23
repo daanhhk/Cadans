@@ -9,6 +9,8 @@ Cadans — greenfield Cloudflare-herbouw van de FTP-Coach. Repo:
 **daanhhk/Cadans** (public). De oude GAS-app (**daanhhk/training**) blijft
 live tot cutover.
 
+**Bronnen en voorrang.** Werkwijze: `docs/WERKWIJZE.md` — canoniek, wint bij tegenspraak. Projectstand: dit document. Parity: de bevroren GAS-bron `daanhhk/training` @ `3e8090a` — die wint van élke samenvatting hier. CC-instructies: `CLAUDE.md` in de root (wordt automatisch geladen).
+
 ## Stand
 
 **RITDETAILS fase 3 AFGEHANDELD + GEDEPLOYED — tabblad Activiteiten LIVE (juli 2026).** Prod Worker Version `30b09a2c-4b41-4eeb-9a50-f5438ace1efa` = main t/m `8657afa`. GEEN migratie (client-only; `0006` blijft de laatste remote — remote-D1 onaangeroerd, geen enkel wrangler-d1-commando). CI success (run <https://github.com/daanhhk/Cadans/actions/runs/29979969220>). Deploy = `pnpm --filter @cadans/web build` (repo-root) → `npx wrangler deploy` (vanuit `workers/api`); 3 assets vervangen, 63 ongewijzigd.
@@ -963,29 +965,10 @@ RUN 1 plannable-predicaten +6 → 329; B2 RUN 2 Trainingen-tab +0). Engine-selft
 _(Vorige stand: 304 → 300 in FASE 3a, `schema.test.ts` 45 → 41; GEEN regressie.)_
 
 ### BRONHIERARCHIE VOOR PARITY (werkwijze — vast)
-- **daanhhk/training is PUBLIC + BEVROREN op `3e8090a`.** De chat leest de GAS-bron DIRECT via
-  `raw.githubusercontent.com/daanhhk/training/3e8090a/<pad>` — dat is de EERSTE reflex bij ELKE parity-vraag, niet
-  een samenvatting.
-- **Claude Code leest de bevroren GAS-bron van SCHIJF — NOOIT via WebFetch.** De bevroren repo staat lokaal:
-  `C:\Users\daan\Projects\training`, HEAD `3e8090a`, READ-ONLY (identiek aan de gepinde raw-URL). Lees 'm met
-  `sed`/`grep`/Read van schijf. WebFetch geeft een LOSSY PARAFRASE terug en veroorzaakte deze reeks TWEE misreads
-  (slider "30-180" i.p.v. de echte `45`/`240`/`15`; een niet-bestaande view-naam `"cat"`). Beide zijn opgevangen,
-  maar de regel is nu vast.
-- De regel "de chat kan de repo niet lezen" geldt ALLEEN voor de LEVENDE lokale Cadans-repo (ongecommit werk → via
-  Claude Code), NIET voor de bevroren GAS-bron.
-- **VORMGEVING-SPEC + HANDOFF = gepinde SAMENVATTING, geen vervanging.** Verifieer elke parity-claim tegen de bron;
-  een samenvatting kan de VERKEERDE fn als meetlat nemen.
-- **Concreet (brok 5):** een samenvatting claimde "GAS = 3 zones / de port wijkt af van 5-bucket". De bron toonde
-  3-bucket in de ENGINE-laag (`Algorithm.gs:364`, load/debt) NAAST 5-bucket in de WEB-APP-laag (`WebApp.gs:728`,
-  display). De juiste meetlat was de web-app-fn → de fix werd CLIENT-ONLY i.p.v. engine-rakend.
-- **Grens:** puur-VISUELE GAS-rendering (spacing/pixels) → screenshot of eigen oog; de LEVENDE Cadans-repo → CC.
+Verhuisd naar `docs/WERKWIJZE.md` (canoniek). Bij tegenspraak wint WERKWIJZE.md.
 
-### PROMPT-VORM (werkwijze — deze sessie)
-CC-prompts zijn nu **SPEC-GEDREVEN by default**: architectuur + exact gedrag + sleutel-logica + gate; CC schrijft de
-code, vindt de call-sites zelf en past aan de ECHTE staat aan (i.p.v. letterlijke str_replace-blokken). EXACTE code
-alleen als ANKER bij FRAGIELE edits (byte-getrouwe GAS-mirrors, TZ-grens-logica, formules/zone-mappings). CC meldt
-in elk rapport de kern-implementatiekeuzes (gekozen conditie, plaatsing) zodat review tegen de spec kan zonder de
-volledige diff.
+### PROMPT-VORM (werkwijze)
+Verhuisd naar `docs/WERKWIJZE.md` (canoniek). Bij tegenspraak wint WERKWIJZE.md.
 
 **FASE A GEDEPLOYD (A1-A4 + B1) — LIVE op prod, Version `171f79fc`** (was `52a51ae9`; de deploy bundelde
 A1/B1/A3/A2/A4). A2/A4 laatste: disposition-backend `6929741`, disposition-UI + gemist-kaart `d8c70e4`. Prod =
@@ -1664,6 +1647,8 @@ engine CLIENT-SIDE (TZ-veilig want de browser = Amsterdam; omzeilt de UTC-worker
 | 6 | telegram-webhook | |
 
 ## Discipline
+
+Werkwijze-conventies staan in `docs/WERKWIJZE.md` (canoniek); wat hieronder staat is projectspecifiek.
 
 - **Gate** = `pnpm lint + typecheck + test + build` groen ÉN CI groen.
 - PR-based review.
