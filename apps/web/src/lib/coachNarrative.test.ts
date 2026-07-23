@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { coachNarrative } from "./coachNarrative";
+import { coachNarrative, faseOvergangRegel } from "./coachNarrative";
 
 // De 3 warm-varianten van key_session (uit de pool) — voor de fallback-assert.
 const KEY_WARM = [
@@ -72,5 +72,48 @@ describe("coachNarrative", () => {
     );
     expect(withDefault).toBe(explicit);
     expect(withDefault).not.toBe("Pendelrit"); // warme zin, niet de droge reden
+  });
+});
+
+describe("faseOvergangRegel", () => {
+  it("event_overname: opent met 'naar het event toe in plaats van je doel-cyclus' + event + weken", () => {
+    const r = faseOvergangRegel({
+      soort: "event_overname",
+      naar: "Build",
+      eventNaam: "Marmotte",
+      wekenTotEvent: 7,
+    });
+    expect(r).toContain("Marmotte");
+    expect(r).toContain("in plaats van naar je doel-cyclus");
+    expect(r).toContain("7 weken");
+    expect(r).toContain("opbouw"); // "wat je merkt" (Build-strekking)
+    expect(r).not.toMatch(/Ik heb/i); // M55: geen daad-claim
+  });
+
+  it("fase_wissel naar taper: noemt taper + fris aan de start; M55-veilig", () => {
+    const r = faseOvergangRegel({
+      soort: "fase_wissel",
+      naar: "Taper",
+      eventNaam: "Marmotte",
+      wekenTotEvent: 1,
+    });
+    expect(r).toContain("taper");
+    expect(r).toContain("fris aan de start");
+    expect(r).toContain("Marmotte");
+    expect(r).toContain("1 week"); // enkelvoud
+    expect(r.startsWith("Vanaf deze week")).toBe(true);
+    expect(r).not.toMatch(/Ik heb/i);
+  });
+
+  it("fase_wissel zonder event: de regel loopt en laat het event-deel weg", () => {
+    const r = faseOvergangRegel({
+      soort: "fase_wissel",
+      naar: "Build",
+      eventNaam: null,
+      wekenTotEvent: null,
+    });
+    expect(r).toContain("opbouw");
+    expect(r).not.toContain("richting");
+    expect(r.startsWith("Vanaf deze week")).toBe(true);
   });
 });

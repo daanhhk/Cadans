@@ -30,6 +30,7 @@ import type {
 } from "@cadans/shared";
 import { type ActValuesRow, derivePlannerGedaan } from "./activities";
 import { parseLocalDate } from "./dates";
+import { detectFaseOvergang, type FaseOvergang } from "./faseOvergang";
 import { PLAN_ADAPTATION_ENABLED } from "./planFlags";
 import type { ReadinessBand } from "./readiness";
 
@@ -95,6 +96,9 @@ export interface ProposalWeek {
    * IN/vlak vóór de taper valt wordt onderdrukt. Voedt de fatigue-trigger (geen voorstel bij
    * nearTaper). Puur informatief; de engine berekent 'm zelf ongewijzigd. */
   nearTaper: boolean;
+  /** M51/M10 — fase-overgang t.o.v. vorige week (detectFaseOvergang), of null als deze week
+   * geen overgang is. Optioneel zodat bestaande fixtures/preview ongemoeid blijven. */
+  faseOvergang?: FaseOvergang | null;
   days: ProposalDay[];
 }
 
@@ -307,6 +311,8 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
   const wekenTotEvent: number | null =
     typeof macro?.wekenTot === "number" ? macro.wekenTot : null;
   const planModus: string | null = planModusLabel(settings, macro != null);
+  // M51/M10 — kondig een fase-overgang aan op de week dat hij gebeurt (vergelijk met today−7).
+  const faseOvergang = detectFaseOvergang(settings, events, todayLocalISO);
 
   // 3. mesoWeek uit settings.doelStart (vaste keuze; geen DocProp). weekIndexFromStart_
   // is 0-gebaseerd + monotoon; mesoCycleWeek_ mapt naar de cyclische 1..4-mesoweek die
@@ -659,6 +665,7 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
     // de (effectieve) macroFase. Voedt de balk-actieve-fase; macroFase blijft voor kop/label.
     fase: (macro?.fase as string | undefined) ?? macroFase,
     nearTaper,
+    faseOvergang,
     profielPreset: settings.profielPreset ?? null,
     coachNaam: settings.coachNaam ?? null,
     days,

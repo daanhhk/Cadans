@@ -355,3 +355,65 @@ export function inhaalAanbodRegel(bucket: InhaalBucket, dagen: number): string {
   const wat = dagen === 1 ? "één sessie" : `${dagen} sessies`;
   return `Voorstel: ik kan je gemiste ${term} deze week inhalen. Ik verschuif daarvoor ${wat} binnen je bestaande uren — je traint dus niet méér, maar wel wat er miste.`;
 }
+
+// ── M51/M10 — fase-overgang aankondigen (week-niveau, alleen tekst) ───────────
+// Vooruitkijkend, GEEN daad-claim (M55: "vanaf deze week", nooit "Ik heb ..."). De regel noemt
+// ALTIJD drie dingen: wat verandert, waarom (het event + het aantal weken, als er een event is),
+// en wat de renner gaat merken. Zonder event valt het event-deel weg; de regel loopt dan nog.
+
+/** Toonbare fase (Base/Build/Peak/Taper/Recovery/Test) → {verandering, merk}. */
+const FASE_STREKKING_: Record<string, { verandering: string; merk: string }> = {
+  Build: {
+    verandering: "schakel je van basis naar opbouw",
+    merk: "je kwaliteitsblokken worden langer en specifieker",
+  },
+  Peak: {
+    verandering: "ga je de piekfase in",
+    merk: "de scherpte gaat omhoog en het volume iets omlaag",
+  },
+  Taper: {
+    verandering: "begin je te taperen",
+    merk: "minder volume, de scherpte blijft — zo kom je fris aan de start",
+  },
+  Recovery: {
+    verandering: "kom je in een herstelweek",
+    merk: "het event zit erop; deze week draait om herstel",
+  },
+  Base: {
+    verandering: "ga je terug naar rustig basiswerk",
+    merk: "de opbouw komt later",
+  },
+  Test: {
+    verandering: "staat er een testweek gepland",
+    merk: "we meten je FTP opnieuw zodat het plan bijblijft",
+  },
+};
+
+function wekenLabel_(n: number): string {
+  return n === 1 ? "1 week" : `${n} weken`;
+}
+
+/** De aankondigingsregel voor een fase-overgang (soort/naar/eventNaam/wekenTotEvent). */
+export function faseOvergangRegel(o: {
+  soort: "event_overname" | "fase_wissel";
+  naar: string;
+  eventNaam: string | null;
+  wekenTotEvent: number | null;
+}): string {
+  const s = FASE_STREKKING_[o.naar] ?? {
+    verandering: "verandert je trainingsfase",
+    merk: "je plan wordt hierop aangepast",
+  };
+  const ev = o.eventNaam;
+  const wk = o.wekenTotEvent;
+  // "waarom": het event + het aantal weken, indien aanwezig.
+  const waarom =
+    ev != null
+      ? ` richting ${ev}${wk != null ? ` (nog ${wekenLabel_(wk)})` : ""}`
+      : "";
+  if (o.soort === "event_overname") {
+    const wkDeel = wk != null ? `, nog ${wekenLabel_(wk)}` : "";
+    return `Vanaf deze week werkt je plan naar ${ev ?? "je event"} toe in plaats van naar je doel-cyclus${wkDeel}. Je ${s.verandering}: ${s.merk}.`;
+  }
+  return `Vanaf deze week ${s.verandering}${waarom}: ${s.merk}.`;
+}

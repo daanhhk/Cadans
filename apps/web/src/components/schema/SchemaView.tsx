@@ -26,6 +26,7 @@ import { DayStrip } from "./DayStrip";
 import { DispositionAffordance } from "./DispositionAffordance";
 import { DoneCompareCard } from "./DoneCompareCard";
 import { DoneDetail } from "./DoneDetail";
+import { FaseOvergangCard } from "./FaseOvergangCard";
 import { FatigueCard, isFatigueAfgewezen } from "./FatigueCard";
 import { GarminPushButton } from "./GarminPushButton";
 import { GemistCard } from "./GemistCard";
@@ -202,6 +203,15 @@ export function SchemaView({
         planModus={view.planModus}
         volumeUren={view.volumeUren}
       />
+
+      {/* M51/M10 — fase-overgang-aankondiging: over de periodisering, dus direct onder de balk en
+          vóór WeekLoad zodat het als eerste gelezen wordt. Alleen op een overgangsweek. */}
+      {proposalWeek.faseOvergang && (
+        <FaseOvergangCard
+          overgang={proposalWeek.faseOvergang}
+          coachNaam={proposalWeek.coachNaam ?? null}
+        />
+      )}
 
       <WeekLoad tss={view.tss} minuten={view.minuten} dagen={view.dagen} />
 

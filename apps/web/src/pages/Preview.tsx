@@ -1,6 +1,7 @@
 import { buildWorkout } from "@cadans/engine";
 import type { SettingsInput } from "@cadans/shared";
 import { useState } from "react";
+import { FaseOvergangCard } from "../components/schema/FaseOvergangCard";
 import { FatigueCard } from "../components/schema/FatigueCard";
 import { InhaalCard } from "../components/schema/InhaalCard";
 import { SchemaView } from "../components/schema/SchemaView";
@@ -11,6 +12,7 @@ import {
   verlichtActieLabel,
   verlichtBadgeLabel,
 } from "../lib/coachNarrative";
+import type { FaseOvergang } from "../lib/faseOvergang";
 import type {
   ProposalDay,
   ProposalWeek,
@@ -438,6 +440,43 @@ const fatigueFixtures: { label: string; v: FatigueVoorstel }[] = [
   },
 ];
 
+// M51/M10 — FaseOvergangCard-fixtures (aankondiging, alleen tekst). Minimaal: event-overname, een
+// wissel naar opbouw, en een wissel naar taper.
+const faseOvergangFixtures: { label: string; o: FaseOvergang }[] = [
+  {
+    label:
+      "Fase-overgang · EVENT-OVERNAME (plan werkt vanaf nu naar het event toe)",
+    o: {
+      soort: "event_overname",
+      van: "Base",
+      naar: "Build",
+      eventNaam: "Marmotte",
+      wekenTotEvent: 7,
+    },
+  },
+  {
+    label:
+      "Fase-overgang · WISSEL naar OPBOUW (doel-cyclus, met naderend event)",
+    o: {
+      soort: "fase_wissel",
+      van: "Base",
+      naar: "Build",
+      eventNaam: "Marmotte",
+      wekenTotEvent: 6,
+    },
+  },
+  {
+    label: "Fase-overgang · WISSEL naar TAPER (fris aan de start)",
+    o: {
+      soort: "fase_wissel",
+      van: "Peak",
+      naar: "Taper",
+      eventNaam: "Marmotte",
+      wekenTotEvent: 1,
+    },
+  },
+];
+
 const fixtureLabel: React.CSSProperties = {
   fontFamily: "var(--font-sans)",
   fontSize: "var(--fs-caption)",
@@ -525,6 +564,12 @@ function VoorstelPreview() {
               onDismiss={() => undefined}
             />
           </div>
+        </div>
+      ))}
+      {faseOvergangFixtures.map((f) => (
+        <div key={f.label}>
+          <div style={fixtureLabel}>{f.label}</div>
+          <FaseOvergangCard overgang={f.o} coachNaam="Coach" />
         </div>
       ))}
     </div>
