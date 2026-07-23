@@ -79,13 +79,24 @@ export function snapshotDayAction_(
 }
 
 /**
- * Fase 2 — Onderhoud-fase-pin: pint de ENGINE-macrofase op 'Base' als doel === 'Onderhoud'
- * (→ allocActive TRUE + een eerste-klas fase, geen missing-key), anders passthrough. PUUR.
- * Alléén de engine-allocatiebron (generateProposal → assignWorkouts → allocateQualityWeek_) wordt
- * hierdoor gewrapt; de payload/display-fase-sites tonen de echte computeMacroPhase-uitkomst (label = Fase 3).
+ * Fase 2 — Onderhoud-fase-pin, nu EVENT-BEWUST. Pint de ENGINE-macrofase op 'Base' als
+ * doel === 'Onderhoud' (→ allocActive TRUE + een eerste-klas fase, geen missing-key), MAAR:
+ * is de fase EVENT-gedreven (`eventDriven`, er is een A-event/trip), dan overleeft die fase
+ * de pin (Build/Peak-opbouw + event-herstelweek blijven staan). Het `fase !== "Test"`-vangnet
+ * borgt "Onderhoud test nooit" langs elk pad: computeMacroPhase blijft na blokweek 12 voorgoed
+ * op 'Test', wat anders elke week een FTP-test zou plannen. Zonder event / eventDriven falsy →
+ * byte-identiek aan de oude pin. PUUR. Alléén de engine-allocatiebron (generateProposal →
+ * assignWorkouts → allocateQualityWeek_) wordt gewrapt; de payload/display-fase-sites tonen de
+ * echte computeMacroPhase-uitkomst (label = Fase 3).
  */
-export function effectiveMacroFase_(fase: any, settings: any): any {
-  return settings && settings.doel === "Onderhoud" ? "Base" : fase;
+export function effectiveMacroFase_(
+  fase: any,
+  settings: any,
+  eventDriven?: any,
+): any {
+  if (!settings || settings.doel !== "Onderhoud") return fase;
+  if (eventDriven && fase !== "Test") return fase;
+  return "Base";
 }
 
 /**
@@ -421,7 +432,7 @@ export function allocateQualityWeek_(
     const bt = Math.min(
       sel.type === "pendel" ? settings.pendelDuurMin || 80 : sel.minuten,
       (profiel && profiel.maxDuurMin) || Infinity,
-    ); // Fase 2: maxDuurMin-cap (Onderhoud 45); geen veld → Infinity → 4 doelen byte-identiek
+    ); // maxDuurMin-seam blijft bruikbaar maar GEEN profiel zet het veld meer (Onderhoud-45-cap verwijderd) → altijd Infinity
     const gw = goalWorkout_(profiel, macroFase, bt, rec, cov, weekV);
     if (gw) {
       plan[sel.dagIdx] = {

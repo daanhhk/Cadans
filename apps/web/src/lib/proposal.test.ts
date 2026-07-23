@@ -404,6 +404,64 @@ describe("buildWeekProposal", () => {
     );
   });
 
+  // ── ONDERHOUD-SOFT: de fase-pin is nu EVENT-BEWUST (T9). Een event-gedreven fase overleeft de
+  //    pin; zonder event blijft het Test-vangnet actief. ──
+  it("Onderhoud met A-event → macroFase volgt het event (Peak), niet Base", () => {
+    // Race 21 dagen na TODAY (2026-04-01) → eventFase_ = Peak, geen taper.
+    const evPeak: EventItem[] = [
+      {
+        datum: "2026-04-01",
+        naam: "Doelrace",
+        type: "race",
+        prioriteit: "A",
+        afstandKm: 120,
+        hoogtemeters: 2000,
+        klimType: "lang",
+        notitie: null,
+      },
+    ];
+    const rOnderhoud = buildWeekProposal({
+      settings: settings({ doel: "Onderhoud" }),
+      plannerDays: WEEK,
+      events: evPeak,
+      wellness: WELL_OK,
+      ...base,
+    });
+    // vóór de fix pinde Onderhoud dit op "Base"; nu overleeft de event-fase.
+    expect(rOnderhoud.macroFase).toBe("Peak");
+    // contrast: zelfde week met doel FTP geeft óók "Peak" (event-fase, geen pin).
+    const rFtp = buildWeekProposal({
+      settings: settings({ doel: "FTP" }),
+      plannerDays: WEEK,
+      events: evPeak,
+      wellness: WELL_OK,
+      ...base,
+    });
+    expect(rFtp.macroFase).toBe("Peak");
+  });
+
+  it("Onderhoud zonder event → Test-vangnet houdt de pin op Base", () => {
+    // doelStart ver in het verleden → computeMacroPhase = "Test" (na blokweek 12); geen events.
+    const rOnderhoud = buildWeekProposal({
+      settings: settings({ doel: "Onderhoud", doelStart: "2025-12-01" }),
+      plannerDays: WEEK,
+      events: [],
+      wellness: WELL_OK,
+      ...base,
+    });
+    // de pin vuurt zonder event; het "Test"-vangnet → "Base" (Onderhoud test nooit).
+    expect(rOnderhoud.macroFase).toBe("Base");
+    // contrast: doel FTP laat de stale "Test"-fase staan.
+    const rFtp = buildWeekProposal({
+      settings: settings({ doel: "FTP", doelStart: "2025-12-01" }),
+      plannerDays: WEEK,
+      events: [],
+      wellness: WELL_OK,
+      ...base,
+    });
+    expect(rFtp.macroFase).toBe("Test");
+  });
+
   // ── LAAG 1b — cross-week recency (ONgegate: benign, kiest tussen even geldige
   //    sleutelsessies). De week moet in de TOEKOMST liggen, anders plaatst de allocator
   //    niets (allocToday, planner.ts:537) en meet je de keyIntensity-fallback.

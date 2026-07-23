@@ -282,7 +282,13 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
   // "[object Object]" in de workout-naam + context-regel bij lege events.
   const macroFaseBase =
     macro?.macroFase ?? computeMacroPhase(settingsE.doelStart, today).fase;
-  const macroFase = effectiveMacroFase_(macroFaseBase, settingsE);
+  // event-driven = macro-truthiness (macro===null ⟺ geen event); zelfde idioom als planModusLabel
+  // hieronder. Een event-gedreven fase (Build/Peak/Recovery) overleeft zo de Onderhoud-pin.
+  const macroFase = effectiveMacroFase_(
+    macroFaseBase,
+    settingsE,
+    macro != null,
+  );
   const klimType: string | null = macro?.hoofdEvent?.klimType ?? null;
   const isTripEvent = macro?.hoofdEvent?.type === "trip";
   const taperCtx = macro?.taperEvent

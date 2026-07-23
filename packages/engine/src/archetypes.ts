@@ -1266,7 +1266,6 @@ export const PROFILES: any = {
     },
     langeRitPerWeek: 0,
     volumeResponse: { vo2Slope: 0, vo2Cap: 0 },
-    maxDuurMin: 45,
     debtEnabled: false,
   },
 };

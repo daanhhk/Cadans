@@ -3697,7 +3697,7 @@ describe("engine selftest", () => {
     );
   });
 
-  // ── Fase 2: Onderhoud gedrag-kern (fase-pin + quota 2 + debt-off + 45-cap) ──
+  // ── Fase 2: Onderhoud gedrag-kern (event-bewuste fase-pin + quota 2 + debt-off; 45-cap verwijderd) ──
   it("testOnderhoudWeekSim", () => {
     // (a) fase-pin: Onderhoud → Base (overrult stale→Test); 4 doelen passthrough.
     assert_(
@@ -3715,8 +3715,35 @@ describe("engine selftest", () => {
       "Test",
       effectiveMacroFase_("Test", { doel: "FTP" }),
     );
+    // (a2) event-bewust (3e arg): een event-gedreven fase overleeft de pin, behalve "Test" (vangnet);
+    //      zonder event (2-arg / falsy) blijft de pin op "Base".
+    assert_(
+      "effFase Onderhoud+event Build passthrough",
+      "Build",
+      effectiveMacroFase_("Build", { doel: "Onderhoud" }, true),
+    );
+    assert_(
+      "effFase Onderhoud+event Peak passthrough",
+      "Peak",
+      effectiveMacroFase_("Peak", { doel: "Onderhoud" }, true),
+    );
+    assert_(
+      "effFase Onderhoud+event Recovery passthrough",
+      "Recovery",
+      effectiveMacroFase_("Recovery", { doel: "Onderhoud" }, true),
+    );
+    assert_(
+      "effFase Onderhoud+event Test → Base (vangnet)",
+      "Base",
+      effectiveMacroFase_("Test", { doel: "Onderhoud" }, true),
+    );
+    assert_(
+      "effFase Onderhoud zonder event Peak → Base",
+      "Base",
+      effectiveMacroFase_("Peak", { doel: "Onderhoud" }),
+    );
 
-    // (b) week-sim via de allocator op de gepinde Base-fase; ruime beschikbaarheid (bt≥60 → 45-cap bindt).
+    // (b) week-sim via de allocator op de gepinde Base-fase; bt = dagminuten (geen cap meer).
     function dW(idx: any, type: any, minuten: any) {
       return {
         dagIdx: idx,
@@ -3761,7 +3788,7 @@ describe("engine selftest", () => {
     const qKeys = Object.keys(plan).filter((k) => plan[k].role === "quality");
     assert_("onderhoud exact 2 quality", 2, qKeys.length);
     let typesOk = true,
-      capOk = true,
+      fitOk = true,
       archOk = true;
     qKeys.forEach((k) => {
       const p = plan[k];
@@ -3769,10 +3796,19 @@ describe("engine selftest", () => {
         typesOk = false; // niet recovery/skip
       if (p.archetypeId == null) archOk = false; // debt-slot zou archetypeId:null zijn
       const rec = p.archetypeId ? byId_(p.archetypeId) : null;
-      if (!rec || rec.duurRange[0] > 45) capOk = false; // korte archetype: past ≤45 (de cap)
+      // 45-cap weg: het gekozen archetype moet nu BIJ DE DAG passen (duurRange omvat de dagminuten
+      // op dezelfde dagIdx als de plan-key), i.p.v. altijd ≤45.
+      const dag = week.filter((w) => String(w.dagIdx) === String(k))[0];
+      const dm = dag ? dag.minuten : null;
+      if (!rec || dm == null || rec.duurRange[0] > dm || rec.duurRange[1] < dm)
+        fitOk = false;
     });
     assert_("onderhoud quality types (geen recovery)", true, typesOk);
-    assert_("onderhoud alle quality ≤45 (korte arch)", true, capOk);
+    assert_(
+      "onderhoud archetype past bij de dag (duurRange omvat dagminuten)",
+      true,
+      fitOk,
+    );
     assert_("onderhoud geen debt-slot (arch gezet)", true, archOk);
     const geenLang = Object.keys(plan).every(
       (k) =>
@@ -3802,6 +3838,58 @@ describe("engine selftest", () => {
       "ftp debt-slot aanwezig (contrast met Onderhoud)",
       true,
       qF.some((k) => planF[k].archetypeId == null),
+    );
+
+    // (d) EVENT-HERSTELWEEK: doel Onderhoud + macroFase "Recovery" → allocActive UIT → NUL harde
+    //     dagen. Dit is de week die de oude (event-blinde) pin sloopte door "Recovery"→"Base" te
+    //     forceren; de client geeft nu de echte event-fase door (zie proposal.test). Patroon uit
+    //     testTaperGuard3d: assignWorkouts op een toekomst-week, dan de harde dagen tellen.
+    const recStart = new Date();
+    recStart.setDate(recStart.getDate() + 1); // toekomst → allocator plaatst
+    const recDays = [0, 1, 2, 3, 4, 5, 6].map((i) => {
+      const dt = new Date(recStart);
+      dt.setDate(recStart.getDate() + i);
+      return {
+        dagIdx: i,
+        datum: dt,
+        train: true,
+        gedaan: false,
+        minuten: i === 5 ? 120 : 75,
+        type: i === 5 ? "weekend" : "vrij",
+        voorgesteldType: null,
+        reden: null,
+        redenCode: null,
+        archetypeId: null,
+      };
+    });
+    assignWorkouts(
+      recDays,
+      {
+        doel: "Onderhoud",
+        ftp: 280,
+        lthr: 170,
+        gewicht: 75,
+        pendelDuurMin: 80,
+      },
+      1,
+      "Recovery",
+      { low: true, high: true, anaerobic: true },
+      { signal: "normal" },
+      null,
+      null,
+      null,
+      false,
+      null,
+      recDays,
+    );
+    const recHard = recDays.filter(
+      (d: any) =>
+        d.voorgesteldType && isHardType_(d.voorgesteldType, "Onderhoud"),
+    ).length;
+    assert_(
+      "onderhoud event-herstelweek: nul harde dagen (allocActive uit)",
+      0,
+      recHard,
     );
   });
 
@@ -4352,8 +4440,10 @@ describe("engine selftest", () => {
   // (fill-headroom-ramp + overhead-trim + long_z2-cap) en +2 voor testTaperGuard3d 1024→1040;
   // 3d stap 3: +12 voor testDeloadInhoud3d (dosis-spiegel f<1 + één-prikkel-plaatsing +
   // ongemoeid-cases) 1040→1052; FASE-C C1: +6 voor testWorkoutWrappers (ZWO/DSL/description
-  // byte-exact + null-pad) 1052→1058).
-  it("exactly 1058 assertions", () => {
-    expect(assertCount).toBe(1058);
+  // byte-exact + null-pad) 1052→1058; Onderhoud-soft: +6 in testOnderhoudWeekSim (5 event-bewuste
+  // effectiveMacroFase_-asserts + de event-herstelweek-sim; de 45-cap-assert werd de "past-bij-de-
+  // dag"-assert, netto ±0) 1058→1064).
+  it("exactly 1064 assertions", () => {
+    expect(assertCount).toBe(1064);
   });
 });
