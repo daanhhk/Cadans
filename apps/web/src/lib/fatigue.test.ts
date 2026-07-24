@@ -106,14 +106,19 @@ describe("fatigueTrigger — buffer-grenzen hard", () => {
         tsbTrend: UP_TSB_THRESHOLD - 2,
       }),
     ).toBeNull();
-    expect(
-      fatigueTrigger({ ...base, calendarMesoWeek: 4, tsbTrend: 6 }),
-    ).toBeNull();
   });
   it("deloadweek + TSB ruim boven de UP-buffer → up", () => {
     expect(fatigueTrigger({ ...base, calendarMesoWeek: 4, tsbTrend: 10 })).toBe(
       "up",
     );
+    // net boven de verlaagde grens (+5): met +8 gaf 6 → null, met +5 geeft 6 → "up".
+    expect(
+      fatigueTrigger({
+        ...base,
+        calendarMesoWeek: 4,
+        tsbTrend: UP_TSB_THRESHOLD + 1,
+      }),
+    ).toBe("up");
   });
   it("opbouwweek + TSB net boven de DOWN-buffer → NIET down (negatief is normaal)", () => {
     expect(

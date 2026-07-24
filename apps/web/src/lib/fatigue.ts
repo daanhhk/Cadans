@@ -8,8 +8,10 @@ import { profileForDoel_ } from "@cadans/engine";
 import type { WellnessInput } from "@cadans/shared";
 import { parseLocalDate } from "./dates";
 
-/** Fris-buffer, ruim voorbij de tsb.ts-Fris-grens (+5): alleen bij écht getaperd → doortrainen. */
-export const UP_TSB_THRESHOLD = 8;
+/** Fris-buffer, GELIJK aan de tsb.ts-Fris-grens (>+5 = Fris): duidelijk fris tijdens een kalender-deload
+ * → doortrainen aanbieden. Niet pas bij een volledige taper — een deload die al fris binnenkomt heeft
+ * z'n doel verloren, dus de conventionele Fris-grens is de juiste drempel, niet een strengere buffer. */
+export const UP_TSB_THRESHOLD = 5;
 /** Oververmoeid-buffer, veel strikter dan de tsb.ts-grens (−10): in een opbouwweek is negatieve TSB
  * NORMAAL/PRODUCTIEF; alleen een DIEPE, aanhoudende put rechtvaardigt een vervroegde deload. */
 export const DOWN_TSB_THRESHOLD = -25;
