@@ -1145,20 +1145,24 @@ export function deriveSchemaView(
             ? "planned"
             : "rest";
 
-    for (const s of sessions) {
-      tss.gepland += s.tss;
-      minuten.gepland += s.totaalMin;
-    }
-    // "Dagen"-noemer: tel elke dag met GEPLANDE trainingsduur > 0 (GAS-parity,
-    // weekPlanSummary_ WebApp.gs:973: geplandDagen = weekplan-entries met minuten > 0; een
-    // rustdag telt niet, een pendel/multi-sessie-dag is al één entry → telt 1). Bron-getrouw
-    // over de HELE week: vooruit-dagen dragen hun duur in `sessions`, maar verstreken/gedane
-    // dagen krijgen sessions=[] (assignWorkouts bouwt sessions alleen voor tePlannen) → val
-    // daar terug op `plannedForDone`, anders krimpt de noemer terwijl de week vordert (5 → 1/4).
-    // Conditie = duur > 0 (NIET louter `!= null`): een naar-rust-gezette dag (0 min) telt niet.
+    // GEPLANDE dagwaarde — ÉÉN keer per dag, met DEZELFDE terugval voor alle drie de stats (TSS, Uren,
+    // Dagen). Vooruit-dagen dragen hun plan in `sessions`; verstreken/gedane dagen krijgen sessions=[]
+    // (assignWorkouts bouwt sessions alleen voor tePlannen = train && !gedaan && datum >= vandaag) → val
+    // daar terug op `d.plannedForDone`, dat DAGTOTALEN draagt (buildWeekplanEntries sommeert de sessies
+    // naar minuten/tss; een verstreken pendeldag telt dus voor beide ritten). Zonder die terugval krimpt
+    // de gepland-noemer terwijl de week vordert (5 → 1/4). `plannedForDone` is per constructie alléén
+    // gezet als de dag GEEN sessies heeft → geen dubbeltelling.
+    // "Dagen"-noemer (GAS-parity, weekPlanSummary_ WebApp.gs:973: geplandDagen = weekplan-entries met
+    // minuten > 0; een rustdag telt niet, een pendel/multi-sessie-dag is één entry → telt 1). Conditie =
+    // duur > 0 (NIET louter `!= null`): een naar-rust-gezette dag (0 min) telt nergens mee.
     const plannedMinDay = hasSessions
       ? sessions.reduce((sum, s) => sum + s.totaalMin, 0)
       : (d.plannedForDone?.totaalMin ?? 0);
+    const plannedTssDay = hasSessions
+      ? sessions.reduce((sum, s) => sum + s.tss, 0)
+      : (d.plannedForDone?.tss ?? 0);
+    minuten.gepland += plannedMinDay;
+    tss.gepland += plannedTssDay;
     if (plannedMinDay > 0) dagen.gepland += 1;
     tss.gedaan += doneTss;
     minuten.gedaan += done?.minuten ?? 0;

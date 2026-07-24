@@ -643,6 +643,38 @@ describe("deriveSchemaView dispatch (flip + doneCompare)", () => {
     // Teller ≤ noemer; de gedane-set is een subset van de geplande-set.
     expect(v.dagen.gedaan).toBeLessThanOrEqual(v.dagen.gepland);
   });
+
+  it("WeekLoad TSS + Uren: verstreken dag met plannedForDone telt mee, zonder plannedForDone nul (werkstroom-3 symmetrie)", () => {
+    // ma verstreken+GEDAAN (sessions=[] + plannedForDone 60min/78TSS) · di verstreken ZONDER
+    // plannedForDone (sessions=[] → 0, geen crash) · wo VANDAAG trainingsdag (session 60/78) ·
+    // do rustdag (0 min, telt nergens). TODAY = wo. Vóór de fix telde de gepland-kant van TSS/Uren
+    // alleen `sessions` → enkel wo (60/78); ma's plannedForDone viel weg.
+    const week = pweek([
+      pday("2026-03-09", {
+        dagIdx: 0,
+        voorgesteldType: "sweet_spot",
+        plannedForDone: plannedSS,
+      }),
+      pday("2026-03-10", { dagIdx: 1 }), // verstreken, geen plan → 0
+      pday("2026-03-11", {
+        dagIdx: 2,
+        voorgesteldType: "threshold",
+        sessions: [plannedSS],
+      }),
+      pday("2026-03-12", { dagIdx: 3 }), // rustdag, 0 min
+    ]);
+    const v = deriveSchemaView(
+      week,
+      { "2026-03-09": doneSS },
+      "2026-03-11",
+      {},
+    );
+    // Na de fix draagt ma (plannedForDone) mee: 60+60 = 120 min, 78+78 = 156 TSS.
+    expect(v.minuten.gepland).toBe(120);
+    expect(v.tss.gepland).toBe(156);
+    // di (verstreken zonder plannedForDone) + do (rustdag 0 min) dragen nul bij → Dagen = ma+wo = 2.
+    expect(v.dagen.gepland).toBe(2);
+  });
 });
 
 describe("durLabel (GAS trnDurLabel_-port)", () => {
