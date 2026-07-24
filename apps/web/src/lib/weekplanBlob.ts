@@ -11,6 +11,7 @@
  * daarom door de worker-freeze uit de bestaande blob behouden, niet door deze serializer.
  */
 import { ensureIntent_ } from "@cadans/engine";
+import type { PlannerDay } from "@cadans/shared";
 import type { ProposalDay, ProposalWeek, ProposalWorkout } from "./proposal";
 
 /** Zone-buckets in de vaste GAS-volgorde. */
@@ -245,4 +246,52 @@ export function sameForwardEntries(
     if (bByDate.get(e.datum) !== key(e)) return false;
   }
   return true;
+}
+
+/**
+ * GAT-DETECTIE (plan-van-record, aanpak A — docs/PLAN-VAN-RECORD-GAT-RECON.md).
+ * TRUE als er een verstreken trainingsdag DEZE week is (`train === true`, datum in
+ * [weekMondayISO .. todayISO)) waarvan de datum NIET in de opgeslagen blob-entries voorkomt.
+ * Zo'n dag is gereden vóórdat de app 'm als vooruit-dag zag en kreeg dus nooit een
+ * plan-van-record; hij valt uit de weekkaart-noemer + compare. Geen gat → geen reconstructie
+ * (de reconstructie-run draait alleen wanneer deze helper TRUE geeft).
+ */
+export function hasUnrecordedPastTrainingDay(
+  plannerDays: PlannerDay[],
+  stored: unknown[],
+  weekMondayISO: string,
+  todayISO: string,
+): boolean {
+  const storedDates = new Set<string>();
+  for (const raw of stored || []) {
+    const e = raw as { datum?: unknown } | null;
+    if (e && typeof e.datum === "string") storedDates.add(e.datum);
+  }
+  for (const d of plannerDays || []) {
+    if (!d || d.train !== true || typeof d.datum !== "string") continue;
+    if (
+      d.datum >= weekMondayISO &&
+      d.datum < todayISO &&
+      !storedDates.has(d.datum)
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * MERGE-SPLIT (aanpak A). De weg te schrijven payload = de VOORUIT-entries uit het live-plan
+ * (`normalEntries`, datum >= todayISO) PLUS de VERLEDEN-entries uit de reconstructie
+ * (`reconEntries`, datum < todayISO). Vandaag/toekomst houdt zo het live-plan; het verleden
+ * komt volledig uit het schone weekmaandag-plan dat de gaten vult. Muteert de inputs niet.
+ */
+export function mergeReconEntries(
+  normalEntries: WeekplanEntry[],
+  reconEntries: WeekplanEntry[],
+  todayISO: string,
+): WeekplanEntry[] {
+  const forward = (normalEntries || []).filter((e) => e.datum >= todayISO);
+  const past = (reconEntries || []).filter((e) => e.datum < todayISO);
+  return [...forward, ...past];
 }

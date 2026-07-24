@@ -66,7 +66,12 @@ import {
 } from "./proposal";
 import { deriveReadiness, type ReadinessResult } from "./readiness";
 import { presetHoursLabel } from "./settings";
-import { buildWeekplanEntries, sameForwardEntries } from "./weekplanBlob";
+import {
+  buildWeekplanEntries,
+  hasUnrecordedPastTrainingDay,
+  mergeReconEntries,
+  sameForwardEntries,
+} from "./weekplanBlob";
 
 // View-model voor de Schema-tab. ALLE derivatie hier (componenten = puur). De engine-
 // ProposalWorkout is los `any`-getypeerd; we casten 'm hier 1-op-1 naar SchemaSession
@@ -1263,8 +1268,21 @@ export function persistWeekplan(
   doel: string | null,
   storedWeekplans: unknown[],
   todayISO: string,
+  reconWeek?: ProposalWeek | null,
 ): boolean {
   const entries = buildWeekplanEntries(proposalWeek, doel);
+  if (reconWeek) {
+    // Aanpak A: er is een gat (een verstreken trainingsdag zonder opgeslagen entry). Vul het met
+    // het schone weekmaandag-plan en schrijf ALTIJD — de dedup zou anders overslaan omdat de
+    // vooruit-dagen ongewijzigd zijn, terwijl juist het verleden aangevuld moet worden. De
+    // worker-freeze houdt correct bewaarde verleden-dagen vast; de reconstructie vult enkel de gaten.
+    const reconEntries = buildWeekplanEntries(reconWeek, doel);
+    const payload = mergeReconEntries(entries, reconEntries, todayISO);
+    void putWeekplan(proposalWeek.weekMonday, payload, todayISO).catch(
+      () => {},
+    );
+    return true;
+  }
   if (sameForwardEntries(entries, storedWeekplans, todayISO)) return false;
   void putWeekplan(proposalWeek.weekMonday, entries, todayISO).catch(() => {});
   return true;
@@ -1359,7 +1377,7 @@ export async function loadSchemaWeek(): Promise<{
   // Het ACTIEVE plan. Niet-goedgekeurd → planAdaptation false, exact zoals vóór 3a
   // (byte-identiek; mesoWeekOverride undefined → de kalender-mesoWeek). Goedgekeurd (inhaal en/of
   // fatigue) → het aangepaste plan IS het plan voor deze week.
-  const proposalWeek = buildWeekProposal({
+  const proposalInput = {
     settings: settings ?? EMPTY_SETTINGS,
     plannerDays,
     events,
@@ -1372,7 +1390,8 @@ export async function loadSchemaWeek(): Promise<{
     todayISO,
     planAdaptation: optedIn,
     mesoWeekOverride: fatigueOverride,
-  });
+  };
+  const proposalWeek = buildWeekProposal(proposalInput);
 
   // 3d stap 4 — het FATIGUE-VOORSTEL. Bij opt-in: `applied` (de shift zit al in proposalWeek).
   // Anders: bereken de TSB-trend uit de LOAD (wellness `vorm`, NIET de readiness-band) en toets de
@@ -1417,12 +1436,38 @@ export async function loadSchemaWeek(): Promise<{
   // DOWN (vervroegde deload) onderdrukt de inhaal-kaart: herstel wint van inhalen (M66/M72).
   const fatigueDownActive = fatigue?.dir === "down";
 
+  // PLAN-VAN-RECORD-GAT (aanpak A — docs/PLAN-VAN-RECORD-GAT-RECON.md). Een geplande dag die
+  // gereden is vóórdat de app 'm als vooruit-dag zag, kreeg nooit een entry en valt uit de
+  // weekkaart-noemer + compare. Detecteer zo'n gat; alleen dán een TWEEDE buildWeekProposal met
+  // het SCHONE plan (weekmaandag als vandaag + lege activities → alle dagen vooruit → de coach
+  // vult de hele week). Verder identieke inputs → zelfde settings/fase/mesoweek → dosis-getrouw.
+  const gap = hasUnrecordedPastTrainingDay(
+    plannerDays,
+    weekplans,
+    proposalWeek.weekMonday,
+    todayISO,
+  );
+  const reconWeek = gap
+    ? buildWeekProposal({
+        ...proposalInput,
+        todayISO: proposalWeek.weekMonday,
+        activities: [],
+      })
+    : null;
+
   // PLAN-VAN-RECORD (laag 1a): persisteer de week als GAS-blob. Fire-and-forget (zoals de
   // auto-sync) — een mislukte PUT mag het scherm nooit blokkeren. DEDUP: alleen schrijven als
   // de NIET-BEVROREN dagen (vandaag/toekomst) afwijken van wat er al ligt; het verleden
   // bevriest de worker toch. `weekplans` is het 8-weken-venster → sameForwardEntries filtert
-  // zelf op datum, dus geen extra fetch.
-  persistWeekplan(proposalWeek, settings?.doel ?? null, weekplans, todayISO);
+  // zelf op datum, dus geen extra fetch. Bij een gat (reconWeek gezet) wordt ALTIJD geschreven:
+  // de recon-payload vult het ontbrekende verleden, dat de worker-freeze daarna vasthoudt.
+  persistWeekplan(
+    proposalWeek,
+    settings?.doel ?? null,
+    weekplans,
+    todayISO,
+    reconWeek,
+  );
 
   // FASE 2b — het INHAAL-VOORSTEL. Tweede weekplan-run met de deciders geforceerd aan
   // (`planAdaptation: true`), UITSLUITEND om te tonen wát er zou veranderen. Het actieve

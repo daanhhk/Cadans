@@ -113,3 +113,78 @@ describe("persistWeekplan (laag 1a — schrijf-kant)", () => {
     expect(() => persistWeekplan(week(), "FTP", [], TODAY)).not.toThrow();
   });
 });
+
+describe("persistWeekplan MET reconWeek (aanpak A — plan-van-record-gat)", () => {
+  const MONDAY = "2026-03-09";
+  // Een verstreken trainingsdag (03-10, di) + vandaag/toekomst. De datums staan expliciet in
+  // elke buildWeekProposal-aanroep (todayISO), dus de entry-aanwezigheid is klok-onafhankelijk.
+  const GAP_WEEK: PlannerDay[] = [
+    {
+      datum: "2026-03-10",
+      train: true,
+      dag: "di",
+      minuten: 80,
+      dagtype: "vrij",
+      toelichting: null,
+      voorgesteldType: null,
+      gedaan: false,
+    },
+    {
+      datum: "2026-03-11",
+      train: true,
+      dag: "wo",
+      minuten: 60,
+      dagtype: "vrij",
+      toelichting: null,
+      voorgesteldType: null,
+      gedaan: false,
+    },
+    {
+      datum: "2026-03-14",
+      train: true,
+      dag: "za",
+      minuten: 120,
+      dagtype: "weekend",
+      toelichting: null,
+      voorgesteldType: null,
+      gedaan: false,
+    },
+  ];
+  const build = (todayISO: string) =>
+    buildWeekProposal({
+      settings: SETTINGS,
+      plannerDays: GAP_WEEK,
+      events: [],
+      activities: [],
+      weekplans: [],
+      wellness: [],
+      rpe: [],
+      todayISO,
+    });
+
+  beforeEach(() => putWeekplan.mockClear());
+
+  it("schrijft OOK als de vooruit-dagen ongewijzigd zijn, en de payload draagt de gereconstrueerde verstreken dag", () => {
+    const normal = build(TODAY); // vandaag 03-11 → 03-10 heeft geen sessies → geen entry
+    const recon = build(MONDAY); // vandaag = maandag → 03-10 ligt vooruit → krijgt sessies
+    // Vooruit-dagen identiek opgeslagen: zonder recon zou dedup de PUT overslaan.
+    const stored = buildWeekplanEntries(normal, "FTP");
+
+    expect(persistWeekplan(normal, "FTP", stored, TODAY, recon)).toBe(true);
+    expect(putWeekplan).toHaveBeenCalledTimes(1);
+    const [, entries] = putWeekplan.mock.calls[0] as unknown as [
+      string,
+      { datum: string }[],
+      string,
+    ];
+    // De verstreken 03-10 zit alleen in de recon-payload — bewijs dat het gat gevuld wordt.
+    expect(entries.map((e) => e.datum)).toContain("2026-03-10");
+  });
+
+  it("zonder reconWeek blijft de dedup werken (ongewijzigd → geen PUT)", () => {
+    const normal = build(TODAY);
+    const stored = buildWeekplanEntries(normal, "FTP");
+    expect(persistWeekplan(normal, "FTP", stored, TODAY)).toBe(false);
+    expect(putWeekplan).not.toHaveBeenCalled();
+  });
+});

@@ -5,6 +5,8 @@ import {
   buildWeekplanEntries,
   entriesToWeekSlots,
   entryFromDay,
+  hasUnrecordedPastTrainingDay,
+  mergeReconEntries,
   sameForwardEntries,
   weekDatesFrom,
   zeroIntentOutsideZones,
@@ -316,5 +318,66 @@ describe("sameForwardEntries (dedup — alleen de niet-bevroren dagen)", () => {
 
   it("lege opslag met vooruit-entries → false (eerste schrijf)", () => {
     expect(sameForwardEntries(next as never, [], TODAY)).toBe(false);
+  });
+});
+
+describe("hasUnrecordedPastTrainingDay (gat-detectie — aanpak A)", () => {
+  const MONDAY = "2026-03-09";
+  const TODAY2 = "2026-03-11"; // wo → 03-09/03-10 zijn verstreken
+
+  it("verstreken trainingsdag die in stored ONTBREEKT → true", () => {
+    const days = [
+      pday("2026-03-10", { dag: "di" }),
+      pday("2026-03-11", { dag: "wo" }),
+    ];
+    expect(hasUnrecordedPastTrainingDay(days, [], MONDAY, TODAY2)).toBe(true);
+  });
+
+  it("alle verstreken trainingsdagen staan in stored → false", () => {
+    const days = [
+      pday("2026-03-10", { dag: "di" }),
+      pday("2026-03-11", { dag: "wo" }),
+    ];
+    const stored = [{ datum: "2026-03-10", naam: "gereden" }];
+    expect(hasUnrecordedPastTrainingDay(days, stored, MONDAY, TODAY2)).toBe(
+      false,
+    );
+  });
+
+  it("geen verstreken trainingsdag (verleden = rustdag) → false", () => {
+    // 03-10 is rustdag (train false); de enige trainingsdag is vandaag → geen gat.
+    const days = [
+      pday("2026-03-10", { dag: "di", train: false }),
+      pday("2026-03-11", { dag: "wo" }),
+    ];
+    expect(hasUnrecordedPastTrainingDay(days, [], MONDAY, TODAY2)).toBe(false);
+  });
+});
+
+describe("mergeReconEntries (merge-split — vooruit live, verleden recon)", () => {
+  const TODAY2 = "2026-03-11";
+  const normal = [
+    { datum: "2026-03-10", naam: "normaal-verleden" },
+    { datum: "2026-03-11", naam: "normaal-vandaag" },
+    { datum: "2026-03-12", naam: "normaal-morgen" },
+  ] as never;
+  const recon = [
+    { datum: "2026-03-10", naam: "recon-verleden" },
+    { datum: "2026-03-11", naam: "recon-vandaag" },
+    { datum: "2026-03-12", naam: "recon-morgen" },
+  ] as never;
+
+  it("vooruit-entries uit normal, verleden-entries uit recon", () => {
+    const m = mergeReconEntries(normal, recon, TODAY2);
+    const byDate = Object.fromEntries(m.map((e) => [e.datum, e.naam]));
+    expect(byDate["2026-03-10"]).toBe("recon-verleden"); // verleden → recon
+    expect(byDate["2026-03-11"]).toBe("normaal-vandaag"); // vandaag → normal (live)
+    expect(byDate["2026-03-12"]).toBe("normaal-morgen"); // toekomst → normal (live)
+  });
+
+  it("muteert de inputs niet", () => {
+    mergeReconEntries(normal, recon, TODAY2);
+    expect((normal as { datum: string }[]).length).toBe(3);
+    expect((recon as { datum: string }[]).length).toBe(3);
   });
 });
