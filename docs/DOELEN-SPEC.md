@@ -95,27 +95,19 @@ GAS-PARITY. GAS draagt hetzelfde quotum en dezelfde tussenruimte en noemt het pr
 eigen commentaar "Fase 1 (scaffolding)" met gedrag dat naar een nooit gebouwde fase 2 werd
 doorgeschoven. Dit is dus het afmaken van een gedeclareerd onaf profiel, geen willekeurige fork.
 BOUWLAST. Klein: twee waarden in `PROFILES.onderhoud`, plus de meso-uitzondering.
-OPEN — DE HERSTELROUTE LEVERT NOG DE ZACHTE WEEK. EIGEN BOUW, VOOR STAP 2. De kalender-deload is
-weg, maar de vermoeidheidskaart (DOWN) substitueert mesoweek 4 en dat dwingt de deload-inhoud af.
-Voor een opbouwblok klopt die inhoud; voor Onderhoud is het exact de zachte week die M38 verbiedt —
-frequentie is juist wat je in de winter beschermt.
-MECHANISME, GELEZEN (`allocateQualityWeek_`, `packages/engine/src/planner.ts`). Vier klemmen hangen
-aan de deload-vlag. Twee zijn bij Onderhoud AL inert: de lange-rit-klem (`langeRitPerWeek` 0) en de
-debt-klem (`debtEnabled` false). Er bijten er dus twee: het quotum wordt naar 1 geklemd, en de
-eligibility laat alleen doordeweekse `vrij`-dagen toe. De dosis-verlaging (mesoFactor 0,60) zit
-NIET in de allocator maar in de f<1-ramp, en die willen we juist HOUDEN — dat is de verlichting.
-RICHTING. Een profiel-vlag die de twee klemmen overslaat, in dezelfde lijn als `debtEnabled !== false`
-en `mesoCyclus`. Gesimuleerd op een gepatchte bundel gaat de winterweek daarmee van 1 naar 3
-kwaliteitsdagen met de 0,60-dosis erop. Structureel gemeten; de belastingcijfers uit die simulatie
-zijn NIET betrouwbaar (proxy-opbouw, niet de volledige pijplijn) en moeten in de bouw-recon opnieuw.
-OPEN ONTWERPVRAAG, BESLISSEN VOOR DE BOUW. "Volume snijden" haalt de app maar half: de dagminuten uit
-de weekplanner zijn een harde bovengrens en de endurance-fill groeit aan tot `doelMin`, dus een
-0,60-dosis verlaagt de tijd-in-zone maar verkort de week nauwelijks. Kiezen tussen (a) accepteren dat
-de verlichting alleen in tijd-in-zone zit, of (b) een week-brede duurverkorting toevoegen — dat is het
-`durCapMin`-mechanisme dat in T28 fase 2 BEWUST niet is gebouwd omdat er geen consument was. Meten
-voor je kiest.
-De precedentie-test in `ea567e5` legt bewust alleen vast DAT de override de week verandert, niet
-WELKE week eruit komt, zodat die test deze fix niet blokkeert.
+BESLUIT — DE HERSTELROUTE BLIJFT OP DAGNIVEAU (VASTGESTELD). Bij Onderhoud vuurt de WEEK-BREDE
+vermoeidheidskaart niet; de bestaande PER-DAG Verlicht-kaart blijft en dekt "vandaag kapot". Er komt
+GEEN week-breed deload-mechanisme voor Onderhoud.
+GROND, GEMETEN (volledige pijplijn, niet de proxy uit de vorige chat). Haal je alleen de twee
+deload-klemmen in `allocateQualityWeek_` weg (quotum-naar-1 en de weekdag-only-eligibility), dan wordt
+de week 3% lichter: TSS 184 naar 179 bij ONGEWIJZIGD volume. Dat is een kaart die verlichting belooft
+en nagenoeg niets levert. Een week-brede duurverkorting toevoegen zou het `durCapMin`-mechanisme
+bouwen (in T28 fase 2 bewust ongebouwd, geen consument) voor een knop die de gebruiker naar eigen
+zeggen bijna altijd negeert — en dat is precies goed: in de winter hoort hoge intensiteit erbij.
+Herstel hoort dus op DAGniveau, niet op weekniveau. Het `durCapMin`-mechanisme blijft ongebouwd, nu
+met een reden in plaats van een open vraag.
+De precedentie-test in `ea567e5` blijft staan en blokkeert dit niet: die legt alleen vast DAT de
+override de week verandert, niet WELKE week eruit komt.
 
 ### 3.3 Korte beklimmingen — VASTGESTELD, moet gebouwd
 
