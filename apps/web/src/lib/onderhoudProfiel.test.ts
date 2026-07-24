@@ -97,6 +97,17 @@ describe("Onderhoud-profiel winterfix", () => {
     expect(hardDagen(r, "Onderhoud")).toBe(3);
   });
 
+  // DOELEN-SPEC stap 2: met de 12 nieuwe sjablonen heeft de band 45 min genoeg diepte dat drie
+  // sleutelsessies drie VERSCHILLENDE archetypes krijgen (was: 2 sjablonen over 3 dagen).
+  it("3 dagen van 45 min → 3 kwaliteitsdagen met 3 VERSCHILLENDE archetypeIds", () => {
+    const r = plan("Onderhoud", DS_BASE, { 1: 45, 3: 45, 5: 45 });
+    const ids = r.days
+      .filter((d) => isHardType_(d.voorgesteldType, "Onderhoud"))
+      .map((d) => d.archetypeId);
+    expect(ids).toHaveLength(3);
+    expect(new Set(ids).size).toBe(3);
+  });
+
   it("3 dagen van 60 gespreid (di/do/za) → 3 kwaliteitsdagen", () => {
     const r = plan("Onderhoud", DS_BASE, { 1: 60, 3: 60, 5: 60 });
     expect(hardDagen(r, "Onderhoud")).toBe(3);

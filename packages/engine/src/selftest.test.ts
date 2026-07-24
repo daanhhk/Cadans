@@ -3676,7 +3676,6 @@ describe("engine selftest", () => {
   // (was: testOnderhoudArchetypeScope; restrictTo ['onderhoud'] is weg — de twee korte sjablonen
   //  zijn nu voor alle vijf profielen beschikbaar en het is de beschikbare TIJD die ze begrenst.)
   it("testOnderhoudArchetypeScope", () => {
-    const shortIds = ["threshold_2x8", "sweetspot_2x10"];
     function byId_(id: any) {
       return ARCHETYPES.filter((a: any) => a.id === id)[0];
     }
@@ -3718,26 +3717,18 @@ describe("engine selftest", () => {
       true,
       intentHaalbaar_("sweetspot", 40, "klim"),
     );
-    // integratie: onderhoud@40 → kort quality-archetype (niet null/recovery); ftp/klim@40 krijgen nu
-    // ÓÓK een kort archetype (was: null → duurrit). Dat is het gat 35-51 dat dichtgaat.
+    // integratie: onderhoud@40 → een korte drempel/sweetspot-quality (niet null/recovery); ftp/klim@40
+    // krijgen nu ÓÓK zo'n archetype (was: null → duurrit) — het gat 35-51 dat dichtgaat. Op INTENT-TYPE
+    // getoetst i.p.v. exact archetypeId: doelen-spec stap 2 gaf de band meer sjablonen die roteren, maar
+    // bij 40 min past alleen een KORT drempel/sweetspot-sjabloon → type threshold/sweet_spot bewijst dat.
+    const kortQuality = (g: any) =>
+      !!g && (g.type === "threshold" || g.type === "sweet_spot");
     const gO = goalWorkout_(profileForDoel_("Onderhoud"), "Base", 40, []);
-    assert_(
-      "onderhoud@40 → kort archetype",
-      true,
-      !!gO && shortIds.indexOf(gO.archetypeId) >= 0 && gO.type !== "recovery",
-    );
+    assert_("onderhoud@40 → kort drempel/sweetspot", true, kortQuality(gO));
     const gF = goalWorkout_(profileForDoel_("FTP"), "Build", 40, []);
-    assert_(
-      "ftp@40 → kort archetype (nu WEL)",
-      true,
-      !!gF && shortIds.indexOf(gF.archetypeId) >= 0,
-    );
+    assert_("ftp@40 → kort drempel/sweetspot (nu WEL)", true, kortQuality(gF));
     const gK = goalWorkout_(profileForDoel_("Beklimmingen"), "Build", 40, []);
-    assert_(
-      "klim@40 → kort archetype (nu WEL)",
-      true,
-      !!gK && shortIds.indexOf(gK.archetypeId) >= 0,
-    );
+    assert_("klim@40 → kort drempel/sweetspot (nu WEL)", true, kortQuality(gK));
   });
 
   // ── Prikkel-in-de-rit fase 1: invarianten B/C/D (BEWIJS, geen steekproef) ──
@@ -3764,26 +3755,16 @@ describe("engine selftest", () => {
     assert_("B: ≥52min nooit een kort sjabloon", false, shortSeen52);
     assert_("B: ≥52min nooit null", false, nullSeen52);
 
-    // C — nieuwe werking: bij 40 min (band 33-51), fase Build, lege recency.
+    // C — nieuwe werking: bij 40 min (band 33-51), fase Build, lege recency. Op INTENT-TYPE getoetst
+    // (niet op exact archetypeId) — doelen-spec stap 2 gaf de band 33-68 meer sjablonen, dus het exacte
+    // sjabloon roteert; de INTENT (drempel/sweetspot/vo2) is wat telt en is stabiel.
     const c40 = (d: any) =>
-      goalWorkout_(profileForDoel_(d), "Build", 40, [])?.archetypeId ?? null;
-    assert_("C: FTP@40 → threshold_2x8", "threshold_2x8", c40("FTP"));
-    assert_(
-      "C: Conditie@40 → sweetspot_2x10",
-      "sweetspot_2x10",
-      c40("Conditie"),
-    );
-    assert_(
-      "C: Beklimmingen@40 → threshold_2x8",
-      "threshold_2x8",
-      c40("Beklimmingen"),
-    );
-    assert_("C: VO2max@40 → vo2_microburst", "vo2_microburst", c40("VO2max"));
-    assert_(
-      "C: Onderhoud@40 → threshold_2x8",
-      "threshold_2x8",
-      c40("Onderhoud"),
-    );
+      goalWorkout_(profileForDoel_(d), "Build", 40, [])?.type ?? null;
+    assert_("C: FTP@40 → drempel", "threshold", c40("FTP"));
+    assert_("C: Conditie@40 → sweetspot", "sweet_spot", c40("Conditie"));
+    assert_("C: Beklimmingen@40 → drempel", "threshold", c40("Beklimmingen"));
+    assert_("C: VO2max@40 → vo2", "vo2max", c40("VO2max"));
+    assert_("C: Onderhoud@40 → drempel", "threshold", c40("Onderhoud"));
     // geen vo2-archetype opgedrongen aan een capaciteitsdoel in 35-51 (VO2max zelf uitgezonderd).
     let vo2Opgedrongen = false;
     for (const d of ["FTP", "Conditie", "Beklimmingen", "Onderhoud"]) {
@@ -4578,8 +4559,12 @@ describe("engine selftest", () => {
   // recency-asserts in testGoalWorkout/-Rotatie (51 niet meer vo2-only → non-vo2-sentinel) 1064→1078;
   // Onderhoud-profiel (DOELEN-SPEC 3.2): +24 in testOnderhoudProfiel (quotum Build/Peak 3 + midweekMinGap 1
   // + mesoCyclus false = +4, plus 20 effectiveMesoWeek_-asserts: 4 mesoweken × 5 doelen). Herijkt zonder
-  // telling-effect (1:1): kwaliteitPerWeek.Base 2→3 en testOnderhoudWeekSim "2 quality"→"3 quality" 1078→1102).
-  it("exactly 1102 assertions", () => {
-    expect(assertCount).toBe(1102);
+  // telling-effect (1:1): kwaliteitPerWeek.Base 2→3 en testOnderhoudWeekSim "2 quality"→"3 quality" 1078→1102;
+  // doelen-spec stap 2 (12 nieuwe archetypes): +143 doordat de per-archetype-validatielussen (velden/
+  // blok-bounds/blok-zone/som==totaal/~doelMin/watt-rows/intent) elk nieuw record ~12× asserten. Herijkt
+  // zonder telling-effect (1:1): de @40-asserts in testOnderhoudArchetypeScope + testPrikkelInRitFase1-C van
+  // exact-archetypeId naar INTENT-TYPE (grotere pool roteert het sjabloon; de intent blijft) 1102→1245).
+  it("exactly 1245 assertions", () => {
+    expect(assertCount).toBe(1245);
   });
 });
