@@ -53,7 +53,12 @@ import {
   verlichtRustResultaatRegel,
 } from "./coachNarrative";
 import { parseLocalDate, todayIso, weekMondayIso } from "./dates";
-import { computeTsbTrend, fatigueMinDataOk, fatigueTrigger } from "./fatigue";
+import {
+  computeTsbTrend,
+  fatigueMinDataOk,
+  fatigueTrigger,
+  weekFatigueEnabled,
+} from "./fatigue";
 import {
   buildWeekProposal,
   type ProposalWeek,
@@ -1326,10 +1331,19 @@ export async function loadSchemaWeek(): Promise<{
   // doorlopende aanpassing, en geen opruim-job).
   const optedIn = debtOptInWeek === monday;
 
+  // Stap 1b (DOELEN-SPEC 3.2) — de WEEK-BREDE vermoeidheidskaart vuurt niet bij een doel zonder
+  // mesocyclus (vandaag Onderhoud). ÉÉN keer berekend uit het doel; ZOWEL de opt-in-tak als de
+  // trigger-tak hangen eraan. Staat er nog een niet-vervallen fatigue_shift-rij van vóór een
+  // doel-wissel, dan mag die geen applied-kaart tonen én geen mesoWeekOverride naar buildWeekProposal
+  // sturen (die override gaat in proposal.ts vóór effectiveMesoWeek_ en zou de week alsnog naar deload 4
+  // duwen). We laten die rij staan en schrijven NIETS naar D1 — hij vervalt vanzelf de maandag erna (M68).
+  const weekFatigueOn = weekFatigueEnabled(settings?.doel);
+
   // 3d stap 4 — FATIGUE-shift opt-in (spiegelt de inhaal-opt-in, M68): geldt alleen voor DEZE
   // maandag + een geldige richting, vervalt vanzelf de week erna. Goedgekeurd → de ACTIEVE
   // proposalWeek krijgt de mesoWeek-substitutie (up→1 doortrainen, down→4 vervroegde deload).
   const fatigueOptIn =
+    weekFatigueOn &&
     fatigueShift.monday === monday &&
     (fatigueShift.dir === "up" || fatigueShift.dir === "down");
   const fatigueOverride: number | undefined = fatigueOptIn
@@ -1369,7 +1383,7 @@ export async function loadSchemaWeek(): Promise<{
       tsbTrend: null,
       preview: null,
     };
-  } else {
+  } else if (weekFatigueOn) {
     const { trend } = computeTsbTrend(wellness, todayISO);
     const dir = fatigueTrigger({
       calendarMesoWeek: proposalWeek.mesoWeek,

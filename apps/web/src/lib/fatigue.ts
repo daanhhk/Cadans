@@ -4,6 +4,7 @@
 //
 // Drempels/venster BESLIST (Daan-akkoord). TSB is al een gladde EWMA-differentie → een N-daags
 // gemiddelde + bufferdrempel levert de "aanhoudend"-eigenschap; geen extra K/M-persistentiefilter.
+import { profileForDoel_ } from "@cadans/engine";
 import type { WellnessInput } from "@cadans/shared";
 import { parseLocalDate } from "./dates";
 
@@ -93,4 +94,18 @@ export function fatigueTrigger(a: {
   )
     return "down";
   return null;
+}
+
+/**
+ * Stap 1b (DOELEN-SPEC 3.2 VASTGESTELD) — mag de WEEK-BREDE vermoeidheidskaart voor dit doel vuren?
+ * Gate op de PROFIEL-vlag, NIET op de doelnaam: een doel zonder mesocyclus (`mesoCyclus === false`,
+ * vandaag alleen Onderhoud) draait geen kalender-deload, dus een week-brede up/down-substitutie hoort
+ * er niet; herstel loopt daar via de PER-DAG Verlicht-kaart. Door op de vlag te gaten klopt dit meteen
+ * voor elk toekomstig doel zonder mesocyclus, zonder hier een naam bij te schrijven. Een leeg/onbekend
+ * doel valt door de klim-fallback van `profileForDoel_`, heeft het veld niet → true (fail-open, dezelfde
+ * lijn als effectiveMesoWeek_). De PER-DAG Verlicht-kaart blijft in alle gevallen ongemoeid.
+ */
+export function weekFatigueEnabled(doel: string | null | undefined): boolean {
+  const prof = profileForDoel_(doel ?? "");
+  return prof?.mesoCyclus !== false;
 }

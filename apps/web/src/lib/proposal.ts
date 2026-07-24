@@ -320,7 +320,9 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
   // MESO_MOD/isMesoRecovery verwachten (3d stap 1 — fixt off-by-one + nooit-meer-herstel).
   // 3d stap 4: een fatigue-wat-als mag de kalender-mesoWeek substitueren (client-only; de engine
   // krijgt de gesubstitueerde waarde ongewijzigd door → dosis mesoFactor + deload-flag isMesoRecovery).
-  // De fatigue-override HOUDT VOORRANG (dat is de herstelroute voor Onderhoud); de KALENDER-mesoweek
+  // De fatigue-override HOUDT in deze keten nog steeds VOORRANG, maar bereikt een doel zonder
+  // mesocyclus (Onderhoud) niet meer: de client gate't de week-brede fatigue-laag daar uit
+  // (stap 1b, schema.ts → weekFatigueEnabled), dus mesoWeekOverride komt er niet. De KALENDER-mesoweek
   // loopt door effectiveMesoWeek_ zodat Onderhoud (mesoCyclus:false) geen ramp/deload krijgt (DOELEN-SPEC 3.2).
   const mesoWeek =
     input.mesoWeekOverride != null

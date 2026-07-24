@@ -222,8 +222,8 @@ daarmee geen los doel maar een dragende laag.
 ## 6. Bouwvolgorde
 
 1. Onderhoud-profiel (quotum 3, tussenruimte 1, meso-uitzondering). Klein, gemeten, winterfix. **AF** — commit `09e6a07`, precedentie-test `ea567e5`.
-1b. Onderhoud-herstelweek (§3.2 OPEN): de twee deload-klemmen in `allocateQualityWeek_` overslaan voor Onderhoud, met de dosis-verlaging behouden. Recon-first, de open ontwerpvraag (dagminuten als hard plafond) eerst meten. VOOR stap 2.
-2. Archetypes 33-68 erbij. Zonder deze stap wordt stap 1 monotoon.
+1b. Onderhoud-herstelroute op DAGniveau (§3.2 VASTGESTELD): bij een doel zonder mesocyclus vuurt de WEEK-BREDE vermoeidheidskaart niet; de bestaande PER-DAG Verlicht-kaart blijft en dekt "vandaag kapot". Het eerder ontworpen mechanisme — de twee deload-klemmen in `allocateQualityWeek_` overslaan plus een week-brede duurcap — is GESCHRAPT: gemeten levert het weghalen van de klemmen TSS 184 naar 179 bij ongewijzigd volume, een kaart die verlichting belooft en niets levert. **AF** — client-side gate op de profiel-vlag `mesoCyclus === false` in `apps/web/src/lib/fatigue.ts` + `schema.ts`, GEEN engine-wijziging.
+2. Archetypes 33-68 erbij. Zonder deze stap wordt stap 1 monotoon. **AF** — commit `0bb79ee`, bibliotheek 23 naar 35.
 3. Doel-lijst herzien: VO2max eruit, Beklimmingen splitsen in kort en lang.
 4. Duurvermogen-meetlat, samen met prikkel-in-de-rit fase 2.
 
@@ -233,8 +233,8 @@ Elke stap eigen bouw, stop-en-verifieer ertussen, gate en CI groen, vloeren niet
 
 - ~~`PROFILES.onderhoud` in `packages/engine/src/archetypes.ts` — quotum en tussenruimte.~~ **GEBRUIKT** (commit `09e6a07`).
 - ~~De meso-uitzondering voor Onderhoud.~~ **GEBRUIKT** — landde NIET bij de `mesoFactor`-consumenten maar als aparte pure helper `effectiveMesoWeek_` aan de bron (`planner.ts`, zet de mesoweek op 1), zodat GEEN dosis-site is geraakt.
-- NOG NIET GEGEVEN: de twee deload-klemmen in `allocateQualityWeek_` (`planner.ts`) — het quotum-naar-1 en de weekdag-only-eligibility, over te slaan voor Onderhoud (§3.2 OPEN, stap 1b).
-- `ARCHETYPES` in `packages/engine/src/archetypes.ts` — de nieuwe sjablonen.
+- ~~De twee deload-klemmen in `allocateQualityWeek_` (`planner.ts`) — quotum-naar-1 en weekdag-only-eligibility, over te slaan voor Onderhoud.~~ **VERVALLEN** — het mechanisme is geschrapt (§3.2 VASTGESTELD); stap 1b is client-side gebouwd. Voor Onderhoud-herstel is GEEN engine-autorisatie meer nodig.
+- ~~`ARCHETYPES` in `packages/engine/src/archetypes.ts` — de nieuwe sjablonen.~~ **GEBRUIKT** (commit `0bb79ee`; twaalf nieuwe kwaliteits-archetypes, bibliotheek 23 naar 35).
 - `DOEL_OPTIONS` en `profileForDoel_` — doel-lijst.
 - `climbTypeWorkout_` en de dode tak in `planner.ts` — klim-splitsing.
 - `packages/engine/src/selftest.test.ts` — asserties bewegen mee, vloer stijgt.

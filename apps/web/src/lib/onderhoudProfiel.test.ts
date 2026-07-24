@@ -132,8 +132,9 @@ describe("Onderhoud-profiel winterfix", () => {
     );
   });
 
-  // HERSTELROUTE-VOORRANG (DOELEN-SPEC 3.2, stap 1b nog open). We leggen de VOORRANG vast, niet de
-  // deload-INHOUD — die inhoud gaat nog veranderen, dus een inhoud-assert zou onterecht afgaan.
+  // HERSTELROUTE-VOORRANG op PROPOSAL-niveau. Deze tests roepen buildWeekProposal RECHTSTREEKS aan (met
+  // een expliciete mesoWeekOverride), dus ze meten de keten-voorrang los van de client-gate uit stap 1b
+  // (weekFatigueEnabled in schema.ts). Die gate zit een laag hoger en raakt deze proposal-tests niet.
   it("Onderhoud zonder override op een would-be-deload-blokweek = normale week (geen deload-inhoud)", () => {
     const r = plan("Onderhoud", DS_DELOAD, { 1: 45, 3: 45, 5: 90, 6: 60 });
     expect(r.mesoWeek).toBe(1); // effectiveMesoWeek_ → geen kalender-deload

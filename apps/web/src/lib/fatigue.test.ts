@@ -12,6 +12,7 @@ import {
   fatigueMinDataOk,
   fatigueTrigger,
   UP_TSB_THRESHOLD,
+  weekFatigueEnabled,
 } from "./fatigue";
 import { buildWeekProposal } from "./proposal";
 
@@ -255,5 +256,21 @@ describe("mesoWeekOverride-substitutie (buildWeekProposal)", () => {
 
   it("nearTaper is false zonder aanstaand event", () => {
     expect(build().nearTaper).toBe(false);
+  });
+});
+
+describe("weekFatigueEnabled — week-brede fatigue-kaart gegate op de mesocyclus-profielvlag", () => {
+  it("Onderhoud (mesoCyclus:false) → false", () => {
+    expect(weekFatigueEnabled("Onderhoud")).toBe(false);
+  });
+  it("de vier doelen met mesocyclus → true", () => {
+    for (const d of ["FTP", "Conditie", "Beklimmingen", "VO2max"]) {
+      expect(weekFatigueEnabled(d)).toBe(true);
+    }
+  });
+  it("leeg of onbekend doel → true (fail-open, klim-fallback zonder de vlag)", () => {
+    expect(weekFatigueEnabled("")).toBe(true);
+    expect(weekFatigueEnabled(null)).toBe(true);
+    expect(weekFatigueEnabled("Iets Onbekends")).toBe(true);
   });
 });
