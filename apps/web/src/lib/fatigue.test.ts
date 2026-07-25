@@ -7,11 +7,11 @@ import type {
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { ActValuesRow } from "./activities";
 import {
+  computeBlockCtlDelta,
   computeTsbTrend,
-  DOWN_TSB_THRESHOLD,
+  deepFatigueThreshold,
   fatigueMinDataOk,
   fatigueTrigger,
-  UP_TSB_THRESHOLD,
   weekFatigueEnabled,
 } from "./fatigue";
 import { buildWeekProposal } from "./proposal";
@@ -96,91 +96,184 @@ describe("fatigueMinDataOk", () => {
   });
 });
 
-describe("fatigueTrigger — buffer-grenzen hard", () => {
-  const base = { macroFase: "Build", nearTaper: false, minDataOk: true };
-  it("deloadweek + TSB net onder de UP-buffer → NIET up", () => {
-    expect(
-      fatigueTrigger({
-        ...base,
-        calendarMesoWeek: 4,
-        tsbTrend: UP_TSB_THRESHOLD - 2,
-      }),
-    ).toBeNull();
+describe("computeBlockCtlDelta — ΔCTL-ankers over het blok", () => {
+  // wc: een wellness-rij met een gekozen ctl (vorm doet er hier niet toe).
+  const wc = (datum: string, ctl: number): WellnessInput => ({
+    ...wl(datum, 0),
+    ctl,
   });
-  it("deloadweek + TSB ruim boven de UP-buffer → up", () => {
-    expect(fatigueTrigger({ ...base, calendarMesoWeek: 4, tsbTrend: 10 })).toBe(
-      "up",
+  // weekMaandag 2026-07-20 → blok-eind-anker 07-19, blok-begin-anker 06-28.
+  const MONDAY = "2026-07-20";
+
+  it("exacte ankers → delta = toCtl − fromCtl (1 decimaal)", () => {
+    const r = computeBlockCtlDelta(
+      [wc("2026-06-28", 50.7), wc("2026-07-19", 45.7)],
+      MONDAY,
     );
-    // net boven de verlaagde grens (+5): met +8 gaf 6 → null, met +5 geeft 6 → "up".
+    expect(r).toEqual({ delta: -5.0, fromCtl: 50.7, toCtl: 45.7 });
+  });
+
+  it("een rij op 2 dagen afstand wordt gepakt, op 4 dagen niet", () => {
+    // begin-anker 06-28: rij op 06-26 (2 dagen) telt; eind-anker 07-19: enige rij 07-15 (4 dagen) valt buiten → null.
+    expect(
+      computeBlockCtlDelta(
+        [wc("2026-06-26", 50.0), wc("2026-07-15", 45.0)],
+        MONDAY,
+      ),
+    ).toBeNull();
+    // met een eind-rij binnen 3 dagen (07-17, 2 dagen) → wél een resultaat.
+    const r = computeBlockCtlDelta(
+      [wc("2026-06-26", 50.0), wc("2026-07-17", 45.0)],
+      MONDAY,
+    );
+    expect(r).toEqual({ delta: -5.0, fromCtl: 50.0, toCtl: 45.0 });
+  });
+
+  it("ontbrekend anker → null", () => {
+    // alleen een eind-anker, geen begin-anker binnen tolerantie.
+    expect(computeBlockCtlDelta([wc("2026-07-19", 45.7)], MONDAY)).toBeNull();
+  });
+
+  it("gelijke afstand → de oudere rij wint (deterministisch)", () => {
+    // eind-anker 07-19: rijen op 07-18 en 07-20, beide 1 dag; de oudere (07-18) telt.
+    const r = computeBlockCtlDelta(
+      [wc("2026-06-28", 50.0), wc("2026-07-18", 44.0), wc("2026-07-20", 46.0)],
+      MONDAY,
+    );
+    expect(r?.toCtl).toBe(44.0);
+  });
+});
+
+describe("deepFatigueThreshold — schaal-relatieve Form-put", () => {
+  it("CTL 45 → −11,25 (de fractie wint van de vloer)", () => {
+    expect(deepFatigueThreshold(45)).toBeCloseTo(-11.25, 5);
+  });
+  it("CTL 30 → −10 (de vloer wint)", () => {
+    expect(deepFatigueThreshold(30)).toBe(-10);
+  });
+});
+
+describe("fatigueTrigger — blok-signaal", () => {
+  const base = { macroFase: "Build", nearTaper: false, minDataOk: true };
+
+  it("juli-blok (mesoWeek 4, ΔCTL −5,0, TSB 4,4) → up", () => {
+    // Echte recon-data: kalender-deload zonder opbouw → doortrainen; TSB speelt geen rol voor UP.
     expect(
       fatigueTrigger({
         ...base,
         calendarMesoWeek: 4,
-        tsbTrend: UP_TSB_THRESHOLD + 1,
+        ctlDelta: -5.0,
+        ctlNow: 45.7,
+        tsbTrend: 4.4,
       }),
     ).toBe("up");
   });
-  it("opbouwweek + TSB net boven de DOWN-buffer → NIET down (negatief is normaal)", () => {
-    expect(
-      fatigueTrigger({ ...base, calendarMesoWeek: 2, tsbTrend: -20 }),
-    ).toBeNull();
+
+  it("april-blok (mesoWeek 2, ΔCTL +12,0, TSB −17, CTL 48) → null (AND-regel houdt DOWN stil)", () => {
+    // Diepe TSB maar productieve overload → geen vervroegde deload; dat is het vangnet-gedrag.
     expect(
       fatigueTrigger({
         ...base,
         calendarMesoWeek: 2,
-        tsbTrend: DOWN_TSB_THRESHOLD + 5,
+        ctlDelta: 12.0,
+        ctlNow: 48,
+        tsbTrend: -17,
       }),
     ).toBeNull();
   });
-  it("opbouwweek + TSB diep onder de DOWN-buffer → down", () => {
-    expect(
-      fatigueTrigger({ ...base, calendarMesoWeek: 2, tsbTrend: -30 }),
-    ).toBe("down");
-  });
-  it("onderdrukt bij Test/Recovery, nearTaper, en !minDataOk", () => {
+
+  it("plateau-grens: ΔCTL exact +1,0 op mesoWeek 4 → up, +1,1 → null", () => {
     expect(
       fatigueTrigger({
+        ...base,
         calendarMesoWeek: 4,
+        ctlDelta: 1.0,
+        ctlNow: 45,
+        tsbTrend: 3,
+      }),
+    ).toBe("up");
+    expect(
+      fatigueTrigger({
+        ...base,
+        calendarMesoWeek: 4,
+        ctlDelta: 1.1,
+        ctlNow: 45,
+        tsbTrend: 3,
+      }),
+    ).toBeNull();
+  });
+
+  it("echt DOWN-geval (mesoWeek 2, ΔCTL −3, CTL 45, TSB −12) → down", () => {
+    // deepFatigueThreshold(45) = −11,25; −12 < −11,25 → de put is diep genoeg.
+    expect(
+      fatigueTrigger({
+        ...base,
+        calendarMesoWeek: 2,
+        ctlDelta: -3,
+        ctlNow: 45,
+        tsbTrend: -12,
+      }),
+    ).toBe("down");
+  });
+
+  it("DOWN: geen opbouw maar de Form-put is niet diep genoeg → null", () => {
+    // −10 < −11,25 is onwaar → geen vervroegde deload.
+    expect(
+      fatigueTrigger({
+        ...base,
+        calendarMesoWeek: 2,
+        ctlDelta: -3,
+        ctlNow: 45,
+        tsbTrend: -10,
+      }),
+    ).toBeNull();
+  });
+
+  it("ontbrekend blok-anker (ctlDelta null) → null", () => {
+    expect(
+      fatigueTrigger({
+        ...base,
+        calendarMesoWeek: 4,
+        ctlDelta: null,
+        ctlNow: 45,
+        tsbTrend: 4,
+      }),
+    ).toBeNull();
+  });
+
+  it("onderdrukt bij Test/Recovery, nearTaper, en !minDataOk", () => {
+    // Elk geval zou zonder de onderdrukking "up" geven (mesoWeek 4, ΔCTL −5).
+    const up = { calendarMesoWeek: 4, ctlDelta: -5, ctlNow: 45, tsbTrend: 4 };
+    expect(
+      fatigueTrigger({
+        ...up,
         macroFase: "Test",
         nearTaper: false,
         minDataOk: true,
-        tsbTrend: 20,
       }),
     ).toBeNull();
     expect(
       fatigueTrigger({
-        calendarMesoWeek: 4,
+        ...up,
         macroFase: "Recovery",
         nearTaper: false,
         minDataOk: true,
-        tsbTrend: 20,
       }),
     ).toBeNull();
     expect(
       fatigueTrigger({
-        calendarMesoWeek: 4,
+        ...up,
         macroFase: "Build",
         nearTaper: true,
         minDataOk: true,
-        tsbTrend: 20,
       }),
     ).toBeNull();
     expect(
       fatigueTrigger({
-        calendarMesoWeek: 4,
+        ...up,
         macroFase: "Build",
         nearTaper: false,
         minDataOk: false,
-        tsbTrend: 20,
-      }),
-    ).toBeNull();
-    expect(
-      fatigueTrigger({
-        calendarMesoWeek: 4,
-        macroFase: "Build",
-        nearTaper: false,
-        minDataOk: true,
-        tsbTrend: null,
       }),
     ).toBeNull();
   });

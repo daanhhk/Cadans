@@ -298,20 +298,36 @@ function deltaMinLabel_(deltaMin: number): string {
   if (r === 0) return "";
   return r > 0 ? ` (+${r} min deze week)` : ` (−${Math.abs(r)} min deze week)`;
 }
+/** CTL op 1 decimaal met NL-decimaalkomma (UI-string): 45.7 → "45,7". */
+function ctlLabel_(v: number): string {
+  return (Math.round(v * 10) / 10).toFixed(1).replace(".", ",");
+}
 
-/** UP-aanbod (kalender-deload + fris → doortrainen). */
+type FatigueBlok = { fromCtl: number; toCtl: number } | null;
+
+/** UP-aanbod (kalender-deload + geen opbouw in het blok → doortrainen). Voorwaardelijk (M55 — "ik
+ * kan", geen daad-claim); noemt het GEMETEN BLOK i.p.v. de TSB, zodat de coach toont waarop hij
+ * zijn voorstel baseert. */
 export function fatigueUpAanbodRegel(
-  tsbTrend: number | null,
+  blok: FatigueBlok,
   deltaMin: number,
 ): string {
-  return `Je vorm is fris (TSB ${tsbLabel_(tsbTrend)}). De kalender plant deze week een deload — ik kan gewoon doortrainen${deltaMinLabel_(deltaMin)}.`;
+  const ctlClause = blok
+    ? `Je CTL ging deze drie weken van ${ctlLabel_(blok.fromCtl)} naar ${ctlLabel_(blok.toCtl)} — het blok heeft je niet belast. `
+    : "";
+  return `${ctlClause}De kalender plant deze week een deload, maar ik kan gewoon doortrainen${deltaMinLabel_(deltaMin)}.`;
 }
-/** DOWN-aanbod (opbouwweek + diep/aanhoudend vermoeid → vervroegde deload). */
+/** DOWN-aanbod (opbouwweek + geen opbouw + diepe Form-put → vervroegde deload). Houdt de Form-put
+ * (TSB) en krijgt het blok erbij: last zonder winst. Voorwaardelijk (M55). */
 export function fatigueDownAanbodRegel(
   tsbTrend: number | null,
+  blok: FatigueBlok,
   deltaMin: number,
 ): string {
-  return `Je vorm zakt weg (TSB ${tsbLabel_(tsbTrend)}) en blijft laag. Ik kan een vervroegde deload inplannen om je te laten herstellen${deltaMinLabel_(deltaMin)}.`;
+  const ctlClause = blok
+    ? ` terwijl je CTL van ${ctlLabel_(blok.fromCtl)} naar ${ctlLabel_(blok.toCtl)} ging — belasting zonder winst`
+    : "";
+  return `Je vorm zit diep (TSB ${tsbLabel_(tsbTrend)})${ctlClause}. Ik kan een vervroegde deload inplannen om je te laten herstellen${deltaMinLabel_(deltaMin)}.`;
 }
 /** Primaire actieknop (accept). */
 export function fatigueActieLabel(dir: "up" | "down"): string {

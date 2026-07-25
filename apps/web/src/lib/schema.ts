@@ -54,9 +54,11 @@ import {
 } from "./coachNarrative";
 import { parseLocalDate, todayIso, weekMondayIso } from "./dates";
 import {
+  computeBlockCtlDelta,
   computeTsbTrend,
   fatigueMinDataOk,
   fatigueTrigger,
+  latestCtl,
   weekFatigueEnabled,
 } from "./fatigue";
 import {
@@ -966,8 +968,10 @@ export interface FatigueVoorstel {
   state: "offer" | "applied";
   /** 'up' = doortrainen (deload→normale week) · 'down' = vervroegde deload (opbouwweek→deload). */
   dir: "up" | "down";
-  /** De TSB-trend die de trigger dreef (offer); null in 'applied'. */
+  /** De TSB-trend (offer); null in 'applied'. Blijft: de DOWN-copy noemt 'm nog (de Form-put). */
   tsbTrend: number | null;
+  /** Het BLOK-signaal dat de trigger dreef (ΔCTL over het blok, offer); null in 'applied'. */
+  blok: { delta: number; fromCtl: number; toCtl: number } | null;
   /** De wat-als-week (mesoWeek gesubstitueerd) — voedt de laag-2-kaart-delta. null in 'applied'. */
   preview: ProposalWeek | null;
 }
@@ -1404,16 +1408,21 @@ export async function loadSchemaWeek(): Promise<{
       state: "applied",
       dir: fatigueShift.dir as "up" | "down",
       tsbTrend: null,
+      blok: null,
       preview: null,
     };
   } else if (weekFatigueOn) {
     const { trend } = computeTsbTrend(wellness, todayISO);
+    const blok = computeBlockCtlDelta(wellness, monday);
+    const ctlNow = latestCtl(wellness, todayISO);
     const dir = fatigueTrigger({
       calendarMesoWeek: proposalWeek.mesoWeek,
       macroFase: proposalWeek.macroFase,
       nearTaper: proposalWeek.nearTaper,
       tsbTrend: trend,
       minDataOk: fatigueMinDataOk(wellness, todayISO),
+      ctlDelta: blok?.delta ?? null,
+      ctlNow,
     });
     if (dir) {
       const preview = buildWeekProposal({
@@ -1430,7 +1439,7 @@ export async function loadSchemaWeek(): Promise<{
         planAdaptation: optedIn,
         mesoWeekOverride: dir === "up" ? 1 : 4,
       });
-      fatigue = { state: "offer", dir, tsbTrend: trend, preview };
+      fatigue = { state: "offer", dir, tsbTrend: trend, blok, preview };
     }
   }
   // DOWN (vervroegde deload) onderdrukt de inhaal-kaart: herstel wint van inhalen (M66/M72).

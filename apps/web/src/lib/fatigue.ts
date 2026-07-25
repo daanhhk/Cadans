@@ -8,13 +8,24 @@ import { profileForDoel_ } from "@cadans/engine";
 import type { WellnessInput } from "@cadans/shared";
 import { parseLocalDate } from "./dates";
 
-/** Fris-buffer, GELIJK aan de tsb.ts-Fris-grens (>+5 = Fris): duidelijk fris tijdens een kalender-deload
- * → doortrainen aanbieden. Niet pas bij een volledige taper — een deload die al fris binnenkomt heeft
- * z'n doel verloren, dus de conventionele Fris-grens is de juiste drempel, niet een strengere buffer. */
-export const UP_TSB_THRESHOLD = 5;
-/** Oververmoeid-buffer, veel strikter dan de tsb.ts-grens (−10): in een opbouwweek is negatieve TSB
- * NORMAAL/PRODUCTIEF; alleen een DIEPE, aanhoudende put rechtvaardigt een vervroegde deload. */
-export const DOWN_TSB_THRESHOLD = -25;
+// ── BLOK-SIGNAAL (docs/DOORTRAIN-KAART-RECON.md) ──────────────────────────────
+// De oude drempels UP_TSB_THRESHOLD/DOWN_TSB_THRESHOLD zijn VERVALLEN: een drempel op het 7-daags
+// TSB-gemiddelde bemonstert ruis (ATL-EWMA verschuift tien punten op één weekendrit). De beslisser is
+// nu de ΔCTL over het afgelopen blok — "heeft dit blok belasting opgebouwd?". TSB blijft informant
+// voor de DOWN-Form-put, geen beslisser meer.
+
+/** Het blok = [weekMaandag-22 .. weekMaandag-1]. Bevat deze week NIET: het oordeel staat op maandag
+ * vast en schuift niet mee. De ΔCTL-ankers liggen 21 dagen uit elkaar. */
+export const BLOCK_WINDOW_DAYS = 21;
+/** ΔCTL ≤ dit over 21 dagen (~0,33 CTL/week) telt als GEEN opbouw → de deload heeft geen functie.
+ * Grensgeval expliciet: exact +1,0 valt er binnen. Ligt op een plateau (recon §4), niet op een helling. */
+export const NO_BUILD_CTL_DELTA = 1.0;
+/** DOWN-Form-put schaalt met de load: de drempel is −0,25 × CTL_nu … */
+export const DEEP_FATIGUE_CTL_FRACTION = 0.25;
+/** … met een vloer op −10, die aansluit op de bestaande Oververmoeid-grens in tsb.ts (kaart = gauge). */
+export const DEEP_FATIGUE_FLOOR = -10;
+/** Ankertolerantie: de dichtstbijzijnde ctl-rij binnen ± dit aantal dagen van een ankerpunt telt. */
+export const CTL_ANCHOR_TOLERANCE_DAYS = 3;
 /** Trend = gemiddelde over de meest recente N wellness-rijen met numerieke `vorm`. */
 export const FATIGUE_TREND_WINDOW_DAYS = 7;
 /** Min-data-poort: aantal rijen met niet-null `vorm` ... */
@@ -73,10 +84,76 @@ export function fatigueMinDataOk(
 }
 
 /**
- * De trigger-poort (ALTIJD voorstel, nooit opgelegd). null → geen voorstel.
- * UP: kalender-deload (mesoWeek 4) + fris → doortrainen (→1). DOWN: opbouwweek (1..3) +
- * diep/aanhoudend oververmoeid → vervroegde deload (→4). Onderdrukt bij Test/Recovery,
- * nearTaper, of onvoldoende data.
+ * ΔCTL over het blok vóór `weekMondayISO`. Twee ankerpunten: blok-eind = weekMaandag − 1 dag,
+ * blok-begin = weekMaandag − (BLOCK_WINDOW_DAYS + 1) dagen. Per anker de rij met numerieke `ctl`
+ * waarvan de datum het DICHTST bij het ankerpunt ligt, binnen CTL_ANCHOR_TOLERANCE_DAYS; bij gelijke
+ * afstand wint de OUDERE rij (deterministisch). Beide gevonden → { delta, fromCtl, toCtl } met
+ * delta = toCtl − fromCtl, afgerond op 1 decimaal. Anker ontbreekt → null. Datums via parseLocalDate.
+ */
+export function computeBlockCtlDelta(
+  wellness: WellnessInput[],
+  weekMondayISO: string,
+): { delta: number; fromCtl: number; toCtl: number } | null {
+  const mondayMs = parseLocalDate(weekMondayISO).getTime();
+  const endMs = mondayMs - 1 * MS_PER_DAY;
+  const startMs = mondayMs - (BLOCK_WINDOW_DAYS + 1) * MS_PER_DAY;
+  const tolMs = CTL_ANCHOR_TOLERANCE_DAYS * MS_PER_DAY;
+
+  const ctlAt = (anchorMs: number): number | null => {
+    let bestCtl: number | null = null;
+    let bestDist = Number.POSITIVE_INFINITY;
+    let bestMs = Number.POSITIVE_INFINITY;
+    for (const w of wellness || []) {
+      if (!w || typeof w.datum !== "string") continue;
+      if (typeof w.ctl !== "number" || !Number.isFinite(w.ctl)) continue;
+      const t = parseLocalDate(w.datum).getTime();
+      const dist = Math.abs(t - anchorMs);
+      if (dist > tolMs) continue;
+      // dichterbij wint; bij gelijke afstand wint de OUDERE rij (kleinere t).
+      if (dist < bestDist || (dist === bestDist && t < bestMs)) {
+        bestCtl = w.ctl;
+        bestDist = dist;
+        bestMs = t;
+      }
+    }
+    return bestCtl;
+  };
+
+  const fromCtl = ctlAt(startMs);
+  const toCtl = ctlAt(endMs);
+  if (fromCtl == null || toCtl == null) return null;
+  return { delta: Math.round((toCtl - fromCtl) * 10) / 10, fromCtl, toCtl };
+}
+
+/** De meest recente numerieke `ctl` met datum ≤ todayISO, of null. */
+export function latestCtl(
+  wellness: WellnessInput[],
+  todayISO: string,
+): number | null {
+  let bestCtl: number | null = null;
+  let bestDatum = "";
+  for (const w of wellness || []) {
+    if (!w || typeof w.datum !== "string" || w.datum > todayISO) continue;
+    if (typeof w.ctl !== "number" || !Number.isFinite(w.ctl)) continue;
+    if (w.datum >= bestDatum) {
+      bestDatum = w.datum;
+      bestCtl = w.ctl;
+    }
+  }
+  return bestCtl;
+}
+
+/** De DOWN-Form-put-drempel, schaal-relatief: min(−10, −0,25 × CTL_nu). CTL 45 → −11,25; CTL 30 → −10. */
+export function deepFatigueThreshold(ctlNow: number): number {
+  return Math.min(DEEP_FATIGUE_FLOOR, -DEEP_FATIGUE_CTL_FRACTION * ctlNow);
+}
+
+/**
+ * De trigger-poort (ALTIJD voorstel, nooit opgelegd). null → geen voorstel. De beslisser is het
+ * BLOK-signaal (ΔCTL), niet meer de TSB-drempel.
+ * UP: kalender-deload (mesoWeek 4) EN geen opbouw in het blok → doortrainen (→1). Leest tsbTrend NIET.
+ * DOWN: opbouwweek (1..3) EN geen opbouw EN een diepe Form-put → vervroegde deload (→4).
+ * Onderdrukt bij Test/Recovery, nearTaper, onvoldoende data, of een ontbrekend blok-anker.
  */
 export function fatigueTrigger(a: {
   calendarMesoWeek: number;
@@ -84,15 +161,25 @@ export function fatigueTrigger(a: {
   nearTaper: boolean;
   tsbTrend: number | null;
   minDataOk: boolean;
+  ctlDelta: number | null;
+  ctlNow: number | null;
 }): "up" | "down" | null {
-  if (!a.minDataOk || a.tsbTrend == null) return null;
+  if (!a.minDataOk) return null;
   if (a.macroFase === "Test" || a.macroFase === "Recovery") return null;
   if (a.nearTaper) return null;
-  if (a.calendarMesoWeek === 4 && a.tsbTrend > UP_TSB_THRESHOLD) return "up";
+  if (a.ctlDelta == null) return null;
+  // UP — kalender-deload + geen opbouw. Het blok heeft niet belast → de deload heeft geen functie.
+  if (a.calendarMesoWeek === 4 && a.ctlDelta <= NO_BUILD_CTL_DELTA) return "up";
+  // DOWN — opbouwweek + geen opbouw + diepe, schaal-relatieve Form-put. Last zonder winst.
   if (
     a.calendarMesoWeek >= 1 &&
     a.calendarMesoWeek <= 3 &&
-    a.tsbTrend < DOWN_TSB_THRESHOLD
+    a.ctlDelta <= NO_BUILD_CTL_DELTA &&
+    typeof a.tsbTrend === "number" &&
+    Number.isFinite(a.tsbTrend) &&
+    typeof a.ctlNow === "number" &&
+    Number.isFinite(a.ctlNow) &&
+    a.tsbTrend < deepFatigueThreshold(a.ctlNow)
   )
     return "down";
   return null;

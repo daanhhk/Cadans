@@ -416,11 +416,13 @@ const scaleWeek = (w: ProposalWeek, factor: number): ProposalWeek => ({
 });
 const fatigueFixtures: { label: string; v: FatigueVoorstel }[] = [
   {
-    label: "Vorm · UP-voorstel (fris op een kalender-deload → doortrainen)",
+    label:
+      "Vorm · UP-voorstel (geen opbouw op een kalender-deload → doortrainen)",
     v: {
       state: "offer",
       dir: "up",
       tsbTrend: 9,
+      blok: { delta: -5.0, fromCtl: 50.7, toCtl: 45.7 },
       preview: scaleWeek(FULL_WEEK, 1.4),
     },
   },
@@ -430,13 +432,20 @@ const fatigueFixtures: { label: string; v: FatigueVoorstel }[] = [
     v: {
       state: "offer",
       dir: "down",
-      tsbTrend: -27,
+      tsbTrend: -13,
+      blok: { delta: -0.4, fromCtl: 44.7, toCtl: 44.3 },
       preview: scaleWeek(FULL_WEEK, 0.6),
     },
   },
   {
     label: "Vorm · TOEGEPAST (up) — knop 'Terug naar de kalender'",
-    v: { state: "applied", dir: "up", tsbTrend: null, preview: null },
+    v: {
+      state: "applied",
+      dir: "up",
+      tsbTrend: null,
+      blok: null,
+      preview: null,
+    },
   },
 ];
 

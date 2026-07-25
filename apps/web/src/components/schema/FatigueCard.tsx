@@ -117,11 +117,20 @@ export function FatigueCard({
   const deltaMin = fatigue.preview
     ? weekPlannedMinuten(fatigue.preview) - weekPlannedMinuten(baseline)
     : 0;
-  const zone = tsbZone(fatigue.tsbTrend ?? 0);
+  // UP hangt niet meer aan de TSB-zone: het signaal is het blok, de pill zegt "Geen opbouw" op de
+  // productief-tokens. DOWN houdt de TSB-zone ("Oververmoeid") — daar is de Form-put wél de trigger.
+  const zone =
+    fatigue.dir === "up"
+      ? {
+          label: "Geen opbouw",
+          color: "var(--good)",
+          soft: "var(--good-soft)",
+        }
+      : tsbZone(fatigue.tsbTrend ?? 0);
   const regel =
     fatigue.dir === "up"
-      ? fatigueUpAanbodRegel(fatigue.tsbTrend, deltaMin)
-      : fatigueDownAanbodRegel(fatigue.tsbTrend, deltaMin);
+      ? fatigueUpAanbodRegel(fatigue.blok, deltaMin)
+      : fatigueDownAanbodRegel(fatigue.tsbTrend, fatigue.blok, deltaMin);
 
   return (
     <Card>
