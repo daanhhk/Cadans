@@ -128,3 +128,19 @@ Er staat een `ftp_auto_update`-vlag in het settings-schema (`workers/api/src/db/
 Dit is een OPEN BEVINDING, geen besluit. Voordat er iets aan de FTP verandert hoort te worden
 vastgesteld welke van de twee waarden de waarheid is en wat de vlag doet — een FTP-wijziging
 herschrijft met terugwerkende kracht de betekenis van elke zone-meting in dit document.
+
+### CORRECTIE 26-07-2026 — §6 is weerlegd
+
+Gemeten in `docs/FTP-REFERENT-RECON.md`. Drie claims hierboven houden niet:
+
+1. "In alle 142 rijen wijkt `rolling_ftp` af van de `ftp`-kolom" is waar maar betekenisloos: het
+   zijn twee verschillende grootheden (gezette FTP tegen rollende schatting), geen twee metingen
+   van hetzelfde.
+2. "De zonegrenzen worden uit de ingestelde FTP afgeleid, dus TSS en CTL te laag" is ONJUIST. TSS,
+   IF, CTL en zoneminuten komen kant-en-klaar uit intervals.icu; de ingestelde FTP komt daar
+   nergens binnen.
+3. "De ingestelde 280 wordt al maanden niet door de ritten gedragen" verwart `settings.ftp` met
+   `activities.ftp`. De ritten droegen 275 tot 20-07-2026 en 280 daarna — gelijk aan de instelling.
+
+De `ftp_auto_update`-vlag staat op NULL en wordt in Cadans nergens gelezen. §5 blijft ONGEWIJZIGD
+geldig.
