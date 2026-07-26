@@ -1,7 +1,7 @@
 import type { EventItem, OverrideEntry } from "@cadans/shared";
 import { describe, expect, it } from "vitest";
 import type { ActValuesRow } from "./activities";
-import { buildBlokReview, shiftIso_ } from "./blok";
+import { blokStartVoorWeek, buildBlokReview } from "./blok";
 import {
   blokGelegenheid,
   blokMaximum,
@@ -133,18 +133,25 @@ describe("ijking op de weekreeks uit EFFECT-REFERENT-RECON.md §4", () => {
 
 // ── PLATEAU-TOETS op het app-raster ─────────────────────────────────────────
 
-describe("plateau-toets — niet-overlappend raster, verankerd op 2026-01-05", () => {
-  // Het raster dat de app zelf uitrekent: niet-overlappende blokken van 28 dagen. Een sweep over
-  // ELKE maandag zou de gevoeligheid voor de RASTERFASE meten, niet voor de drempel (ontwerp §3).
-  const eerste = WEEKREEKS[0]?.[0] as string;
-  const laatste = WEEKREEKS[WEEKREEKS.length - 1]?.[0] as string;
-  const RASTER: string[] = (() => {
-    let s = "2026-01-05";
-    while (shiftIso_(s, -28) >= eerste) s = shiftIso_(s, -28);
-    const out: string[] = [];
-    for (let d = s; d <= laatste; d = shiftIso_(d, 28)) out.push(d);
-    return out;
-  })();
+describe("plateau-toets — het raster van de app zelf (blokStartVoorWeek)", () => {
+  // DE ENUMERATIE KOMT UIT DE APP (ontwerp §3): elke reeks-maandag wordt via `blokStartVoorWeek`
+  // op zijn blokstart gemapt en gededupliceerd. NIET via een eigen lus van 28 dagen — die
+  // reproduceert de verankering op `doelStart` niet en kan er een kwartslag naast liggen; dat
+  // gebeurde in de eerste bouwronde, waarbij het ijk-blok van §8 buiten het toetsraster viel
+  // zonder dat er iets faalde.
+  //
+  // FIXTURE-doelStart 2025-10-20: dezelfde rasterfase als de live `doelStart` 2026-06-29 (precies
+  // negen blokken ervoor) en vóór het begin van de §4-reeks. Nodig omdat `blokWeekVanWeek`
+  // negatieve verschillen op nul klemt — met de live doelStart zou de hele historische reeks op
+  // blokweek 1 vallen.
+  const FIXTURE_DOELSTART = "2025-10-20";
+  const RASTER: string[] = [
+    ...new Set(
+      WEEKREEKS.map(([maandag]) =>
+        blokStartVoorWeek(FIXTURE_DOELSTART, maandag),
+      ),
+    ),
+  ].sort();
 
   /** De blokstarts die bij drempel T als "gestegen" gelden. */
   function gestegenBij(drempel: number): string[] {
@@ -161,23 +168,28 @@ describe("plateau-toets — niet-overlappend raster, verankerd op 2026-01-05", (
   }
 
   it("het raster bevat de twee stijgings-blokken", () => {
-    expect(RASTER).toContain("2026-01-05");
-    expect(RASTER).toContain("2026-04-27");
+    expect(RASTER).toContain("2026-01-12");
+    expect(RASTER).toContain("2026-05-04");
   });
 
-  it("drempel 1 t/m 6 geeft ELKE keer exact { 2026-01-05, 2026-04-27 }", () => {
-    for (let t = 1; t <= 6; t++) {
-      expect(gestegenBij(t)).toEqual(["2026-01-05", "2026-04-27"]);
+  it("het ijk-blok uit §8 ligt op DITZELFDE raster", () => {
+    // Grendel op de fout van de eerste bouwronde: plateau-toets en ijk-blok moeten aantoonbaar
+    // hetzelfde raster delen, anders toetst de een iets wat de app nooit uitrekent.
+    expect(RASTER).toContain("2026-06-29");
+  });
+
+  it("drempel 1 t/m 8 geeft ELKE keer exact { 2026-01-12, 2026-05-04 }", () => {
+    for (let t = 1; t <= 8; t++) {
+      expect(gestegenBij(t)).toEqual(["2026-01-12", "2026-05-04"]);
     }
   });
 
-  it("drempel 7 en 8 geven een LEGE set", () => {
-    expect(gestegenBij(7)).toEqual([]);
-    expect(gestegenBij(8)).toEqual([]);
+  it("drempel 9 houdt alleen 2026-01-12 over", () => {
+    expect(gestegenBij(9)).toEqual(["2026-01-12"]);
   });
 
-  it("beide blokken meten precies +6 — de BOVENRAND van het plateau", () => {
-    // Dragend: een latere verhoging van ROLLING_FTP_STIJGING_W boven 6 zet de meter stil zonder
+  it("2026-01-12 meet +9 en 2026-05-04 meet +8 — de BOVENRAND van het plateau", () => {
+    // Dragend: een latere verhoging van ROLLING_FTP_STIJGING_W boven 8 zet de meter stil zonder
     // dat er iets faalt. Deze assertie is de grendel daarop.
     const verschil = (start: string) =>
       buildEffectReferent({
@@ -187,9 +199,9 @@ describe("plateau-toets — niet-overlappend raster, verankerd op 2026-01-05", (
         startMonday: start,
         ctlDelta: null,
       })?.verschil;
-    expect(verschil("2026-01-05")).toBe(6);
-    expect(verschil("2026-04-27")).toBe(6);
-    expect(ROLLING_FTP_STIJGING_W).toBeLessThanOrEqual(6);
+    expect(verschil("2026-01-12")).toBe(9);
+    expect(verschil("2026-05-04")).toBe(8);
+    expect(ROLLING_FTP_STIJGING_W).toBeLessThanOrEqual(8);
   });
 });
 
