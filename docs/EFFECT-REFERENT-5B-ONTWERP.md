@@ -43,7 +43,9 @@ live raster, wijst elke drempel van +1 tot en met +8 dezelfde TWEE blokken aan: 
 DE TWEE BLOKKEN, MET HUN TERMEN. 2026-01-12 gaat van instap 267 naar maximum 276, dus +9, op drie
 gevulde weken; dat blok draagt de indoor test van 13-01. 2026-05-04 gaat van instap 264 naar 272,
 dus +8, op vier gevulde weken; dat blok draagt de wegwedstrijd van 21-05. Alle overige blokken
-komen op nul of negatief uit.
+komen op nul of negatief uit, met één uitzondering die geen nul is: 2025-10-20
+levert GEEN getal, want vóór die datum bestaat er in de reeks geen instapniveau. `buildEffectReferent`
+geeft daar null en dat blok valt daarmee buiten elke plateau-set.
 
 De verdeling van de week-op-week stappen verklaart waarom er tussen die grenzen niets ligt: −3 drie
 keer, −2 veertien keer, −1 vijftien keer, 0 zeventien keer, +1 een keer, +9 een keer, +10 een keer.

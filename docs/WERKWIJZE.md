@@ -57,6 +57,16 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
 - **Een halve fix is een vindpatroon.** Repareert een fix één van meerdere parallelle accumulaties of takken, controleer dan meteen de broertjes. Werkstroom 3 vond dat `sessions` leeg is voor verstreken dagen en repareerde alleen de Dagen-noemer; TSS en Uren droegen dezelfde bug daarna nog maanden mee. Daans screenshot pinde hem vast: de getallen op zijn scherm zijn een MEETINSTRUMENT, niet alleen een visuele check — waar CC geen visuele verificatie kan doen, kan Daans oog wél een numeriek bewijs leveren.
 - **IJk een drempel op de ECHTE reeks, nooit op een modelcurve.** Een simulatie met gelijkmatige load mist de clustering van echte training en leidt naar de verkeerde conclusie. Bij de doortrain-kaart voorspelde de modelredenering dat het 7-daags TSB-gemiddelde rond 0 zou blijven; de echte reeks liep tot 9,14 en zakte binnen acht dagen weer weg. Dat verschil verplaatste de diagnose van "de drempel staat te hoog" naar "het signaal is ruis" — een andere fix, niet een andere waarde.
 - **Een drempel hoort op een PLATEAU te liggen.** Toets vóór je een grens vaststelt hoe de uitkomst meebeweegt met die grens: verschuift hij sterk over een klein bereik, dan bemonster je ruis en is elke waarde even willekeurig. Het blok-signaal verschoof over 0,0..+2,5 maar twee van zeventien gevallen; het TSB-signaal bewoog in acht dagen meer dan de hele drempelafstand. Dit criterium vooraf toepassen had de hele +8 → +5-ronde overbodig gemaakt.
+- **Enumereer met de functie die de app zelf aanroept.** Een toets die zijn eigen venster- of
+  blokraster nabouwt — al is het maar een lus van 28 dagen — reproduceert de verankering niet en
+  kan er ongemerkt een kwartslag naast liggen. Er faalt dan niets, want de toets is intern
+  consistent; hij meet alleen iets anders dan de app doet. Roep de échte enumerator aan
+  (`blokStartVoorWeek`) en asserteer expliciet dat het ijk-blok uit de recon op datzelfde raster
+  ligt. Kostte twee bouwrondes bij de 5b-drempel: eerst een sweep over élke maandag, die de
+  gevoeligheid voor de RASTERFASE meet in plaats van voor de drempel en per constructie geen
+  plateau oplevert; daarna een lus die op een willekeurig blok verankerd was en het ijk-blok uit
+  §8 niet eens bevatte. Het oorspronkelijke ontwerp had gelijk; de "correctie" maakte het stuk en
+  moest worden teruggedraaid.
 - **Pin de CI-run op de commit, niet op "de laatste".** Haal de conclusie op met een `head_sha`-filter
   op de eigen commit-hash in plaats van kaal `per_page=1`: die laatste kan een run van een andere
   commit of branch teruggeven, en dan rapporteer je groen over werk dat je niet gedaan hebt. Kwam
@@ -139,3 +149,4 @@ FOCUS DEZE CHAT: <vul in>
 - 2026-07-25 — drie afspraken toegevoegd n.a.v. het doortrain-kaart-herontwerp: in *Prod en veiligheid* dat remote-D1 LEZEN (read-only `SELECT`) als meetinstrument mag terwijl bewerken verboden blijft; in *Recon en bewijslast* dat een drempel op de echte reeks geijkt hoort (nooit op een modelcurve) en op een plateau moet liggen (toets hoe de uitkomst met de grens meebeweegt). Aanleiding: de drempel leunde op 376 echte CTL-rijen, en het plateau-criterium had de +8 → +5-tussenronde overbodig gemaakt.
 - 2026-07-26 — CI-runs worden gepind op de commit-hash (`head_sha`-filter) in plaats van op de laatste run. Aanleiding: CC deed het uit zichzelf zo bij de coach-model-commit en meldde het als afwijking; de kale variant kan een run van een andere commit teruggeven.
 - 2026-07-26 — les toegevoegd in *Recon en bewijslast*: meet beide kanten van een vergelijking in dezelfde eenheid en bewaar de termen. Aanleiding: de uitvoerings-referent-recon mat dat `zoneDebt_` voorgeschreven intent van gemeten zonetijd aftrekt, en dat het saldo een chaotisch uitgevoerd blok niet onderscheidt van een perfect uitgevoerd blok.
+- 2026-07-26 — les toegevoegd in *Recon en bewijslast*: enumereer met de functie die de app zelf aanroept, niet met een nagebouwd raster. Aanleiding: de 5b-drempelronde kostte twee bouwrondes aan foute enumeraties — een sweep over élke maandag en daarna een eigen lus van 28 dagen die het ijk-blok uit §8 niet bevatte — terwijl het oorspronkelijke ontwerp gelijk had.
