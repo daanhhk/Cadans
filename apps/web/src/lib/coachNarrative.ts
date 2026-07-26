@@ -395,7 +395,7 @@ export function blokReviewRegel(r: BlokReview): string {
     key = "geleverd_niet_gestegen";
     pool = [
       `Je leverde ${beoordeeld} ${g} van de ${b} opbouwweken boven de gevraagde ${r.norm} minuten, en tóch ${ctlZin}. Dan lag het niet aan de uitvoering — het plan was te licht. De dosis mag ${volgend} omhoog.`,
-      `${g} van de ${b} opbouwweken zaten ${beoordeeld} boven de gevraagde ${r.norm} minuten, en toch ${ctlZin}. Je deed je deel; de prikkel was het probleem. Er mag ${volgend} meer dosis in.`,
+      `${g} van de ${b} opbouwweken zaten ${beoordeeld} boven de gevraagde ${r.norm} minuten, en toch ${ctlZin}. Aan de uitvoering lag het dus niet; het plan was te licht. Er mag ${volgend} meer dosis in.`,
     ];
   } else if (r.check?.uitkomst === "geleverd_gestegen") {
     key = "geleverd_gestegen";
