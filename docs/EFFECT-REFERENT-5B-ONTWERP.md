@@ -27,10 +27,37 @@ NIET punt-tot-punt: de ruisvloer is groter dan de blokuitslag (§3 van dat doc).
 STIJGING = opbouw-boven-instap groter dan of gelijk aan 3 watt. Named export, herijkbaar zonder
 logica-wijziging.
 
-PLATEAU-TOETS over 13 blokken: elke drempel van +1 tot en met +8 wijst dezelfde TWEE blokken aan.
-Acht opeenvolgende gehele waarden, identieke uitkomst. De verdeling van de week-op-week stappen
-verklaart waarom: −3 drie keer, −2 veertien keer, −1 vijftien keer, 0 zeventien keer, +1 een keer,
-+9 een keer, +10 een keer. Tussen +1 en +9 zit NIETS.
+DE ENUMERATIE HOORT BIJ DE APP. De plateau-toets loopt over NIET-OVERLAPPENDE blokken op hetzelfde
+vaste vier-weeks raster dat de app zelf gebruikt (`blokStartVoorWeek`, verankerd op `doelStart`).
+Dat is de enige enumeratie die de app ooit uitrekent. Een sweep over ELKE maandag als kandidaat-
+blokstart meet iets anders — de gevoeligheid voor de RASTERFASE, niet voor de drempel — en levert
+per constructie geen plateau: gemeten loopt de uitslag daar van negen blokken bij +1 naar vier bij
++7. Die twee vragen zijn in de eerste bouwronde door elkaar gelopen; hier zijn ze gescheiden.
+
+PLATEAU-TOETS, GECORRIGEERD. Op de weekreeks van paragraaf 4 van `EFFECT-REFERENT-RECON.md` wijst
+elke drempel van +1 tot en met +6 dezelfde TWEE blokken aan: 2026-01-05 en 2026-04-27. Bij +7 en
+hoger blijven er NUL over. Het plateau is +1 tot en met +6, NIET +1 tot en met +8 zoals hier eerder
+stond.
+
+DE OORZAAK VAN DIE CORRECTIE. Beide blokken meten op BLOKNIVEAU precies +6, niet de +9 en +10 van
+de weekstappen: de aggregatie maximum-binnen-blok minus instapniveau vlakt een weeksprong af zodra
+het instapniveau verder terugligt dan de week vóór de sprong. Blok 2026-01-05 gaat van instap 270
+(2025-12-29) naar maximum 276; blok 2026-04-27 van instap 266 (2026-04-20) naar maximum 272.
+
+De verdeling van de week-op-week stappen verklaart waarom er tussen die grenzen niets ligt: −3 drie
+keer, −2 veertien keer, −1 vijftien keer, 0 zeventien keer, +1 een keer, +9 een keer, +10 een keer.
+Tussen +1 en +9 zit NIETS.
+
+DE GEKOZEN 3 LIGT MIDDEN OP HET PLATEAU, met drie watt marge naar beide randen, en boven de enkele
++1-stap in de ruisverdeling. De waarde verandert niet; alleen de onderbouwing hierboven.
+
+REPRODUCEERBAARHEID. Paragraaf 4 van `EFFECT-REFERENT-RECON.md` draagt 39 weken (2025-10-27 tot en
+met 2026-07-20); de eerdere plateau-claim hier rekende op 54 weken, waarvan de eerste vijftien niet
+in de repo staan. De toets hierboven is daarom op de 39 gepubliceerde weken gedraaid. Dat kan de
+grenzen niet verschuiven: paragraaf 4 van dit document stelt vast dat de daling in stapjes van een
+tot twee watt verloopt zonder enkele sprong groter dan drie, en dat er in de HELE reeks maar twee
+stijgingen zijn — beide binnen het gepubliceerde venster. Blokken uit die eerste vijftien weken
+tellen dus bij elke drempel van +1 tot en met +8 als niet-gestegen.
 
 ## 4. Alleen stijgingen dragen informatie
 
