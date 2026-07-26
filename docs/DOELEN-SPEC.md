@@ -356,7 +356,7 @@ daarmee geen los doel maar een dragende laag.
 1b. Onderhoud-herstelroute op DAGniveau (§3.2 VASTGESTELD): bij een doel zonder mesocyclus vuurt de WEEK-BREDE vermoeidheidskaart niet; de bestaande PER-DAG Verlicht-kaart blijft en dekt "vandaag kapot". Het eerder ontworpen mechanisme — de twee deload-klemmen in `allocateQualityWeek_` overslaan plus een week-brede duurcap — is GESCHRAPT: gemeten levert het weghalen van de klemmen TSS 184 naar 179 bij ongewijzigd volume, een kaart die verlichting belooft en niets levert. **AF** — client-side gate op de profiel-vlag `mesoCyclus === false` in `apps/web/src/lib/fatigue.ts` + `schema.ts`, GEEN engine-wijziging.
 2. Archetypes 33-68 erbij. Zonder deze stap wordt stap 1 monotoon. **AF** — commit `0bb79ee`, bibliotheek 23 naar 35.
 3. Doel-lijst herzien: VO2max eruit, Beklimmingen splitsen in kort en lang.
-4. Duurvermogen-meetlat, samen met prikkel-in-de-rit fase 2.
+4. Duurvermogen-meetlat, samen met prikkel-in-de-rit fase 2. Onafhankelijk van stap 5; de nummering is geen volgorde tussen deze twee.
 5. Blok-object en de twee vragen (de weeklus). Uitvoerings-referent EERST: het venster van de
    uitvoeringsmaat van week naar blok. Daarna pas de effect-referent per doel. Dit KEERT de
    volgorde van `docs/DOEL-REFERENT-RECON.md` paragraaf 8 om, die de meetlat als fase 1 zet: effect
