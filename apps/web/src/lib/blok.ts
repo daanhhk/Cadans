@@ -69,9 +69,18 @@ function shiftIso_(iso: string, days: number): string {
  * BEWUST de KALENDER-variant, niet `effectiveMesoWeek_`: die pint een doel zonder mesocyclus
  * (Onderhoud) op 1, en dan zou het blok nooit omslaan en bestond er geen blokgrens meer.
  *
- * De deling loopt over hele dagen in ms en erft daarmee dezelfde afronding als de engine rond een
- * DST-grens (een 23- of 25-uursdag schuift de quotiënt niet over een weekgrens). Dat is GEWENST:
- * blok en mesoteller blijven zo in de pas, ook als beide een uur verschuiven.
+ * DST — GECORRIGEERD, de sprong schuift de quotiënt WÉL over een weekgrens. De deling gaat over een
+ * vaste 7×24u-constante, dus een 23-uursdag maakt de teller net te klein. GEMETEN onder
+ * Europe/Amsterdam met doelStart 2026-03-02: de maandagen 09-03, 16-03 en 23-03 geven quotiënt
+ * 1,0000 / 2,0000 / 3,0000, maar de maandag ná de voorjaarssprong (30-03-2026) geeft 3,9940 →
+ * `Math.floor` levert 3 in plaats van 4. Die achterstand van één week blijft staan tot de
+ * najaarsswitch het uur teruggeeft (26-10-2026 meet weer een ronde 34,0000).
+ *
+ * Dat gedrag wordt hier BEWUST GEËRFD van `weekIndexFromStart_`: blok-teller en mesoteller moeten in
+ * de pas blijven, en de teller zelf woont in de engine (read-only, geen autorisatie). Repareren we
+ * het alleen hier, dan wijst het blok naar een andere week dan de dosis-ramp — erger dan de scheefte.
+ * De eerstvolgende voorjaarssprong is 28-03-2027, drie weken vóór het A-event; wie de teller dan
+ * gelijk wil hebben, repareert `weekIndexFromStart_` in de engine en deze spiegel tegelijk.
  */
 export function blokWeekVanWeek(
   doelStartISO: string | null,
