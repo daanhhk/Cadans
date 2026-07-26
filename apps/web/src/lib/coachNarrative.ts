@@ -428,6 +428,90 @@ export function blokReviewRegel(r: BlokReview): string {
   );
 }
 
+// ── 5b-i — de EFFECT-regel (heeft het blok gewerkt) ──────────────────────────
+// VOORWAARDELIJK (M55): de coach biedt aan en stelt niet vast. Bij `niet_meetbaar` doet hij
+// EXPLICIET geen uitspraak — dat is het hele punt van de derde toestand: niet concluderen uit
+// afwezig bewijs. De getallen komen uit de meting, niet uit een schatting.
+
+const GELEGENHEID_NAAM_: Record<string, string> = {
+  test: "de test",
+  race: "de wedstrijd",
+};
+
+/** "21 mei" — korte NL-datum uit een yyyy-MM-dd. */
+function datumKort_(iso: string): string {
+  const maanden = [
+    "januari",
+    "februari",
+    "maart",
+    "april",
+    "mei",
+    "juni",
+    "juli",
+    "augustus",
+    "september",
+    "oktober",
+    "november",
+    "december",
+  ];
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return iso;
+  return `${Number(m[3])} ${maanden[Number(m[2]) - 1] ?? ""}`.trim();
+}
+
+/** De effect-regel, of null als er geen effect-referent is (dan zwijgt de coach erover). */
+export function blokEffectRegel(r: BlokReview): string | null {
+  const e = r.effect;
+  if (!e) return null;
+  const gelegenheid =
+    e.gelegenheid.bron != null
+      ? `${GELEGENHEID_NAAM_[e.gelegenheid.bron] ?? "de inspanning"}${
+          e.gelegenheid.datum ? ` van ${datumKort_(e.gelegenheid.datum)}` : ""
+        }`
+      : "";
+
+  let pool: string[];
+  let key: string;
+  if (e.uitkomst === "gestegen") {
+    key = "gestegen";
+    pool = [
+      `Je rolling FTP ging van ${e.instap} naar ${e.maximum} watt. Dat is precies de winst waar dit blok voor bedoeld was.`,
+      `De rolling FTP staat op ${e.maximum} watt, ${e.verschil} boven de ${e.instap} waarmee je het blok inging — de winst die dit blok moest opleveren.`,
+    ];
+  } else if (e.uitkomst === "niet_gestegen" && e.dosisTerm === "tijd_in_zone") {
+    key = "niet_gestegen_tijd_in_zone";
+    pool = [
+      `Bij ${gelegenheid} bleef je rolling FTP op ${e.maximum} watt staan, tegen ${e.instap} bij de start. Je belasting bouwde wél op, dus de kwaliteitsdosis was te licht — daar mag tijd-in-zone bij.`,
+      `${gelegenheid} leverde geen hogere rolling FTP op: ${e.maximum} watt tegen ${e.instap} bij de start. De belasting groeide wel, dus het zat niet in de opbouw maar in de prikkel; ik kan de tijd-in-zone verhogen.`,
+    ];
+  } else if (e.uitkomst === "niet_gestegen" && e.dosisTerm === "volume") {
+    key = "niet_gestegen_volume";
+    pool = [
+      `Bij ${gelegenheid} bleef je rolling FTP op ${e.maximum} watt staan, tegen ${e.instap} bij de start. Je belasting bouwde ook niet op, dus méér drempeltijd is niet het antwoord — de ruimte zit in het volume, om te beginnen bij de lange rit.`,
+      `${gelegenheid} leverde geen hogere rolling FTP op: ${e.maximum} watt tegen ${e.instap}. De belasting stond stil, dus harder trainen lost dit niet op; ik kan beter volume toevoegen, te beginnen bij de lange rit.`,
+    ];
+  } else {
+    key = "niet_meetbaar";
+    pool = [
+      `Er stond in dit blok geen test of wedstrijd, dus dat je rolling FTP niet steeg zegt alleen dat er geen maximum in het venster viel. Daar doe ik geen uitspraak over — zullen we een test inplannen?`,
+      `Zonder test of wedstrijd in dit blok kan ik niet zien of je sterker bent geworden; de rolling FTP zakt vanzelf als er geen maximum bijkomt. Een ingeplande test zou dat wél laten zien.`,
+    ];
+  }
+  return (
+    pool[seedIndex(`${r.startMonday}|effect|${key}`, pool.length)] ??
+    pool[0] ??
+    ""
+  );
+}
+
+/** De volledige blok-uitspraak: uitvoering eerst, dan effect. Zonder effect blijft het de
+ * bestaande regel — `blokReviewRegel` blijft daarom ONGEWIJZIGD geëxporteerd. */
+export function blokReviewNarrative(r: BlokReview): string {
+  const uitvoering = blokReviewRegel(r);
+  const effect = blokEffectRegel(r);
+  return effect ? `${uitvoering} ${effect}` : uitvoering;
+}
+
 // ── FASE 2b — inhaal-voorstel (week-niveau, read-only) ───────────────────────
 // VOORWAARDELIJKE aanbod-copy: biedt aan, claimt de daad NIET (M10/M55). De catchup_*-pools
 // hierboven zijn DAAD-copy ("Ik heb je schema bijgesteld") en horen bij de TOEGEPASTE staat;

@@ -1,5 +1,5 @@
 import type { BlokReview, BlokWeek } from "../../lib/blok";
-import { blokReviewRegel } from "../../lib/coachNarrative";
+import { blokReviewNarrative } from "../../lib/coachNarrative";
 import { parseLocalDate } from "../../lib/dates";
 import { Card, Overline } from "../ui";
 import { CoachCallout } from "./CoachCallout";
@@ -143,8 +143,63 @@ export function BlokReviewCard({
           <Regel key={w.weekMonday} week={w} />
         ))}
       </div>
+      {review.effect && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            justifyContent: "space-between",
+            gap: "var(--s-3)",
+            padding: "var(--s-2) 0",
+            borderTop: "1px solid var(--border-subtle)",
+          }}
+        >
+          <div
+            style={{
+              fontFamily: "var(--font-sans)",
+              fontSize: "var(--fs-label)",
+              color: "var(--text-secondary)",
+            }}
+          >
+            rolling FTP
+            {review.effect.gelegenheid.bron && (
+              <span
+                style={{
+                  marginLeft: "var(--s-2)",
+                  fontSize: "var(--fs-caption)",
+                  color: "var(--text-muted)",
+                }}
+              >
+                {review.effect.gelegenheid.bron === "test"
+                  ? "test"
+                  : "wedstrijd"}
+                {review.effect.gelegenheid.datum
+                  ? ` · ${kort_(review.effect.gelegenheid.datum)}`
+                  : ""}
+              </span>
+            )}
+          </div>
+          <div
+            style={{
+              flexShrink: 0,
+              fontFamily: "var(--font-num)",
+              fontSize: "var(--fs-label)",
+              fontWeight: 600,
+              color:
+                review.effect.uitkomst === "gestegen"
+                  ? "var(--good)"
+                  : "var(--text-muted)",
+            }}
+          >
+            <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>
+              {review.effect.instap} →{" "}
+            </span>
+            {review.effect.maximum}
+          </div>
+        </div>
+      )}
       <CoachCallout
-        narrative={blokReviewRegel(review)}
+        narrative={blokReviewNarrative(review)}
         coachNaam={coachNaam}
         style={{ marginTop: "var(--s-4)" }}
       />

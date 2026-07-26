@@ -17,8 +17,10 @@ import {
   profileForDoel_,
   zoneTimesFromCell_,
 } from "@cadans/engine";
+import type { EventItem, OverrideEntry } from "@cadans/shared";
 import type { ActValuesRow } from "./activities";
 import { parseLocalDate } from "./dates";
+import { buildEffectReferent, type EffectReferent } from "./effect";
 import { NO_BUILD_CTL_DELTA } from "./fatigue";
 
 /** Vaste bloklengte: drie opbouwweken plus een deload. VAST — een blok dat zichzelf verlengt is niet
@@ -49,14 +51,14 @@ export const ZONEDATA_DEKKING_MIN = 0.5;
 const MS_PER_DAY = 86400000;
 
 /** Lokale datum → yyyy-MM-dd (geen toISOString: dat schuift over de UTC-grens). */
-function isoFrom_(d: Date): string {
+export function isoFrom_(d: Date): string {
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
   return `${d.getFullYear()}-${mm}-${dd}`;
 }
 
 /** Lokale middernacht van een yyyy-MM-dd, plus n dagen. */
-function shiftIso_(iso: string, days: number): string {
+export function shiftIso_(iso: string, days: number): string {
   const d = parseLocalDate(iso);
   return isoFrom_(new Date(d.getFullYear(), d.getMonth(), d.getDate() + days));
 }
@@ -433,6 +435,9 @@ export interface BlokReview {
   /** null bij een niet-opbouwdoel (Onderhoud): daar is de CTL geen proces-meter. */
   check: BlokCheck | null;
   ctlDelta: number | null;
+  /** 5b-i — de EFFECT-referent op `rolling_ftp`. null als de vraag niet geldig of niet te
+   * beantwoorden is: fase "lopend", uitvoering niet geleverd, of te weinig dekking. */
+  effect: EffectReferent | null;
 }
 
 /**
@@ -452,6 +457,9 @@ export function buildBlokReview(input: {
   weekMondayISO: string;
   todayISO: string;
   ctlDelta: number | null;
+  /** 5b-i — voeden de gelegenheid-detectie. Optioneel: bestaande aanroepen blijven compileren. */
+  events?: EventItem[];
+  overrides?: OverrideEntry[];
 }): BlokReview | null {
   const venster = blokReviewVenster(input.doelStart, input.weekMondayISO);
   if (!venster) return null;
@@ -468,6 +476,23 @@ export function buildBlokReview(input: {
   const uitvoering = blokUitvoering(ref);
   if (uitvoering.geleverd == null) return null;
 
+  // 5b-i — de EFFECT-referent achter TWEE harde poorten.
+  // (1) Alleen fase "afgerond" (blokweek 1): in fase "lopend" is het vier-weeks venster nog niet
+  //     compleet en staat de test nog in blokweek 4, dus een maximum kan er nog bij komen.
+  // (2) Alleen bij een GELEVERDE uitvoering: effect zonder uitvoering is betekenisloos
+  //     (ontwerp §6, M5 — de app zwijgt liever dan te gokken).
+  const effect =
+    venster.fase === "afgerond" && uitvoering.geleverd === true
+      ? buildEffectReferent({
+          activities: input.activities,
+          events: input.events ?? [],
+          overrides: input.overrides ?? [],
+          startMonday: venster.startMonday,
+          // Dezelfde ctlDelta die de caller al meegaf voedt de dosis-term: geen tweede signaal.
+          ctlDelta: input.ctlDelta,
+        })
+      : null;
+
   return {
     startMonday: venster.startMonday,
     eindMonday: venster.ctlAnker,
@@ -479,5 +504,6 @@ export function buildBlokReview(input: {
     uitvoering,
     check: blokCheck(ref, input.ctlDelta, input.doel),
     ctlDelta: input.ctlDelta,
+    effect,
   };
 }

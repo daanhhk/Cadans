@@ -139,6 +139,7 @@ describe("blokReviewRegel — de vijf takken", () => {
         gestegen: false,
       },
       ctlDelta: -5,
+      effect: null,
       ...o,
     };
   }

@@ -1460,6 +1460,10 @@ export async function loadSchemaWeek(): Promise<{
         todayISO,
         ctlDelta:
           computeBlockCtlDelta(wellness, blokVenster.ctlAnker)?.delta ?? null,
+        // 5b-i — voeden de gelegenheid-detectie (test-override of wedstrijd). Beide staan al in
+        // loadSchemaWeek; geen extra fetch.
+        events,
+        overrides,
       })
     : null;
 
