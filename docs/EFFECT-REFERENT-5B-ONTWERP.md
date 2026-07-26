@@ -27,37 +27,40 @@ NIET punt-tot-punt: de ruisvloer is groter dan de blokuitslag (§3 van dat doc).
 STIJGING = opbouw-boven-instap groter dan of gelijk aan 3 watt. Named export, herijkbaar zonder
 logica-wijziging.
 
-DE ENUMERATIE HOORT BIJ DE APP. De plateau-toets loopt over NIET-OVERLAPPENDE blokken op hetzelfde
-vaste vier-weeks raster dat de app zelf gebruikt (`blokStartVoorWeek`, verankerd op `doelStart`).
-Dat is de enige enumeratie die de app ooit uitrekent. Een sweep over ELKE maandag als kandidaat-
-blokstart meet iets anders — de gevoeligheid voor de RASTERFASE, niet voor de drempel — en levert
-per constructie geen plateau: gemeten loopt de uitslag daar van negen blokken bij +1 naar vier bij
-+7. Die twee vragen zijn in de eerste bouwronde door elkaar gelopen; hier zijn ze gescheiden.
+DE ENUMERATIE KOMT UIT DE APP ZELF. De plateau-toets loopt over NIET-OVERLAPPENDE blokken, en die
+blokken worden opgehaald met `blokStartVoorWeek` — de functie die de app gebruikt — op het raster
+dat verankerd is op `doelStart`. Niet met een eigen lus van 28 dagen. Een lus reproduceert de
+verankering namelijk niet en kan er ongemerkt een kwartslag naast liggen; dat is in de eerste
+bouwronde precies gebeurd, waarbij het ijk-blok uit paragraaf 8 buiten het toetsraster viel zonder
+dat er iets faalde. Een sweep over ELKE maandag als kandidaat-blokstart is weer iets anders: die
+meet de gevoeligheid voor de RASTERFASE, niet voor de drempel, en levert per constructie geen
+plateau.
 
-PLATEAU-TOETS, GECORRIGEERD. Op de weekreeks van paragraaf 4 van `EFFECT-REFERENT-RECON.md` wijst
-elke drempel van +1 tot en met +6 dezelfde TWEE blokken aan: 2026-01-05 en 2026-04-27. Bij +7 en
-hoger blijven er NUL over. Het plateau is +1 tot en met +6, NIET +1 tot en met +8 zoals hier eerder
-stond.
+PLATEAU-TOETS. Op de weekreeks van paragraaf 4 van `EFFECT-REFERENT-RECON.md`, geënumereerd op het
+live raster, wijst elke drempel van +1 tot en met +8 dezelfde TWEE blokken aan: 2026-01-12 en
+2026-05-04. Bij +9 valt 2026-05-04 af. Acht opeenvolgende gehele waarden met identieke uitkomst.
 
-DE OORZAAK VAN DIE CORRECTIE. Beide blokken meten op BLOKNIVEAU precies +6, niet de +9 en +10 van
-de weekstappen: de aggregatie maximum-binnen-blok minus instapniveau vlakt een weeksprong af zodra
-het instapniveau verder terugligt dan de week vóór de sprong. Blok 2026-01-05 gaat van instap 270
-(2025-12-29) naar maximum 276; blok 2026-04-27 van instap 266 (2026-04-20) naar maximum 272.
+DE TWEE BLOKKEN, MET HUN TERMEN. 2026-01-12 gaat van instap 267 naar maximum 276, dus +9, op drie
+gevulde weken; dat blok draagt de indoor test van 13-01. 2026-05-04 gaat van instap 264 naar 272,
+dus +8, op vier gevulde weken; dat blok draagt de wegwedstrijd van 21-05. Alle overige blokken
+komen op nul of negatief uit.
 
 De verdeling van de week-op-week stappen verklaart waarom er tussen die grenzen niets ligt: −3 drie
 keer, −2 veertien keer, −1 vijftien keer, 0 zeventien keer, +1 een keer, +9 een keer, +10 een keer.
 Tussen +1 en +9 zit NIETS.
 
-DE GEKOZEN 3 LIGT MIDDEN OP HET PLATEAU, met drie watt marge naar beide randen, en boven de enkele
-+1-stap in de ruisverdeling. De waarde verandert niet; alleen de onderbouwing hierboven.
+HET PLATEAU IS RASTERAFHANKELIJK. Verschuift `doelStart`, dan verschuift het raster en moet deze
+toets opnieuw. De gekozen 3 ligt met ruime marge naar beide randen midden op het huidige plateau,
+dus een verschuiving hoeft de waarde niet meteen te raken — maar de onderbouwing hierboven geldt
+alleen voor de rasterfase van `doelStart` 2026-06-29.
 
 REPRODUCEERBAARHEID. Paragraaf 4 van `EFFECT-REFERENT-RECON.md` draagt 39 weken (2025-10-27 tot en
-met 2026-07-20); de eerdere plateau-claim hier rekende op 54 weken, waarvan de eerste vijftien niet
-in de repo staan. De toets hierboven is daarom op de 39 gepubliceerde weken gedraaid. Dat kan de
-grenzen niet verschuiven: paragraaf 4 van dit document stelt vast dat de daling in stapjes van een
-tot twee watt verloopt zonder enkele sprong groter dan drie, en dat er in de HELE reeks maar twee
-stijgingen zijn — beide binnen het gepubliceerde venster. Blokken uit die eerste vijftien weken
-tellen dus bij elke drempel van +1 tot en met +8 als niet-gestegen.
+met 2026-07-20); de reeks waarop dit ontwerp oorspronkelijk werd opgesteld liep over 54 weken,
+waarvan de eerste vijftien niet in de repo staan. De toets hierboven draait op de 39 gepubliceerde
+weken. Dat kan de grenzen niet verschuiven: paragraaf 4 van dit document stelt vast dat de daling
+in stapjes van een tot twee watt verloopt zonder enkele sprong groter dan drie, en dat er in de
+HELE reeks maar twee stijgingen zijn — beide binnen het gepubliceerde venster. Blokken uit die
+eerste vijftien weken tellen dus bij elke drempel van +1 tot en met +9 als niet-gestegen.
 
 ## 4. Alleen stijgingen dragen informatie
 
