@@ -133,3 +133,29 @@ Dit KEERT `docs/DOEL-REFERENT-RECON.md` paragraaf 8 om, die de meetlat als fase 
 - `frozenEntryByDate` (`apps/web/src/lib/proposal.ts`) stelt in commentaar dat het recent-venster
   de weken oplopend aanlevert. Gemeten is het aflopend: `gatherWeekplanEntries_` begint bij k=0
   op de basismaandag. Vandaag onschadelijk want datums zijn week-uniek; het commentaar klopt niet.
+
+## 7. IJking van de gebouwde referent
+
+De in stap 5a gebouwde referent (`apps/web/src/lib/blok.ts`) is na de bouw tegen remote D1 geijkt,
+op de echte activiteiten via de app-eigen `parseActivityRows` en de app-eigen aggregatie — geen
+eigen parser, geen nagerekende cijfers.
+
+REPRODUCTIE. De referent levert voor het blok 29-06 t/m 20-07 de weekwaarden 110,0 / 97,1 / 117,5 /
+91,0 tegenover de in §2.6 gemeten 110 / 97 / 118 / 91. Grootste afwijking 0,5 minuut, volledig
+verklaard door afronding. De implementatie meet dus wat de recon mat.
+
+HET FIETS-FILTER KAN DE REFERENT NIET OMLAAG TREKKEN. Dat was de enige route waarlangs de geleverde
+kant structureel te laag zou kunnen staan. Gemeten over 121 ritten: buiten `CYCLING_TYPES` valt
+2570 minuten (AlpineSki 2129, Run 233, IceSkate 145, Walk 51, WeightTraining 12), en daarvan draagt
+NUL minuut zonedata. Er is dus geen kwaliteitsminuut die door het filter verdwijnt.
+
+DE NORM LIGT OP HET PLATEAU. De plateau-toets uit §2.7 is herhaald mét het fiets-filter, over 27
+kalenderweken: T=70 geeft 17 weken, T=80 geeft 12, T=84 geeft 12, T=90 geeft 11, T=100 geeft 7. De
+gekozen norm van 84 (drie prikkels × 28 minuten bij vijf weekuren) telt EXACT gelijk met 80 en ligt
+daarmee aantoonbaar op het vlakke stuk, niet op een helling. Dat is de onderbouwing van die norm en
+hij hoort hier vast te liggen, niet in een chat: wie de norm later wil verschuiven, verschuift hem
+tegen deze tabel.
+
+DE DEKKINGS-POORT BIJT NIET. Van de 27 weken viel er 0 af op `ZONEDATA_DEKKING_MIN`. Eén week
+(02-02-2026) heeft nul ritten; die telt volgens ontwerp WEL mee, want niet gereden is een echte
+misser en geen datagat.
