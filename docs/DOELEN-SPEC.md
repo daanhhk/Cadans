@@ -39,6 +39,95 @@ Pieken. Alleen de eerste twee zijn doelen.
 Gevolg: de doel-lijst hoeft alleen het trainingsdoel te dragen, niet de kalender en niet de
 omstandigheden. Dat scheelt drie plannen die we niet hoeven bouwen.
 
+## 2A. Het coach-model — VASTGESTELD
+
+DE DIAGNOSE. Elk mechanisme — mesoweek-teller, dosis-ramp, deload-inhoud, vermoeidheidskaart,
+inhaal-kaart — is LOS gebouwd, met een eigen signaal en een eigen drempel. Er is geen gedeeld
+model van wat de coach weet en waarop hij besluit. De wortel is één ontbrekend object: er is geen
+BLOK. Een trainer houdt één ding vast — een periode met een bedoeling, een dosis-doel, een
+sleutelsessie en een check aan het eind — en alles wat hij week op week doet is de vraag of dat
+blok op koers ligt. Cadans heeft drie klokken (event-aftelling, 4-weeks mesoteller vanaf
+`doelStart`, weekquotum per fase) en geen van de drie draagt een bedoeling of een check.
+
+GEMETEN, wat die drie klokken vandaag doen (gelezen op HEAD `a09d9b3`):
+- `eventFase_` zet Base bij 9 of meer weken tot het hoofdevent. AGR ligt 38 weken weg, dus de fase
+  staat tot circa 13-02-2027 op één ononderbroken Base van 29 weken. Zonder event valt
+  `computeMacroPhase` terug op een 12-weeks kalender die na week 12 voorgoed op "Test" blijft staan.
+- Vier van de vijf planner-profielen dragen in Base hetzelfde quotum (2), dezelfde tussenruimte (1)
+  en dezelfde lange rit (1); alleen de intent-gewichten verschillen. Dat reproduceert paragraaf 1:
+  het doel is inert in precies de weken die nu tellen.
+- `mesoCycleWeek_` telt cyclisch 1..4 vanaf `doelStart`, los van de fase en los van enige
+  blok-inhoud; `mesoFactor` past 1,00 / 1,08 / 1,15 / 0,60 puur op de kalender toe.
+
+DRIE NIVEAUS, elk met één vraag.
+- SEIZOEN — waar moet ik uitkomen, en wanneer. Levert het event als er een hoofdevent staat,
+  anders het doel.
+- BLOK — drie opbouwweken plus een herstelweek, met één bedoeling, één dosis-doel, één
+  sleutelsessietype en een check aan het eind.
+- WEEK — wat vraagt dit blok deze week binnen de tijd die er echt is; en daarna: wat is er gebeurd.
+
+HET BLOK-OBJECT. Vier velden: BEDOELING (wat traint dit blok), DOSIS-DOEL (hoeveel, per week),
+SLEUTELSESSIE (welk type draagt de bedoeling), CHECK (waaraan zie je aan het eind of het gelukt is).
+VASTE LENGTE. De check bepaalt de dosis van het VOLGENDE blok, nooit de lengte van het huidige: een
+blok dat zichzelf verlengt is niet uit te leggen en maakt het plan onvoorspelbaar.
+
+TWEE VRAGEN, IN DEZE VOLGORDE. Eerst UITVOERING: is de dosis geleverd. Dan pas EFFECT: heeft het
+gedaan wat het moest doen. Zonder de eerste is de tweede betekenisloos, en bij een niet-geleverde
+week zwijgt de app over effect (M5). Dit scheidt "niet gedaan" van "niet gewerkt": niet-gedaan is
+een WEEK-vraag, niet-gewerkt is een BLOK-vraag.
+
+DE SCHAARSTE-REGEL. Elk doel draagt een BESCHERMD deel en een RESIDU. Zakken de beschikbare uren,
+dan sneuvelt het residu en blijft het beschermde deel staan; is zelfs dat niet meer te leveren, dan
+past het doel niet bij de uren en hoort de coach dat te zeggen (M40). Dit is de reden dat een
+gedeclareerd urenbudget bestaat: niet als plafond om vol te maken, maar als de grond waarop wordt
+besloten wat wegvalt. GEMETEN: `weekUren` staat in `settings` en in de Instellingen-UI, maar de
+engine leest het veld NERGENS; de planner leidt zijn weekvolume af uit de som van de
+weekplanner-dagminuten (`weekV`, `planner.ts`). BESLUIT: de gedeclareerde uren blijven een
+MEETLAT-invoer (past het doel bij de uren) en worden GEEN planner-invoer. Dat houdt de eerste bouw
+client-only en laat M27 ongemoeid.
+
+DE DOSIS-DOEL-EENHEID. Een dosis-doel is TIJD-IN-ZONE per week in de dragende buckets (high en
+anaerobic), plus lange-rit-minuten en week-kJ bij de duur-doelen. NIET TSS: TSS mengt duur en
+intensiteit en verbergt daarmee precies het onderscheid waarop de doelen uiteenlopen. NIET %FTP:
+het karakter is invariant onder meso- en fase-modulatie (M74-M78), alleen de dosis beweegt.
+
+DE BLOK-CHECK, drie uitkomsten. Geleverd EN gestegen -> volgende opbouwtrede. Geleverd maar NIET
+gestegen -> dosis omhoog, want het plan was te licht voor deze uren. NIET geleverd -> dosis NIET
+omhoog, want het plan was niet het probleem; daar hoort de uitvoering aangepakt te worden.
+
+WAT DE MACHINERIE AL DRAAGT. Twee stukken staan er al, met de goede korrel, en worden te smal
+gebruikt.
+- `computeBlockCtlDelta` (`apps/web/src/lib/fatigue.ts`) meet de CTL-verandering over de voorgaande
+  drie weken. Dat IS de blok-voortgangsvraag. Vandaag is de enige consument het besluit of de
+  kalender-deload vervalt, en de UP-tak landt op mesoweek 1 — de LAAGSTE opbouwtrede.
+- `zoneDebt_` (`packages/engine/src/weekprep.ts`) doet intent min werkelijk per zone-bucket op
+  minuutniveau. Dat IS de uitvoeringsvraag. Vandaag is het venster `[maandag .. vandaag)` en de
+  enige consument de inhaal-kaart.
+Er is dus GEEN nieuw signaal nodig. Wat verandert is het VENSTER (blok in plaats van week) en het
+GEBRUIK (de dosis van het volgende blok in plaats van alleen "deload overslaan").
+
+DOEL-PASSENDHEID — VASTGESTELD (Daan-besluit). De coach mag een ander doel VOORSTELLEN als het
+ingestelde doel niet binnen het urenbudget past, en Daan moet dat kunnen AFWIJZEN. Vorm volgt
+M10/M11: het ingestelde doel blijft staan tot hij bevestigt, het voorstel ligt ernaast, de coach
+zegt waarom, afwijzen is één tik. Frequentie-grens: hoogstens ÉÉN KEER PER BLOK, op een blokgrens.
+Plaatsing in de UI is een bouwbeslissing, geen norm.
+
+DE VIJF GATEN, WAAR ZE DICHTGAAN.
+1. Geen tussenstappen per doel -> het blok-object, plus de KETEN-regel per doel in paragraaf 3.
+2. Tijd als invoer in plaats van schaarste -> de schaarste-regel plus doel-passendheid.
+3. Geen bijstelling binnen de week -> twee lussen; de daglus draait binnen de week.
+4. Opbouw week 1-3 aangenomen -> de blok-check, gevoed door de uitvoeringsmaat die al bestaat.
+5. "Niet gedaan" tegen "niet gewerkt" -> de twee vragen in volgorde: week tegen blok.
+
+TWEE LUSSEN, NIET VIJF DREMPELS. Een WEEKLUS op het blok (is de dosis geleverd, en heeft het blok
+belast -> één voorstel) en een DAGLUS op vandaag (kun je deze sessie dragen). De doortrain-kaart,
+de kalender-deload, de dosis-ramp en de inhaal-kaart zijn UITINGEN van de weeklus, geen zelfstandige
+mechanismen met een eigen drempel. De per-dag Verlicht-kaart is de daglus.
+
+WAT DIT DOCUMENT NIET DOET. Het legt GEEN drempelwaarden vast. Elke drempel wordt op de ECHTE reeks
+geijkt en moet op een plateau liggen — zie `docs/WERKWIJZE.md`, paragraaf *Recon en bewijslast*. Een
+norm die hier een getal noemt, bemonstert ruis.
+
 ## 3. De doelen
 
 ### 3.1 FTP verhogen — VASTGESTELD
@@ -51,6 +140,13 @@ tijd-in-zone. De opbouw komt uit dosis, niet uit hogere percentages (M74-M78).
 APP VANDAAG. Profiel `ftp`; quotum Base 2 / Build 3 / Peak 2; tussenruimte 1; lange rit 1;
 eigen meetlat in `GOAL_PROFILES_.ftp`. Werkt zoals bedoeld.
 BOUWLAST. Geen. Dit doel is de referentie waartegen de andere worden gemeten.
+KETEN (paragraaf 2A). BESTEMMING: hoger drempelvermogen op een testdatum; vandaag FTP 280.
+TUSSENSTAPPEN: blokken met een oplopend dosis-doel in tijd-in-zone — sweet-spot-basis, dan
+drempel-intervallen, dan langere drempelblokken; de tussenstap is een DOSIS, geen percentage.
+PER WEEK: twee sleutelsessies tot circa vier uur, drie vanaf vijf a zes uur. BESCHERMD: de
+sleutelsessies. RESIDU: de vulling en de lange rit. METER: uitvoering = sleutelsessies geleverd op
+de voorgeschreven tijd-in-zone; proces = de belasting stijgt over het blok; effect = eFTP of het
+20-minutenvermogen — traag (zes tot twaalf weken) en daarom NOOIT de weekreferent.
 
 ### 3.2 Onderhoud — VASTGESTELD (het winterdoel)
 
@@ -108,6 +204,14 @@ Herstel hoort dus op DAGniveau, niet op weekniveau. Het `durCapMin`-mechanisme b
 met een reden in plaats van een open vraag.
 De precedentie-test in `ea567e5` blijft staan en blokkeert dit niet: die legt alleen vast DAT de
 override de week verandert, niet WELKE week eruit komt.
+KETEN (paragraaf 2A). BESTEMMING: een datum plus een VLOER — bij de overgang naar Build nog
+minstens circa 95 procent van de FTP waarmee de winter begon. TUSSENSTAPPEN: bewust geen progressie
+maar een TELLER; frequentie is de tussenstap (twaalf weken maal drie kwaliteitsdagen is 36
+prikkels). PER WEEK: drie kwaliteitsdagen, ook bij drie uur. BESCHERMD: de frequentie. RESIDU:
+volume; de lange rit is al vrijgegeven (`langeRitPerWeek: 0`). METER: uitvoering = drie van de drie
+kwaliteitsdagen geleverd, met de tijd-in-zone erbij; effect = het beste 20-minutenvermogen over zes
+weken zakt niet meer dan enkele procenten. NIET CTL — die hoort te dalen; dat is het doel, geen
+signaal.
 
 ### 3.3 Korte beklimmingen — VASTGESTELD, moet gebouwd
 
@@ -132,6 +236,18 @@ mapt kort naar vo2max en lang naar drempel, maar zit in een tak die nooit vuurt.
 BESLUIT. Splitsen in twee doelen. De logica uit de dode tak wordt de basis van twee profielen;
 het `klimType`-veld op het event blijft bestaan maar is niet langer de enige route.
 BOUWLAST. Middel. Twee profielen, dode tak opruimen, meetlat mee.
+KETEN (paragraaf 2A). BESTEMMING: 17-04-2027, herhaalbare bovendrempel-inspanningen NA 200 km —
+twee componenten tegelijk, herhaalbaarheid en vermoeidheidsbestendigheid. TUSSENSTAPPEN: (i) winter
+drempelbasis en frequentie; (ii) februari-maart een herhaalbaarheidsblok waarin de dosis stijgt in
+het AANTAL HERHALINGEN, niet in intensiteit; (iii) maart-april een specificiteitsblok waarin
+diezelfde inspanningen LAAT in een lange rit komen en de lange rit naar vier a vijf uur groeit;
+(iv) taper. Elke tussenstap is toetsbaar: eerst de intervalset vers, dan dezelfde set na drie uur.
+PER WEEK vanaf circa zes uur: een korte-intervalsessie, een drempelsessie, een groeiende lange rit.
+BESCHERMD: de intervalsessie EN de lange rit — die twee kunnen niet allebei sneuvelen. RESIDU: de
+tweede drempelsessie en de vulling. Onder circa vijf uur in het voorjaar past het doel niet en hoort
+de coach dat te zeggen (M40). METER: proces = lange-rit-duur en week-kJ stijgen, herhalingen in de
+intervalsessie stijgen; effect = het vermogen in de late inspanningen ten opzichte van vers —
+dezelfde durability-maat als paragraaf 3.5.
 
 ### 3.4 Lange beklimmingen — VASTGESTELD, moet gebouwd
 
@@ -147,6 +263,14 @@ BESLUIT. Komt gratis mee met de splitsing van 3.3.
 PRAKTISCH. Zonder datum kan de app er niet op periodiseren (`eventFase_` meet weken tot het
 event). Voorlopige datum invoeren en later aanscherpen.
 BOUWLAST. Gaat mee met 3.3.
+KETEN (paragraaf 2A). BESTEMMING: een week lange klimmen waarin dag vijf zwaarder telt dan dag een
+— een PLATEAU, geen piek. TUSSENSTAPPEN: (i) aanhoudende drempelblokken van acht tot dertig
+minuten, opgebouwd in tijd-in-zone; (ii) lange-rit-volume met hoogtemeters; (iii) back-to-back,
+eerst een weekendpaar, later drie dagen. Geen echte taper. PER WEEK: volume-hongerig; onder circa
+zes a acht uur niet fatsoenlijk te bedienen. BESCHERMD: het weekendpaar. RESIDU: de midweekse
+kwaliteit. METER: proces = uren, hoogtemeters en het langste aanhoudende drempelblok; effect = het
+vermogen op dag twee van een back-to-back ten opzichte van dag een — een directe toets op precies
+het doel.
 
 ### 3.5 Conditie / duurvermogen — VASTGESTELD als doel, meetlat NIEUW
 
@@ -175,6 +299,13 @@ APP VANDAAG, GEMETEN. Profiel `conditie` bestaat en weegt sweet-spot zwaarst, ma
 gemeten tegen het girona-profiel (T2) en levert in Base hetzelfde plan als FTP.
 BOUWLAST. Klein voor het profiel; middel voor de meetlat (nieuwe afgeleide uit de
 activiteiten-data), en die hangt aan prikkel-in-de-rit fase 2.
+KETEN (paragraaf 2A). BESTEMMING: X watt na N uur — een durability-getal, geen FTP. TUSSENSTAPPEN:
+(i) ritduur omhoog naar een plafond; (ii) week-kJ omhoog; (iii) inspanningen laat in de rit.
+PER WEEK: de lange rit IS het doel. BESCHERMD: de lange rit. RESIDU: de midweekse kwaliteit. Onder
+circa vier uur is het doel niet te bedienen en is Onderhoud of FTP het eerlijke voorstel (zie
+doel-passendheid, paragraaf 2A). METER: het 20-minutenvermogen na 15 kJ per kilo als percentage van
+vers; secundair decoupling en de Power/HR-Z2-trend. Staat de maat leeg — in de winter meestal — dan
+zwijgt de app erover (M5).
 
 ### 3.6 VO2max — VERVALT
 
@@ -226,6 +357,16 @@ daarmee geen los doel maar een dragende laag.
 2. Archetypes 33-68 erbij. Zonder deze stap wordt stap 1 monotoon. **AF** — commit `0bb79ee`, bibliotheek 23 naar 35.
 3. Doel-lijst herzien: VO2max eruit, Beklimmingen splitsen in kort en lang.
 4. Duurvermogen-meetlat, samen met prikkel-in-de-rit fase 2.
+5. Blok-object en de twee vragen (de weeklus). Uitvoerings-referent EERST: het venster van de
+   uitvoeringsmaat van week naar blok. Daarna pas de effect-referent per doel. Dit KEERT de
+   volgorde van `docs/DOEL-REFERENT-RECON.md` paragraaf 8 om, die de meetlat als fase 1 zet: effect
+   zonder uitvoering is betekenisloos, wat die recon in paragraaf 7 zelf vaststelt. Client-only
+   verwacht; drempels op de echte reeks ijken, nooit hier.
+6. Doel-passendheid. De coach stelt een passend doel voor, afwijsbaar, hoogstens een keer per blok
+   op een blokgrens. Hangt aan stap 5 (zonder referent weet het voorstel niet waartegen het meet).
+7. Consolidatie. Doortrain-kaart, kalender-deload, dosis-ramp en inhaal-kaart onder de weeklus
+   brengen, zodat er twee lussen overblijven in plaats van vijf drempels. ENGINE waarschijnlijk;
+   aparte autorisatie, selftest-vloer stijgt mee.
 
 Elke stap eigen bouw, stop-en-verifieer ertussen, gate en CI groen, vloeren niet regresseren.
 
