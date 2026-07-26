@@ -61,6 +61,12 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   op de eigen commit-hash in plaats van kaal `per_page=1`: die laatste kan een run van een andere
   commit of branch teruggeven, en dan rapporteer je groen over werk dat je niet gedaan hebt. Kwam
   binnen als CC-afwijking bij de coach-model-commit en is strikt beter dan wat de prompt vroeg.
+- **Meet beide kanten in dezelfde eenheid, en bewaar de termen.** Een vergelijking die
+  voorgeschreven grootheden van gemeten grootheden aftrekt oogt geldig en is het niet:
+  `zoneDebt_` trekt voorgeschreven intent-minuten af van gemeten zonetijd, wat bij een volledig
+  gemiste dag onzichtbaar blijft (actual = 0) maar over een blok systematisch scheefloopt. En een
+  saldo verbergt zijn termen: vier gemiste plus vier dubbel gereden kwaliteitsdagen leveren exact
+  hetzelfde getal als een perfect uitgevoerd blok. Retourneer gevraagd en geleverd apart.
 
 ## Vorm van een CC-prompt
 
@@ -132,3 +138,4 @@ FOCUS DEZE CHAT: <vul in>
 - 2026-07-24 — les toegevoegd in *Recon en bewijslast*: een halve fix is een vindpatroon. Aanleiding: één wortel (`sessions` leeg voor verstreken dagen) was eerder maar half gerepareerd — alleen de Dagen-noemer, niet TSS/Uren — en die brak pas op via Daans in-app screenshot als meetinstrument.
 - 2026-07-25 — drie afspraken toegevoegd n.a.v. het doortrain-kaart-herontwerp: in *Prod en veiligheid* dat remote-D1 LEZEN (read-only `SELECT`) als meetinstrument mag terwijl bewerken verboden blijft; in *Recon en bewijslast* dat een drempel op de echte reeks geijkt hoort (nooit op een modelcurve) en op een plateau moet liggen (toets hoe de uitkomst met de grens meebeweegt). Aanleiding: de drempel leunde op 376 echte CTL-rijen, en het plateau-criterium had de +8 → +5-tussenronde overbodig gemaakt.
 - 2026-07-26 — CI-runs worden gepind op de commit-hash (`head_sha`-filter) in plaats van op de laatste run. Aanleiding: CC deed het uit zichzelf zo bij de coach-model-commit en meldde het als afwijking; de kale variant kan een run van een andere commit teruggeven.
+- 2026-07-26 — les toegevoegd in *Recon en bewijslast*: meet beide kanten van een vergelijking in dezelfde eenheid en bewaar de termen. Aanleiding: de uitvoerings-referent-recon mat dat `zoneDebt_` voorgeschreven intent van gemeten zonetijd aftrekt, en dat het saldo een chaotisch uitgevoerd blok niet onderscheidt van een perfect uitgevoerd blok.
