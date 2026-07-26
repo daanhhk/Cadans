@@ -38,6 +38,7 @@ import {
   getWellness,
   putWeekplan,
 } from "./api";
+import { type BlokReview, blokReviewVenster, buildBlokReview } from "./blok";
 import {
   type InhaalBucket,
   inhaalAanbodRegel,
@@ -1311,6 +1312,8 @@ export async function loadSchemaWeek(): Promise<{
   inhaal: InhaalVoorstel | null;
   /** 3d stap 4 — fatigue-voorstel (offer/applied), of null. Laag-2 rendert de kaart. */
   fatigue: FatigueVoorstel | null;
+  /** 5a-ii — blok-terugblik (alleen in blokweek 4 en 1), of null. Laag-2 rendert de kaart. */
+  blokReview: BlokReview | null;
   /** FASE 3a — is het inhaal-plan voor DEZE week goedgekeurd? */
   optedIn: boolean;
   /** De maandag van de getoonde week (de sleutel van de goedkeuring). */
@@ -1442,6 +1445,24 @@ export async function loadSchemaWeek(): Promise<{
       fatigue = { state: "offer", dir, tsbTrend: trend, blok, preview };
     }
   }
+  // 5a-ii — de BLOK-TERUGBLIK. Eigen CTL-anker: `blokReviewVenster` levert de maandag van blokweek 4
+  // van het BEOORDEELDE blok, zodat computeBlockCtlDelta exact de drie opbouwweken meet. Het
+  // fatigue-pad hierboven blijft ONGEWIJZIGD en houdt zijn eigen anker op de huidige maandag — dat
+  // beantwoordt een andere vraag (mag de deload vervallen) op een ander moment.
+  const blokVenster = blokReviewVenster(settings?.doelStart ?? null, monday);
+  const blokReview = blokVenster
+    ? buildBlokReview({
+        activities,
+        doel: settings?.doel ?? null,
+        weekUren: settings?.weekUren ?? null,
+        doelStart: settings?.doelStart ?? null,
+        weekMondayISO: monday,
+        todayISO,
+        ctlDelta:
+          computeBlockCtlDelta(wellness, blokVenster.ctlAnker)?.delta ?? null,
+      })
+    : null;
+
   // DOWN (vervroegde deload) onderdrukt de inhaal-kaart: herstel wint van inhalen (M66/M72).
   const fatigueDownActive = fatigue?.dir === "down";
 
@@ -1554,6 +1575,7 @@ export async function loadSchemaWeek(): Promise<{
     settings: settings ?? EMPTY_SETTINGS,
     inhaal,
     fatigue,
+    blokReview,
     optedIn,
     weekMonday: monday,
   };

@@ -1,6 +1,7 @@
 import { mesoFactor } from "@cadans/engine";
 import type { DispositionReason, SettingsInput } from "@cadans/shared";
 import { useMemo, useState } from "react";
+import type { BlokReview } from "../../lib/blok";
 import {
   coachNarrative,
   normalizeCoachPersona,
@@ -20,6 +21,7 @@ import {
 import { Card, Overline } from "../ui";
 import { ActionButtons } from "./ActionButtons";
 import { AlignChip } from "./AlignChip";
+import { BlokReviewCard } from "./BlokReviewCard";
 import { CoachCallout } from "./CoachCallout";
 import { CoachReadinessBanner } from "./CoachReadinessBanner";
 import { DayStrip } from "./DayStrip";
@@ -62,6 +64,7 @@ export function SchemaView({
   settings,
   inhaal = null,
   fatigue = null,
+  blokReview = null,
   optedIn = false,
   weekMonday,
 }: {
@@ -76,6 +79,8 @@ export function SchemaView({
   inhaal?: InhaalVoorstel | null;
   /** 3d stap 4 — fatigue-voorstel op weekniveau (offer/applied), of null. */
   fatigue?: FatigueVoorstel | null;
+  /** 5a-ii — blok-terugblik (alleen in blokweek 4 en 1), of null. */
+  blokReview?: BlokReview | null;
   /** FASE 3a — is het inhaal-plan voor deze week goedgekeurd? */
   optedIn?: boolean;
   /** Maandag van de getoonde week (sleutel van de goedkeuring); default = view.weekMonday. */
@@ -246,6 +251,14 @@ export function SchemaView({
           weekMonday={weekMonday ?? view.weekMonday}
           optedIn={optedIn}
         />
+      )}
+
+      {/* 5a-ii — BLOK-TERUGBLIK. Staat NA de fatigue- en inhaal-kaart en vóór het dag-detail:
+          voorstellen die een actie vragen horen boven, een terugblik die context geeft eronder.
+          Geen render-guard nodig — de kaart is zelfbegrenzend (alleen in blokweek 4 en 1) en
+          vraagt niets, dus hij concurreert niet met de week-voorstellen. */}
+      {blokReview && (
+        <BlokReviewCard review={blokReview} coachNaam={view.coachNaam} />
       )}
 
       {day && (

@@ -3,10 +3,12 @@ import type { ActValuesRow } from "./activities";
 import {
   blokCheck,
   blokDosisNorm,
+  blokReviewVenster,
   blokStartVoorWeek,
   blokUitvoering,
   blokWeekVanWeek,
   buildBlokReferent,
+  buildBlokReview,
   vorigBlokStart,
   weekKwaliteitMinuten,
 } from "./blok";
@@ -299,5 +301,105 @@ describe("Onderhoud — uitvoering wél, effect niet (CTL hoort te dalen)", () =
   it("blokUitvoering geeft wél een uitkomst, blokCheck is null", () => {
     expect(blokUitvoering(ref()).geleverd).toBe(true);
     expect(blokCheck(ref(), -5, "Onderhoud")).toBeNull();
+  });
+});
+
+// ── 5a-ii — venster en review ────────────────────────────────────────────────
+
+describe("blokReviewVenster — wanneer mag de kaart, en welk blok", () => {
+  it("blokweek 2 en 3 → null (de opbouwweken zijn nog niet af)", () => {
+    expect(blokReviewVenster(DOEL_START, "2026-07-06")).toBeNull();
+    expect(blokReviewVenster(DOEL_START, "2026-07-13")).toBeNull();
+  });
+
+  it("blokweek 4 → het LOPENDE blok, anker is de huidige maandag", () => {
+    expect(blokReviewVenster(DOEL_START, "2026-07-20")).toEqual({
+      startMonday: "2026-06-29",
+      ctlAnker: "2026-07-20",
+      fase: "lopend",
+    });
+  });
+
+  it("blokweek 1 → het VORIGE blok, anker precies zeven dagen terug", () => {
+    expect(blokReviewVenster(DOEL_START, "2026-07-27")).toEqual({
+      startMonday: "2026-06-29",
+      ctlAnker: "2026-07-20",
+      fase: "afgerond",
+    });
+  });
+
+  it("het anker is altijd de maandag van blokweek 4 van het beoordeelde blok", () => {
+    for (const ma of ["2026-07-20", "2026-07-27"]) {
+      const v = blokReviewVenster(DOEL_START, ma);
+      expect(v).not.toBeNull();
+      if (!v) return;
+      // anker = startMonday + 21 dagen → computeBlockCtlDelta meet exact de drie opbouwweken.
+      expect(blokStartVoorWeek(DOEL_START, v.ctlAnker)).toBe(v.startMonday);
+      expect(blokWeekVanWeek(DOEL_START, v.ctlAnker)).toBe(4);
+    }
+  });
+});
+
+describe("buildBlokReview", () => {
+  function review(o: {
+    ctlDelta: number | null;
+    doel?: string;
+    weekUren?: number | null;
+    weekMondayISO?: string;
+  }) {
+    return buildBlokReview({
+      activities: RECON_ACTS,
+      doel: o.doel ?? "FTP",
+      weekUren: o.weekUren === undefined ? 5 : o.weekUren,
+      doelStart: DOEL_START,
+      weekMondayISO: o.weekMondayISO ?? "2026-07-27",
+      todayISO: "2026-07-27",
+      ctlDelta: o.ctlDelta,
+    });
+  }
+
+  it("het afgeronde blok met ctlDelta −5 → geleverd_niet_gestegen, drie beoordeelde weken", () => {
+    const r = review({ ctlDelta: -5 });
+    expect(r?.startMonday).toBe("2026-06-29");
+    expect(r?.eindMonday).toBe("2026-07-20");
+    expect(r?.fase).toBe("afgerond");
+    expect(r?.norm).toBe(84);
+    expect(r?.uitvoering.beoordeeldeWeken).toBe(3);
+    expect(r?.check?.uitkomst).toBe("geleverd_niet_gestegen");
+  });
+
+  it("ctlDelta null → check null, maar wél een review met uitvoering", () => {
+    const r = review({ ctlDelta: null });
+    expect(r).not.toBeNull();
+    expect(r?.check).toBeNull();
+    expect(r?.uitvoering.geleverd).toBe(true);
+    expect(r?.ctlDelta).toBeNull();
+  });
+
+  it("geen gedeclareerde weekuren → null (geen norm, dus geen kaart)", () => {
+    expect(review({ ctlDelta: -5, weekUren: null })).toBeNull();
+  });
+
+  it("buiten blokweek 1 en 4 → null", () => {
+    expect(review({ ctlDelta: -5, weekMondayISO: "2026-07-13" })).toBeNull();
+  });
+
+  it("Onderhoud → check null, uitvoering gevuld", () => {
+    const r = buildBlokReview({
+      activities: [
+        weekRit("2026-06-30", 70),
+        weekRit("2026-07-07", 70),
+        weekRit("2026-07-14", 70),
+      ],
+      doel: "Onderhoud",
+      weekUren: 3,
+      doelStart: DOEL_START,
+      weekMondayISO: "2026-07-27",
+      todayISO: "2026-07-27",
+      ctlDelta: -5,
+    });
+    expect(r?.check).toBeNull();
+    expect(r?.uitvoering.geleverd).toBe(true);
+    expect(r?.uitvoering.beoordeeldeWeken).toBe(3);
   });
 });

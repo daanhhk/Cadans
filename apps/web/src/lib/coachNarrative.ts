@@ -6,6 +6,8 @@
 // op warm (en warm valt terug op de droge reden-string). De settings-kiezer komt in een aparte brok →
 // render geeft nu persona "warm" hardcoded.
 
+import type { BlokReview } from "./blok";
+
 export type CoachPersona = "warm" | "disciplined" | "statistical";
 
 /** Guard: een willekeurige (settings-)waarde → een geldige CoachPersona; onbekend → "warm". */
@@ -342,6 +344,88 @@ export function fatigueAppliedRegel(dir: "up" | "down"): string {
   return dir === "up"
     ? "Je traint deze week door in plaats van de deload."
     : "Deze week is een vervroegde deload.";
+}
+
+// ── 5a-ii — de BLOK-REVIEW-regel (blok-niveau, terugkijkend) ─────────────────
+// FEITELIJK, geen daad-claim en geen belofte over de uitkomst (M5/M18): de regel meldt wat er
+// gemeten is en wat dat over het PLAN zegt, niet wat de renner waard is. Vorm volgt
+// faseOvergangRegel — geen pool per persona, wel hetzelfde register en een deterministische keuze
+// uit twee formuleringen (geseed op het blok, zodat dezelfde kaart niet per render wisselt).
+//
+// De LEVENDE tak is `geleverd_niet_gestegen` (recon §6): de uitvoering ligt structureel boven het
+// plan terwijl de CTL daalt. `niet_geleverd` is het vangnet en vuurt bij deze gebruiker zelden.
+
+/** Woordpaar per fase: het BEOORDEELDE blok en het blok waar de dosis naartoe gaat.
+ * `beoordeeld` is de BIJWOORDELIJKE vorm ("vorig blok", zoals "vorige week"); `beoordeeldNP` is
+ * dezelfde verwijzing als naamwoordgroep mét lidwoord, voor zinnen waarin het blok ONDERWERP is —
+ * "Dan zegt vorig blok …" is fout Nederlands, "Dan zegt het vorige blok …" niet. */
+function blokLabels_(fase: "lopend" | "afgerond"): {
+  beoordeeld: string;
+  beoordeeldNP: string;
+  volgend: string;
+} {
+  return fase === "afgerond"
+    ? {
+        beoordeeld: "vorig blok",
+        beoordeeldNP: "het vorige blok",
+        volgend: "dit blok",
+      }
+    : {
+        beoordeeld: "dit blok",
+        beoordeeldNP: "dit blok",
+        volgend: "het volgende blok",
+      };
+}
+
+export function blokReviewRegel(r: BlokReview): string {
+  const g = r.uitvoering.geleverdeWeken;
+  const b = r.uitvoering.beoordeeldeWeken;
+  const { beoordeeld, beoordeeldNP, volgend } = blokLabels_(r.fase);
+  // Congruentie: "1 van de 3 opbouwweken HAALDE", "2 van de 3 opbouwweken HAALDEN".
+  const haalde = g === 1 ? "haalde" : "haalden";
+  const kwam = g === 1 ? "kwam" : "kwamen";
+  const d = r.ctlDelta ?? 0;
+  const x = ctlLabel_(Math.abs(d));
+  // Negatief → "zakte met X"; nul of licht positief onder de opbouw-drempel → "bleef vlak".
+  const ctlZin = d < 0 ? `zakte je CTL met ${x}` : "bleef je CTL vlak";
+
+  let pool: string[];
+  let key: string;
+  if (r.check?.uitkomst === "geleverd_niet_gestegen") {
+    key = "geleverd_niet_gestegen";
+    pool = [
+      `Je leverde ${beoordeeld} ${g} van de ${b} opbouwweken boven de gevraagde ${r.norm} minuten, en tóch ${ctlZin}. Dan lag het niet aan de uitvoering — het plan was te licht. De dosis mag ${volgend} omhoog.`,
+      `${g} van de ${b} opbouwweken zaten ${beoordeeld} boven de gevraagde ${r.norm} minuten, en toch ${ctlZin}. Je deed je deel; de prikkel was het probleem. Er mag ${volgend} meer dosis in.`,
+    ];
+  } else if (r.check?.uitkomst === "geleverd_gestegen") {
+    key = "geleverd_gestegen";
+    pool = [
+      `${g} van de ${b} opbouwweken op norm, en je CTL steeg met ${x}. Dat is precies wat een blok hoort te doen — ${volgend} mag er een trede bij.`,
+      `${g} van de ${b} opbouwweken gehaald en je CTL ging ${x} omhoog. Zo hoort een blok te lopen — ${volgend} kan een trede zwaarder.`,
+    ];
+  } else if (r.check?.uitkomst === "niet_geleverd") {
+    key = "niet_geleverd";
+    pool = [
+      `${g} van de ${b} opbouwweken ${haalde} de gevraagde ${r.norm} minuten. Dan zegt ${beoordeeldNP} nog niets over het plan — de dosis blijft staan tot je een blok een keer helemaal draait.`,
+      `${g} van de ${b} opbouwweken ${kwam} aan de gevraagde ${r.norm} minuten. Zo laat ${beoordeeldNP} niet zien of het plan klopt — de dosis blijft staan tot een blok een keer rond is.`,
+    ];
+  } else if (r.uitvoering.geleverd) {
+    // Niet-opbouwdoel (Onderhoud): de CTL is hier geen meter — die HOORT te zakken.
+    key = "onderhoud_geleverd";
+    pool = [
+      `${g} van de ${b} kwaliteitsweken geleverd. Bij onderhoud is dat de hele vraag — dat je CTL ondertussen zakt hoort erbij.`,
+      `${g} van de ${b} kwaliteitsweken staan. Bij onderhoud is dat precies waar het om gaat; een zakkende CTL is hier geen signaal.`,
+    ];
+  } else {
+    key = "onderhoud_niet_geleverd";
+    pool = [
+      `${g} van de ${b} kwaliteitsweken geleverd. Bij onderhoud is de frequentie de hele vraag; die mag niet wegzakken.`,
+      `${g} van de ${b} kwaliteitsweken geleverd. Onderhoud draait op frequentie — daar mag je niet onder zakken.`,
+    ];
+  }
+  return (
+    pool[seedIndex(`${r.startMonday}|${key}`, pool.length)] ?? pool[0] ?? ""
+  );
 }
 
 // ── FASE 2b — inhaal-voorstel (week-niveau, read-only) ───────────────────────

@@ -2,6 +2,7 @@ import type { DispositionReason, SettingsInput } from "@cadans/shared";
 import { useEffect, useState } from "react";
 import { SchemaView } from "../components/schema/SchemaView";
 import { postSyncActivities, postSyncWellness } from "../lib/api";
+import type { BlokReview } from "../lib/blok";
 import { subscribePlannerVersion } from "../lib/plannerSignal";
 import type { ProposalWeek } from "../lib/proposal";
 import type { ReadinessResult } from "../lib/readiness";
@@ -31,6 +32,8 @@ interface SchemaData {
   inhaal: InhaalVoorstel | null;
   /** 3d stap 4 — fatigue-voorstel (offer/applied), of null. */
   fatigue: FatigueVoorstel | null;
+  /** 5a-ii — blok-terugblik (alleen in blokweek 4 en 1), of null. */
+  blokReview: BlokReview | null;
   /** FASE 3a — goedkeuring van het inhaal-plan voor deze week. */
   optedIn: boolean;
   weekMonday: string;
@@ -182,6 +185,7 @@ export function Schema() {
       settings={data.settings}
       inhaal={data.inhaal}
       fatigue={data.fatigue}
+      blokReview={data.blokReview}
       optedIn={data.optedIn}
       weekMonday={data.weekMonday}
     />

@@ -373,3 +373,111 @@ export function blokCheck(
     gestegen,
   };
 }
+
+// ── 5a-ii — de BLOK-REVIEW-kaart ─────────────────────────────────────────────
+
+export type BlokReviewFase = "lopend" | "afgerond";
+
+export interface BlokReviewVenster {
+  startMonday: string;
+  ctlAnker: string;
+  fase: BlokReviewFase;
+}
+
+/**
+ * WELK blok wordt beoordeeld, en mag de kaart nu verschijnen? Alleen het meest recente blok waarvan
+ * alle DRIE de opbouwweken compleet zijn, en alleen op twee momenten:
+ *  - blokweek 4 (de deload loopt): het blok waarin we zitten → fase "lopend".
+ *  - blokweek 1 (het nieuwe blok begint): het blok ervóór → fase "afgerond".
+ * Elke andere blokweek → null: dan zijn de opbouwweken nog niet af en zou de kaart een halve week
+ * beoordelen.
+ *
+ * `ctlAnker` is ALTIJD de maandag van blokweek 4 van het BEOORDEELDE blok. `computeBlockCtlDelta`
+ * meet [anker−22 .. anker−1], dus precies de drie opbouwweken. Zou je de HUIDIGE maandag als anker
+ * nemen, dan meet je in blokweek 1 opbouwweek 2, opbouwweek 3 en de deload — de verkeerde drie
+ * weken, en de deload drukt de ΔCTL stelselmatig omlaag.
+ */
+export function blokReviewVenster(
+  doelStartISO: string | null,
+  weekMondayISO: string,
+): BlokReviewVenster | null {
+  const bw = blokWeekVanWeek(doelStartISO, weekMondayISO);
+  const huidigeStart = blokStartVoorWeek(doelStartISO, weekMondayISO);
+  if (bw === BLOK_WEKEN) {
+    return {
+      startMonday: huidigeStart,
+      ctlAnker: weekMondayISO,
+      fase: "lopend",
+    };
+  }
+  if (bw === 1) {
+    return {
+      startMonday: vorigBlokStart(huidigeStart),
+      ctlAnker: shiftIso_(weekMondayISO, -7),
+      fase: "afgerond",
+    };
+  }
+  return null;
+}
+
+export interface BlokReview {
+  startMonday: string;
+  /** Maandag van blokweek 4 van het beoordeelde blok — tevens het CTL-anker. */
+  eindMonday: string;
+  fase: BlokReviewFase;
+  doel: string | null;
+  norm: number;
+  weekUren: number | null;
+  weeks: BlokWeek[];
+  uitvoering: BlokUitvoering;
+  /** null bij een niet-opbouwdoel (Onderhoud): daar is de CTL geen proces-meter. */
+  check: BlokCheck | null;
+  ctlDelta: number | null;
+}
+
+/**
+ * De BLOK-REVIEW: het venster, de referent, de uitvoering en (bij een opbouwdoel) de check in één
+ * object voor laag 2. Zwijgt (null) als er geen venster is, geen norm, of te weinig beoordeelbare
+ * weken — dan heeft de app niets te zeggen (M5).
+ *
+ * `ctlDelta` komt van de CALLER, die 'm ophaalt met `computeBlockCtlDelta(wellness, venster.ctlAnker)`.
+ * Daarom is `blokReviewVenster` apart geëxporteerd: het anker is nodig vóór de review bestaat. Deze
+ * functie parseert zelf geen wellness — dat houdt de laag puur en de eenheid ondubbelzinnig.
+ */
+export function buildBlokReview(input: {
+  activities: ActValuesRow[];
+  doel: string | null;
+  weekUren: number | null;
+  doelStart: string | null;
+  weekMondayISO: string;
+  todayISO: string;
+  ctlDelta: number | null;
+}): BlokReview | null {
+  const venster = blokReviewVenster(input.doelStart, input.weekMondayISO);
+  if (!venster) return null;
+
+  const ref = buildBlokReferent({
+    activities: input.activities,
+    doel: input.doel,
+    weekUren: input.weekUren,
+    startMonday: venster.startMonday,
+    todayISO: input.todayISO,
+  });
+  if (!ref) return null;
+
+  const uitvoering = blokUitvoering(ref);
+  if (uitvoering.geleverd == null) return null;
+
+  return {
+    startMonday: venster.startMonday,
+    eindMonday: venster.ctlAnker,
+    fase: venster.fase,
+    doel: input.doel,
+    norm: ref.norm,
+    weekUren: input.weekUren,
+    weeks: ref.weeks,
+    uitvoering,
+    check: blokCheck(ref, input.ctlDelta, input.doel),
+    ctlDelta: input.ctlDelta,
+  };
+}

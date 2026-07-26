@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { coachNarrative, faseOvergangRegel } from "./coachNarrative";
+import type { BlokReview } from "./blok";
+import {
+  blokReviewRegel,
+  coachNarrative,
+  faseOvergangRegel,
+} from "./coachNarrative";
 
 // De 3 warm-varianten van key_session (uit de pool) — voor de fallback-assert.
 const KEY_WARM = [
@@ -112,5 +117,135 @@ describe("faseOvergangRegel", () => {
     expect(r).not.toContain("weken");
     expect(r).not.toContain("(nog");
     expect(r).not.toMatch(/Ik heb/i);
+  });
+});
+
+describe("blokReviewRegel — de vijf takken", () => {
+  function review(o: Partial<BlokReview> = {}): BlokReview {
+    return {
+      startMonday: "2026-06-29",
+      eindMonday: "2026-07-20",
+      fase: "afgerond",
+      doel: "FTP",
+      norm: 84,
+      weekUren: 5,
+      weeks: [],
+      uitvoering: { geleverd: true, geleverdeWeken: 3, beoordeeldeWeken: 3 },
+      check: {
+        uitkomst: "geleverd_niet_gestegen",
+        geleverdeWeken: 3,
+        beoordeeldeWeken: 3,
+        ctlDelta: -5,
+        gestegen: false,
+      },
+      ctlDelta: -5,
+      ...o,
+    };
+  }
+
+  it("geleverd_niet_gestegen: het plan was te licht, de dosis mag omhoog", () => {
+    const r = blokReviewRegel(review());
+    expect(r).toContain("3 van de 3 opbouwweken");
+    expect(r).toContain("84 minuten");
+    expect(r).toContain("zakte je CTL met 5,0");
+    expect(r).toMatch(/dosis/);
+  });
+
+  it("geleverd_gestegen: een trede erbij", () => {
+    const r = blokReviewRegel(
+      review({
+        check: {
+          uitkomst: "geleverd_gestegen",
+          geleverdeWeken: 3,
+          beoordeeldeWeken: 3,
+          ctlDelta: 4,
+          gestegen: true,
+        },
+        ctlDelta: 4,
+      }),
+    );
+    expect(r).toContain("3 van de 3 opbouwweken");
+    expect(r).toContain("4,0");
+    expect(r).toContain("trede");
+  });
+
+  it("niet_geleverd: de dosis blijft staan", () => {
+    const r = blokReviewRegel(
+      review({
+        uitvoering: { geleverd: false, geleverdeWeken: 1, beoordeeldeWeken: 3 },
+        check: {
+          uitkomst: "niet_geleverd",
+          geleverdeWeken: 1,
+          beoordeeldeWeken: 3,
+          ctlDelta: -5,
+          gestegen: false,
+        },
+      }),
+    );
+    expect(r).toContain("1 van de 3 opbouwweken");
+    expect(r).toMatch(/blijft staan/);
+    // Congruentie bij 1: enkelvoud, en het blok als onderwerp krijgt een lidwoord.
+    expect(r).not.toMatch(/opbouwweken (haalden|kwamen)/);
+    expect(r).not.toMatch(/zegt vorig blok/);
+  });
+
+  it("niet_geleverd bij 2 van de 3: meervoud", () => {
+    const r = blokReviewRegel(
+      review({
+        startMonday: "2026-05-04",
+        uitvoering: { geleverd: false, geleverdeWeken: 2, beoordeeldeWeken: 3 },
+        check: {
+          uitkomst: "niet_geleverd",
+          geleverdeWeken: 2,
+          beoordeeldeWeken: 3,
+          ctlDelta: -5,
+          gestegen: false,
+        },
+      }),
+    );
+    expect(r).toMatch(/2 van de 3 opbouwweken (haalden|kwamen)/);
+  });
+
+  it("niet-opbouwdoel, wel geleverd: frequentie is de hele vraag, zakkende CTL hoort erbij", () => {
+    const r = blokReviewRegel(
+      review({ doel: "Onderhoud", check: null, ctlDelta: -5 }),
+    );
+    expect(r).toContain("3 van de 3 kwaliteitsweken");
+    expect(r).toMatch(/onderhoud/i);
+    expect(r).not.toContain("opbouwweken");
+  });
+
+  it("niet-opbouwdoel, niet geleverd: de frequentie mag niet wegzakken", () => {
+    const r = blokReviewRegel(
+      review({
+        doel: "Onderhoud",
+        check: null,
+        uitvoering: { geleverd: false, geleverdeWeken: 1, beoordeeldeWeken: 3 },
+      }),
+    );
+    expect(r).toContain("1 van de 3 kwaliteitsweken");
+    expect(r).toMatch(/frequentie/i);
+  });
+
+  it("fase-woordpaar: afgerond zegt 'vorig blok' + 'dit blok', lopend zegt 'dit blok' + 'het volgende blok'", () => {
+    const af = blokReviewRegel(review({ fase: "afgerond" }));
+    expect(af).toContain("vorig blok");
+    expect(af).toContain("dit blok");
+    expect(af).not.toContain("het volgende blok");
+
+    const lo = blokReviewRegel(review({ fase: "lopend" }));
+    expect(lo).toContain("dit blok");
+    expect(lo).toContain("het volgende blok");
+    expect(lo).not.toContain("vorig blok");
+  });
+
+  it("vlakke CTL: geen 'zakte met', wel 'bleef je CTL vlak'", () => {
+    const r = blokReviewRegel(review({ ctlDelta: 0 }));
+    expect(r).toContain("bleef je CTL vlak");
+    expect(r).not.toContain("zakte je CTL");
+  });
+
+  it("deterministisch: dezelfde review geeft dezelfde zin", () => {
+    expect(blokReviewRegel(review())).toBe(blokReviewRegel(review()));
   });
 });
