@@ -1,11 +1,14 @@
 import { buildWorkout } from "@cadans/engine";
-import type { SettingsInput } from "@cadans/shared";
+import type { EventItem, SettingsInput } from "@cadans/shared";
 import { useState } from "react";
+import { BlokReviewCard } from "../components/schema/BlokReviewCard";
 import { FaseOvergangCard } from "../components/schema/FaseOvergangCard";
 import { FatigueCard } from "../components/schema/FatigueCard";
 import { InhaalCard } from "../components/schema/InhaalCard";
 import { SchemaView } from "../components/schema/SchemaView";
 import { VerlichtCard } from "../components/schema/VerlichtCard";
+import type { ActValuesRow } from "../lib/activities";
+import { type BlokReview, buildBlokReview } from "../lib/blok";
 import {
   inhaalAanbodRegel,
   verlichtAanbodRegel,
@@ -483,6 +486,167 @@ const faseOvergangFixtures: { label: string; o: FaseOvergang }[] = [
   },
 ];
 
+// 5a-ii + 5b-i — BlokReviewCard-fixtures. HARDE EIS: elke fixture wordt BEREKEND door
+// buildBlokReview op een fixture-activiteitenmatrix; er wordt hier GEEN BlokReview of
+// EffectReferent met de hand in elkaar gezet. De UP-fixture hierboven schaalt een week kunstmatig
+// met ×1,4 en overdrijft daarmee wat de motor doet — die schuld staat in HANDOFF en wordt hier
+// niet herhaald.
+//
+// De rolling_ftp-reeks is de ECHTE reeks uit docs/EFFECT-REFERENT-RECON.md §4 (laatste geldige
+// waarde per kalenderweek). 2026-02-02 heeft daar geen waarde en krijgt er hier dus ook geen.
+const PREVIEW_ROLLING_FTP: [string, number | null][] = [
+  ["2025-10-27", 276],
+  ["2025-11-03", 276],
+  ["2025-11-10", 276],
+  ["2025-11-17", 276],
+  ["2025-11-24", 273],
+  ["2025-12-01", 273],
+  ["2025-12-08", 273],
+  ["2025-12-15", 273],
+  ["2025-12-22", 271],
+  ["2025-12-29", 270],
+  ["2026-01-05", 267],
+  ["2026-01-12", 276],
+  ["2026-01-19", 276],
+  ["2026-01-26", 276],
+  ["2026-02-02", null], // geen rij in de reeks
+  ["2026-02-09", 274],
+  ["2026-02-16", 272],
+  ["2026-02-23", 270],
+  ["2026-03-02", 270],
+  ["2026-03-09", 268],
+  ["2026-03-16", 267],
+  ["2026-03-23", 266],
+  ["2026-03-30", 266],
+  ["2026-04-06", 266],
+  ["2026-04-13", 266],
+  ["2026-04-20", 266],
+  ["2026-04-27", 264],
+  ["2026-05-04", 263],
+  ["2026-05-11", 262],
+  ["2026-05-18", 272],
+  ["2026-05-25", 272],
+  ["2026-06-01", 271],
+  ["2026-06-08", 269],
+  ["2026-06-15", 270],
+  ["2026-06-22", 269],
+  ["2026-06-29", 267],
+  ["2026-07-06", 265],
+  ["2026-07-13", 264],
+  ["2026-07-20", 262],
+];
+
+/** De GEMETEN kwaliteitsminuten van het live blok — dezelfde die vandaag op de kaart staan. */
+const PREVIEW_KWALITEIT: Record<string, number> = {
+  "2026-06-29": 110,
+  "2026-07-06": 97,
+  "2026-07-13": 117,
+  "2026-07-20": 91,
+};
+
+/** Eén fiets-rit per kalenderweek: idx3 duur, idx14 rolling_ftp, idx15 zonetijden.
+ * De duur is low + high, dus de zonedekking is 1,0 en ligt ruim boven ZONEDATA_DEKKING_MIN. */
+function previewAct(
+  datum: string,
+  rollingFtp: number | null,
+  high: number,
+): ActValuesRow {
+  const [y, m, d] = datum.split("-").map(Number);
+  const row: ActValuesRow = new Array(17).fill(null);
+  row[0] = new Date(y ?? 2026, (m ?? 1) - 1, d ?? 1);
+  row[1] = "Ride";
+  row[3] = 150 + high;
+  row[14] = rollingFtp;
+  row[15] = JSON.stringify([
+    { id: "Z2", secs: 150 * 60 },
+    { id: "Z4", secs: high * 60 },
+  ]);
+  return row;
+}
+
+function previewActs(overrideFtp: Record<string, number> = {}): ActValuesRow[] {
+  return PREVIEW_ROLLING_FTP.map(([datum, v]) =>
+    previewAct(
+      datum,
+      overrideFtp[datum] ?? v,
+      PREVIEW_KWALITEIT[datum] ?? 30, // buiten het blok doet de kwaliteit er niet toe
+    ),
+  );
+}
+
+const PREVIEW_RACE: EventItem = {
+  datum: "2026-07-13",
+  naam: "Ronde van Iets",
+  type: "race",
+  prioriteit: "A",
+  afstandKm: 120,
+  hoogtemeters: null,
+  klimType: null,
+  notitie: null,
+};
+
+function previewReview(o: {
+  weekMondayISO: string;
+  ctlDelta: number | null;
+  events?: EventItem[];
+  overrideFtp?: Record<string, number>;
+}): BlokReview | null {
+  return buildBlokReview({
+    activities: previewActs(o.overrideFtp),
+    doel: "FTP",
+    weekUren: 5,
+    doelStart: "2026-06-29",
+    weekMondayISO: o.weekMondayISO,
+    todayISO: o.weekMondayISO,
+    ctlDelta: o.ctlDelta,
+    events: o.events ?? [],
+    overrides: [],
+  });
+}
+
+// Labels noemen de VERWACHTE uitkomst, zodat bij het kijken meteen zichtbaar is of de kaart iets
+// anders rendert dan bedoeld.
+const blokReviewFixtures: { label: string; r: BlokReview | null }[] = [
+  {
+    label:
+      "Blok · LOPEND (blokweek 4, wat vandaag live staat) — geen effect-regel, het blok loopt nog",
+    r: previewReview({ weekMondayISO: "2026-07-20", ctlDelta: -2.7 }),
+  },
+  {
+    label:
+      "Blok · AFGEROND, NIET MEETBAAR (geen test of wedstrijd) — 269 → 267, verschil −2",
+    r: previewReview({ weekMondayISO: "2026-07-27", ctlDelta: -2.7 }),
+  },
+  {
+    label:
+      "Blok · AFGEROND, NIET GESTEGEN · term VOLUME (wedstrijd 13-07, CTL bouwde niet op)",
+    r: previewReview({
+      weekMondayISO: "2026-07-27",
+      ctlDelta: -2.7,
+      events: [PREVIEW_RACE],
+    }),
+  },
+  {
+    label:
+      "Blok · AFGEROND, NIET GESTEGEN · term TIJD-IN-ZONE (wedstrijd 13-07, CTL bouwde wél op)",
+    r: previewReview({
+      weekMondayISO: "2026-07-27",
+      ctlDelta: 2,
+      events: [PREVIEW_RACE],
+    }),
+  },
+  {
+    label: "Blok · AFGEROND, GESTEGEN — 269 → 275, verschil +6",
+    r: previewReview({
+      weekMondayISO: "2026-07-27",
+      ctlDelta: -2.7,
+      events: [PREVIEW_RACE],
+      // Alleen de REEKSWAARDE gaat omhoog; de drempel blijft ROLLING_FTP_STIJGING_W.
+      overrideFtp: { "2026-07-06": 275 },
+    }),
+  },
+];
+
 const fixtureLabel: React.CSSProperties = {
   fontFamily: "var(--font-sans)",
   fontSize: "var(--fs-caption)",
@@ -578,6 +742,14 @@ function VoorstelPreview() {
           <FaseOvergangCard overgang={f.o} coachNaam="Coach" />
         </div>
       ))}
+      {blokReviewFixtures.map((f) =>
+        f.r ? (
+          <div key={f.label}>
+            <div style={fixtureLabel}>{f.label}</div>
+            <BlokReviewCard review={f.r} coachNaam="Coach" />
+          </div>
+        ) : null,
+      )}
     </div>
   );
 }
