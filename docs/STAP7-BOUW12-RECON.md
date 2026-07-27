@@ -125,3 +125,41 @@ gedrag veroorzaken. De vierde is een DOSISVRAAG en wordt geijkt, niet gekozen.
 Geen enkele nieuwe trainingsregel. Dit document meet wat de app doet en waarom, en wijst aan
 welke keuzes nog geijkt moeten worden. Een dosis- of selectieregel die met de hand is gekozen
 in plaats van geijkt hoort niet in dit document en niet in de code.
+
+### CORRECTIE 27-07-2026 — §9 punt 4, §6 en §2 bijgesteld
+
+Gemeten in `docs/STAP7-IJKING-DATA.md` (204 ritten, 266 uur) en gebouwd in `e6b3e4a`. Vier
+bijstellingen; de tekst hierboven blijft ONGEWIJZIGD staan als vindplaats van de redenering.
+
+1. §9 PUNT 4 IS WEERLEGD. Daar staat dat de selectieregel voor een lange dag wordt AFGELEID uit
+   de meting van §7. Dat kan niet: die ritten zijn een verslag van hoe Daan vóór Cadans op gevoel
+   trainde — deels groepsritten en een evenement — dus een regel die daarop fit reproduceert de
+   oude gewoonte en noemt hem daarna een norm. Er ontbreekt bovendien per constructie een
+   tegenvoorbeeld: dezelfde vier uur is nooit met een ANDERE invulling gereden, dus over wat
+   beter werkt zegt de reeks niets. De regel komt uit de COACH-CANON, dezelfde categorie als de
+   testfrequentie; zie de bullet "IJk niet op gedrag dat je wilt vervangen" in
+   `docs/WERKWIJZE.md`. Wat de meting WEL levert is een BOVENGRENS-CHECK: 45 tot 130 minuten Z3+
+   in een lange rit is aantoonbaar verteerd, dus een voorstel van 20 minuten op een rit van vier
+   uur is niet voorzichtig maar te weinig. Die check is dun onderbouwd — n=11 voor de band
+   120-179 minuten en n=2 respectievelijk n=3 daarboven — en draagt dus een grens, geen regel.
+
+2. §6's "EXACTE" REFERENTIE IS NIET EXACT. Minuten × IF² × 1,6667 staat zelf 5 tot 10% te laag
+   tegen de werkelijk gemeten TSS (afhankelijk van het aangenomen Z1-midden). Mechanisme: NP
+   middelt over 30 seconden, dus belasting LEKT naar de makkelijke minuten rond een blok. De fit
+   laat dat lek zien — rust en anaeroob komen hoger uit dan hun steady-waarde, drempel lager
+   (1,35 tegen 1,60 steady). De grondwaarheid is de GEMETEN TSS, niet de formule.
+
+3. §6's MENG-BEZWAAR IS BEVESTIGD MAAR KLEIN op deze mix: de vijf-zone-fit haalt RMSE 8,26 tegen
+   8,42 voor drie buckets. De uitweg is dus niet een compromisgetal per bucket maar de SPLITSING
+   naar de vijf `pctZoneBucket_`-buckets, die de engine al per blok berekent en waarvan de
+   grenzen samenvallen met de zones waarop intervals.icu meet. De gemeten tarieven staan in het
+   STAND-blok van `HANDOFF.md` en in `docs/STAP7-IJKING-DATA.md`.
+
+4. §2 — HEK 1 EN HEK 3 ZIJN GEBOUWD, HEK 2 BESTOND NIET. De lange-rit-pre-claim en de
+   dubbele demotie zijn weg (`e6b3e4a`). HEK 2 (`gapOK_` met `midweekMinGap` 1) bleek geen
+   zelfstandig hek maar het PROFIEL dat zijn werk doet — die tussenruimte is bedoeld en blijft.
+   Het document miste bovendien een VIERDE sectie in `allocateQualityWeek_`: een endurance-fill
+   die élke resterende eligible dag alsnog claimt (`long_z2`, pendel → `pendel_z2`). Daardoor
+   draagt in een Base/Build/Peak-week iedere trainbare dag een allocator-entry, kan de lange rit
+   niet verdwijnen, en loopt de cross-week bescherming in zo'n week via `gapOK_` met de
+   profiel-tussenruimte in plaats van via de vaste eendaagse afstand van de demotie.
