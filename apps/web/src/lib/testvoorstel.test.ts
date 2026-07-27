@@ -42,12 +42,18 @@ function week(o: Partial<PlannerDay>[] = []): PlannerDay[] {
   return basis.map((d, i) => ({ ...d, ...(o[i] ?? {}) }));
 }
 
-function act(datumISO: string, minuten = 90, type = "Ride"): ActValuesRow {
+function act(
+  datumISO: string,
+  minuten = 90,
+  type = "Ride",
+  rollingFtp: number | null = null,
+): ActValuesRow {
   const [y, m, d] = datumISO.split("-").map(Number);
   const row: ActValuesRow = new Array(17).fill(null);
   row[0] = new Date(y ?? 2026, (m ?? 1) - 1, d ?? 1);
   row[1] = type;
   row[3] = minuten;
+  row[14] = rollingFtp;
   return row;
 }
 
@@ -232,5 +238,48 @@ describe("IJK-CASUS op echte getallen", () => {
     expect(dagen).toBeLessThan(TEST_INTERVAL_DAGEN);
     // En met de testdatum haalt hij het wél:
     expect(bouw()).not.toBeNull();
+  });
+});
+
+describe("de SPRONG als derde meetmoment", () => {
+  it("een sprongdag binnen 90 dagen vóór de testdatum ONDERDRUKT het aanbod", () => {
+    // Geen test en geen wedstrijd, maar de rolling FTP sprong op 2026-08-01 (261 → 272):
+    // 21 dagen vóór de testdatum 2026-08-22, dus ruim binnen het interval.
+    const v = bouw({
+      events: [],
+      activities: [
+        act("2026-07-25", 90, "Ride", 261),
+        act("2026-08-01", 90, "Ride", 272),
+      ],
+    });
+    expect(v).toBeNull();
+  });
+
+  it("zonder die sprong blijft het aanbod staan", () => {
+    // Dezelfde twee dagen, maar zonder stijging → geen meetmoment → wél aanbieden.
+    const v = bouw({
+      events: [],
+      activities: [
+        act("2026-07-25", 90, "Ride", 261),
+        act("2026-08-01", 90, "Ride", 261),
+      ],
+    });
+    expect(v).not.toBeNull();
+    expect(v?.laatsteMeting).toBeNull();
+  });
+
+  it("een sprong LANG geleden laat het aanbod staan en wordt als bron gemeld", () => {
+    const v = bouw({
+      events: [],
+      activities: [
+        act("2026-05-14", 90, "Ride", 261),
+        act("2026-05-21", 90, "Ride", 272),
+      ],
+    });
+    expect(v?.laatsteMeting).toEqual({
+      bron: "inspanning",
+      datum: "2026-05-21",
+    });
+    expect(v?.dagenSinds).toBe(93);
   });
 });

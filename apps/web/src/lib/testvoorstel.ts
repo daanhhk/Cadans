@@ -20,7 +20,7 @@ import {
   shiftIso_,
 } from "./blok";
 import { parseLocalDate } from "./dates";
-import { type GelegenheidBron, laatsteGelegenheid } from "./effect";
+import { laatsteGelegenheid, type MetingBron } from "./effect";
 
 /** Hoogstens ~vier metingen per jaar: pas na zoveel dagen sinds de laatste maximale inspanning
  * biedt de coach een test aan. BELEID, geen gemeten drempel. */
@@ -51,7 +51,7 @@ export interface TestVoorstel {
   durMin: number;
   /** De beschikbare minuten op die dag (uit de weekplanner). */
   beschikbaarMin: number;
-  laatsteMeting: { bron: GelegenheidBron; datum: string } | null;
+  laatsteMeting: { bron: MetingBron; datum: string } | null;
   /** Dagen tussen de laatste meting en de voorgestelde testdatum; null als er geen meting is. */
   dagenSinds: number | null;
 }

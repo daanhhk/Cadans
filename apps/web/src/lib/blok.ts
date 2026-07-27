@@ -23,8 +23,8 @@ import { parseLocalDate } from "./dates";
 import {
   buildEffectReferent,
   type EffectReferent,
-  type GelegenheidBron,
   laatsteGelegenheid,
+  type MetingBron,
 } from "./effect";
 import { NO_BUILD_CTL_DELTA } from "./fatigue";
 
@@ -445,7 +445,7 @@ export interface BlokReview {
   effect: EffectReferent | null;
   /** 5b-ii — de LAATSTE maximale inspanning over de hele historie t/m vandaag, of null. ALTIJD
    * gevuld, ook als `effect` null is: de copy noemt 'm ook wanneer er geen effect-uitspraak is. */
-  laatsteMeting?: { bron: GelegenheidBron; datum: string } | null;
+  laatsteMeting?: { bron: MetingBron; datum: string } | null;
 }
 
 /**

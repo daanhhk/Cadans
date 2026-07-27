@@ -206,6 +206,53 @@ export function blokGelegenheid(input: {
   return { bron: null, datum: null };
 }
 
+/** De bronnen die als MEETMOMENT tellen. `test` en `race` zijn GELEGENHEDEN (de app kende ze
+ * vooraf); `inspanning` is een sprong in de reeks zelf — achteraf zichtbaar bewijs dat er een
+ * maximum gezet is, zonder dat de app weet wat voor rit het was. */
+export type MetingBron = GelegenheidBron | "inspanning";
+
+/**
+ * De dagen waarop `rolling_ftp` SPRONG, oplopend. Een sprong is achteraf bewijs dat er een maximum
+ * gezet is: de meter kan alleen omhoog als er een betere inspanning in het venster kwam.
+ *
+ * GRENS, DRAGEND: dit voedt UITSLUITEND `laatsteGelegenheid` (de meetinterval-poort van het
+ * testvoorstel). `blokGelegenheid` en `buildEffectReferent` blijven ONGEWIJZIGD, en dat is geen
+ * nalatigheid maar de kern: een sprong als bewijs van gelegenheid gebruiken is CIRCULAIR. De
+ * effect-vraag luidt "was er een gelegenheid en steeg de meter"; zou een sprong zelf de gelegenheid
+ * zijn, dan is "geen sprong" per definitie "geen gelegenheid" en kan de uitkomst `niet_gestegen`
+ * nooit meer vuren. Vandaar: sprongen tellen voor WANNEER er voor het laatst gemeten is, nooit voor
+ * de vraag of dit blok een meting bevatte.
+ *
+ * Vergelijking met de VORIGE dag-met-waarde, niet met het all-time maximum: de reeks daalt over het
+ * jaar, dus een all-time-max zou de sprong van 21-05-2026 (261 → 272) onzichtbaar maken achter de
+ * eerdere piek van 13-01 (276). Twee ritten op één dag tellen als ÉÉN dag — op 21-05 stond 07:23 op
+ * 261 en 16:23 op 272 — dus per datum het maximum.
+ */
+export function sprongDagen(
+  activities: ActValuesRow[],
+  totISO: string,
+): string[] {
+  const perDag = new Map<string, number>();
+  for (const row of activities || []) {
+    const datum = datumVan_(row);
+    if (datum == null || datum > totISO) continue;
+    const v = rollingFtp_(row);
+    if (v == null) continue;
+    const huidig = perDag.get(datum);
+    if (huidig == null || v > huidig) perDag.set(datum, v);
+  }
+  const datums = [...perDag.keys()].sort();
+  const uit: string[] = [];
+  let vorig: number | null = null;
+  for (const d of datums) {
+    const v = perDag.get(d) as number;
+    // De eerste dag met een waarde is nooit een sprong: er is geen niveau om mee te vergelijken.
+    if (vorig != null && v - vorig >= ROLLING_FTP_STIJGING_W) uit.push(d);
+    vorig = v;
+  }
+  return uit;
+}
+
 /**
  * De LAATSTE gelegenheid over de HELE historie t/m `totISO` (inclusief), of null. Voedt de
  * meetinterval-poort van het testvoorstel: hoe lang is het geleden dat er werkelijk een maximum
@@ -217,16 +264,19 @@ export function laatsteGelegenheid(input: {
   events: EventItem[];
   overrides: OverrideEntry[];
   totISO: string;
-}): { bron: GelegenheidBron; datum: string } | null {
-  let beste: { bron: GelegenheidBron; datum: string } | null = null;
-  const overweeg = (bron: GelegenheidBron, datum: string) => {
+}): { bron: MetingBron; datum: string } | null {
+  // Specifieker feit wint bij een gelijke datum: een INGEPLANDE test slaat een wedstrijd, en beide
+  // slaan een kale sprong (waarvan de app niet weet wat voor rit het was).
+  const rang: Record<MetingBron, number> = { test: 3, race: 2, inspanning: 1 };
+  let beste: { bron: MetingBron; datum: string } | null = null;
+  const overweeg = (bron: MetingBron, datum: string) => {
     if (datum > input.totISO) return;
-    if (!isGereden_(input.activities, datum)) return;
-    // Later wint; bij een GELIJKE datum wint "test" — dezelfde voorrang als blokGelegenheid.
+    // De gereden-poort geldt NIET voor een sprong: die impliceert per constructie een rit.
+    if (bron !== "inspanning" && !isGereden_(input.activities, datum)) return;
     if (
       beste == null ||
       datum > beste.datum ||
-      (datum === beste.datum && bron === "test")
+      (datum === beste.datum && rang[bron] > rang[beste.bron])
     ) {
       beste = { bron, datum };
     }
@@ -236,6 +286,9 @@ export function laatsteGelegenheid(input: {
   }
   for (const ov of input.overrides || []) {
     if (isTestOverride_(ov)) overweeg("test", ov.datum);
+  }
+  for (const d of sprongDagen(input.activities, input.totISO)) {
+    overweeg("inspanning", d);
   }
   return beste;
 }

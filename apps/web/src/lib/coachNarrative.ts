@@ -7,6 +7,7 @@
 // render geeft nu persona "warm" hardcoded.
 
 import type { BlokReview } from "./blok";
+import type { MetingBron } from "./effect";
 
 export type CoachPersona = "warm" | "disciplined" | "statistical";
 
@@ -433,6 +434,22 @@ export function blokReviewRegel(r: BlokReview): string {
 // EXPLICIET geen uitspraak — dat is het hele punt van de derde toestand: niet concluderen uit
 // afwezig bewijs. De getallen komen uit de meting, niet uit een schatting.
 
+/** "Je ging voor het laatst vol …" per bron. Bij een SPRONG noemt de coach GEEN ritsoort — hij
+ * weet niet wat voor rit het was, alleen dat de meter omhoogging. Geen wattwaarden hier: die zitten
+ * niet in het meegegeven object en worden dus niet verzonnen. */
+function metingZin_(
+  m: { bron: MetingBron; datum: string },
+  maanden: number,
+): string {
+  const terug = `ongeveer ${maanden} ${maanden === 1 ? "maand" : "maanden"} terug`;
+  const wanneer = `${datumKort_(m.datum)}, ${terug}`;
+  if (m.bron === "test")
+    return `Je ging voor het laatst vol tijdens je test van ${wanneer}.`;
+  if (m.bron === "race")
+    return `Je ging voor het laatst vol tijdens je wedstrijd van ${wanneer}.`;
+  return `Je ging voor het laatst vol op ${wanneer}; je rolling FTP sprong daar omhoog.`;
+}
+
 const GELEGENHEID_NAAM_: Record<string, string> = {
   test: "de test",
   race: "de wedstrijd",
@@ -497,7 +514,9 @@ export function blokEffectRegel(r: BlokReview): string | null {
     // hij voor het laatst een maximum zag, en zegt WANNEER hij zelf een test zou voorstellen —
     // zonder een datum te noemen, want die schuift zodra er een wedstrijd bijkomt.
     const laatstZin = r.laatsteMeting
-      ? ` Je ging voor het laatst vol op ${datumKort_(r.laatsteMeting.datum)}.`
+      ? r.laatsteMeting.bron === "inspanning"
+        ? ` Je ging voor het laatst vol op ${datumKort_(r.laatsteMeting.datum)}; je rolling FTP sprong daar omhoog.`
+        : ` Je ging voor het laatst vol tijdens je ${r.laatsteMeting.bron === "test" ? "test" : "wedstrijd"} van ${datumKort_(r.laatsteMeting.datum)}.`
       : " Ik heb nog geen maximale inspanning van je gezien.";
     pool = [
       `Er stond in dit blok geen test of wedstrijd, dus over je vorm doe ik hier geen uitspraak. Dat is geen slecht nieuws — het is een ontbrekende meting.${laatstZin} Loopt dat richting drie maanden, dan stel ik in een rustweek een test voor.`,
@@ -519,16 +538,15 @@ export function blokEffectRegel(r: BlokReview): string | null {
 export function testAanbodRegel(o: {
   weekdag: string;
   beschikbaarMin: number;
-  laatsteMeting: { bron: "test" | "race"; datum: string } | null;
+  laatsteMeting: { bron: MetingBron; datum: string } | null;
   dagenSinds: number | null;
 }): string {
   const maanden = o.dagenSinds != null ? Math.round(o.dagenSinds / 30) : null;
-  const bron = o.laatsteMeting?.bron === "test" ? "test" : "wedstrijd";
   const sinds =
     o.laatsteMeting && maanden != null
-      ? `Je ging voor het laatst vol tijdens je ${bron} van ${datumKort_(o.laatsteMeting.datum)}, ongeveer ${maanden} ${maanden === 1 ? "maand" : "maanden"} terug.`
-      : "Ik heb nog geen maximale inspanning van je gezien, dus ik heb geen ijkpunt.";
-  return `Dit blok loopt af. ${sinds} Ik kan er op ${o.weekdag} een 20-minutentest van maken: een uur totaal, rustig inrijden, twintig minuten alles geven, uitrijden. Dan weet het volgende blok waarop het doseert.`;
+      ? `${metingZin_(o.laatsteMeting, maanden)} `
+      : "Ik heb nog geen maximale inspanning van je gezien, dus ik heb geen ijkpunt. ";
+  return `Dit blok loopt af. ${sinds}Ik kan er op ${o.weekdag} een 20-minutentest van maken: een uur totaal, rustig inrijden, twintig minuten alles geven, uitrijden. Dan weet het volgende blok waarop het doseert.`;
 }
 
 /** Primaire actieknop. */

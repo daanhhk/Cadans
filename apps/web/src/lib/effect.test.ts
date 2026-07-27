@@ -12,6 +12,7 @@ import {
   isStijging,
   laatsteGelegenheid,
   ROLLING_FTP_STIJGING_W,
+  sprongDagen,
 } from "./effect";
 import { NO_BUILD_CTL_DELTA } from "./fatigue";
 
@@ -580,5 +581,130 @@ describe("laatsteGelegenheid — de laatste maximale inspanning over de hele his
         startMonday: "2026-06-29",
       }).bron,
     ).toBeNull();
+  });
+});
+
+// ── 5b-ii — de SPRONG in de reeks als derde meetmoment ──────────────────────
+
+describe("sprongDagen", () => {
+  it("vindt op de gepubliceerde reeks precies de twee sprongdagen", () => {
+    // De §4-reeks draagt exact twee stijgingen: 2026-01-12 (267 → 276) en 2026-05-18 (262 → 272).
+    expect(sprongDagen(REEKS_ACTS, "2026-07-26")).toEqual([
+      "2026-01-12",
+      "2026-05-18",
+    ]);
+  });
+
+  it("geen enkele DALING telt mee", () => {
+    // De reeks daalt 30 van de 38 overgangen; die mogen nooit als sprong verschijnen.
+    const dalingen = ["2025-11-24", "2026-01-05", "2026-06-29", "2026-07-20"];
+    const gevonden = sprongDagen(REEKS_ACTS, "2026-07-26");
+    for (const d of dalingen) expect(gevonden).not.toContain(d);
+  });
+
+  it("twee ritten op DEZELFDE dag: de hoogste telt", () => {
+    // 21-05-2026: 07:23 stond op 261, 16:23 op 272 — dat is één sprongdag, geen twee.
+    const acts = [
+      act("2026-05-20", { rollingFtp: 261 }),
+      act("2026-05-21", { rollingFtp: 261 }),
+      act("2026-05-21", { rollingFtp: 272 }),
+    ];
+    expect(sprongDagen(acts, "2026-07-26")).toEqual(["2026-05-21"]);
+  });
+
+  it("REGRESSIE: vergelijkt met de VORIGE dag, niet met het all-time maximum", () => {
+    // Hier zat de val. Een latere sprong die LAGER ligt dan een eerdere piek moet tóch gevonden
+    // worden — anders verdwijnt 21-05 (272) achter de piek van 13-01 (276).
+    const acts = [
+      act("2026-01-12", { rollingFtp: 267 }),
+      act("2026-01-13", { rollingFtp: 276 }), // piek
+      act("2026-05-11", { rollingFtp: 261 }), // weggezakt
+      act("2026-05-21", { rollingFtp: 272 }), // sprong, maar ONDER de piek
+    ];
+    const gevonden = sprongDagen(acts, "2026-07-26");
+    expect(gevonden).toContain("2026-05-21");
+    expect(gevonden).toEqual(["2026-01-13", "2026-05-21"]);
+  });
+
+  it("de eerste dag met een waarde is nooit een sprong", () => {
+    expect(
+      sprongDagen([act("2026-01-12", { rollingFtp: 276 })], "2026-07-26"),
+    ).toEqual([]);
+  });
+
+  it("totISO knipt af", () => {
+    expect(sprongDagen(REEKS_ACTS, "2026-03-01")).toEqual(["2026-01-12"]);
+  });
+
+  it("een verschil ONDER de drempel telt niet", () => {
+    const acts = [
+      act("2026-05-11", { rollingFtp: 262 }),
+      act("2026-05-18", { rollingFtp: 262 + ROLLING_FTP_STIJGING_W - 1 }),
+    ];
+    expect(sprongDagen(acts, "2026-07-26")).toEqual([]);
+  });
+});
+
+describe("laatsteGelegenheid met de sprong-bron", () => {
+  const race2 = (datum: string): EventItem => ({
+    datum,
+    naam: "Ronde",
+    type: "race",
+    prioriteit: "A",
+    afstandKm: null,
+    hoogtemeters: null,
+    klimType: null,
+    notitie: null,
+  });
+
+  it("een LATERE sprong wint van een eerdere wedstrijd", () => {
+    const acts = [
+      act("2026-01-13", { minuten: 90, rollingFtp: 267 }),
+      act("2026-05-21", { minuten: 90, rollingFtp: 276 }),
+    ];
+    expect(
+      laatsteGelegenheid({
+        activities: acts,
+        events: [race2("2026-01-13")],
+        overrides: [],
+        totISO: "2026-07-26",
+      }),
+    ).toEqual({ bron: "inspanning", datum: "2026-05-21" });
+  });
+
+  it("bij een GELIJKE datum wint test van sprong", () => {
+    const acts = [
+      act("2026-05-11", { minuten: 90, rollingFtp: 261 }),
+      act("2026-05-21", { minuten: 90, rollingFtp: 272 }),
+    ];
+    expect(
+      laatsteGelegenheid({
+        activities: acts,
+        events: [],
+        overrides: [
+          {
+            datum: "2026-05-21",
+            override: { type: "library", workoutType: "test", durMin: 60 },
+          } as unknown as OverrideEntry,
+        ],
+        totISO: "2026-07-26",
+      })?.bron,
+    ).toBe("test");
+  });
+
+  it("een sprong telt ZONDER de gereden-poort (hij impliceert een rit)", () => {
+    // De ritminuten staan hier onder GELEGENHEID_MIN_MINUTEN; een race zou afvallen, een sprong niet.
+    const acts = [
+      act("2026-05-11", { minuten: 5, rollingFtp: 261 }),
+      act("2026-05-21", { minuten: 5, rollingFtp: 272 }),
+    ];
+    expect(
+      laatsteGelegenheid({
+        activities: acts,
+        events: [race2("2026-05-21")],
+        overrides: [],
+        totISO: "2026-07-26",
+      }),
+    ).toEqual({ bron: "inspanning", datum: "2026-05-21" });
   });
 });
