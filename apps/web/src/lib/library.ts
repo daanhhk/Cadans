@@ -83,7 +83,9 @@ export function trainingCategories(settings: SettingsInput): LibraryCategory[] {
     zoneVar: normalizeZoneVar(c.zoneVar),
     omschrijving: c.omschrijving,
     defaultDur: c.defaultDur,
-    // De 6 cat-types zijn exact het OverrideWorkoutType-domein (TRAINING_CATS_, planner.ts).
+    // De 6 cat-types (TRAINING_CATS_, planner.ts) zijn een DEELVERZAMELING van het
+    // OverrideWorkoutType-domein — sinds 5b-ii draagt dat domein ook `test`, en die is
+    // APP-GEÏNITIEERD: de coach biedt 'm aan in een rustweek, hij staat niet in de kiezer.
     type: c.type as OverrideWorkoutType,
     variants: (c.variants ?? []).map((v) => ({
       variantId: v.variantId,

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ActValuesRow } from "./activities";
+import { testBadgeLabel } from "./coachNarrative";
 import type { ProposalDay, ProposalWeek, ProposalWorkout } from "./proposal";
 import {
   actualZone5_,
@@ -20,6 +21,7 @@ import {
   mergeDone,
   silhouetSegments,
   stripFaseSuffix,
+  testResultaat,
   ZONE_META,
   zoneCompareRows,
   zoneNumFromToken,
@@ -723,5 +725,47 @@ describe("actualZone5_", () => {
     expect(actualZone5_(undefined)).toBeNull();
     expect(actualZone5_("rubbish")).toBeNull();
     expect(actualZone5_([{ id: "SS", secs: 999 }])).toBeNull(); // enkel overlay → geen valide bucket
+  });
+});
+
+describe("testResultaat (5b-ii) — matcht alleen op het exacte badge-label", () => {
+  const basis = {
+    type: "library" as const,
+    workoutType: "test" as const,
+    durMin: 60,
+  };
+
+  it("library + test + het badge-label → resultaat-regel", () => {
+    const r = testResultaat({ ...basis, label: testBadgeLabel() }, "zaterdag");
+    expect(r).not.toBeNull();
+    expect(r).toContain("zaterdag");
+  });
+
+  it("zonder label → null (handmatig gekozen test krijgt de voorstel-copy niet)", () => {
+    expect(testResultaat(basis, "zaterdag")).toBeNull();
+  });
+
+  it("een ANDER label → null", () => {
+    expect(
+      testResultaat({ ...basis, label: "Iets anders" }, "zaterdag"),
+    ).toBeNull();
+  });
+
+  it("ander workoutType of ander override-type → null", () => {
+    expect(
+      testResultaat(
+        {
+          type: "library",
+          workoutType: "threshold",
+          durMin: 60,
+          label: testBadgeLabel(),
+        },
+        "zaterdag",
+      ),
+    ).toBeNull();
+    expect(
+      testResultaat({ type: "rest", label: testBadgeLabel() }, "zaterdag"),
+    ).toBeNull();
+    expect(testResultaat(null, "zaterdag")).toBeNull();
   });
 });

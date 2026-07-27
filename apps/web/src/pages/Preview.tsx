@@ -6,6 +6,7 @@ import { FaseOvergangCard } from "../components/schema/FaseOvergangCard";
 import { FatigueCard } from "../components/schema/FatigueCard";
 import { InhaalCard } from "../components/schema/InhaalCard";
 import { SchemaView } from "../components/schema/SchemaView";
+import { TestVoorstelCard } from "../components/schema/TestVoorstelCard";
 import { VerlichtCard } from "../components/schema/VerlichtCard";
 import type { ActValuesRow } from "../lib/activities";
 import { type BlokReview, buildBlokReview } from "../lib/blok";
@@ -28,6 +29,7 @@ import type {
   InhaalVoorstel,
   VerlichtVoorstel,
 } from "../lib/schema";
+import { buildTestVoorstel, type TestVoorstel } from "../lib/testvoorstel";
 
 // DEV-ONLY preview-loop: voedt de ECHTE SchemaView (PeriodTimeline/WeekLoad/DayStrip + de
 // dagkaart-dispatch) met FIXTURE-data in de exacte ProposalWeek/ProposalDay/DoneEntry-shape,
@@ -574,6 +576,18 @@ function previewActs(overrideFtp: Record<string, number> = {}): ActValuesRow[] {
   );
 }
 
+/** De gereden A-wedstrijd van 21-05-2026 — de laatste maximale inspanning in de echte data. */
+const PREVIEW_RACE_MEI: EventItem = {
+  datum: "2026-05-21",
+  naam: "De Ronde Venen",
+  type: "race",
+  prioriteit: "A",
+  afstandKm: 80,
+  hoogtemeters: null,
+  klimType: null,
+  notitie: null,
+};
+
 const PREVIEW_RACE: EventItem = {
   datum: "2026-07-13",
   naam: "Ronde van Iets",
@@ -646,6 +660,91 @@ const blokReviewFixtures: { label: string; r: BlokReview | null }[] = [
     }),
   },
 ];
+
+// 5b-ii — TestVoorstelCard-fixture. Net als de blok-fixtures BEREKEND door de echte
+// buildTestVoorstel, niet met de hand gezet. De rustweek van 17-08-2026 is de eerste waarin dit
+// live kan vuren; de laatste meting is de gereden A-wedstrijd van 21-05-2026 (93 dagen ervoor).
+const previewTestVoorstel: TestVoorstel | null = buildTestVoorstel({
+  plannerDays: [
+    {
+      datum: "2026-08-17",
+      train: false,
+      dag: "ma",
+      minuten: null,
+      dagtype: null,
+      toelichting: null,
+      voorgesteldType: null,
+      gedaan: false,
+    },
+    {
+      datum: "2026-08-18",
+      train: true,
+      dag: "di",
+      minuten: 45,
+      dagtype: "vrij",
+      toelichting: null,
+      voorgesteldType: null,
+      gedaan: false,
+    },
+    {
+      datum: "2026-08-19",
+      train: false,
+      dag: "wo",
+      minuten: null,
+      dagtype: null,
+      toelichting: null,
+      voorgesteldType: null,
+      gedaan: false,
+    },
+    {
+      datum: "2026-08-20",
+      train: true,
+      dag: "do",
+      minuten: 60,
+      dagtype: "vrij",
+      toelichting: null,
+      voorgesteldType: null,
+      gedaan: false,
+    },
+    {
+      datum: "2026-08-21",
+      train: false,
+      dag: "vr",
+      minuten: null,
+      dagtype: null,
+      toelichting: null,
+      voorgesteldType: null,
+      gedaan: false,
+    },
+    {
+      datum: "2026-08-22",
+      train: true,
+      dag: "za",
+      minuten: 90,
+      dagtype: "weekend",
+      toelichting: null,
+      voorgesteldType: null,
+      gedaan: false,
+    },
+    {
+      datum: "2026-08-23",
+      train: false,
+      dag: "zo",
+      minuten: null,
+      dagtype: null,
+      toelichting: null,
+      voorgesteldType: null,
+      gedaan: false,
+    },
+  ],
+  overrides: [],
+  events: [PREVIEW_RACE_MEI],
+  activities: [previewAct("2026-05-21", null, 30)],
+  doel: "FTP",
+  doelStart: "2026-06-29",
+  weekMondayISO: "2026-08-17",
+  todayISO: "2026-08-17",
+});
 
 const fixtureLabel: React.CSSProperties = {
   fontFamily: "var(--font-sans)",
@@ -742,6 +841,21 @@ function VoorstelPreview() {
           <FaseOvergangCard overgang={f.o} coachNaam="Coach" />
         </div>
       ))}
+      {previewTestVoorstel && (
+        <div>
+          <div style={fixtureLabel}>
+            Test · VOORSTEL in de rustweek (laatste meting 21-05, 93 dagen
+            terug) — knoppen schrijven een ECHTE override, niet aantikken
+          </div>
+          <div style={{ pointerEvents: "none", opacity: 0.97 }}>
+            <TestVoorstelCard
+              voorstel={previewTestVoorstel}
+              coachNaam="Coach"
+              onDismiss={() => undefined}
+            />
+          </div>
+        </div>
+      )}
       {blokReviewFixtures.map((f) =>
         f.r ? (
           <div key={f.label}>

@@ -19,6 +19,7 @@ import {
   setLastSyncTs,
   setSyncInFlight,
 } from "../lib/syncStatus";
+import type { TestVoorstel } from "../lib/testvoorstel";
 
 interface SchemaData {
   proposalWeek: ProposalWeek;
@@ -34,6 +35,8 @@ interface SchemaData {
   fatigue: FatigueVoorstel | null;
   /** 5a-ii — blok-terugblik (alleen in blokweek 4 en 1), of null. */
   blokReview: BlokReview | null;
+  /** 5b-ii — testvoorstel voor de rustweek, of null. */
+  testVoorstel: TestVoorstel | null;
   /** FASE 3a — goedkeuring van het inhaal-plan voor deze week. */
   optedIn: boolean;
   weekMonday: string;
@@ -186,6 +189,7 @@ export function Schema() {
       inhaal={data.inhaal}
       fatigue={data.fatigue}
       blokReview={data.blokReview}
+      testVoorstel={data.testVoorstel}
       optedIn={data.optedIn}
       weekMonday={data.weekMonday}
     />

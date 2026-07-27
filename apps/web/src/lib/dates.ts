@@ -50,3 +50,19 @@ export function isoWeekNumber(d: Date): number {
     )
   );
 }
+
+/** Volledige NL-weekdagnaam van een yyyy-MM-dd ("2026-08-22" → "zaterdag"). Lokale kalender via
+ * parseLocalDate, dus geen UTC-verschuiving die de dag een plek opschuift. */
+const WEEKDAG_NAMEN = [
+  "zondag",
+  "maandag",
+  "dinsdag",
+  "woensdag",
+  "donderdag",
+  "vrijdag",
+  "zaterdag",
+];
+export function weekdagNaam(iso: string): string {
+  const d = parseLocalDate(iso);
+  return WEEKDAG_NAMEN[d.getDay()] ?? "";
+}

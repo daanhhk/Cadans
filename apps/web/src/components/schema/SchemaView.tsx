@@ -18,6 +18,7 @@ import {
   verlengResultaat,
   verlichtResultaat,
 } from "../../lib/schema";
+import type { TestVoorstel } from "../../lib/testvoorstel";
 import { Card, Overline } from "../ui";
 import { ActionButtons } from "./ActionButtons";
 import { AlignChip } from "./AlignChip";
@@ -35,6 +36,7 @@ import { GemistCard } from "./GemistCard";
 import { InhaalCard } from "./InhaalCard";
 import { OverriddenDetail } from "./OverriddenDetail";
 import { PeriodTimeline } from "./PeriodTimeline";
+import { isTestVoorstelAfgewezen, TestVoorstelCard } from "./TestVoorstelCard";
 import { isVerlengAfgewezen, VerlengCard } from "./VerlengCard";
 import { isVerlichtAfgewezen, VerlichtCard } from "./VerlichtCard";
 import { WeekLoad } from "./WeekLoad";
@@ -65,6 +67,7 @@ export function SchemaView({
   inhaal = null,
   fatigue = null,
   blokReview = null,
+  testVoorstel = null,
   optedIn = false,
   weekMonday,
 }: {
@@ -81,6 +84,8 @@ export function SchemaView({
   fatigue?: FatigueVoorstel | null;
   /** 5a-ii — blok-terugblik (alleen in blokweek 4 en 1), of null. */
   blokReview?: BlokReview | null;
+  /** 5b-ii — testvoorstel voor de rustweek, of null. */
+  testVoorstel?: TestVoorstel | null;
   /** FASE 3a — is het inhaal-plan voor deze week goedgekeurd? */
   optedIn?: boolean;
   /** Maandag van de getoonde week (sleutel van de goedkeuring); default = view.weekMonday. */
@@ -117,6 +122,9 @@ export function SchemaView({
   // 3d stap 4: idem voor het FATIGUE-aanbod ("Volg de deload" / "Hou de opbouw") — sessie-scoped
   // afwijzing leeft in FatigueCard; deze teller dwingt de her-evaluatie af.
   const [, setFatigueDismissed] = useState(0);
+  // 5b-ii: idem voor het TESTVOORSTEL ("Niet dit blok") — de afwijzing leeft sessie-scoped in
+  // TestVoorstelCard, op BLOKSTART; deze teller dwingt de her-evaluatie af.
+  const [, setTestDismissed] = useState(0);
   const day = view.days.find((d) => d.datum === selected) ?? view.days[0];
   // dag >= vandaag: het knoppen-blok toont alleen op vandaag/toekomst (verleden kun je niet meer plannen).
   const dayFuture = !!day && day.datum >= todayISO;
@@ -252,6 +260,20 @@ export function SchemaView({
           optedIn={optedIn}
         />
       )}
+
+      {/* 5b-ii — TESTVOORSTEL (rustweek). Staat NA de inhaal-kaart en VÓÓR de terugblik: een
+          actievragend voorstel hoort boven een terugblik. ONDERDRUKT zolang er een fatigue-
+          voorstel OPEN staat — twee vragende kaarten tegelijk is geen coach. Bij state "applied"
+          is de vraag al beantwoord en mag hij wel. */}
+      {testVoorstel &&
+        !isTestVoorstelAfgewezen(testVoorstel.blokStart) &&
+        fatigueVoorstel?.state !== "offer" && (
+          <TestVoorstelCard
+            voorstel={testVoorstel}
+            coachNaam={view.coachNaam}
+            onDismiss={() => setTestDismissed((n) => n + 1)}
+          />
+        )}
 
       {/* 5a-ii — BLOK-TERUGBLIK. Staat NA de fatigue- en inhaal-kaart en vóór het dag-detail:
           voorstellen die een actie vragen horen boven, een terugblik die context geeft eronder.

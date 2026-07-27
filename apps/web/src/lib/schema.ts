@@ -42,6 +42,8 @@ import { type BlokReview, blokReviewVenster, buildBlokReview } from "./blok";
 import {
   type InhaalBucket,
   inhaalAanbodRegel,
+  testBadgeLabel,
+  testResultaatRegel,
   type VerlichtBand,
   verlengBadgeLabel,
   verlengResultaatRegel,
@@ -69,6 +71,7 @@ import {
 } from "./proposal";
 import { deriveReadiness, type ReadinessResult } from "./readiness";
 import { presetHoursLabel } from "./settings";
+import { buildTestVoorstel, type TestVoorstel } from "./testvoorstel";
 import {
   buildWeekplanEntries,
   hasUnrecordedPastTrainingDay,
@@ -937,6 +940,23 @@ export function verlengResultaat(override: DayOverride | null): string | null {
   return verlengResultaatRegel(override.durMin);
 }
 
+/** 5b-ii — resultaat-regel voor een geaccepteerd TESTVOORSTEL. Matcht op het EXACTE badge-label:
+ * een handmatig gekozen test (mocht die ooit bestaan) draagt dat label niet en krijgt dus ook niet
+ * de coach-regel die bij het voorstel hoort. `weekdag` komt van de caller (presentatie). */
+export function testResultaat(
+  override: DayOverride | null,
+  weekdag: string,
+): string | null {
+  if (
+    !override ||
+    override.type !== "library" ||
+    override.workoutType !== "test" ||
+    override.label !== testBadgeLabel()
+  )
+    return null;
+  return testResultaatRegel(weekdag);
+}
+
 // ── FASE 2b — het INHAAL-VOORSTEL (week-niveau, READ-ONLY) ─────────────────────────────
 // Toont naast het actieve plan wat er zou veranderen als het tekort van deze week wordt
 // ingehaald. Muteert NIETS: het actieve `proposalWeek` blijft het origineel, en er is in
@@ -1314,6 +1334,8 @@ export async function loadSchemaWeek(): Promise<{
   fatigue: FatigueVoorstel | null;
   /** 5a-ii — blok-terugblik (alleen in blokweek 4 en 1), of null. Laag-2 rendert de kaart. */
   blokReview: BlokReview | null;
+  /** 5b-ii — testvoorstel voor de rustweek, of null. Laag-2 rendert de kaart. */
+  testVoorstel: TestVoorstel | null;
   /** FASE 3a — is het inhaal-plan voor DEZE week goedgekeurd? */
   optedIn: boolean;
   /** De maandag van de getoonde week (de sleutel van de goedkeuring). */
@@ -1467,6 +1489,19 @@ export async function loadSchemaWeek(): Promise<{
       })
     : null;
 
+  // 5b-ii — het TESTVOORSTEL voor de rustweek. Leest uitsluitend uit wat hierboven al opgehaald
+  // is (plannerDays, overrides, events, activities, settings) — GEEN extra fetch.
+  const testVoorstel = buildTestVoorstel({
+    plannerDays,
+    overrides,
+    events,
+    activities,
+    doel: settings?.doel ?? null,
+    doelStart: settings?.doelStart ?? null,
+    weekMondayISO: monday,
+    todayISO,
+  });
+
   // DOWN (vervroegde deload) onderdrukt de inhaal-kaart: herstel wint van inhalen (M66/M72).
   const fatigueDownActive = fatigue?.dir === "down";
 
@@ -1580,6 +1615,7 @@ export async function loadSchemaWeek(): Promise<{
     inhaal,
     fatigue,
     blokReview,
+    testVoorstel,
     optedIn,
     weekMonday: monday,
   };

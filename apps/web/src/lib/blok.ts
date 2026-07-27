@@ -20,7 +20,12 @@ import {
 import type { EventItem, OverrideEntry } from "@cadans/shared";
 import type { ActValuesRow } from "./activities";
 import { parseLocalDate } from "./dates";
-import { buildEffectReferent, type EffectReferent } from "./effect";
+import {
+  buildEffectReferent,
+  type EffectReferent,
+  type GelegenheidBron,
+  laatsteGelegenheid,
+} from "./effect";
 import { NO_BUILD_CTL_DELTA } from "./fatigue";
 
 /** Vaste bloklengte: drie opbouwweken plus een deload. VAST — een blok dat zichzelf verlengt is niet
@@ -438,6 +443,9 @@ export interface BlokReview {
   /** 5b-i — de EFFECT-referent op `rolling_ftp`. null als de vraag niet geldig of niet te
    * beantwoorden is: fase "lopend", uitvoering niet geleverd, of te weinig dekking. */
   effect: EffectReferent | null;
+  /** 5b-ii — de LAATSTE maximale inspanning over de hele historie t/m vandaag, of null. ALTIJD
+   * gevuld, ook als `effect` null is: de copy noemt 'm ook wanneer er geen effect-uitspraak is. */
+  laatsteMeting?: { bron: GelegenheidBron; datum: string } | null;
 }
 
 /**
@@ -505,5 +513,11 @@ export function buildBlokReview(input: {
     check: blokCheck(ref, input.ctlDelta, input.doel),
     ctlDelta: input.ctlDelta,
     effect,
+    laatsteMeting: laatsteGelegenheid({
+      activities: input.activities,
+      events: input.events ?? [],
+      overrides: input.overrides ?? [],
+      totISO: input.todayISO,
+    }),
   };
 }

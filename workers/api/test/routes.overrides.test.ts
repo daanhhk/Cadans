@@ -134,6 +134,18 @@ describe("Fase B — override D1 (PUT /api/override/:date, GET /api/overrides)",
     ).toBe(400);
     expect(await rowFor("2026-03-14")).toBeNull();
   });
+
+  it("f. 5b-ii: workoutType 'test' wordt nu GEACCEPTEERD (was 400)", async () => {
+    const ov = {
+      type: "library",
+      workoutType: "test",
+      durMin: 60,
+      label: "FTP-test gepland",
+    };
+    const r = await put("/api/override/2026-03-15", { override: ov });
+    expect(r.status).toBe(200);
+    expect((await rowFor("2026-03-15"))?.overrideJson).toBe(JSON.stringify(ov));
+  });
 });
 
 describe("PUT /api/override/:date — rest-override (T28 fase 2a-i)", () => {

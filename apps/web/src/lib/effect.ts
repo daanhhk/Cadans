@@ -138,6 +138,31 @@ function fietsMinutenOpDag_(
   return min;
 }
 
+/** Is die dag echt gereden? Een gelegenheid die niet gereden is, is geen gelegenheid. */
+function isGereden_(activities: ActValuesRow[], datumISO: string): boolean {
+  return fietsMinutenOpDag_(activities, datumISO) >= GELEGENHEID_MIN_MINUTEN;
+}
+
+/** Telt dit event als maximale inspanning? Type "race" en prioriteit A of B; C telt niet mee. */
+function isMaximaalEvent_(ev: EventItem | null | undefined): ev is EventItem {
+  if (!ev || typeof ev.datum !== "string") return false;
+  if (String(ev.type ?? "") !== "race") return false;
+  return GELEGENHEID_PRIORITEITEN.indexOf(String(ev.prioriteit ?? "")) >= 0;
+}
+
+/** Is deze override de door de app INGEPLANDE test? 5b-ii heeft `test` aan
+ * `OVERRIDE_WORKOUT_TYPES` toegevoegd, dus deze tak is LEVEND — hij matcht op de override die
+ * `TestVoorstelCard` schrijft. `workoutType` blijft defensief als string gelezen: de wire-vorm is
+ * opaak en een oudere blob hoeft het veld niet te dragen. */
+function isTestOverride_(
+  ov: OverrideEntry | null | undefined,
+): ov is OverrideEntry {
+  if (!ov || typeof ov.datum !== "string") return false;
+  const o = ov.override as { type?: unknown; workoutType?: unknown } | null;
+  if (!o || o.type !== "library") return false;
+  return String(o.workoutType ?? "") === "test";
+}
+
 /**
  * Bevatte het blok een GELEGENHEID om een maximum te zetten? Alleen een inspanning die de app KENT
  * telt: een testdag die hij zelf inplande (5b-ii) of een wedstrijd uit de events-agenda — en die
@@ -158,37 +183,61 @@ export function blokGelegenheid(input: {
 }): BlokGelegenheid {
   const eind = shiftIso_(input.startMonday, BLOK_WEKEN * 7);
   // `datum` is in beide bronnen een RAUWE yyyy-MM-dd-string → lexicografisch = chronologisch.
-  const inVenster = (d: unknown): d is string =>
-    typeof d === "string" && d >= input.startMonday && d < eind;
-  const gereden = (d: string) =>
-    fietsMinutenOpDag_(input.activities, d) >= GELEGENHEID_MIN_MINUTEN;
+  const inVenster = (d: string) => d >= input.startMonday && d < eind;
 
   let race: string | null = null;
   for (const ev of input.events || []) {
-    if (!ev || !inVenster(ev.datum)) continue;
-    if (String(ev.type ?? "") !== "race") continue;
-    if (GELEGENHEID_PRIORITEITEN.indexOf(String(ev.prioriteit ?? "")) < 0)
-      continue;
-    if (!gereden(ev.datum)) continue;
+    if (!isMaximaalEvent_(ev)) continue;
+    if (!inVenster(ev.datum)) continue;
+    if (!isGereden_(input.activities, ev.datum)) continue;
     if (race == null || ev.datum < race) race = ev.datum;
   }
 
   let test: string | null = null;
   for (const ov of input.overrides || []) {
-    if (!ov || !inVenster(ov.datum)) continue;
-    const o = ov.override as { type?: unknown; workoutType?: unknown } | null;
-    if (!o || o.type !== "library") continue;
-    // BEWUST als losse string vergeleken: "test" staat (nog) niet in OVERRIDE_WORKOUT_TYPES, want
-    // het testvoorstel is 5b-ii en het shared-contract mag hier niet wijzigen. Tot die stap is
-    // deze tak dus slapend — hij vuurt zodra 5b-ii het type toevoegt.
-    if (String(o.workoutType ?? "") !== "test") continue;
-    if (!gereden(ov.datum)) continue;
+    if (!isTestOverride_(ov)) continue;
+    if (!inVenster(ov.datum)) continue;
+    if (!isGereden_(input.activities, ov.datum)) continue;
     if (test == null || ov.datum < test) test = ov.datum;
   }
 
   if (test != null) return { bron: "test", datum: test };
   if (race != null) return { bron: "race", datum: race };
   return { bron: null, datum: null };
+}
+
+/**
+ * De LAATSTE gelegenheid over de HELE historie t/m `totISO` (inclusief), of null. Voedt de
+ * meetinterval-poort van het testvoorstel: hoe lang is het geleden dat er werkelijk een maximum
+ * gezet is. Zelfde definitie en zelfde voorrang als `blokGelegenheid` — bij een gelijke datum wint
+ * de test — maar zonder blok-venster.
+ */
+export function laatsteGelegenheid(input: {
+  activities: ActValuesRow[];
+  events: EventItem[];
+  overrides: OverrideEntry[];
+  totISO: string;
+}): { bron: GelegenheidBron; datum: string } | null {
+  let beste: { bron: GelegenheidBron; datum: string } | null = null;
+  const overweeg = (bron: GelegenheidBron, datum: string) => {
+    if (datum > input.totISO) return;
+    if (!isGereden_(input.activities, datum)) return;
+    // Later wint; bij een GELIJKE datum wint "test" — dezelfde voorrang als blokGelegenheid.
+    if (
+      beste == null ||
+      datum > beste.datum ||
+      (datum === beste.datum && bron === "test")
+    ) {
+      beste = { bron, datum };
+    }
+  };
+  for (const ev of input.events || []) {
+    if (isMaximaalEvent_(ev)) overweeg("race", ev.datum);
+  }
+  for (const ov of input.overrides || []) {
+    if (isTestOverride_(ov)) overweeg("test", ov.datum);
+  }
+  return beste;
 }
 
 export type EffectUitkomst = "gestegen" | "niet_gestegen" | "niet_meetbaar";

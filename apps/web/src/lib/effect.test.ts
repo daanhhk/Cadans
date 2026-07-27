@@ -10,6 +10,7 @@ import {
   EFFECT_MIN_GEVULDE_WEKEN,
   instapNiveau,
   isStijging,
+  laatsteGelegenheid,
   ROLLING_FTP_STIJGING_W,
 } from "./effect";
 import { NO_BUILD_CTL_DELTA } from "./fatigue";
@@ -462,5 +463,122 @@ describe("buildBlokReview — de twee effect-poorten", () => {
     expect(r?.uitvoering.beoordeeldeWeken).toBe(3);
     expect(r?.uitvoering.geleverd).toBe(false);
     expect(r?.effect).toBeNull();
+  });
+});
+
+// ── 5b-ii — laatsteGelegenheid ──────────────────────────────────────────────
+
+describe("laatsteGelegenheid — de laatste maximale inspanning over de hele historie", () => {
+  const race = (datum: string, prioriteit = "A"): EventItem => ({
+    datum,
+    naam: "Ronde van Iets",
+    type: "race",
+    prioriteit,
+    afstandKm: null,
+    hoogtemeters: null,
+    klimType: null,
+    notitie: null,
+  });
+  const testOv = (datum: string): OverrideEntry =>
+    ({
+      datum,
+      override: { type: "library", workoutType: "test", durMin: 60 },
+    }) as unknown as OverrideEntry;
+  const gereden = (datum: string) => act(datum, { minuten: 90 });
+
+  it("pakt de LAATSTE, ongeacht bron", () => {
+    expect(
+      laatsteGelegenheid({
+        activities: [gereden("2026-01-13"), gereden("2026-05-21")],
+        events: [race("2026-05-21")],
+        overrides: [testOv("2026-01-13")],
+        totISO: "2026-07-26",
+      }),
+    ).toEqual({ bron: "race", datum: "2026-05-21" });
+  });
+
+  it("negeert een dag die niet gereden is", () => {
+    expect(
+      laatsteGelegenheid({
+        activities: [gereden("2026-01-13")],
+        events: [race("2026-05-21")], // geen rit op die dag
+        overrides: [testOv("2026-01-13")],
+        totISO: "2026-07-26",
+      }),
+    ).toEqual({ bron: "test", datum: "2026-01-13" });
+  });
+
+  it("negeert prioriteit C", () => {
+    expect(
+      laatsteGelegenheid({
+        activities: [gereden("2026-05-21")],
+        events: [race("2026-05-21", "C")],
+        overrides: [],
+        totISO: "2026-07-26",
+      }),
+    ).toBeNull();
+  });
+
+  it("respecteert totISO", () => {
+    expect(
+      laatsteGelegenheid({
+        activities: [gereden("2026-01-13"), gereden("2026-05-21")],
+        events: [race("2026-05-21")],
+        overrides: [testOv("2026-01-13")],
+        totISO: "2026-03-01",
+      }),
+    ).toEqual({ bron: "test", datum: "2026-01-13" });
+  });
+
+  it("gelijke datum → test wint (zelfde voorrang als blokGelegenheid)", () => {
+    expect(
+      laatsteGelegenheid({
+        activities: [gereden("2026-05-21")],
+        events: [race("2026-05-21")],
+        overrides: [testOv("2026-05-21")],
+        totISO: "2026-07-26",
+      }),
+    ).toEqual({ bron: "test", datum: "2026-05-21" });
+  });
+
+  it("niets gevonden → null", () => {
+    expect(
+      laatsteGelegenheid({
+        activities: [gereden("2026-05-21")],
+        events: [],
+        overrides: [],
+        totISO: "2026-07-26",
+      }),
+    ).toBeNull();
+  });
+
+  it("blokGelegenheid is ONGEWIJZIGD na de refactor", () => {
+    // Zelfde drie eigenschappen als vóór het uittrekken van de predicaten: venster, gereden-eis
+    // en de test-wint-van-race-voorrang.
+    const acts = [...REEKS_ACTS, gereden("2026-07-08"), gereden("2026-07-11")];
+    expect(
+      blokGelegenheid({
+        activities: acts,
+        events: [race("2026-07-11")],
+        overrides: [testOv("2026-07-08")],
+        startMonday: "2026-06-29",
+      }),
+    ).toEqual({ bron: "test", datum: "2026-07-08" });
+    expect(
+      blokGelegenheid({
+        activities: REEKS_ACTS,
+        events: [race("2026-07-11")],
+        overrides: [],
+        startMonday: "2026-06-29",
+      }).bron,
+    ).toBeNull();
+    expect(
+      blokGelegenheid({
+        activities: acts,
+        events: [race("2026-06-20")],
+        overrides: [],
+        startMonday: "2026-06-29",
+      }).bron,
+    ).toBeNull();
   });
 });

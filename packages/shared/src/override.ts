@@ -9,7 +9,12 @@
  */
 /** De toegestane library-override-types, als RUNTIME-lijst. Eén bron: de worker-validatie
  * (routes/api.ts `isValidOverride`) én de client-check "mag dit type als library-override?"
- * (laag 2 verlicht-voorstel) lezen deze lijst, zodat ze niet uit elkaar kunnen lopen. */
+ * (laag 2 verlicht-voorstel) lezen deze lijst, zodat ze niet uit elkaar kunnen lopen.
+ *
+ * `test` is APP-GEÏNITIEERD (5b-ii, het testvoorstel) en staat bewust NIET in de trainingskiezer:
+ * die leest `TRAINING_CATS_` uit de engine — zes categorieën — en die zes zijn sinds deze
+ * toevoeging een DEELVERZAMELING van dit domein, geen gelijkheid meer. Een test kies je niet zelf
+ * uit de bibliotheek; de coach biedt 'm aan in een rustweek en jij accepteert of wijst af. */
 export const OVERRIDE_WORKOUT_TYPES = [
   "recovery",
   "long_z2",
@@ -17,6 +22,7 @@ export const OVERRIDE_WORKOUT_TYPES = [
   "sweet_spot",
   "threshold",
   "vo2max",
+  "test",
 ] as const;
 export type OverrideWorkoutType = (typeof OVERRIDE_WORKOUT_TYPES)[number];
 export type OverrideRitType = "vrij" | "groep";

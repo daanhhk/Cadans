@@ -492,9 +492,16 @@ export function blokEffectRegel(r: BlokReview): string | null {
     ];
   } else {
     key = "niet_meetbaar";
+    // GEEN VRAAG meer. De oude variant eindigde op "zullen we een test inplannen?" en die vraag
+    // keerde elk blok terug zonder dat er iets veranderde. De coach constateert nu, noemt wanneer
+    // hij voor het laatst een maximum zag, en zegt WANNEER hij zelf een test zou voorstellen —
+    // zonder een datum te noemen, want die schuift zodra er een wedstrijd bijkomt.
+    const laatstZin = r.laatsteMeting
+      ? ` Je ging voor het laatst vol op ${datumKort_(r.laatsteMeting.datum)}.`
+      : " Ik heb nog geen maximale inspanning van je gezien.";
     pool = [
-      `Er stond in dit blok geen test of wedstrijd, dus dat je rolling FTP niet steeg zegt alleen dat er geen maximum in het venster viel. Daar doe ik geen uitspraak over — zullen we een test inplannen?`,
-      `Zonder test of wedstrijd in dit blok kan ik niet zien of je sterker bent geworden; de rolling FTP zakt vanzelf als er geen maximum bijkomt. Een ingeplande test zou dat wél laten zien.`,
+      `Er stond in dit blok geen test of wedstrijd, dus over je vorm doe ik hier geen uitspraak. Dat is geen slecht nieuws — het is een ontbrekende meting.${laatstZin} Loopt dat richting drie maanden, dan stel ik in een rustweek een test voor.`,
+      `Geen test en geen wedstrijd dit blok, dus je rolling FTP zakt vanzelf; daar valt niets uit af te lezen. Geen tegenvaller, wel een gat in de meting.${laatstZin} Zit daar straks zo'n drie maanden tussen, dan kom ik in een rustweek met een testvoorstel.`,
     ];
   }
   return (
@@ -502,6 +509,48 @@ export function blokEffectRegel(r: BlokReview): string | null {
     pool[0] ??
     ""
   );
+}
+
+// ── 5b-ii — HET TESTVOORSTEL ─────────────────────────────────────────────────
+// VOORWAARDELIJK (M55): "ik kan", nooit een daad-claim. De coach biedt de meting aan, hij legt 'm
+// niet op — en hij zegt erbij WAAROM het nut heeft, want een test kost een dag.
+
+/** Aanbod-regel voor de test. `dagenSinds` telt tot de VOORGESTELDE testdatum, niet tot vandaag. */
+export function testAanbodRegel(o: {
+  weekdag: string;
+  beschikbaarMin: number;
+  laatsteMeting: { bron: "test" | "race"; datum: string } | null;
+  dagenSinds: number | null;
+}): string {
+  const maanden = o.dagenSinds != null ? Math.round(o.dagenSinds / 30) : null;
+  const bron = o.laatsteMeting?.bron === "test" ? "test" : "wedstrijd";
+  const sinds =
+    o.laatsteMeting && maanden != null
+      ? `Je ging voor het laatst vol tijdens je ${bron} van ${datumKort_(o.laatsteMeting.datum)}, ongeveer ${maanden} ${maanden === 1 ? "maand" : "maanden"} terug.`
+      : "Ik heb nog geen maximale inspanning van je gezien, dus ik heb geen ijkpunt.";
+  return `Dit blok loopt af. ${sinds} Ik kan er op ${o.weekdag} een 20-minutentest van maken: een uur totaal, rustig inrijden, twintig minuten alles geven, uitrijden. Dan weet het volgende blok waarop het doseert.`;
+}
+
+/** Primaire actieknop. */
+export function testActieLabel(weekdag: string): string {
+  return `Plan de test op ${weekdag}`;
+}
+
+/** Secundaire knop — afwijzen geldt voor dit hele blok, niet voor die ene dag. */
+export function testAfwijsLabel(): string {
+  return "Niet dit blok";
+}
+
+/** CONSTANTE marker: gaat als `label` mee op de override én is waarop `testResultaat` matcht
+ * (zelfde patroon als `verlengBadgeLabel`). Wijzigt deze string, dan herkent de dagkaart oude
+ * overrides niet meer — dus niet zomaar aanpassen. */
+export function testBadgeLabel(): string {
+  return "FTP-test gepland";
+}
+
+/** Resultaat-regel op de override-kaart ná akkoord — FEITELIJK, geen belofte over de uitkomst. */
+export function testResultaatRegel(weekdag: string): string {
+  return `FTP-test op ${weekdag} — twintig minuten alles geven; die waarde ijkt je volgende blok.`;
 }
 
 /** De volledige blok-uitspraak: uitvoering eerst, dan effect. Zonder effect blijft het de
