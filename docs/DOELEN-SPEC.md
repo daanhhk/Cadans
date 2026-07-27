@@ -86,16 +86,27 @@ weekplanner-dagminuten (`weekV`, `planner.ts`). BESLUIT: de gedeclareerde uren b
 MEETLAT-invoer (past het doel bij de uren) en worden GEEN planner-invoer. Dat houdt de eerste bouw
 client-only en laat M27 ongemoeid.
 
-DE DAG-INVULLING — VASTGESTELD (Daan-besluit). De coach vult de beschikbaar gestelde tijd zo
-optimaal mogelijk in, zodat de belasting past bij de week. DUUR IS EEN EIGENSCHAP VAN DE DAG, GEEN
-VOORSCHRIFT VOOR DE INHOUD: een lange dag mag intensiteit dragen, en een dag van drie uur is geen
-reden om er duurwerk van te maken. Het ENIGE vaste element is de heenrit van de pendel, die rustig
-blijft; al het andere deelt de coach in op grond van de opgegeven tijd. ER BESTAAT DUS GEEN
-BESCHERMDE LANGE RIT — de langste dag van de week is geen gereserveerde `long_z2`. Dat raakt de
-schaarste-regel hierboven aan de residu-kant: extra uren horen als Z2 óm de sleutelsessies heen te
-landen, nooit ten koste ervan. GEMETEN als directe oorzaak van twee anomalieën, zie
-`docs/STAP7-BOUW12-RECON.md` §1 (de norm), §2 (de lange-rit-pre-claim als eerste van drie hekken)
-en §3 (`langeRitPerWeek` 1 tegen 0 verklaart waarom Onderhoud harder traint dan FTP).
+DE DAG-INVULLING — VASTGESTELD (Daan-besluit). DE GEBRUIKER LEVERT UITSLUITEND BESCHIKBARE TIJD PER
+DAG; DE APP BEPAALT DE INHOUD. Dat is de rolverdeling, en ze is niet onderhandelbaar per week.
+
+DUUR IS EEN EIGENSCHAP VAN DE DAG, GEEN VOORSCHRIFT VOOR DE INHOUD. Een dag van 120, 180 of 240
+minuten mag intensiteit dragen; een lange dag is niet per definitie Z2, en een dag van drie uur is
+geen reden om er duurwerk van te maken. ER BESTAAT GEEN BESCHERMDE LANGE RIT — de langste dag van
+de week is geen gereserveerde `long_z2`. Het ENIGE vaste element is de HEENRIT VAN DE PENDEL, die
+rustig blijft; die is beschermd omdat hij een VERPLAATSING is en geen trainingskeuze. Al het andere
+deelt de coach in op grond van de opgegeven tijd.
+
+Dat raakt de schaarste-regel hierboven aan de residu-kant: extra uren horen als Z2 óm de
+sleutelsessies heen te landen, nooit ten koste ervan.
+
+WELKE INHOUD BIJ WELKE BESCHIKBARE TIJD HOORT, WORDT GEIJKT — op data en op de coach-canon in dit
+document, nooit met de hand vastgelegd: niet door de gebruiker en niet in een chat. "Hoeveel
+kwaliteit hoort in een dag van drie uur" is een trainingsvraag met een meetbaar antwoord, geen
+voorkeur. Zolang die ijking niet gedaan is blijft de regel expliciet OPEN; een met de hand gekozen
+dosis- of selectieregel hoort niet in dit document en niet in de code.
+
+GEMETEN als directe oorzaak van twee anomalieën, zie `docs/STAP7-BOUW12-RECON.md` §1 (de norm en
+de rolverdeling) en §9 (de bouwvolgorde, met de selectieregel als open ijkpunt).
 
 DE DOSIS-DOEL-EENHEID. Een dosis-doel is TIJD-IN-ZONE per week in de dragende buckets (high en
 anaerobic), plus lange-rit-minuten en week-kJ bij de duur-doelen. NIET TSS: TSS mengt duur en
