@@ -372,10 +372,26 @@ export function allocateQualityWeek_(
     return best;
   }
 
-  // 1. lange rit — langste eligible niet-pendel dag (tie: hoogste dagIdx).
-  // 3d stap 3 — deload: GEEN langerit-slot (het weekend is al long_z2 ×0.60 via de isRecovery-tak;
-  // een longride_efforts zou bovendien het ene quality-slot opeten via remaining--).
-  if (!isDeload && (profiel.langeRitPerWeek || 0) >= 1) {
+  // 1. lange rit met EFFORTS — langste eligible niet-pendel dag (tie: hoogste dagIdx).
+  //
+  // STAP 7 BOUWITEM 2: de kale long_z2-PRE-CLAIM IS VERVALLEN. Die gaf de langste trainbare
+  // niet-pendeldag onvoorwaardelijk aan `long_z2` en haalde hem uit de pool ZONDER `remaining` te
+  // verlagen — een gratis hek dat elke hendel bovenstrooms inert maakte (GEMETEN: quotum 3 mét de
+  // claim gaf 45 kwaliteitsminuten op 2 dagen, zonder de claim 93 op 3). DOELEN-SPEC §2A: er
+  // bestaat GEEN beschermde lange rit; duur is een eigenschap van de dag, geen voorschrift voor de
+  // inhoud. Een weekenddag die de allocator niet als kwaliteit kiest, valt in de dag-lus alsnog
+  // naar `long_z2` via de weekend-tak — de lange rit verdwijnt dus niet, hij is alleen niet langer
+  // voorgeprogrammeerd.
+  //
+  // De EFFORTS-arm blijft ongewijzigd: die CONSUMEERT een slot (`remaining--`) en is daarmee geen
+  // hek maar een plaatsing. 3d stap 3 — deload: geen langerit-slot (het weekend is al long_z2
+  // ×0.60 via de isRecovery-tak; een longride_efforts zou het ene quality-slot opeten).
+  const effortsArm =
+    !isDeload &&
+    (profiel.langeRitPerWeek || 0) >= 1 &&
+    !!spreiding.effortsInLangeRit &&
+    (macroFase === "Build" || macroFase === "Peak");
+  if (effortsArm) {
     let lr: any = null;
     elig.forEach((d: any) => {
       if (d.type === "pendel") return;
@@ -387,26 +403,14 @@ export function allocateQualityWeek_(
         lr = d;
     });
     if (lr) {
-      const efforts =
-        !!spreiding.effortsInLangeRit &&
-        (macroFase === "Build" || macroFase === "Peak");
-      if (efforts) {
-        plan[lr.dagIdx] = {
-          role: "longride_efforts",
-          type: "combo_long_with_efforts",
-          archetypeId: null,
-        };
-        cov.low = true;
-        cov.high = true;
-        remaining = Math.max(0, remaining - 1);
-      } else {
-        plan[lr.dagIdx] = {
-          role: "longride",
-          type: "long_z2",
-          archetypeId: null,
-        };
-        cov.low = true;
-      }
+      plan[lr.dagIdx] = {
+        role: "longride_efforts",
+        type: "combo_long_with_efforts",
+        archetypeId: null,
+      };
+      cov.low = true;
+      cov.high = true;
+      remaining = Math.max(0, remaining - 1);
       planned[lr.dagIdx] = true;
     }
   }
@@ -619,6 +623,9 @@ export function assignWorkouts(
     let redenCode: string | null = null; // 2a: machineleesbare reden-code NAAST de string (additief)
     let debtForced = false; // debt-geforceerde compensatie → exempt van avoid-consecutive-hard
     let archetypeId: any = null; // 2b.2: door goalWorkout_ gekozen archetype (alleen vrij-keyIntensity-dagen)
+    // STAP 7 BOUWITEM 2: kwam het FINALE type van de week-allocator? Zo ja, dan oordeelt
+    // avoid-consecutive-hard er niet nog eens overheen (zie de demotie-blok hieronder).
+    let uitAllocator = false;
 
     // Per-dag taper-gating: een dag tapert ALLEEN als hij 0..venster dagen vóór
     // het taper-event ligt; anders (ook post-event) → normale toewijzing.
@@ -691,6 +698,7 @@ export function assignWorkouts(
       redenCode = "test";
     } else if (allocActive && quotaPlan[d.dagIdx]) {
       // C4: week-allocator-plaatsing (quality/longride/endurance) — overrulet de per-dag-takken.
+      uitAllocator = true;
       const qp = quotaPlan[d.dagIdx];
       type = qp.type;
       archetypeId = qp.archetypeId || null;
@@ -790,7 +798,14 @@ export function assignWorkouts(
     const zonesPre = workoutZones(type, doel);
     let isHard =
       zonesPre.indexOf("high") >= 0 || zonesPre.indexOf("anaerobic") >= 0;
-    if (isHard && !debtForced && d.datum && lastHardDate) {
+    // STAP 7 BOUWITEM 2: sla de demotie OVER voor een dag die de week-allocator zelf plaatste.
+    // Die heeft de tussenruimte al afgedwongen via `gapOK_` met de `midweekMinGap` van het profiel,
+    // en bij `weekendBlok` mag een weekendpaar juist WÉL aaneensluiten — deze vaste afstand van één
+    // dag negeert dat profiel en gooide zo een zojuist geplaatste derde prikkel weg. De demotie
+    // blijft volledig gelden voor dagen die NIET van de allocator komen (bijvoorbeeld een
+    // pendel-intervaldag pal na een kwaliteitsdag) en voor de CROSS-WEEK bescherming vanuit
+    // `recentHardDate`; `lastHardDate` blijft ook door allocator-dagen bijgewerkt.
+    if (isHard && !debtForced && !uitAllocator && d.datum && lastHardDate) {
       const prevDay = stripTime_(
         new Date(d.datum.getTime() - 24 * 60 * 60 * 1000),
       );

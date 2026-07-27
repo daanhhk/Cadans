@@ -262,19 +262,17 @@ describe("assignWorkouts redenCode ↔ reden (week-allocator ACTIEF)", () => {
     ];
   }
 
-  it("FTP/Base plaatst long_ride + endurance + key_session (quality via debt-preclaim)", () => {
-    // debt high forceert een quality-pre-claim (sweet_spot) → deterministische key_session-plaatsing;
-    // FTP heeft effortsInLangeRit:false → de lange rit = rol 'longride' (long_ride).
+  it("FTP/Base plaatst endurance + key_session (quality via debt-preclaim)", () => {
+    // debt high forceert een quality-pre-claim (sweet_spot) → deterministische key_session-plaatsing.
+    // STAP 7 BOUWITEM 2 — 1:1 HERIJKT. Was: "plaatst long_ride + endurance + key_session", met de
+    // verwachting dat de lange rit de rol 'longride' (redenCode long_ride) kreeg. FTP heeft
+    // effortsInLangeRit:false, dus die rol kwam uitsluitend uit de kale pre-claim; die is vervallen
+    // (DOELEN-SPEC §2A: geen beschermde lange rit). De assertie is omgedraaid: de rol mag NIET meer
+    // voorkomen. Zelfde aantal expects, andere verwachting.
     const days = allocWeek();
     run(days, { macroFase: "Base", debt: { low: 0, high: 40, anaerobic: 0 } });
 
-    expect(
-      days.some(
-        (x) =>
-          x.reden === "Lange duurrit — week-plaatsing" &&
-          x.redenCode === "long_ride",
-      ),
-    ).toBe(true);
+    expect(days.some((x) => x.redenCode === "long_ride")).toBe(false);
     expect(
       days.some(
         (x) =>

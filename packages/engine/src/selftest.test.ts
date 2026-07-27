@@ -2562,8 +2562,16 @@ describe("engine selftest", () => {
       false,
       null,
     );
-    assert_("alloc Base longride role", "longride", pb[5] && pb[5].role);
-    assert_("alloc Base longride long_z2", "long_z2", pb[5] && pb[5].type);
+    // STAP 7 BOUWITEM 2 — 1:1 HERIJKT. Was: role "longride" / type "long_z2" (de kale
+    // pre-claim gaf de langste dag onvoorwaardelijk aan long_z2). De pre-claim is vervallen;
+    // de dag valt nu door naar de endurance-fill met hetzelfde type, tenzij de allocator hem
+    // als kwaliteit kiest. Zelfde aantal asserties, andere verwachting.
+    assert_(
+      "alloc Base langste dag: geen pre-claim meer",
+      "endurance",
+      pb[5] && pb[5].role,
+    );
+    assert_("alloc Base langste dag type", "long_z2", pb[5] && pb[5].type);
     assert_("alloc Base 2 quality", 2, qCount(pb));
     // Pass 1: Base loopt nu via goalWorkout_ (was hardcoded sweet_spot) → quality = echte archetypes,
     // drempel-led (#1 Base-intent), geen herhaalde vorm. Bij dit fixture-volume (~9,5u) komt vo2 via de
@@ -4564,7 +4572,248 @@ describe("engine selftest", () => {
   // blok-bounds/blok-zone/som==totaal/~doelMin/watt-rows/intent) elk nieuw record ~12× asserten. Herijkt
   // zonder telling-effect (1:1): de @40-asserts in testOnderhoudArchetypeScope + testPrikkelInRitFase1-C van
   // exact-archetypeId naar INTENT-TYPE (grotere pool roteert het sjabloon; de intent blijft) 1102→1245).
-  it("exactly 1245 assertions", () => {
-    expect(assertCount).toBe(1245);
+  // ── STAP 7 BOUWITEM 2: de twee hekken uit de kwaliteitsplaatsing ──────
+  // (1) De kale long_z2-PRE-CLAIM in allocateQualityWeek_ stap 1 is vervallen; de EFFORTS-arm
+  //     blijft en consumeert een slot. (2) avoid-consecutive-hard oordeelt niet nog eens over een
+  //     dag die de week-allocator zelf plaatste — die heeft de tussenruimte al via gapOK_ met de
+  //     profiel-midweekMinGap afgedwongen, en bij weekendBlok mag een weekendpaar aaneensluiten.
+  it("testStap7Hekken", () => {
+    const morgen = new Date();
+    morgen.setDate(morgen.getDate() + 1);
+    function dagen_(spec: [number, number, string][]): any[] {
+      return spec.map(([i, min, type]) => {
+        const dt = new Date(morgen);
+        dt.setDate(morgen.getDate() + i);
+        return {
+          dagIdx: i,
+          datum: dt,
+          train: true,
+          gedaan: false,
+          minuten: min,
+          type,
+          voorgesteldType: null,
+          reden: null,
+          redenCode: null,
+          archetypeId: null,
+        };
+      });
+    }
+    function plan_(spec: any, fase: string, profId: string, doel: string): any {
+      const d = dagen_(spec);
+      return allocateQualityWeek_(
+        d,
+        (PROFILES as any)[profId],
+        fase,
+        { low: false, high: false, anaerobic: false },
+        [],
+        null,
+        null,
+        { doel, ftp: 280, lthr: 170, doelStart: null },
+        new Date(),
+        false,
+        null,
+        d,
+        false,
+      );
+    }
+    const rollen_ = (p: any, rol: string) =>
+      Object.keys(p).filter((k) => p[k].role === rol).length;
+
+    // (1a) Zonder effortsInLangeRit claimt stap 1 GEEN dag meer: de rol "longride" bestaat niet
+    //      meer in het plan, en de langste dag is gewoon kandidaat voor kwaliteit.
+    const pFtp = plan_(
+      [
+        [0, 60, "vrij"],
+        [1, 60, "vrij"],
+        [3, 60, "vrij"],
+        [5, 120, "weekend"],
+      ],
+      "Base",
+      "ftp",
+      "FTP",
+    );
+    assert_(
+      "stap7: geen longride-pre-claim meer",
+      0,
+      rollen_(pFtp, "longride"),
+    );
+    assert_(
+      "stap7: volle quality-quota geplaatst (Base 2)",
+      2,
+      rollen_(pFtp, "quality"),
+    );
+    assert_(
+      "stap7: de langste dag mag kwaliteit dragen",
+      "quality",
+      pFtp[5] && pFtp[5].role,
+    );
+
+    // (1b) MET effortsInLangeRit in Build/Peak blijft de langste dag combo_long_with_efforts
+    //      houden, en gaat remaining omlaag (quotum Build 3 → 2 quality-slots over).
+    const pKlim = plan_(
+      [
+        [1, 60, "vrij"],
+        [3, 60, "vrij"],
+        [5, 150, "weekend"],
+        [6, 120, "weekend"],
+      ],
+      "Build",
+      "klim",
+      "Beklimmingen",
+    );
+    assert_(
+      "stap7: efforts-arm claimt de langste dag",
+      "longride_efforts",
+      pKlim[5] && pKlim[5].role,
+    );
+    assert_(
+      "stap7: efforts-arm type",
+      "combo_long_with_efforts",
+      pKlim[5] && pKlim[5].type,
+    );
+    assert_(
+      "stap7: efforts-arm verlaagt remaining (3-1=2 quality)",
+      2,
+      rollen_(pKlim, "quality"),
+    );
+    // In Base vuurt de efforts-arm NIET (alleen Build/Peak) → ook daar geen claim meer.
+    const pKlimBase = plan_(
+      [
+        [5, 150, "weekend"],
+        [6, 120, "weekend"],
+      ],
+      "Base",
+      "klim",
+      "Beklimmingen",
+    );
+    assert_(
+      "stap7: efforts-arm vuurt niet in Base",
+      0,
+      rollen_(pKlimBase, "longride_efforts") + rollen_(pKlimBase, "longride"),
+    );
+
+    // (2a) Een door de allocator geplaatste kwaliteitsdag wordt NIET gedemoteerd, ook niet als de
+    //      vorige kalenderdag hard is. Weekend-only bij klim: za = combo (hard), zo = quality.
+    function run_(
+      spec: any,
+      fase: string,
+      doel: string,
+      recentHard: boolean,
+    ): any[] {
+      const d = dagen_(spec);
+      let rh: any = null;
+      if (recentHard) {
+        rh = new Date(morgen);
+        rh.setDate(morgen.getDate() - 1);
+      }
+      assignWorkouts(
+        d,
+        {
+          ftp: 280,
+          lthr: 170,
+          gewicht: 75,
+          doel,
+          doelStart: null,
+          hrMax: 190,
+          hrRest: 45,
+          pendelDuurMin: 80,
+          pendelAantal: 2,
+        },
+        1,
+        fase,
+        { low: false, high: false, anaerobic: false },
+        { signal: "normal" },
+        null,
+        rh,
+        null,
+        false,
+        null,
+        d,
+      );
+      return d;
+    }
+    const wknd = run_(
+      [
+        [5, 150, "weekend"],
+        [6, 120, "weekend"],
+      ],
+      "Build",
+      "Beklimmingen",
+      false,
+    );
+    assert_(
+      "stap7: za draagt de efforts-rit",
+      "combo_long_with_efforts",
+      wknd[0].voorgesteldType,
+    );
+    assert_(
+      "stap7: allocator-dag NA een harde dag blijft staan",
+      "threshold",
+      wknd[1].voorgesteldType,
+    );
+    assert_(
+      "stap7: en krijgt dus geen demote-reden",
+      "key_session",
+      wknd[1].redenCode,
+    );
+
+    // (2b) Een dag die NIET van de allocator komt wordt nog steeds wél gedemoteerd. In een
+    //      Test-week staat allocActive uit, dus de per-dag-takken beslissen: dag 0 = test (hard),
+    //      dag 1 zou hard zijn en zakt naar long_z2.
+    const testWk = run_(
+      [
+        [0, 60, "vrij"],
+        [1, 60, "vrij"],
+        [2, 60, "vrij"],
+      ],
+      "Test",
+      "FTP",
+      false,
+    );
+    assert_(
+      "stap7: niet-allocator dag 0 is de test",
+      "test",
+      testWk[0].voorgesteldType,
+    );
+    assert_(
+      "stap7: niet-allocator dag NA een harde dag wordt nog gedemoteerd",
+      "long_z2",
+      testWk[1].voorgesteldType,
+    );
+    assert_(
+      "stap7: met de demote-reden",
+      "demote_recent_hard",
+      testWk[1].redenCode,
+    );
+
+    // (2c) De CROSS-WEEK bescherming vanuit recentHardDate werkt nog: dag 0 volgt op een harde dag
+    //      van vorige week en zakt naar long_z2.
+    const cross = run_(
+      [
+        [0, 60, "vrij"],
+        [1, 60, "vrij"],
+      ],
+      "Test",
+      "FTP",
+      true,
+    );
+    assert_(
+      "stap7: cross-week demotie vanuit recentHardDate werkt nog",
+      "long_z2",
+      cross[0].voorgesteldType,
+    );
+    assert_(
+      "stap7: cross-week demote-reden",
+      "demote_recent_hard",
+      cross[0].redenCode,
+    );
+  });
+
+  // stap 7 bouwitem 2 (de twee hekken): +15 in testStap7Hekken — 4× allocateQualityWeek_ zonder
+  // pre-claim, 4× de efforts-arm die blijft en een slot consumeert, en 7× assignWorkouts voor de
+  // demotie (allocator-dag blijft staan, niet-allocator-dag én cross-week worden nog gedemoteerd).
+  // Herijkt zonder telling-effect (1:1): "alloc Base longride role" longride→endurance. 1245→1260.
+  it("exactly 1260 assertions", () => {
+    expect(assertCount).toBe(1260);
   });
 });
