@@ -67,6 +67,8 @@ import {
   genericLongZ2,
   genericPendelIntervals,
   genericPendelZ2,
+  genericRecovery,
+  genericTaperZ2Kort,
   getPool_,
   getReadinessScore_,
   getTrainingLibrary_,
@@ -117,6 +119,7 @@ import {
   weekPlanSummary_,
   wellnessSignal_,
   workoutZones,
+  ZONE_TSS_RATE_,
   zoneActsByDateFromTab_,
   zoneDebt_,
   zoneTimesFromCell_,
@@ -337,8 +340,11 @@ describe("engine selftest", () => {
       ["low", "high", "anaerobic"].forEach((k) => {
         if (Math.abs(vouw[k] - (Number(it[k]) || 0)) > 1.0) intentOk = false;
       });
-      // 1,0 min speling: vo2_3030/vo2_4020 laten tot 0,96 min liggen door de
-      // 30/30- en 40/20-deling. Geen drift — de blokken zijn nooit méér.
+      // 1,0 min speling. Hermeten over deze 1020 renderings: 105 wijken af, over 21
+      // varianten, en BEIDE kanten op — 63 boven totaalMin, 42 eronder. Grootste
+      // |afwijking| 0,96 min, dus de tolerantie houdt. Oorzaak is de mesoFactor-
+      // werkschaling: het vuurt in mesoweek 2, 3 en 4, nooit in week 1 (factor 1,00), en
+      // uitsluitend op het renderVariant_-pad. vo2_3030 + vo2_4020 zijn 20 van de 105.
       if (Math.abs(som - (Number(wo.totaalMin) || 0)) > 1.0) somOk = false;
     }
     // expandArchetype_-pad: elk archetype over zijn EIGEN duurRange (onder-, midden-
@@ -425,6 +431,53 @@ describe("engine selftest", () => {
       "duursessie blijft binnen 5%",
       true,
       Math.abs(z2.tss - oudeWeging(z2.intent)) <= 0.05 * oudeWeging(z2.intent),
+    );
+  });
+
+  // ── Familie B, eerste twee: pendel_z2 en taper_z2_kort op de z2-ijking ─
+  // Beide rijden 60-72% FTP, dus één z2-blok over de volle rit. z2 is de enige
+  // zone naast tempo die SOLO mag — zie de geldigheidsgrens bij ZONE_TSS_RATE_.
+  it("testSoloZ2Bouwers", () => {
+    const S: any = { ftp: 275, lthr: 178 };
+    function toetsSoloZ2(label: string, wo: any): void {
+      assert_(label + " precies één blok", 1, (wo.blokken || []).length);
+      assert_(label + " zone z2", "z2", wo.blokken[0].zone);
+      assert_(
+        label + " blokminuten == totaalMin",
+        wo.totaalMin,
+        wo.blokken[0].minuten,
+      );
+      assert_(label + " tss uit blokken", tssFromBlokken_(wo.blokken), wo.tss);
+    }
+    [60, 75, 100, 150].forEach((m) => {
+      toetsSoloZ2("pendel_z2 " + m, genericPendelZ2(m, S, 1, "Base"));
+    });
+    // taper halveert zijn input en klemt op 30..45 — blokken volgen de UITKOMST
+    [40, 60, 80, 90].forEach((m) => {
+      toetsSoloZ2("taper_z2_kort in" + m, genericTaperZ2Kort(m, S));
+    });
+    // gepinde uitkomsten, zodat een tariefwijziging hier omvalt
+    assert_("pendel_z2 75 tss", 55, genericPendelZ2(75, S, 1, "Base").tss);
+    assert_("pendel_z2 150 tss", 110, genericPendelZ2(150, S, 1, "Base").tss);
+    assert_("taper_z2_kort in90 tss", 33, genericTaperZ2Kort(90, S).tss);
+
+    // recovery blijft BEWUST op het vlakke 0,35-tarief en krijgt GEEN blokken:
+    // het rust-tarief is een attributie-tarief en niet geldig voor een solo-rit.
+    [30, 45, 60].forEach((m) => {
+      const wo = genericRecovery(m, S);
+      assert_("recovery " + m + " geen blokken", true, wo.blokken == null);
+      assert_(
+        "recovery " + m + " tss vlak tarief",
+        Math.round(wo.totaalMin * 0.35),
+        wo.tss,
+      );
+    });
+    // regressie: NIET via het rust-tarief (dat had 36 gegeven op een uur)
+    assert_("recovery 60 tss", 21, genericRecovery(60, S).tss);
+    assert_(
+      "recovery 60 is niet het rust-tarief",
+      true,
+      genericRecovery(60, S).tss !== Math.round(60 * ZONE_TSS_RATE_.rust),
     );
   });
 
@@ -2239,9 +2292,10 @@ describe("engine selftest", () => {
     assert_("pendelZ2 één structuur-rij", 1, pz2.structuur.length);
     assert_("pendelZ2 label 'Hele rit'", "Hele rit", pz2.structuur[0][0]);
     assert_("pendelZ2 rij-duur = volle mins", "75 min", pz2.structuur[0][1]);
-    // belasting-invariantie (gemeten vóór de opschoning)
+    // belasting-invariantie (gemeten vóór de opschoning). tss is bij de TSS-ijking
+    // herijkt van 45 naar 55: pendel_z2 draagt nu één z2-blok (75 × 0,73).
     assert_("pendelZ2 totaalMin ongewijzigd", 75, pz2.totaalMin);
-    assert_("pendelZ2 tss ongewijzigd", 45, pz2.tss);
+    assert_("pendelZ2 tss geijkt", 55, pz2.tss);
 
     function pInt(type: string, doel: string) {
       return genericPendelIntervals(type, 75, S, 1, "Build", doel);
@@ -2329,9 +2383,9 @@ describe("engine selftest", () => {
       false,
       pz2terug.eindopmerking.includes("werk"),
     );
-    // belasting-invariantie: de richting mag totaalMin/tss niet raken.
+    // belasting-invariantie: de richting mag totaalMin/tss niet raken (tss geijkt op 55).
     assert_("pendelZ2 terug totaalMin ongewijzigd", 75, pz2terug.totaalMin);
-    assert_("pendelZ2 terug tss ongewijzigd", 45, pz2terug.tss);
+    assert_("pendelZ2 terug tss geijkt", 55, pz2terug.tss);
 
     // genericPendelIntervals is ALTIJD de terugrit.
     const pIntFtp = genericPendelIntervals(
@@ -4995,7 +5049,7 @@ describe("engine selftest", () => {
   // pre-claim, 4× de efforts-arm die blijft en een slot consumeert, en 7× assignWorkouts voor de
   // demotie (allocator-dag blijft staan, niet-allocator-dag én cross-week worden nog gedemoteerd).
   // Herijkt zonder telling-effect (1:1): "alloc Base longride role" longride→endurance. 1245→1260.
-  it("exactly 1286 assertions", () => {
-    expect(assertCount).toBe(1286);
+  it("exactly 1329 assertions", () => {
+    expect(assertCount).toBe(1329);
   });
 });

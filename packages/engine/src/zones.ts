@@ -216,6 +216,30 @@ export function pctZoneBucket_(pct: any): string {
  * De vijf grenzen vallen samen met de zones die intervals.icu meet:
  * tryPowerZoneTimes_ (ditzelfde bestand) vouwt Z1..Z7 identiek op, zodat een
  * geplande sessie en een gereden rit langs dezelfde meetlat gaan.
+ *
+ * GELDIGHEIDSGRENS — dit is een ATTRIBUTIE-tabel, geen steady-state-tabel.
+ * De fit verdeelt de GEMETEN TSS van een hele rit over de zoneminuten van die rit, dus de
+ * SOM klopt per constructie en de tabel is juist voor een GEMENGDE sessie.
+ *
+ * Hij is NIET geldig voor een sessie die volledig uit één zone bestaat. NP middelt over 30
+ * seconden, dus belasting lekt van een hard blok naar de makkelijke minuten eromheen; de
+ * fit schrijft dat geleende deel toe aan de zone waar die minuten staan. Tegen de klassieke
+ * referentie duur × IF² × 100 op het midden van elke band:
+ *
+ *   rust     0,598 tegen 0,376 steady  (+59%)   -> NIET solo toepassen
+ *   z2       0,734 tegen 0,726 steady   (+1%)   -> solo toepasbaar
+ *   tempo    1,142 tegen 1,148 steady   (-1%)   -> solo toepasbaar
+ *   drempel  1,351 tegen 1,601 steady  (-16%)   -> NIET solo toepassen
+ *   anaeroob 3,077 tegen 2,204 steady  (+40%)   -> NIET solo toepassen
+ *
+ * Het lek is direct gemeten op de eigen reeks (E_intensiteitsband in
+ * docs/STAP7-IJKING-DATA.md): geef Z2..Z5 hun gefitte tarief en laat het residu aan Z1, dan
+ * loopt het impliciete Z1-tarief van 0,404 bij 3,3% kwaliteit naar 0,900 bij 22,3%. Het
+ * tarief beweegt mee met hoe hard de REST van de rit was.
+ *
+ * Het z2-tarief is tegengetoetst op dezelfde reeks: op de rustigste ritten komt het uit
+ * tussen 0,73 en 0,79, en die uitkomst is ongevoelig voor de aanname over het Z1-tarief.
+ * 0,7335 is daarmee bevestigd en conservatief.
  */
 export const ZONE_TSS_RATE_ = {
   rust: 0.6,

@@ -1855,6 +1855,13 @@ export function genericRecovery(mins: any, settings: any): any {
         "Praat-tempo, soepel benen",
       ],
     ],
+    // TSS-ijking: 0,35 blijft staan, en er komen BEWUST geen blokken. Het rust-tarief uit
+    // ZONE_TSS_RATE_ (0,60) is besmet — zie de geldigheidsgrens in zones.ts: het is een
+    // attributie-tarief dat belasting geleend heeft van de harde blokken elders in de rit,
+    // en een herstelrit heeft die niet. De geldige referent voor een SOLO herstelrit is
+    // 0,376 steady tot 0,404 op de rustigste band; 0,35 ligt daar dichtbij en het verschil
+    // is kleiner dan de meetonzekerheid. Coach-canon voor een herstel-uur is 20 tot 25 TSS;
+    // de naïeve route via het rust-tarief had 36 gegeven.
     tss: Math.round(mins * 0.35),
     eindopmerking:
       "Bloed laten stromen, geen stress. Niet skippen — herstel is training.",
@@ -1898,11 +1905,15 @@ export function genericTaperZ2Kort(mins: any, settings: any): any {
   const ftp = settings.ftp,
     lthr = settings.lthr;
   mins = Math.max(30, Math.min(45, Math.round((mins || 40) * 0.5)));
+  // TSS-ijking, identiek aan genericPendelZ2: dezelfde 60-72%-band → z2 over de hele band.
+  // Blokken over de AL GEHALVEERDE mins, zodat blokminuten == totaalMin.
+  const blokken = [{ minuten: mins, zone: pctZoneBucket_(66) }];
   return {
     naam: "Taper Z2 kort (" + mins + " min)",
     focus: "aerobic onderhoud",
     zones: ["low"],
     totaalMin: mins,
+    blokken: blokken,
     structuur: [
       [
         "Hele rit",
@@ -1912,7 +1923,7 @@ export function genericTaperZ2Kort(mins: any, settings: any): any {
         "Soepel, laag volume — fris blijven voor het event",
       ],
     ],
-    tss: Math.round(mins * 0.6),
+    tss: tssFromBlokken_(blokken),
     eindopmerking:
       "Volume bewust gehalveerd. Niet opbouwen meer — fris worden is het doel.",
   };
@@ -2125,6 +2136,12 @@ export function genericPendelZ2(
     lthr = settings.lthr;
   mins = mins || 150;
   const isRecoveryWeek = mesoWeek === 4 || macroFase === "Recovery";
+  // TSS-ijking: de structuur rijdt 60-72% FTP, dus pctZoneBucket_ geeft z2 over de hele
+  // band — geen grensgeval. Eén blok over de volle rit, en z2 mag solo (zie de
+  // geldigheidsgrens bij ZONE_TSS_RATE_ in zones.ts). intent blijft ongemoeid:
+  // ensureIntent_ levert low = totaalMin, en z2 vouwt via ARCHETYPE_LOAD_FROM_BUCKET_
+  // naar low, dus blokken en intent dragen dezelfde minuten.
+  const blokken = [{ minuten: mins, zone: pctZoneBucket_(66) }];
   return {
     naam: isRecoveryWeek
       ? "Pendel Z2 (" + mins + " min, recovery week)"
@@ -2132,6 +2149,7 @@ export function genericPendelZ2(
     focus: "aerobic base",
     zones: ["low"],
     totaalMin: mins,
+    blokken: blokken,
     // T28 fase 3b: ÉÉN blok. De oude "Heen"/"Terug"-splitsing beschreef twee richtingen
     // binnen wat sinds fase 3a één RIT is (pendelDuurMin = duur per rit), en gaf twee
     // identieke Z2-regels. Belasting ongewijzigd: totaalMin en tss staan los van de structuur.
@@ -2144,7 +2162,7 @@ export function genericPendelZ2(
         "Rustige Z2",
       ],
     ],
-    tss: Math.round(mins * 0.6),
+    tss: tssFromBlokken_(blokken),
     eindopmerking: isRecoveryWeek
       ? "Recovery-week pendel — geen intensiteit, alleen volume."
       : leg === "terug"
