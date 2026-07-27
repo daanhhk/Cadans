@@ -42,7 +42,7 @@ live raster, wijst elke drempel van +1 tot en met +8 dezelfde TWEE blokken aan: 
 
 DE TWEE BLOKKEN, MET HUN TERMEN. 2026-01-12 gaat van instap 267 naar maximum 276, dus +9, op drie
 gevulde weken; dat blok draagt de indoor test van 13-01. 2026-05-04 gaat van instap 264 naar 272,
-dus +8, op vier gevulde weken; dat blok draagt de wegwedstrijd van 21-05. Alle overige blokken
+dus +8, op vier gevulde weken; dat blok draagt de zware rit van 21-05. Alle overige blokken
 komen op nul of negatief uit, met één uitzondering die geen nul is: 2025-10-20
 levert GEEN getal, want vóór die datum bestaat er in de reeks geen instapniveau. `buildEffectReferent`
 geeft daar null en dat blok valt daarmee buiten elke plateau-set.
@@ -82,9 +82,19 @@ stijging, 21-05-2026 op 88,36 wel. Een heuristiek op intensiteit en duur die moe
 er een maximale inspanning was, is op deze data NIET te bouwen: dat is fitten op twee gevallen.
 
 De twee stijgingen kwamen niet uit training maar uit GEBEURTENISSEN: een indoor test van 20
-minuten op `if_pct` 100,77 (13-01-2026) en een wegwedstrijd van 74 minuten met normW 243
-(21-05-2026). Dat bevestigt het beeld van de gebruiker: de waarde springt bij een test en zakt
-daarna.
+minuten op `if_pct` 100,77 (13-01-2026) en een zware rit van 74 minuten met normW 243 en `if_pct`
+88,36 (21-05-2026). Dat bevestigt het beeld van de gebruiker: de waarde springt bij een maximale
+inspanning en zakt daarna.
+
+CORRECTIE 27-07-2026 (Daan). Die rit van 21-05 stond hier eerder als "wegwedstrijd" — dat klopt
+niet: het was een rit tijdens een fietsvakantie. De MEETWAARDEN blijven ongewijzigd (74 minuten,
+normW 243, `if_pct` 88,36, sprong 261 → 272 binnen één dag; om 07:23 stond de meter nog op 261 en
+om 16:23 op 272). Alleen het etiket was fout. Dat is precies waarom 5b-ii een SPRONG in de reeks
+als DERDE meetmoment telt naast een ingeplande test en een A/B-wedstrijd: een maximale inspanning
+hoeft niet in de agenda te staan om te tellen, en de app kan achteraf niet weten wát voor rit het
+was — alleen dát de meter omhoogging. Die derde bron voedt uitsluitend het MEETINTERVAL van het
+testvoorstel, nooit de gelegenheid-vraag van de effect-referent; zie de grens-notitie bij
+`sprongDagen` in `apps/web/src/lib/effect.ts`.
 
 Daaruit volgen drie uitkomsten:
 
