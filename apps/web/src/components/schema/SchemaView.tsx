@@ -6,6 +6,7 @@ import {
   coachNarrative,
   normalizeCoachPersona,
 } from "../../lib/coachNarrative";
+import { weekdagNaam } from "../../lib/dates";
 import { isDayPlannable } from "../../lib/library";
 import type { ProposalWeek } from "../../lib/proposal";
 import type { ReadinessResult } from "../../lib/readiness";
@@ -15,6 +16,7 @@ import {
   deriveSchemaView,
   type FatigueVoorstel,
   type InhaalVoorstel,
+  testResultaat,
   verlengResultaat,
   verlichtResultaat,
 } from "../../lib/schema";
@@ -356,9 +358,14 @@ export function SchemaView({
               date={day.datum}
               // LAAG 2: alleen een GEACCEPTEERD verlicht-voorstel (src:'readiness') krijgt een
               // coach-resultaatregel; een handmatige keuze niet (GAS overrideKaart_ ook niet).
+              // 5b-ii: testResultaat als DERDE schakel. De drie sluiten elkaar wederzijds uit
+              // op type + label, dus de volgorde is vrij; testResultaat staat achteraan zodat de
+              // twee bestaande takken ongemoeid blijven. `day.weekday` is de KORTE strip-vorm —
+              // de zin leest voluit, dus weekdagNaam(day.datum).
               coachRegel={
                 verlichtResultaat(day.override) ??
-                verlengResultaat(day.override)
+                verlengResultaat(day.override) ??
+                testResultaat(day.override, weekdagNaam(day.datum))
               }
               coachNaam={view.coachNaam}
             />

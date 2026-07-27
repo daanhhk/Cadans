@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ActValuesRow } from "./activities";
 import { testBadgeLabel } from "./coachNarrative";
+import { weekdagNaam } from "./dates";
 import type { ProposalDay, ProposalWeek, ProposalWorkout } from "./proposal";
 import {
   actualZone5_,
@@ -749,6 +750,20 @@ describe("testResultaat (5b-ii) — matcht alleen op het exacte badge-label", ()
     expect(
       testResultaat({ ...basis, label: "Iets anders" }, "zaterdag"),
     ).toBeNull();
+  });
+
+  it("weekdagNaam levert de VOLLE naam, en de zin leest voluit", () => {
+    // 2026-08-22 is de zaterdag die buildTestVoorstel in de eerste live rustweek kiest.
+    // `day.weekday` in de dagstrip is de KORTE vorm ("za"); de coachregel moet voluit lezen.
+    expect(weekdagNaam("2026-08-22")).toBe("zaterdag");
+    expect(
+      testResultaat(
+        { ...basis, label: testBadgeLabel() },
+        weekdagNaam("2026-08-22"),
+      ),
+    ).toBe(
+      "FTP-test op zaterdag — twintig minuten alles geven; die waarde ijkt je volgende blok.",
+    );
   });
 
   it("ander workoutType of ander override-type → null", () => {
