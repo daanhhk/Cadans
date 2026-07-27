@@ -189,3 +189,25 @@ niet wat Cadans voorschrijft.
   geleverd op de voorgeschreven tijd-in-zone"). De huidige weeknorm uit gedeclareerde
   uren is een afwijking van die spec.
 - De CTL-simulatie in §6 moet opnieuw met de gecorrigeerde weging uit §4.
+
+### CORRECTIE 27-07-2026 — §3 en §5 zijn weerlegd
+
+Gemeten in `docs/STAP7-BOUW12-RECON.md`. Twee aanwijzingen hierboven houden niet:
+
+1. §3 wees `goalWorkout_` / `goalPickIntent_` aan als de derde-prikkel-klem. ONJUIST: vier
+   achtereenvolgende aanroepen leveren probleemloos drempel, sweetspot, drempel, sweetspot met
+   steeds een ander sjabloon. De klem bestaat uit DRIE GESTAPELDE HEKKEN, alle drie buiten die
+   twee functies: de lange-rit-pre-claim in `allocateQualityWeek_` stap 1 (claimt de langste
+   trainbare dag zonder `remaining` te verlagen), `gapOK_` met `midweekMinGap` 1, en
+   `demote_recent_hard`, dat NA de allocator een zojuist geplaatste kwaliteitsdag terugzet naar
+   `long_z2`. Dat laatste hek verklaart waarom élke hendel bovenstrooms inert mat. Zie
+   `STAP7-BOUW12-RECON.md` §2.
+2. §5 noemde als vermoedelijke oorzaak van de Onderhoud-verwatering tussen vijf en zes uur dat
+   "de selector bij meer minuten een langer sjabloon met relatief minder tijd-in-zone kiest".
+   ONJUIST: bij meer dan 135 minuten kwalificeert er GEEN ENKEL sjabloon. De kandidaat-filter in
+   `goalWorkout_` eist `beschikbareTijd <= duurRange[1]` en de bibliotheek loopt tot 135, dus de
+   dag valt door naar duurwerk. Zie `STAP7-BOUW12-RECON.md` §4 en §5.
+
+De MEETWAARDEN in §3 en §5 blijven ONGEWIJZIGD geldig — 45/48,5/51,8/12,6 kwaliteitsminuten en de
+doel-vergelijking per urenbudget zijn onafhankelijk gereproduceerd. Alleen de aangewezen oorzaken
+klopten niet. De overige paragrafen blijven ongewijzigd.

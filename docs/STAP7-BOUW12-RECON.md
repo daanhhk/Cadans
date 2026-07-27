@@ -12,6 +12,11 @@ intensiteit dragen. Het ENIGE vaste element is de heenrit van de pendel (rustig)
 deelt de coach in op basis van de opgegeven tijd. Deze norm hoort in `docs/DOELEN-SPEC.md`;
 hij is meermaals in chats gegeven en nooit vastgelegd.
 
+Deze norm gaat over WIE beslist, niet over WAT de inhoud is. De gebruiker levert uitsluitend
+beschikbare tijd; de app bepaalt de invulling. Een regel die de INHOUD vastlegt hoort alleen in
+`docs/DOELEN-SPEC.md` als hij op data is geijkt — met de hand gekozen dosisregels horen er niet
+in. Zonder dat onderscheid keert deze discussie elke chat terug.
+
 ## 2. De derde-prikkel-klem — GEISOLEERD, de vorige diagnose was fout
 
 `docs/STAP7-RECON.md` §3 wees `goalWorkout_` / `goalPickIntent_` aan. Weerlegd: vier
@@ -63,8 +68,9 @@ warmup, kwaliteitsblokken ongewijzigd, Z2-fill ertussen, cooldown; totaal landt 
 - bij 180 minuten kwalificeren 0 van 35 sjablonen; zonder plafond 35 van 35
 
 LET OP de bekende regressie: de tie-break sorteert OPLOPEND op `duurRange[0]`, dus met het
-plafond eraf wint het kortste sjabloon en krijgt een dag van vier uur 24 minuten drempel. De
-passende regel is: het sjabloon met de meeste werktijd dat nog past, rest Z2.
+plafond eraf wint het kortste sjabloon en krijgt een dag van vier uur 24 minuten drempel. Dát is
+aantoonbaar fout; welke regel er WEL hoort te staan is een dosisvraag die geijkt moet worden en
+niet hier gekozen — zie paragraaf 9, punt 4.
 
 ## 6. De TSS-weging — gemeten, nog niet geijkt op eigen data
 
@@ -99,9 +105,23 @@ tijd-in-zone als dosis-eenheid aanwijst. Raakt de uitvoerings-referent en de blo
 
 ## 9. Herziene bouwvolgorde voor item 2
 
+De eerste drie ingrepen zijn MECHANISCH — ze halen hekken weg die aantoonbaar niet-bedoeld
+gedrag veroorzaken. De vierde is een DOSISVRAAG en wordt geijkt, niet gekozen.
+
 1. Lange-rit-pre-claim vervalt: duur bepaalt de omvang van de dag, niet de inhoud.
 2. Duur-plafond uit de kandidaat-filter van `goalWorkout_`.
-3. Tie-break om: meeste werktijd die past, rest Z2.
-4. `demote_recent_hard` beperken tot de CROSS-WEEK bescherming (`recentHardDate`), niet als tweede
-   oordeel over dagen die de allocator zojuist zelf plaatste.
-5. Dosisvraag, apart en later te ijken: hoeveel kwaliteit hoort er in een dag van drie uur.
+3. `demote_recent_hard` beperken tot de CROSS-WEEK bescherming (`recentHardDate`), niet als
+   tweede oordeel over dagen die de allocator zojuist zelf plaatste.
+4. De SELECTIEREGEL voor een lange dag. Met het plafond eraf kwalificeren alle 35 sjablonen en
+   wint via de huidige tie-break het KORTSTE — een dag van vier uur krijgt dan 24 minuten
+   drempel. Dat is aantoonbaar fout, maar het juiste antwoord staat hier NIET: hoeveel
+   kwaliteit een dag van twee, drie of vier uur hoort te dragen is een trainingsvraag, geen
+   implementatiekeuze. Die regel wordt AFGELEID uit de meting van paragraaf 7 (wat leverde een
+   lange dag in de praktijk aan belasting op) en uit de coach-canon in `docs/DOELEN-SPEC.md`,
+   en pas daarna in code gezet. Tot die ijking blijft dit een OPEN punt.
+
+## 10. Wat hier bewust NIET staat
+
+Geen enkele nieuwe trainingsregel. Dit document meet wat de app doet en waarom, en wijst aan
+welke keuzes nog geijkt moeten worden. Een dosis- of selectieregel die met de hand is gekozen
+in plaats van geijkt hoort niet in dit document en niet in de code.
