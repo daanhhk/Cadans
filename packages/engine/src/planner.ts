@@ -40,6 +40,7 @@ import { vo2Pools_, workoutForVo2max } from "./workouts/vo2max";
 import {
   pctZoneBucket_,
   scaleBlocksToFit_,
+  tssFromBlokken_,
   tssFromZoneMinutes_,
   typeBucket_,
   workoutZones,
@@ -1251,7 +1252,7 @@ export function renderVariant_(
     structuur: structuur,
     intent: intent,
     blokken: blokken,
-    tss: tssFromZoneMinutes_(intent),
+    tss: tssFromBlokken_(blokken),
     eindopmerking:
       variant.tip ||
       variant.naam + " — variant van deze week (roteert wekelijks).",
@@ -1262,7 +1263,7 @@ export function renderVariant_(
 // ════════════════════════════════════════════════════════════════
 // TRAININGEN-BIBLIOTHEEK (read-side) — {categorie → varianten[]} via de
 // BESTAANDE pure builders (renderVariant_ + segmentsFromBlokken_ +
-// tssFromZoneMinutes_). Géén DocProp-state; veilig per request.
+// tssFromBlokken_). Géén DocProp-state; veilig per request.
 // ════════════════════════════════════════════════════════════════
 
 // Display-categorie → engine-pool-type + design-tokens. zoneVar = marker/naam-
@@ -1357,7 +1358,7 @@ export function recoveryPool_(): any {
  * Bouwt de Trainingen-bibliotheek: per categorie tot 5 varianten met ZoneBar-
  * segmenten (+hoogtePct), blok-structuur (label/duur/watt) en zone-gewogen TSS —
  * alles uit de bestaande builders. `intent` {low,high,anaerobic} gaat mee zodat
- * de client de duur-slider live kan herrekenen (extra duur → Z2 → tssFromZoneMinutes_).
+ * de client de duur-slider live kan herrekenen (extra duur → Z2 → tssFromBlokken_).
  * @return [{ key,label,zoneVar,omschrijving,defaultDur,type, variants:[...] }]
  */
 export function getTrainingLibrary_(settings: any): any {
@@ -1411,6 +1412,7 @@ export function buildFreeRideWorkout_(ov: any, settings: any): any {
   const zone = FREE_RIDE_ZONE_[ov.intensiteit] || "low";
   const intent: any = { low: 0, high: 0, anaerobic: 0 };
   intent[zone] = dur;
+  const blokken = [{ minuten: dur, zone: pctZoneBucket_(pct) }];
   const label = ov.ritType === "groep" ? "Groepsrit" : "Vrije rit";
   return {
     naam: label + " · " + (ov.intensiteit || "rustig"),
@@ -1418,7 +1420,7 @@ export function buildFreeRideWorkout_(ov: any, settings: any): any {
     zones: [zone],
     totaalMin: dur,
     intent: intent,
-    blokken: [{ minuten: dur, zone: pctZoneBucket_(pct) }],
+    blokken: blokken,
     structuur: [
       [
         label,
@@ -1428,7 +1430,7 @@ export function buildFreeRideWorkout_(ov: any, settings: any): any {
         "Op gevoel rijden",
       ],
     ],
-    tss: tssFromZoneMinutes_(intent),
+    tss: tssFromBlokken_(blokken),
     eindopmerking: label + " op gevoel — geen vaste blokstructuur.",
   };
 }
@@ -1829,7 +1831,7 @@ export function genericLongZ2(
     structuur: structuur,
     intent: intent,
     blokken: blokken,
-    tss: tssFromZoneMinutes_(intent),
+    tss: tssFromBlokken_(blokken),
     eindopmerking: eind,
     tooLong: tooLong,
   };

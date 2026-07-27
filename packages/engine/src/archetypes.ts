@@ -6,7 +6,7 @@
  */
 import { COACH_INTENT_ENGINE_TYPE_, intentFromType_ } from "./coach";
 import { bpmBelow, bpmRange, mesoFactor, wattsRange } from "./utils";
-import { pctZoneBucket_, tssFromZoneMinutes_ } from "./zones";
+import { pctZoneBucket_, tssFromBlokken_ } from "./zones";
 
 export const ARCHETYPE_STRUCTUURTYPES = [
   "steady",
@@ -268,7 +268,7 @@ export function expandArchetype_(rec: any, ctx: any): any {
     structuur: structuur,
     intent: intent,
     blokken: blokken,
-    tss: tssFromZoneMinutes_(intent),
+    tss: tssFromBlokken_(blokken),
     eindopmerking: rec.eindopmerking,
   };
   if (tooLong) out.tooLong = tooLong;

@@ -10,6 +10,7 @@ import {
   ACT_ID_IDX,
   ACT_ZONE_TIMES_IDX,
   ARCHETYPE_EFFECT_TAGS,
+  ARCHETYPE_LOAD_FROM_BUCKET_,
   ARCHETYPE_STRUCTUURTYPES,
   ARCHETYPES,
   actAnchorDate_,
@@ -66,6 +67,7 @@ import {
   genericLongZ2,
   genericPendelIntervals,
   genericPendelZ2,
+  getPool_,
   getReadinessScore_,
   getTrainingLibrary_,
   goalEffWeights_,
@@ -99,12 +101,14 @@ import {
   readinessAdjust_,
   recencyFromWeekplan_,
   recentHardDate_,
+  renderVariant_,
   riderTypeFromCurve_,
   rollingZoneCoverage_,
   rpeSignal_,
   snapshotDayAction_,
   sortActivityRowsNewestFirst_,
   stripTime_,
+  tssFromBlokken_,
   tssFromZoneMinutes_,
   tssPerHourRecent_,
   volumeModulatie,
@@ -222,17 +226,17 @@ describe("engine selftest", () => {
     );
     assert_(
       "tss high-only",
-      57,
+      72,
       tssFromZoneMinutes_({ low: 0, high: 60, anaerobic: 0 }),
     );
     assert_(
       "tss anaerobic-only",
-      63,
+      183,
       tssFromZoneMinutes_({ low: 0, high: 0, anaerobic: 60 }),
     );
     assert_(
       "tss mixed",
-      47,
+      52,
       tssFromZoneMinutes_({ low: 40, high: 20, anaerobic: 0 }),
     );
     assert_("tss empty", 0, tssFromZoneMinutes_({}));
@@ -240,6 +244,187 @@ describe("engine selftest", () => {
       "tss monotone-low",
       true,
       tssFromZoneMinutes_({ low: 120 }) > tssFromZoneMinutes_({ low: 60 }),
+    );
+  });
+
+  // ── tssFromBlokken_ — de vijf-zone-ijking (puur) ─────────────────────
+  // Verwachte waarden zijn LITERALS, geen herberekening van de tabel: kantelt
+  // een tarief, dan valt deze test om in plaats van mee te bewegen.
+  it("testTssFromBlokken", () => {
+    const blk = (zone: string, minuten: number) => [{ zone, minuten }];
+    // (a) per bucket 60 minuten → gemeten tarief × 60, één keer afgerond
+    assert_("blok-tss rust 60", 36, tssFromBlokken_(blk("rust", 60)));
+    assert_("blok-tss z2 60", 44, tssFromBlokken_(blk("z2", 60)));
+    assert_("blok-tss tempo 60", 68, tssFromBlokken_(blk("tempo", 60)));
+    assert_("blok-tss drempel 60", 81, tssFromBlokken_(blk("drempel", 60)));
+    assert_("blok-tss anaeroob 60", 185, tssFromBlokken_(blk("anaeroob", 60)));
+
+    // (b) randgevallen — leeg / null / geen array → 0; onbekende zone → z2-tarief
+    assert_("blok-tss leeg", 0, tssFromBlokken_([]));
+    assert_("blok-tss null", 0, tssFromBlokken_(null));
+    assert_("blok-tss undefined", 0, tssFromBlokken_(undefined));
+    assert_("blok-tss geen-array", 0, tssFromBlokken_({ minuten: 60 }));
+    assert_("blok-tss string", 0, tssFromBlokken_("60"));
+    assert_(
+      "blok-tss onbekende zone → z2",
+      tssFromBlokken_(blk("z2", 60)),
+      tssFromBlokken_(blk("zwerfzone", 60)),
+    );
+    assert_(
+      "blok-tss zone ontbreekt → z2",
+      tssFromBlokken_(blk("z2", 60)),
+      tssFromBlokken_([{ minuten: 60 }] as any),
+    );
+    // één keer afronden, nooit per blok: 3×20 min z2 = 43.8 → 44, niet 3×15=45
+    assert_(
+      "blok-tss rondt één keer af",
+      44,
+      tssFromBlokken_([
+        { zone: "z2", minuten: 20 },
+        { zone: "z2", minuten: 20 },
+        { zone: "z2", minuten: 20 },
+      ]),
+    );
+
+    // (c) monotonie — in de minuten én over de zones
+    assert_(
+      "blok-tss monotoon in minuten",
+      true,
+      tssFromBlokken_(blk("drempel", 40)) > tssFromBlokken_(blk("drempel", 20)),
+    );
+    const ladder = ["rust", "z2", "tempo", "drempel", "anaeroob"];
+    let stijgend = true;
+    let vorige = -1;
+    ladder.forEach((zone) => {
+      const nu = tssFromBlokken_(blk(zone, 60));
+      if (!(nu > vorige)) stijgend = false;
+      vorige = nu;
+    });
+    assert_("blok-tss monotoon over zones", true, stijgend);
+  });
+
+  // ── De dragende aanname: blokken en intent dragen DEZELFDE minuten ────
+  // De hele ontwerpkeuze (TSS uit blokken, dosis uit intent) hangt hieraan.
+  // Vouwt ARCHETYPE_LOAD_FROM_BUCKET_ de blokken terug op intent? Zo niet, dan
+  // lopen dosisgetal en belastinggetal uiteen en is de ijking waardeloos.
+  it("testBlokkenDekkenIntent", () => {
+    const S: any = {
+      ftp: 275,
+      lthr: 178,
+      doel: "FTP",
+      // vaste doelStart → weekIndexFromStart_ is deterministisch, geen omgevingsklok
+      doelStart: new Date(2026, 0, 5),
+    };
+    let n = 0,
+      intentOk = true,
+      somOk = true,
+      blokkenOk = true;
+    function toets(wo: any): void {
+      if (!wo) return;
+      n++;
+      if (!Array.isArray(wo.blokken) || !wo.blokken.length) {
+        blokkenOk = false;
+        return;
+      }
+      const vouw: any = { low: 0, high: 0, anaerobic: 0 };
+      let som = 0;
+      wo.blokken.forEach((b: any) => {
+        const lf = ARCHETYPE_LOAD_FROM_BUCKET_[b.zone] || "low";
+        vouw[lf] += Number(b.minuten) || 0;
+        som += Number(b.minuten) || 0;
+      });
+      const it = wo.intent || {};
+      ["low", "high", "anaerobic"].forEach((k) => {
+        if (Math.abs(vouw[k] - (Number(it[k]) || 0)) > 1.0) intentOk = false;
+      });
+      // 1,0 min speling: vo2_3030/vo2_4020 laten tot 0,96 min liggen door de
+      // 30/30- en 40/20-deling. Geen drift — de blokken zijn nooit méér.
+      if (Math.abs(som - (Number(wo.totaalMin) || 0)) > 1.0) somOk = false;
+    }
+    // expandArchetype_-pad: elk archetype over zijn EIGEN duurRange (onder-, midden-
+    // en bovengrens) × mesoweek 1..4. expandArchetype_ neemt (rec, ctx) — duur en
+    // mesoweek gaan via ctx.doelMin / ctx.mesoWeek, niet positioneel.
+    ARCHETYPES.forEach((rec: any) => {
+      const lo = rec.duurRange[0],
+        hi = rec.duurRange[1];
+      [lo, Math.round((lo + hi) / 2), hi].forEach((dur) => {
+        [1, 2, 3, 4].forEach((mw) => {
+          toets(
+            expandArchetype_(rec, {
+              ftp: S.ftp,
+              lthr: S.lthr,
+              doelMin: dur,
+              mesoWeek: mw,
+              macroFase: "Base",
+            }),
+          );
+        });
+      });
+    });
+    // renderVariant_-pad: elke variant uit elke pool
+    [
+      "conditie",
+      "klim",
+      "long_z2",
+      "sweet_spot",
+      "tempo",
+      "threshold",
+      "vo2max",
+    ].forEach((type) => {
+      const pool = getPool_(type) || [];
+      pool.forEach((v: any) => {
+        [40, 60, 90, 120, 180].forEach((dur) => {
+          [1, 2, 3, 4].forEach((mw) => {
+            toets(renderVariant_(v, S, mw, "Base", dur));
+          });
+        });
+      });
+    });
+    assert_("blokken-dekking: renderings > 1000", true, n > 1000);
+    assert_("elke rendering heeft blokken", true, blokkenOk);
+    assert_("blokken teruggevouwen == intent (±1,0 min)", true, intentOk);
+    assert_("Σ blokminuten == totaalMin (±1,0 min)", true, somOk);
+  });
+
+  // ── Richtingsregressie op de ijking ──────────────────────────────────
+  // Vaste archetype-id, vaste duur, vaste mesoweek. De oude weging staat hier
+  // als literal zodat de RICHTING vastligt, niet alleen het nieuwe getal.
+  it("testIjkingRichting", () => {
+    const S: any = {
+      ftp: 275,
+      lthr: 178,
+      doel: "FTP",
+      doelStart: new Date(2026, 0, 5),
+    };
+    const oudeWeging = (it: any) =>
+      Math.round(
+        (it.low || 0) * 0.7 +
+          (it.high || 0) * 0.95 +
+          (it.anaerobic || 0) * 1.05,
+      );
+    // drempelsessie: kwaliteitsminuten wogen te licht → moet omhoog
+    const thr = expandArchetype_(
+      ARCHETYPES.filter((a: any) => a.id === "threshold_2x20")[0],
+      { ftp: S.ftp, lthr: S.lthr, doelMin: 90, mesoWeek: 1, macroFase: "Base" },
+    );
+    assert_("threshold_2x20 90min oude weging", 73, oudeWeging(thr.intent));
+    assert_("threshold_2x20 90min nieuwe weging", 88, thr.tss);
+    assert_("drempelsessie stijgt", true, thr.tss > oudeWeging(thr.intent));
+    // zuivere duursessie zonder kwaliteitsminuten: blijft praktisch gelijk
+    const z2 = renderVariant_(
+      getPool_("long_z2").filter((v: any) => v.id === "z2_steady")[0],
+      S,
+      1,
+      "Base",
+      150,
+    );
+    assert_("z2_steady geen kwaliteitsminuten", 0, z2.intent.high);
+    assert_("z2_steady 150min oude weging", 105, oudeWeging(z2.intent));
+    assert_("z2_steady 150min nieuwe weging", 108, z2.tss);
+    assert_(
+      "duursessie blijft binnen 5%",
+      true,
+      Math.abs(z2.tss - oudeWeging(z2.intent)) <= 0.05 * oudeWeging(z2.intent),
     );
   });
 
@@ -955,12 +1140,8 @@ describe("engine selftest", () => {
       });
       assert_("arch " + rec.id + " push-parse", true, pushOk);
       assert_("arch " + rec.id + " watt-roundtrip", true, wattOk);
-      // (6) tss == tssFromZoneMinutes_(intent)
-      assert_(
-        "arch " + rec.id + " tss",
-        tssFromZoneMinutes_(wo.intent),
-        wo.tss,
-      );
+      // (6) tss == tssFromBlokken_(blokken)
+      assert_("arch " + rec.id + " tss", tssFromBlokken_(wo.blokken), wo.tss);
     });
     // (7) M74 karakter-invariantie — expandArchetype_-pad: het werk-pct is INVARIANT
     // onder meso-/fase-modulatie (de %FTP-hendel is verwijderd; adj = identiteit).
@@ -1059,7 +1240,7 @@ describe("engine selftest", () => {
       });
       assert_("lib " + rec.id + " push-parse", true, pushOk);
       assert_("lib " + rec.id + " watt-roundtrip", true, wattOk);
-      assert_("lib " + rec.id + " tss", tssFromZoneMinutes_(wo.intent), wo.tss);
+      assert_("lib " + rec.id + " tss", tssFromBlokken_(wo.blokken), wo.tss);
       let tagsOk = rec.effectTags.length > 0;
       rec.effectTags.forEach((t: any) => {
         if (ARCHETYPE_EFFECT_TAGS.indexOf(t) < 0) tagsOk = false;
@@ -2078,7 +2259,8 @@ describe("engine selftest", () => {
       pFtp.structuur[2][0],
     );
     assert_("pendelIntervals FTP totaalMin ongewijzigd", 75, pFtp.totaalMin);
-    assert_("pendelIntervals FTP tss ongewijzigd", 60, pFtp.tss);
+    // herijkt op LOAD_TSS_RATE_: pendel blijft op tssFromZoneMinutes_ (geen blokken)
+    assert_("pendelIntervals FTP tss ongewijzigd", 66, pFtp.tss);
     assert_(
       "pendelIntervals VO2max werkblok",
       "Intervallen",
@@ -2086,7 +2268,7 @@ describe("engine selftest", () => {
     );
     assert_(
       "pendelIntervals VO2max tss ongewijzigd",
-      57,
+      85,
       pInt("pendel_vo2_intervals", "VO2max").tss,
     );
     assert_(
@@ -4813,7 +4995,7 @@ describe("engine selftest", () => {
   // pre-claim, 4× de efforts-arm die blijft en een slot consumeert, en 7× assignWorkouts voor de
   // demotie (allocator-dag blijft staan, niet-allocator-dag én cross-week worden nog gedemoteerd).
   // Herijkt zonder telling-effect (1:1): "alloc Base longride role" longride→endurance. 1245→1260.
-  it("exactly 1260 assertions", () => {
-    expect(assertCount).toBe(1260);
+  it("exactly 1286 assertions", () => {
+    expect(assertCount).toBe(1286);
   });
 });

@@ -206,13 +206,65 @@ export function pctZoneBucket_(pct: any): string {
   return "anaeroob";
 }
 
-/** Zone-gewogen TSS — ENIGE bron van de per-zone-rates. buckets in MINUTEN. */
+/**
+ * TSS per minuut per zone — ENIGE bron van de rates.
+ *
+ * Herkomst: gemeten op eigen ritten, niet overgenomen uit literatuur. Kleinste
+ * kwadraten door de oorsprong over 204 ritten / 266 uur; bron en ruwe uitvoer
+ * staan in docs/STAP7-IJKING-DATA.md.
+ *
+ * De vijf grenzen vallen samen met de zones die intervals.icu meet:
+ * tryPowerZoneTimes_ (ditzelfde bestand) vouwt Z1..Z7 identiek op, zodat een
+ * geplande sessie en een gereden rit langs dezelfde meetlat gaan.
+ */
+export const ZONE_TSS_RATE_ = {
+  rust: 0.6,
+  z2: 0.73,
+  tempo: 1.14,
+  drempel: 1.35,
+  anaeroob: 3.08,
+};
+
+/**
+ * Dezelfde ijking, opgevouwen naar de drie load-buckets (low/high/anaerobic)
+ * van ARCHETYPE_LOAD_FROM_BUCKET_. Alleen voor sessies zonder blokken.
+ */
+export const LOAD_TSS_RATE_ = {
+  low: 0.695,
+  high: 1.208,
+  anaerobic: 3.045,
+};
+
+/**
+ * Zone-gewogen TSS uit blokken — de nauwkeurige weg: vijf zones in plaats van
+ * drie. Rondt EEN keer aan het eind, nooit per blok. Onbekende of ontbrekende
+ * zone valt terug op het z2-tarief.
+ */
+export function tssFromBlokken_(blokken: any): number {
+  if (!Array.isArray(blokken) || !blokken.length) return 0;
+  let tss = 0;
+  for (const blok of blokken) {
+    if (!blok) continue;
+    const min = Number(blok.minuten) || 0;
+    const rate: number | undefined = (
+      ZONE_TSS_RATE_ as Record<string, number | undefined>
+    )[blok.zone];
+    tss += min * (rate == null ? ZONE_TSS_RATE_.z2 : rate);
+  }
+  return Math.round(tss);
+}
+
+/** Zone-gewogen TSS uit load-buckets. buckets in MINUTEN. */
 export function tssFromZoneMinutes_(buckets: any): number {
   buckets = buckets || {};
   const low = buckets.low || 0,
     high = buckets.high || 0,
     anaerobic = buckets.anaerobic || 0;
-  return Math.round(low * 0.7 + high * 0.95 + anaerobic * 1.05);
+  return Math.round(
+    low * LOAD_TSS_RATE_.low +
+      high * LOAD_TSS_RATE_.high +
+      anaerobic * LOAD_TSS_RATE_.anaerobic,
+  );
 }
 
 /** Lookup: welke load-focus zones dekt deze workout? (low/high/anaerobic) */
