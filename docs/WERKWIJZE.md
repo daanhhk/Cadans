@@ -45,6 +45,7 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
 - **CC**: leest de GAS-bron van schijf (`C:\Users\daan\Projects\training`, read-only) — **nooit via WebFetch**, dat geeft een lossy parafrase.
 - De regel "de chat kan de repo niet lezen" geldt **alleen de uncommitte lokale Cadans-staat**. De GAS-bron en de gecommitte Cadans-code lees je gewoon zelf.
 - `VORMGEVING-SPEC.md`, `HANDOFF.md` en de recon-docs zijn een gepinde **samenvatting**, geen vervanging. Verifieer elke parity-claim tegen de bron.
+- **GAS is een PORT-referentie, geen normbron.** De bevroren bron beantwoordt uitsluitend "hebben we functie X destijds getrouw overgezet". Hij beantwoordt NOOIT "is dit de juiste waarde": waar een getal vandaan komt zegt niets over of het klopt. Is er een meting op de echte reeks, dan wint die, en dan is de herkomst van het oude getal geen bespreking waard — een fork hoeft niet als fork verantwoord te worden. Aanleiding: bij de TSS-ijking werd de GAS-oorsprong van de weging 0,7/0,95/1,05 opgezocht om de wijziging als "bewuste fork" te labelen, terwijl HANDOFF §7 GAS al gesloten had verklaard en de meting het antwoord al gaf.
 
 ## Recon en bewijslast
 
@@ -159,3 +160,4 @@ FOCUS DEZE CHAT: <vul in>
 - 2026-07-27 — les toegevoegd in *Recon en bewijslast*: ijk een simulatie op een gemeten eindwaarde vóór je hem gebruikt. Aanleiding: de CTL-simulatie naar AGR erfde de onderschatting van `tssFromZoneMinutes_` en leverde een onhoudbare uren-conclusie op.
 - 2026-07-27 — les toegevoegd in *Recon en bewijslast*: ijk niet op gedrag dat je wilt vervangen. Aanleiding: de selectieregel voor een lange dag was aan de D1-meting toegewezen, terwijl die ritten een verslag zijn van hoe Daan vóór Cadans op gevoel trainde; een regel die daarop fit reproduceert de oude gewoonte.
 - 2026-07-27 — in *Prod en veiligheid* vastgelegd dat `wrangler d1 execute --file` het bestand als import verwerkt en geen resultaatrijen teruggeeft; een meting draait per statement met `--command --json`.
+- 2026-07-27 — in *Bronhiërarchie voor parity* vastgelegd dat de bevroren GAS-bron een PORT-referentie is en geen normbron: een op de echte reeks geijkt getal wint van de bron, en een afwijking hoeft niet als fork verantwoord te worden. Aanleiding: bij de TSS-ijking ging een ronde op aan het opzoeken van de GAS-herkomst van 0,7/0,95/1,05 terwijl de meting het antwoord al gaf.
