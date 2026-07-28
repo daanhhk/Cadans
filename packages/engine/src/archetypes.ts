@@ -42,6 +42,28 @@ export function archBpm_(kind: string, lthr: number): string {
   return bpmRange(lthr, 78, 90); // steady / fill
 }
 
+/**
+ * Nominale WERKminuten van een archetype — de ENIGE definitie. steady telt zijn durMin,
+ * een interval telt reps × onMin (onSec/60 als onMin ontbreekt). Rust tussen de intervallen
+ * telt NIET mee; dat is nominalRest en die blijft waar hij hoort.
+ *
+ * Telt over ALLE core-entries: een ladder, een over-under en een set staan als meerdere
+ * entries naast elkaar, niet als een eigen kind. Er zijn er maar twee: "int" en "steady".
+ */
+export function archetypeWorkMin_(rec: any): number {
+  let werk = 0;
+  ((rec && rec.core) || []).forEach((c: any) => {
+    if (!c) return;
+    if (c.kind === "steady") {
+      werk += Number(c.durMin) || 0;
+    } else {
+      const onM = c.onMin != null ? c.onMin : (Number(c.onSec) || 0) / 60;
+      werk += (Number(c.reps) || 0) * (Number(onM) || 0);
+    }
+  });
+  return werk;
+}
+
 export function expandArchetype_(rec: any, ctx: any): any {
   ctx = ctx || {};
   const ftp = ctx.ftp,
@@ -65,17 +87,12 @@ export function expandArchetype_(rec: any, ctx: any): any {
   const f = ctx.mesoWeek != null ? mesoFactor(ctx.mesoWeek) : 1;
   const warmupMin0 = rec.warmup.durMin;
   const cooldownMin0 = rec.cooldown.durMin;
-  let nominalWork = 0,
-    nominalRest = 0;
+  const nominalWork = archetypeWorkMin_(rec);
+  let nominalRest = 0;
   rec.core.forEach((c: any) => {
-    if (c.kind === "steady") {
-      nominalWork += c.durMin;
-    } else {
-      const onM = c.onMin != null ? c.onMin : c.onSec / 60;
-      const offM = c.offMin != null ? c.offMin : c.offSec / 60;
-      nominalWork += c.reps * onM;
-      nominalRest += c.reps * offM;
-    }
+    if (c.kind === "steady") return;
+    const offM = c.offMin != null ? c.offMin : c.offSec / 60;
+    nominalRest += c.reps * offM;
   });
   let workScale = 1,
     effWarmup = warmupMin0,
@@ -1769,7 +1786,34 @@ export function goalWorkout_(
       beschikbareTijd <= a.duurRange[1] &&
       archetypeAllowedForProfile_(a, profiel.id),
   );
-  if (!kandidaten.length) return null;
+
+  // FALLBACK VOORBIJ HET PLAFOND (docs/DUUR-SELECTIEREGEL.md §4). Binnen de bibliotheek-band
+  // doet het plafond echt werk — het weert korte sjablonen van middellange dagen — dus het
+  // blijft staan. Maar boven de band (drempel vanaf 121 min, sweetspot vanaf 136, vo2 vanaf
+  // 101) levert het NUL kandidaten en viel de dag door naar duurwerk zonder kwaliteit.
+  // Dan, en alleen dan, kiezen we alsnog: langste band eerst, bij gelijke band het zwaarste
+  // sjabloon. Voorkeur en staleness spelen hier geen rol — er valt niets te rouleren.
+  if (!kandidaten.length) {
+    const buitenBand = ARCHETYPES.filter(
+      (a: any) =>
+        a.effectTags.indexOf(intent) >= 0 &&
+        beschikbareTijd >= a.duurRange[0] &&
+        archetypeAllowedForProfile_(a, profiel.id),
+    );
+    if (!buitenBand.length) return null;
+    buitenBand.sort((a: any, b: any) => {
+      if (a.duurRange[1] !== b.duurRange[1])
+        return b.duurRange[1] - a.duurRange[1];
+      const wa = archetypeWorkMin_(a),
+        wb = archetypeWorkMin_(b);
+      if (wa !== wb) return wb - wa;
+      return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+    });
+    return {
+      type: COACH_INTENT_ENGINE_TYPE_[intent],
+      archetypeId: buitenBand[0].id,
+    };
+  }
 
   const voork = profiel.archetypeVoorkeuren || {};
   const intentRec = recency.filter((r: any) => r.intent === intent);

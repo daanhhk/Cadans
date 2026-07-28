@@ -2504,10 +2504,13 @@ describe("engine selftest", () => {
       "sweet_spot",
       keyIntensity("FTP", "Build", dek, "lang", false),
     );
-    // goalWorkout_ null (geen archetype past in 300 min) → fallback-keten → trip-tak long_z2.
+    // HERIJKT (docs/DUUR-SELECTIEREGEL.md §4): goalWorkout_ geeft boven de bibliotheek-band
+    // niet meer null. De fallback-pass kiest threshold_long (band 82-120, 42 werkminuten), dus
+    // de trip-tak naar long_z2 wordt niet meer bereikt. Dit was de PIN op het defect zelf —
+    // een dag van 300 min viel door naar duurwerk zonder kwaliteit.
     assert_(
-      "kiPlug goalWO-null trip-fallback",
-      "long_z2",
+      "kiPlug goalWO-null → fallback-archetype",
+      "threshold",
       keyIntensity("FTP", "Build", dek, null, true, {
         beschikbareTijd: 300,
         recency: [],
@@ -2576,10 +2579,11 @@ describe("engine selftest", () => {
       assert_("sim " + fase + " geen-directe-herhaling", false, herh);
     });
 
-    // Duur-extremen.
+    // Duur-extremen. HERIJKT, zelfde reden als hierboven: boven de band levert goalWorkout_
+    // nu een archetype in plaats van null, dus de trip-tak long_z2 vuurt niet meer.
     assert_(
-      "sim >135min trip-fallback",
-      "long_z2",
+      "sim >135min → fallback-archetype",
+      "vo2max",
       keyIntensity("Beklimmingen", "Build", dekNorm, null, true, {
         beschikbareTijd: 150,
         recency: [],

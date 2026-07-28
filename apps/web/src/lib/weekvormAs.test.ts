@@ -1,0 +1,185 @@
+import type { PlannerDay, SettingsInput } from "@cadans/shared";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { buildWeekProposal } from "./proposal";
+
+// DE WEEKVORM-AS — de vaste meetlat van docs/ROADMAP.md. Vijf weekvormen, doel FTP, fase Base,
+// mesoweek 1. Per weekvorm: kwaliteitsminuten (Σ intent.high + intent.anaerobic over alle
+// sessies) en week-TSS. Elke bouw die de dosis raakt draait deze as opnieuw.
+//
+// TWEE SOORTEN ASSERTIE, en het verschil is opzettelijk:
+//   1. De INVARIANT — V1, V3 en V5 mogen niet ZAKKEN. Die weekvormen liggen binnen de
+//      bibliotheek-band; een wijziging die daar kwaliteit kost is een regressie, geen keuze.
+//      Deze assertie wordt NIET herijkt. Valt hij om, dan is de wijziging fout.
+//   2. De VINGERAFDRUK — de volledige reeks, exact. Die MAG bewust herijkt worden bij een
+//      dosis-wijziging, mits de invariant staat en de richting in de commit-body verantwoord
+//      is. Hij vangt onbedoelde drift, hij verbiedt geen ontwerpbesluit.
+//
+// Klok gepind BINNEN de test (na vi.setSystemTime), want weekIndexFromStart_ én
+// allocateQualityWeek_ dateren zich op de ambient new Date().
+
+const MAANDAG = new Date(2026, 6, 27, 8, 0, 0); // 2026-07-27, ma
+beforeAll(() => {
+  vi.useFakeTimers();
+  vi.setSystemTime(MAANDAG);
+});
+afterAll(() => {
+  vi.useRealTimers();
+});
+
+const iso = (n: number) => {
+  const d = new Date(2026, 6, 27 + n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate(),
+  ).padStart(2, "0")}`;
+};
+
+function settings(pendelDuurMin: number): SettingsInput {
+  return {
+    ftp: 280,
+    lthr: null,
+    gewicht: 75,
+    doel: "FTP",
+    doelStart: "2026-06-29",
+    hrMax: null,
+    hrRest: null,
+    doelDuur: null,
+    fase: null,
+    profielPreset: null,
+    pendelDuurMin,
+    pendelAantal: 2,
+  };
+}
+
+function plannerDays(
+  min: Record<number, number>,
+  pendel: number[],
+): PlannerDay[] {
+  return [0, 1, 2, 3, 4, 5, 6].map((n) => ({
+    datum: iso(n),
+    train: min[n] != null,
+    dag: null,
+    minuten: min[n] ?? 0,
+    dagtype:
+      min[n] == null
+        ? null
+        : pendel.indexOf(n) >= 0
+          ? "pendel"
+          : n === 5 || n === 6
+            ? "weekend"
+            : "vrij",
+    toelichting: null,
+    voorgesteldType: null,
+    gedaan: false,
+  }));
+}
+
+function meet(
+  min: Record<number, number>,
+  pendel: number[],
+  pendelDuurMin: number,
+): { kwal: number; tss: number } {
+  const r = buildWeekProposal({
+    settings: settings(pendelDuurMin),
+    plannerDays: plannerDays(min, pendel),
+    events: [
+      {
+        id: 1,
+        datum: "2027-04-17",
+        naam: "A-race",
+        type: "race",
+        prioriteit: "A",
+      },
+    ],
+    activities: [],
+    weekplans: [],
+    wellness: [],
+    rpe: [],
+    todayISO: iso(0),
+  } as never);
+  let kwal = 0;
+  let tss = 0;
+  for (const d of (r as { days: unknown[] }).days) {
+    for (const s of ((d as { sessions?: unknown[] }).sessions ?? []) as {
+      intent?: { high?: number; anaerobic?: number };
+      tss?: number;
+    }[]) {
+      kwal +=
+        (Number(s.intent?.high) || 0) + (Number(s.intent?.anaerobic) || 0);
+      tss += Number(s.tss) || 0;
+    }
+  }
+  return { kwal: Math.round(kwal), tss };
+}
+
+const VORMEN: {
+  naam: string;
+  min: Record<number, number>;
+  pendel: number[];
+  pendelDuurMin: number;
+}[] = [
+  {
+    naam: "V1 5,0u ma60 di60 do60 za120",
+    min: { 0: 60, 1: 60, 3: 60, 5: 120 },
+    pendel: [],
+    pendelDuurMin: 80,
+  },
+  {
+    naam: "V2 8,0u ma90 di90 do90 za210",
+    min: { 0: 90, 1: 90, 3: 90, 5: 210 },
+    pendel: [],
+    pendelDuurMin: 80,
+  },
+  {
+    naam: "V3 8,0u ma70 di70 do70 za180 zo90",
+    min: { 0: 70, 1: 70, 3: 70, 5: 180, 6: 90 },
+    pendel: [],
+    pendelDuurMin: 80,
+  },
+  {
+    naam: "V4 7,0u ma60 di60 do60 za240",
+    min: { 0: 60, 1: 60, 3: 60, 5: 240 },
+    pendel: [],
+    pendelDuurMin: 80,
+  },
+  {
+    naam: "V5 7,0u ma60 za120 + 3 pendeldagen 80",
+    min: { 0: 60, 1: 80, 2: 80, 3: 80, 5: 120 },
+    pendel: [1, 2, 3],
+    pendelDuurMin: 40,
+  },
+];
+
+// De vingerafdruk. Gemeten 2026-07-28, na docs/DUUR-SELECTIEREGEL.md §4 (plafond-fallback).
+const VERWACHT = {
+  kwal: [69, 81, 45, 81, 64],
+  tss: [253, 391, 362, 347, 340],
+};
+
+// De invariant. V1, V3 en V5 liggen binnen de bibliotheek-band; daar hoort geen enkele
+// dosis-wijziging kwaliteit te KOSTEN. Herijk deze getallen niet naar beneden.
+const VLOER: Record<number, number> = { 0: 69, 2: 45, 4: 64 };
+
+describe("Weekvorm-as: kwaliteitsminuten en week-TSS per weekvorm", () => {
+  it("V1, V3 en V5 zakken niet onder hun vloer (INVARIANT — niet herijken)", () => {
+    for (const [idx, vloer] of Object.entries(VLOER)) {
+      const v = VORMEN[Number(idx)];
+      if (!v) throw new Error(`weekvorm ${idx} bestaat niet`);
+      const { kwal } = meet(v.min, v.pendel, v.pendelDuurMin);
+      expect(
+        kwal,
+        `${v.naam}: ${kwal} kwaliteitsminuten, vloer is ${vloer}`,
+      ).toBeGreaterThanOrEqual(vloer);
+    }
+  });
+
+  it("de volledige reeks (VINGERAFDRUK — mag bewust herijkt worden)", () => {
+    const kwal: number[] = [];
+    const tss: number[] = [];
+    for (const v of VORMEN) {
+      const r = meet(v.min, v.pendel, v.pendelDuurMin);
+      kwal.push(r.kwal);
+      tss.push(r.tss);
+    }
+    expect({ kwal, tss }).toEqual(VERWACHT);
+  });
+});
