@@ -4878,8 +4878,8 @@ describe("engine selftest", () => {
       rollen_(pFtp, "longride"),
     );
     assert_(
-      "stap7: volle quality-quota geplaatst (Base 2)",
-      2,
+      "stap7: volle quality-quota geplaatst (Base 3)",
+      3,
       rollen_(pFtp, "quality"),
     );
     assert_(

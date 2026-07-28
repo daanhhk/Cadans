@@ -166,11 +166,12 @@ const VORMEN: {
   },
 ];
 
-// De vingerafdruk. V1 t/m V5 gemeten 2026-07-28 na docs/DUUR-SELECTIEREGEL.md §4
-// (plafond-fallback); V6 erbij gemeten op diezelfde, ongewijzigde engine.
+// De vingerafdruk. Herijkt na het derde kwaliteitsslot in Base (ROADMAP stap 1b):
+// PROFILES.ftp.kwaliteitPerWeek.Base van 2 naar 3. Elke weekvorm STEEG; de invariant hieronder
+// is niet aangeraakt en bleef groen.
 const VERWACHT = {
-  kwal: [69, 81, 45, 81, 64, 69],
-  tss: [253, 391, 362, 347, 340, 212],
+  kwal: [93, 113, 77, 105, 84, 93],
+  tss: [268, 410, 437, 362, 352, 227],
 };
 
 // De invariant. V1, V3 en V5 liggen binnen de bibliotheek-band; daar hoort geen enkele

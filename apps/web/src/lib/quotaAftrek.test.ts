@@ -74,7 +74,16 @@ function act(
 // HARD geleverd: 40 min in Z4 → high = 40 ≥ DEKKING_MIN_MIN (15).
 const HARDE_RIT = [act(iso(0), [{ id: "Z4", secs: 2400 }])];
 // Zelfde dag, zelfde duur, maar puur Z2 → low; geen high/anaerobic → niet hard.
-const RUSTIGE_RIT = [act(iso(0), [{ id: "Z2", secs: 5400 }])];
+// IF EXPLICIET OP 0,65. act() zet standaard 0,85, en dat maakte deze "rustige" rit
+// zelftegensprekend: recentHardDate_ noemt een rit hard bij IF >= 0,85 ÓF bij high/anaerobic-
+// minuten, dus met 0,85 telde hij alsnog als hard en blokkeerde hij via avoid-consecutive-hard
+// de dinsdag. Bij een quotum van 2 viel dat niet op — de TELLING bleef toevallig gelijk — maar
+// de test mat daarmee niet wat hij beweert. Een pure Z2-rit van 90 min heeft een IF rond 0,65.
+const RUSTIGE_RIT = (() => {
+  const r = act(iso(0), [{ id: "Z2", secs: 5400 }]);
+  r[7] = 0.65;
+  return [r];
+})();
 
 function plan(activities: ActValuesRow[]): ProposalWeek {
   return buildWeekProposal({

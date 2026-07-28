@@ -1600,7 +1600,7 @@ export const PROFILES: any = {
     soort: "capaciteit",
     intentGewichten: GOAL_INTENT_WEIGHTS_FTP_,
     faseModulatie: GOAL_FASE_MOD_,
-    kwaliteitPerWeek: { Base: 2, Build: 3, Peak: 2 },
+    kwaliteitPerWeek: { Base: 3, Build: 3, Peak: 2 },
     spreiding: {
       midweekMinGap: 1,
       weekendBlok: false,
