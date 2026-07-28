@@ -329,12 +329,73 @@ export function allocateQualityWeek_(
     return m;
   }
   // Spreiding-prioriteit: (1) geen weekend-paar vormen, (2) max gap, (3) pendel-voorkeur, (4) laagste dagIdx.
-  function pickBestSpread_(cands: any, anchors: any): any {
+  // Effectief trainbare tijd van een dag: een pendeldag rijdt pendelDuurMin (terugval 80),
+  // een gewone dag zijn dagminuten; beide afgetopt door maxDuurMin. ENIGE definitie — zowel de
+  // sjabloonkeuze in stap 3 als de draagkrachtterm hieronder lezen deze helper.
+  function draagkracht_(d: any): number {
+    return Math.min(
+      d.type === "pendel" ? settings.pendelDuurMin || 80 : d.minuten,
+      (profiel && profiel.maxDuurMin) || Infinity,
+    );
+  }
+
+  // DRAAGKRACHT BOVEN AFSTAND vanaf de tweede kwaliteitsdag — docs/STAP1B-ALLOCATOR-RECON.md §4.
+  // De tussenruimte-eis (gapOK_) is een HARDE filter en blijft dat; wie hier binnenkomt voldoet
+  // er al aan. Boven die eis heeft EXTRA afstand geen trainingswaarde, terwijl draagkracht die
+  // wel heeft: zonder deze term won in V3 de zondag van 90 min van de zaterdag van 180, puur
+  // omdat hij verder van de maandag lag, en droeg de grootste dag van de week nul kwaliteit.
+  // Zonder ankers bestaat er geen afstandsvraag, dus dan doet de term NIET mee en is de eerste
+  // keuze byte-identiek aan voorheen. Dit reserveert de lange dag niet — DOELEN-SPEC §2A blijft
+  // staan — het stopt alleen dat de allocator er blind overheen stapt.
+  // Anker-vorm zoals hardAnchors_ hem maakt, zodat gapOK_ en formsWeekendPair_ er ongewijzigd
+  // mee overweg kunnen.
+  function ankerVan_(d: any): any {
+    return { t: stripTime_(d.datum).getTime(), weekend: d.type === "weekend" };
+  }
+
+  // Hoeveel dagen zijn er NA deze pool nog te plaatsen, hoogstens `budget`? Uitputtend gezocht
+  // over de pool — die is hoogstens zeven dagen en het budget een handvol. Gebruikt dezelfde
+  // gapOK_ die de allocator zelf hanteert; de tussenruimte-regel wordt hier NIET nagebouwd.
+  function maxPlaatsbaar_(pool: any, anchors: any, budget: number): number {
+    if (budget <= 0) return 0;
+    let best = 0;
+    for (let i = 0; i < pool.length; i++) {
+      const d = pool[i];
+      if (!gapOK_(d, anchors)) continue;
+      const rest = pool.filter((x: any) => x.dagIdx !== d.dagIdx);
+      const n =
+        1 + maxPlaatsbaar_(rest, anchors.concat([ankerVan_(d)]), budget - 1);
+      if (n > best) best = n;
+      if (best >= budget) break;
+    }
+    return best;
+  }
+
+  // BEREIKBAARHEID BOVEN DRAAGKRACHT — docs/STAP1B-ALLOCATOR-RECON.md §4.
+  // De draagkrachtterm is GREEDY: hij kan een lange dag kiezen die door de tussenruimte-eis zijn
+  // buren blokkeert, waarna het resterende quotum onbenut blijft. GEMETEN op de ftp-fixture:
+  // kwaliteit op de dagen 1, 4 en 6 werd 1 en 5 — drie sleutelsessies werden er twee.
+  // Daarom telt eerst het AANTAL nog plaatsbare sleutelsessies en pas daarna de draagkracht van
+  // één dag: DOELEN-SPEC §3.1 noemt de sleutelsessies beschermd en §3.2 de frequentie. Een dag
+  // die zichzelf groot maakt ten koste van een hele andere sessie is netto verlies.
+  function pickBestSpread_(cands: any, anchors: any, budget?: any): any {
+    const weegDraagkracht = !!(anchors && anchors.length);
+    // budget = het aantal slots dat NA deze keuze nog te vergeven is.
+    const restBudget = Math.max(0, (Number(budget) || 1) - 1);
     let best: any = null,
       bk: any = null;
     cands.forEach((d: any) => {
       const k = {
         pair: formsWeekendPair_(d, anchors) ? 1 : 0,
+        bereik: weegDraagkracht
+          ? 1 +
+            maxPlaatsbaar_(
+              cands.filter((x: any) => x.dagIdx !== d.dagIdx),
+              anchors.concat([ankerVan_(d)]),
+              restBudget,
+            )
+          : 0,
+        draag: weegDraagkracht ? draagkracht_(d) : 0,
         gap: minGapTo_(d, anchors),
         pendel: d.type === "pendel" ? 0 : 1,
         idx: d.dagIdx,
@@ -346,6 +407,20 @@ export function allocateQualityWeek_(
       }
       if (k.pair !== bk.pair) {
         if (k.pair < bk.pair) {
+          best = d;
+          bk = k;
+        }
+        return;
+      }
+      if (k.bereik !== bk.bereik) {
+        if (k.bereik > bk.bereik) {
+          best = d;
+          bk = k;
+        }
+        return;
+      }
+      if (k.draag !== bk.draag) {
+        if (k.draag > bk.draag) {
           best = d;
           bk = k;
         }
@@ -427,6 +502,7 @@ export function allocateQualityWeek_(
       const pick = pickBestSpread_(
         elig.filter((d: any) => !planned[d.dagIdx] && gapOK_(d, anc2)),
         anc2,
+        remaining,
       );
       if (pick) {
         plan[pick.dagIdx] = { role: "quality", type: dp, archetypeId: null };
@@ -446,14 +522,13 @@ export function allocateQualityWeek_(
       (d: any) => !planned[d.dagIdx] && gapOK_(d, anchors),
     );
     if (!cands.length) break;
-    const sel = pickBestSpread_(cands, anchors);
+    const sel = pickBestSpread_(cands, anchors, remaining);
     if (!sel) break;
     // Pass 1: Base loopt nu via dezelfde goalWorkout_-keuze als Build/Peak (was hardcoded
     // sweet_spot), mét de weekvolume-laag (weekV) → Base polariseert (vo2 verschijnt bij hoog volume).
-    const bt = Math.min(
-      sel.type === "pendel" ? settings.pendelDuurMin || 80 : sel.minuten,
-      (profiel && profiel.maxDuurMin) || Infinity,
-    ); // maxDuurMin-seam blijft bruikbaar maar GEEN profiel zet het veld meer (Onderhoud-45-cap verwijderd) → altijd Infinity
+    // maxDuurMin-seam blijft bruikbaar maar GEEN profiel zet het veld meer (Onderhoud-45-cap
+    // verwijderd) → altijd Infinity. Zelfde grootheid als de draagkrachtterm in pickBestSpread_.
+    const bt = draagkracht_(sel);
     const gw = goalWorkout_(profiel, macroFase, bt, rec, cov, weekV);
     if (gw) {
       plan[sel.dagIdx] = {

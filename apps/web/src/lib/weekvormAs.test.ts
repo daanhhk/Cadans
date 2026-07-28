@@ -81,7 +81,7 @@ function meet(
   pendel: number[],
   pendelDuurMin: number,
   dagOffset = 0,
-): { kwal: number; tss: number } {
+): { kwal: number; tss: number; dagen: number } {
   vi.setSystemTime(new Date(2026, 6, 27 + dagOffset, 8, 0, 0));
   const r = buildWeekProposal({
     settings: settings(pendelDuurMin),
@@ -103,17 +103,20 @@ function meet(
   } as never);
   let kwal = 0;
   let tss = 0;
+  const kdagen = new Set<string>();
   for (const d of (r as { days: unknown[] }).days) {
     for (const s of ((d as { sessions?: unknown[] }).sessions ?? []) as {
       intent?: { high?: number; anaerobic?: number };
       tss?: number;
     }[]) {
-      kwal +=
+      const q =
         (Number(s.intent?.high) || 0) + (Number(s.intent?.anaerobic) || 0);
+      kwal += q;
       tss += Number(s.tss) || 0;
+      if (q > 0) kdagen.add((d as { datum: string }).datum);
     }
   }
-  return { kwal: Math.round(kwal), tss };
+  return { kwal: Math.round(kwal), tss, dagen: kdagen.size };
 }
 
 const VORMEN: {
@@ -164,14 +167,32 @@ const VORMEN: {
     pendelDuurMin: 80,
     dagOffset: 1,
   },
+  // V7 — de LANGE WEEKENDDAG DIE ZIJN BUREN BLOKKEERT. Deze familie zat in geen van beide
+  // meetsets, en juist daar zat het defect: een greedy keuze voor de zaterdag van 180 min laat
+  // vrijdag én zondag door de tussenruimte-eis afvallen, waarna het derde slot onbenut blijft.
+  // GEMETEN zonder de bereikbaarheidsterm: 81 kwaliteitsminuten en 2 kwaliteitsdagen in plaats
+  // van 90 en 3. Het AANTAL dagen maakt dat zichtbaar; op minuten alleen oogt het als ruis.
+  // Staat NIET in de invariant-lijst, net als V6.
+  {
+    naam: "V7 di60 vr90 za180 zo120",
+    min: { 1: 60, 4: 90, 5: 180, 6: 120 },
+    pendel: [],
+    pendelDuurMin: 80,
+  },
 ];
 
-// De vingerafdruk. Herijkt na het derde kwaliteitsslot in Base (ROADMAP stap 1b):
-// PROFILES.ftp.kwaliteitPerWeek.Base van 2 naar 3. Elke weekvorm STEEG; de invariant hieronder
-// is niet aangeraakt en bleef groen.
+// De vingerafdruk. Herijkt na de allocator-termen bereikbaarheid en draagkracht (ROADMAP stap
+// 1b, docs/STAP1B-ALLOCATOR-RECON.md §4). Alleen V3 beweegt ten opzichte van de nulmeting:
+// 77 -> 113 kwaliteitsminuten en 437 -> 464 TSS, doordat de zaterdag van 180 min nu wint van de
+// zondag van 90. De andere zes zijn byte-identiek in minuten ÉN in TSS.
+//
+// `dagen` = het AANTAL dagen met kwaliteitsminuten. Die rij is er bewust bij gekomen: het
+// greedy-defect uit de tussenronde kostte V7 een hele kwaliteitsdag terwijl de minuten maar 10
+// procent zakten. Op minuten alleen oogt zoiets als ruis; op dagen niet.
 const VERWACHT = {
-  kwal: [93, 113, 77, 105, 84, 93],
-  tss: [268, 410, 437, 362, 352, 227],
+  kwal: [93, 113, 113, 105, 84, 93, 90],
+  tss: [268, 410, 464, 362, 352, 227, 375],
+  dagen: [3, 3, 3, 3, 3, 3, 3],
 };
 
 // De invariant. V1, V3 en V5 liggen binnen de bibliotheek-band; daar hoort geen enkele
@@ -194,11 +215,13 @@ describe("Weekvorm-as: kwaliteitsminuten en week-TSS per weekvorm", () => {
   it("de volledige reeks (VINGERAFDRUK — mag bewust herijkt worden)", () => {
     const kwal: number[] = [];
     const tss: number[] = [];
+    const dagen: number[] = [];
     for (const v of VORMEN) {
       const r = meet(v.min, v.pendel, v.pendelDuurMin, v.dagOffset);
       kwal.push(r.kwal);
       tss.push(r.tss);
+      dagen.push(r.dagen);
     }
-    expect({ kwal, tss }).toEqual(VERWACHT);
+    expect({ kwal, tss, dagen }).toEqual(VERWACHT);
   });
 });

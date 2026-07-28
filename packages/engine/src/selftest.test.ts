@@ -2728,9 +2728,28 @@ describe("engine selftest", () => {
       });
       return a.sort((x: any, y: any) => x - y);
     }
-    function noAdjacent(idxs: any) {
-      for (let i = 1; i < idxs.length; i++)
-        if (idxs[i] - idxs[i - 1] < 2) return false;
+    // Twee harde dagen moeten twee dagen tussenruimte houden — MET dezelfde uitzondering die
+    // gapOK_ (planner.ts, `adjWeekend`) al draagt: een weekendpaar mag aaneensluiten zodra het
+    // profiel `spreiding.weekendBlok` draagt. DOELEN-SPEC §3.4 beschermt dat paar zelfs.
+    // Deze helper codeerde tot nu toe een STRENGERE regel dan de engine ooit beloofde, en
+    // slaagde alleen doordat de situatie zich niet voordeed. Niet versoepeld — gelijkgetrokken.
+    // De vlag komt van het meegegeven profiel; er wordt nergens een doel hardgecodeerd.
+    function noAdjacent(idxs: any, prof?: any, dagen?: any) {
+      const weekendBlok = !!(
+        prof &&
+        prof.spreiding &&
+        prof.spreiding.weekendBlok
+      );
+      const isWeekend = (idx: any) => {
+        const d = (dagen || []).filter((x: any) => x.dagIdx === idx)[0];
+        return !!d && d.type === "weekend";
+      };
+      for (let i = 1; i < idxs.length; i++) {
+        if (idxs[i] - idxs[i - 1] >= 2) continue;
+        const paarMag =
+          weekendBlok && isWeekend(idxs[i]) && isWeekend(idxs[i - 1]);
+        if (!paarMag) return false;
+      }
       return true;
     }
 
@@ -2760,20 +2779,82 @@ describe("engine selftest", () => {
     );
     assert_("alloc klim Build 2 quality", 2, qCount(pa));
     assert_("alloc klim Build recovery-excl", true, pa[3] === undefined);
+    // HERIJKT bij de draagkracht-term (docs/STAP1B-ALLOCATOR-RECON.md §4). De pendeldag draagt
+    // pendelDuurMin = 80 effectief trainbare minuten en verslaat daarmee dagIdx 0 (60) en 2 (75);
+    // de zondag van 120 verslaat dagIdx 2 eveneens. De quality-dagen verschuiven dus van {0, 2}
+    // naar {1, 6}. Dat een pendeldag kwaliteit KAN dragen lag al vast — zie "alloc Base pendel
+    // kan quality" verderop; nieuw is alleen dat draagkracht bepaalt wie wint.
     assert_(
-      "alloc klim Build pendel endurance",
-      "pendel_z2",
+      "alloc klim Build pendeldag draagt quality",
+      "vo2max",
       pa[1] && pa[1].type,
     );
     assert_(
       "alloc klim Build no-adjacent-hard",
       true,
-      noAdjacent(hardIdxs(pa)),
+      noAdjacent(hardIdxs(pa), klim, week()),
+    );
+    // Het weekendpaar is GEEN vrije keuze: het ontstaat alleen als er geen gapOK_-geldige
+    // kandidaat is die er géén vormt. De oude assertie pinde dat dagIdx 6 endurance is, en dat
+    // was slechts waar zolang er toevallig een alternatief bestond. Twee metingen leggen de
+    // echte regel vast.
+    //
+    // (i) HET PAAR KOST NIETS. Haal dagIdx 6 weg en de allocator plaatst nog stééds drie harde
+    //     dagen, nu op 0, 2 en 5 zonder paar. Het paar is dus geen noodgreep om het quotum vol
+    //     te krijgen: beide routes leveren drie sleutelsessies. Op gelijke bereikbaarheid wint
+    //     vervolgens de draagkracht van de pendeldag (80 min) van dag 0 (60), waarna alleen de
+    //     zondag nog door gapOK_ komt — via de weekendBlok-uitzondering die klim expliciet
+    //     draagt en die DOELEN-SPEC §3.4 beschermt.
+    const weekZonder6 = week().map((d: any) =>
+      d.dagIdx === 6 ? { ...d, train: false } : d,
+    );
+    const paZonder6 = allocateQualityWeek_(
+      weekZonder6,
+      klim,
+      "Build",
+      dekFresh,
+      [],
+      null,
+      null,
+      SK,
+      today,
+      false,
+      null,
     );
     assert_(
-      "alloc klim Build weekend-pair vermeden",
+      "alloc klim Build zonder zondag: ongepaard drietal",
+      "0,2,5",
+      hardIdxs(paZonder6).join(","),
+    );
+    // (ii) De voorkeur LEEFT. Maak dagIdx 3 een gewone dag in plaats van recovery: die ligt op
+    //      twee dagen van beide ankers, komt dus door gapOK_ en vormt geen paar. Dan wint hij
+    //      van dagIdx 6 en blijft het weekend ongepaard. Zonder deze assertie is (i) een lege
+    //      huls — een regel die nooit iets vermijdt, vermijdt niets.
+    const weekMetAlt = week().map((d: any) =>
+      d.dagIdx === 3 ? { ...d, type: "vrij", minuten: 75 } : d,
+    );
+    const paMetAlt = allocateQualityWeek_(
+      weekMetAlt,
+      klim,
+      "Build",
+      dekFresh,
+      [],
+      null,
+      null,
+      SK,
+      today,
+      false,
+      null,
+    );
+    assert_(
+      "alloc klim Build weekendpaar vermeden zodra het kan",
+      "1,3,5",
+      hardIdxs(paMetAlt).join(","),
+    );
+    assert_(
+      "alloc klim Build alternatief laat zondag met rust",
       "endurance",
-      pa[6] && pa[6].role,
+      paMetAlt[6] && paMetAlt[6].role,
     );
     let qOk = true;
     Object.keys(pa).forEach((k) => {
@@ -2805,13 +2886,19 @@ describe("engine selftest", () => {
     // STAP 7 BOUWITEM 2 — 1:1 HERIJKT. Was: role "longride" / type "long_z2" (de kale
     // pre-claim gaf de langste dag onvoorwaardelijk aan long_z2). De pre-claim is vervallen;
     // de dag valt nu door naar de endurance-fill met hetzelfde type, tenzij de allocator hem
-    // als kwaliteit kiest. Zelfde aantal asserties, andere verwachting.
+    // als kwaliteit kiest.
+    //
+    // STAP 1b — 1:1 HERIJKT, en dit is precies dat "tenzij". Met de draagkracht-term KIEST de
+    // allocator de langste dag (180 min) nu als kwaliteit. Dat is geen pre-claim: de dag wint
+    // hem, hij krijgt hem niet gratis — het bewijs staat in "alloc klim Build weekendpaar
+    // vermeden zodra het kan", waar een kortere dag de lange verslaat zodra de spreiding dat
+    // vraagt. Zelfde aantal asserties, andere verwachting.
     assert_(
       "alloc Base langste dag: geen pre-claim meer",
-      "endurance",
+      "quality",
       pb[5] && pb[5].role,
     );
-    assert_("alloc Base langste dag type", "long_z2", pb[5] && pb[5].type);
+    assert_("alloc Base langste dag type", "vo2max", pb[5] && pb[5].type);
     assert_("alloc Base 2 quality", 2, qCount(pb));
     // Pass 1: Base loopt nu via goalWorkout_ (was hardcoded sweet_spot) → quality = echte archetypes,
     // drempel-led (#1 Base-intent), geen herhaalde vorm. Bij dit fixture-volume (~9,5u) komt vo2 via de
@@ -2874,7 +2961,14 @@ describe("engine selftest", () => {
       false,
       null,
     );
-    assert_("alloc ftp no-adjacent-hard", true, noAdjacent(hardIdxs(pd)));
+    // Profiel EXPLICIET meegegeven: ftp draagt weekendBlok=false, dus de uitzondering in
+    // noAdjacent kan hier per constructie niet vuren en de eis blijft twee dagen tussenruimte.
+    // Dat de vlag het gedrag stuurt — en niet het doel — wordt hiermee ook getoetst.
+    assert_(
+      "alloc ftp no-adjacent-hard",
+      true,
+      noAdjacent(hardIdxs(pd), ftp, week()),
+    );
     assert_("alloc ftp 3 quality", 3, qCount(pd));
     // E — done-quality threading (#3): pendel-only week (geen longride_efforts → volle 3 quality-slots);
     // weekDays met 1 done-hard dag (threshold) reduceert de quota 3 → 2.
@@ -5049,11 +5143,125 @@ describe("engine selftest", () => {
     );
   });
 
+  // ── STAP 1b — draagkracht boven afstand vanaf de tweede kwaliteitsdag ──
+  // docs/STAP1B-ALLOCATOR-RECON.md §4. Zonder deze term won in de V3-vorm de zondag van 90 min
+  // van de zaterdag van 180, puur omdat hij verder van de maandag lag, en droeg de grootste dag
+  // van de week nul kwaliteit. Twee kanten worden vastgelegd: dat de langste dag nu kwaliteit
+  // krijgt, én dat een week met GELIJKE dagduren zich niet verroert (draagkracht is dan overal
+  // gelijk, dus de term is inert en de afstand beslist als vanouds).
+  it("testStap1bDraagkracht", () => {
+    function dag_(idx: any, type: any, minuten: any) {
+      return {
+        dagIdx: idx,
+        dag: "d" + idx,
+        train: minuten != null,
+        datum: new Date(2026, 6, 27 + idx),
+        minuten: minuten == null ? 0 : minuten,
+        type: type,
+        gedaan: false,
+        voorgesteldType: "",
+      };
+    }
+    const dekFresh = { low: false, high: false, anaerobic: false };
+    const today = new Date(2026, 6, 27);
+    const SF = { doel: "FTP", pendelDuurMin: 80 };
+    const alloc_ = (dagen: any) =>
+      allocateQualityWeek_(
+        dagen,
+        PROFILES.ftp,
+        "Base",
+        dekFresh,
+        [],
+        null,
+        null,
+        SF,
+        today,
+        false,
+        null,
+      );
+    function qIdxs_(p: any) {
+      const a: any = [];
+      Object.keys(p).forEach((k) => {
+        if (p[k].role === "quality") a.push(Number(k));
+      });
+      return a.sort((x: any, y: any) => x - y);
+    }
+
+    // (1) V3-vorm: ma70 di70 do70 za180 zo90 — de langste eligible dag is zaterdag (dagIdx 5).
+    const v3 = [
+      dag_(0, "vrij", 70),
+      dag_(1, "vrij", 70),
+      dag_(2, null, null),
+      dag_(3, "vrij", 70),
+      dag_(4, null, null),
+      dag_(5, "weekend", 180),
+      dag_(6, "weekend", 90),
+    ];
+    const pV3 = alloc_(v3);
+    assert_("stap1b: V3 langste dag draagt quality", "quality", pV3[5]?.role);
+    assert_("stap1b: V3 drie quality-slots", 3, qIdxs_(pV3).length);
+    // de zondag van 90 min verliest nu van de zaterdag van 180 — dát was de vondst
+    assert_(
+      "stap1b: V3 zondag draagt geen quality",
+      true,
+      !pV3[6] || pV3[6].role !== "quality",
+    );
+
+    // (2) GELIJKE dagduren → draagkracht overal gelijk → term inert, keuze onveranderd.
+    // GEMETEN aan beide kanten: mét én zonder de draagkrachtterm levert deze week dagIdx
+    // 0, 3 en 6. Ter contrast: de V3-vorm hierboven gaf zonder de term 0, 3 en 6 — de ZONDAG
+    // dus, niet de zaterdag — en met de term 0, 3 en 5.
+    const vlak = [
+      dag_(0, "vrij", 90),
+      dag_(1, "vrij", 90),
+      dag_(2, "vrij", 90),
+      dag_(3, "vrij", 90),
+      dag_(4, "vrij", 90),
+      dag_(5, "weekend", 90),
+      dag_(6, "weekend", 90),
+    ];
+    assert_(
+      "stap1b: vlakke week houdt dezelfde dagkeuze",
+      "0,3,6",
+      qIdxs_(alloc_(vlak)).join(","),
+    );
+
+    // (3) BEREIKBAARHEID BOVEN DRAAGKRACHT. Draagkracht alleen is greedy: een lange dag die
+    //     door de tussenruimte-eis zijn buren blokkeert kost netto een hele sleutelsessie.
+    //     Vorm di60 vr90 za180 zo120 — de zaterdag van 180 blokkeert vrijdag ÉN zondag.
+    //     De allocator hoort hem te LATEN LIGGEN en drie dagen te plaatsen in plaats van twee.
+    const blokkeert = [
+      dag_(0, "vrij", null),
+      dag_(1, "vrij", 60),
+      dag_(2, "vrij", null),
+      dag_(3, "vrij", null),
+      dag_(4, "vrij", 90),
+      dag_(5, "weekend", 180),
+      dag_(6, "weekend", 120),
+    ];
+    assert_(
+      "stap1b: lange dag blijft liggen als hij een slot kost",
+      "1,4,6",
+      qIdxs_(alloc_(blokkeert)).join(","),
+    );
+    //     ...en hij wordt WÉL gepakt zodra dat niets kost: haal de zondag weg en er valt na de
+    //     zaterdag toch niets meer te plaatsen, dus wint zijn draagkracht van de vrijdag.
+    //     Zonder deze tweede assertie zou een allocator die lange dagen altijd mijdt óók slagen.
+    const zonderZondag = blokkeert.map((d: any) =>
+      d.dagIdx === 6 ? dag_(6, "weekend", null) : d,
+    );
+    assert_(
+      "stap1b: lange dag wordt gepakt als hij niets kost",
+      "1,5",
+      qIdxs_(alloc_(zonderZondag)).join(","),
+    );
+  });
+
   // stap 7 bouwitem 2 (de twee hekken): +15 in testStap7Hekken — 4× allocateQualityWeek_ zonder
   // pre-claim, 4× de efforts-arm die blijft en een slot consumeert, en 7× assignWorkouts voor de
   // demotie (allocator-dag blijft staan, niet-allocator-dag én cross-week worden nog gedemoteerd).
   // Herijkt zonder telling-effect (1:1): "alloc Base longride role" longride→endurance. 1245→1260.
-  it("exactly 1329 assertions", () => {
-    expect(assertCount).toBe(1329);
+  it("exactly 1337 assertions", () => {
+    expect(assertCount).toBe(1337);
   });
 });
