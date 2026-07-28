@@ -6,7 +6,10 @@ packages:
 # esbuild needs its postinstall (links the platform binary) for `vite build`.
 # workerd needs its postinstall (downloads the runtime binary) for the Worker
 # integration tests (@cloudflare/vitest-pool-workers). sharp stays off (unused).
+# playwright stays off: the browser download is a few hundred MB and we run it
+# explicitly (`pnpm exec playwright install chromium`), not from an install script.
 allowBuilds:
   esbuild: true
+  playwright: false
   sharp: false
   workerd: true
