@@ -137,6 +137,21 @@ const SCENARIOS = [
       5: { minuten: 240, dagtype: "weekend" },
     },
   },
+  // MIDWEEK: de klok staat op WOENSDAG, dus maandag en dinsdag zijn VERSTREKEN trainingsdagen.
+  // Dat is de enige manier om het rustdag-defect te fotograferen — assignWorkouts bouwt sessions
+  // alleen voor tePlannen (train && !gedaan && datum >= vandaag), dus een verstreken dag heeft er
+  // nul, en de dagkaart valt daarop terug op de rustdag-copy.
+  {
+    name: "v7-midweek",
+    dagOffset: 2,
+    spec: {
+      0: { minuten: 60, dagtype: "vrij" },
+      1: { minuten: 60, dagtype: "vrij" },
+      3: { minuten: 90, dagtype: "vrij" },
+      5: { minuten: 180, dagtype: "weekend" },
+      6: { minuten: 120, dagtype: "weekend" },
+    },
+  },
 ];
 
 /** Poll a URL until it answers 200, or give up after `seconds`. */
@@ -340,14 +355,32 @@ async function sweep(page, scenario, monday, results) {
   const label = scenario ? scenario.name : "prod";
   const dir = join(OUT, label);
   mkdirSync(dir, { recursive: true });
+  const url = `${WEB}/schema`;
   if (scenario) {
     await apiPut(`/api/planner/${monday}`, {
       days: plannerDays(monday, scenario.spec),
     });
+
+    // DE KLOK PER SCENARIO. Stond dit één keer in main() vóór de lus, dan lag ELK scenario
+    // volledig vooruit en was een VERSTREKEN dag per constructie onbereikbaar. Offset 0 (of
+    // weggelaten) pint op de maandag en is byte-identiek aan voorheen. setFixedTime, niet
+    // install: Date bevriezen en timers laten lopen.
+    const offset = scenario.dagOffset ?? 0;
+    if (offset > 0) {
+      // WARM-UP, niet geschoten. De app schrijft de week pas als plan-van-record weg zolang de
+      // dagen nog VOORUIT liggen; zonder deze load bestaat de bevroren entry niet en meet je een
+      // ander defect dan je denkt. Dus eerst laden met de klok op de maandag, dán verzetten.
+      await page.clock.setFixedTime(new Date(`${monday}T08:00:00`));
+      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
+      await settle(page);
+    }
+    await page.clock.setFixedTime(
+      new Date(`${plusDays(monday, offset)}T08:00:00`),
+    );
+    PINNED = `${plusDays(monday, offset)} 08:00 (Europe/Amsterdam)`;
   }
 
   const probe = attach(page);
-  const url = `${WEB}/schema`;
   await page.setViewportSize({ width: VIEWPORT_W, height: VIEWPORT_H });
   probe.reset();
   // NOT networkidle: vite keeps an HMR websocket open, so it never settles.
@@ -415,7 +448,8 @@ async function main() {
     PINNED = `${monday} 08:00 (Europe/Amsterdam)`;
     const log = [
       `monday (from local clock): ${monday}`,
-      `browser clock pinned to: ${PINNED}`,
+      // De klok wordt PER SCENARIO gepind (sweep); de gepinde dag staat in elke .txt.
+      `clock pinned per scenario: ${SCENARIOS.map((x) => `${x.name}=${plusDays(monday, x.dagOffset ?? 0)}`).join(", ")}`,
     ];
     await seedSettings(log);
     eventsState = await seedEvents(log);
@@ -442,10 +476,7 @@ async function main() {
       // One situation only: whatever the live data happens to be.
       await sweep(page, null, monday, results);
     } else {
-      // setFixedTime, NOT install: freeze Date only and leave timers running, otherwise the
-      // app's own polling and transitions stall. Set before the first goto so every
-      // navigation inherits it.
-      await page.clock.setFixedTime(new Date(`${monday}T08:00:00`));
+      // De klok-pin staat PER SCENARIO in sweep(): elk scenario mag zijn eigen dag pinnen.
       for (const scenario of SCENARIOS) {
         await sweep(page, scenario, monday, results);
       }
