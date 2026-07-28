@@ -13,6 +13,8 @@
 import {
   actualZoneMinutes_,
   CYCLING_TYPES,
+  KWALITEIT_MIN_PER_PRIKKEL,
+  KWALITEIT_MIN_PER_PRIKKEL_DEFAULT,
   mesoFactor,
   profileForDoel_,
   zoneTimesFromCell_,
@@ -33,16 +35,12 @@ import { NO_BUILD_CTL_DELTA } from "./fatigue";
 export const BLOK_WEKEN = 4;
 /** Alleen de opbouwweken worden beoordeeld; de deload draagt bewust een lagere dosis. */
 export const BLOK_OPBOUWWEKEN = 3;
-/** Kwaliteitsminuten (high + anaerobic) per sleutelprikkel, per doel. FTP draagt de zwaarste
- * drempel-dosis; Onderhoud is een FREQUENTIE-opgave bij minder uren (DOELEN-SPEC §3.2), dus een
- * kortere prikkel per keer. */
-export const KWALITEIT_MIN_PER_PRIKKEL: Record<string, number> = {
-  FTP: 28,
-  Onderhoud: 22,
-};
-/** Conditie, Beklimmingen en VO2max: hun dosis-doel draagt óók lange-rit-minuten en week-kJ, en die
- * as wordt in 5a BEWUST niet gebouwd. Deze waarde dekt alleen de kwaliteitskant. */
-export const KWALITEIT_MIN_PER_PRIKKEL_DEFAULT = 26;
+// De twee kwaliteitsminuten-constanten WONEN NU IN DE ENGINE (packages/engine/src/utils.ts) en
+// worden hier alleen doorgegeven, zodat geen enkele bestaande import breekt. Reden voor de
+// verhuizing: de dosis-trede-factor is (basis + stap × trede) / basis, en de NORM hier en het
+// PLAN in de engine moeten met DEZELFDE factor omhoog (docs/DOSIS-TREDE-RECON.md §3). Staat de
+// basis hier en de factor daar, dan leeft die invariant nergens.
+export { KWALITEIT_MIN_PER_PRIKKEL, KWALITEIT_MIN_PER_PRIKKEL_DEFAULT };
 /** Vanaf dit aantal GEDECLAREERDE weekuren een derde sleutelprikkel (DOELEN-SPEC §3.1). */
 export const PRIKKEL_UREN_DREMPEL = 5;
 /** Zoveel van de drie opbouwweken op norm telt als "geleverd". */

@@ -45,11 +45,13 @@ import {
   ctlReeksMaandelijks_,
   DEMOTE_MAP,
   DOEL_OPTIONS,
+  DOSIS_TREDE_MAX,
   dashActualsByDate_,
   dashBeginAnker_,
   dashNiveauReeks_,
   dashStatsFromActivities_,
   doelTestWeken_,
+  dosisTredeFactor,
   dslBlockFromRow_,
   dslPowerRange_,
   effectiveMacroFase_,
@@ -82,6 +84,7 @@ import {
   intentFromType_,
   intentHaalbaar_,
   isHardType_,
+  KWALITEIT_MIN_PER_PRIKKEL_DEFAULT,
   keyIntensity,
   maxRecentRideH_,
   mergeById_,
@@ -479,6 +482,108 @@ describe("engine selftest", () => {
       true,
       genericRecovery(60, S).tss !== Math.round(60 * ZONE_TSS_RATE_.rust),
     );
+  });
+
+  // ── ROADMAP stap 2 fase 1 — de dosis-trede in de work-scale ──────────
+  // docs/DOSIS-TREDE-RECON.md §4/§6. De factor moet op BEIDE work-scale-plekken landen; de
+  // weekvorm-as bewijst dat NIET, want daar komt alle kwaliteit via expandArchetype_ binnen
+  // en levert een patch op alleen die tak dezelfde kwaliteitsminuten op. Daarom staat de
+  // renderVariant_-kant hier apart, direct gemeten.
+  it("testDosisTrede", () => {
+    // (1) de pure factor. Trede 0 is EXACT 1 — dat is de byte-identiek-garantie.
+    assert_("trede 0 = exact 1", 1, dosisTredeFactor("FTP", 0));
+    assert_("trede weggelaten = 1", 1, dosisTredeFactor("FTP", undefined));
+    assert_("trede null = 1", 1, dosisTredeFactor("FTP", null));
+    assert_("trede NaN = 1", 1, dosisTredeFactor("FTP", Number.NaN));
+    assertClose_(
+      "trede 1 FTP = 30/28",
+      30 / 28,
+      dosisTredeFactor("FTP", 1),
+      1e-9,
+    );
+    assertClose_(
+      "trede 2 FTP = 32/28",
+      32 / 28,
+      dosisTredeFactor("FTP", 2),
+      1e-9,
+    );
+    assertClose_(
+      "trede 2 Onderhoud = 26/22",
+      26 / 22,
+      dosisTredeFactor("Onderhoud", 2),
+      1e-9,
+    );
+    // clamp op het beleidsplafond, en een onbekend doel valt op de default-basis terug
+    assert_(
+      "trede boven plafond klemt",
+      dosisTredeFactor("FTP", DOSIS_TREDE_MAX),
+      dosisTredeFactor("FTP", DOSIS_TREDE_MAX + 7),
+    );
+    assert_("negatieve trede = 1", 1, dosisTredeFactor("FTP", -3));
+    assertClose_(
+      "onbekend doel valt op de default",
+      (KWALITEIT_MIN_PER_PRIKKEL_DEFAULT + 2 * 2) /
+        KWALITEIT_MIN_PER_PRIKKEL_DEFAULT,
+      dosisTredeFactor("Zwemmen", 2),
+      1e-9,
+    );
+
+    const S: any = { ftp: 275, lthr: 178, doel: "FTP" };
+    const kwal = (wo: any) =>
+      Math.round(
+        (Number(wo?.intent?.high) || 0) + (Number(wo?.intent?.anaerobic) || 0),
+      );
+
+    // (2) PLEK EEN — expandArchetype_. mesoWeek 1 zodat alleen de trede beweegt.
+    const arec = ARCHETYPES.filter((a: any) => a.id === "threshold_2x20")[0];
+    const ctx0: any = { ftp: 275, lthr: 178, doelMin: 90, mesoWeek: 1 };
+    const a0 = expandArchetype_(arec, ctx0);
+    const aTrede0 = expandArchetype_(arec, {
+      ...ctx0,
+      doel: "FTP",
+      dosisTrede: 0,
+    });
+    const a2 = expandArchetype_(arec, { ...ctx0, doel: "FTP", dosisTrede: 2 });
+    assert_("arch trede 0 == weggelaten", kwal(a0), kwal(aTrede0));
+    assert_("arch trede 2 stijgt", true, kwal(a2) > kwal(a0));
+
+    // (3) PLEK TWEE — renderVariant_. Zelfde vorm, eigen code, dus eigen bewijs.
+    const v = (getPool_("threshold") || []).filter(
+      (x: any) => x.id === "thr_3x15",
+    )[0];
+    const r0 = renderVariant_(v, S, 1, "Base", 90);
+    const rTrede0 = renderVariant_(v, S, 1, "Base", 90, 0);
+    const r2 = renderVariant_(v, S, 1, "Base", 90, 2);
+    assert_("variant trede 0 == weggelaten", kwal(r0), kwal(rTrede0));
+    assert_("variant trede 2 stijgt", true, kwal(r2) > kwal(r0));
+    // gepinde uitkomsten: 45 werkminuten wordt 51 bij trede 2 (32/28 op de core-werktijd)
+    assert_("variant trede 0 kwaliteitsminuten", 45, kwal(r0));
+    assert_("variant trede 2 kwaliteitsminuten", 51, kwal(r2));
+
+    // (4) buildWorkout geeft de trede door aan BEIDE takken.
+    const bA0 = buildWorkout(
+      "threshold",
+      90,
+      S,
+      1,
+      "Base",
+      null,
+      0,
+      "threshold_2x20",
+    );
+    const bA2 = buildWorkout(
+      "threshold",
+      90,
+      S,
+      1,
+      "Base",
+      null,
+      0,
+      "threshold_2x20",
+      "heen",
+      2,
+    );
+    assert_("buildWorkout archetype-tak stijgt", true, kwal(bA2) > kwal(bA0));
   });
 
   // ── checkinDelta_ (puur, leest CHECKIN_LEVELS) ──────────────────────
@@ -5261,7 +5366,7 @@ describe("engine selftest", () => {
   // pre-claim, 4× de efforts-arm die blijft en een slot consumeert, en 7× assignWorkouts voor de
   // demotie (allocator-dag blijft staan, niet-allocator-dag én cross-week worden nog gedemoteerd).
   // Herijkt zonder telling-effect (1:1): "alloc Base longride role" longride→endurance. 1245→1260.
-  it("exactly 1337 assertions", () => {
-    expect(assertCount).toBe(1337);
+  it("exactly 1354 assertions", () => {
+    expect(assertCount).toBe(1354);
   });
 });

@@ -5,7 +5,13 @@
  * bindings → the planner↔archetypes↔coach cycle resolves at call time).
  */
 import { COACH_INTENT_ENGINE_TYPE_, intentFromType_ } from "./coach";
-import { bpmBelow, bpmRange, mesoFactor, wattsRange } from "./utils";
+import {
+  bpmBelow,
+  bpmRange,
+  dosisTredeFactor,
+  mesoFactor,
+  wattsRange,
+} from "./utils";
 import { pctZoneBucket_, tssFromBlokken_ } from "./zones";
 
 export const ARCHETYPE_STRUCTUURTYPES = [
@@ -84,7 +90,13 @@ export function expandArchetype_(rec: any, ctx: any): any {
   // bovengrens); %FTP per blok ONgemoeid (adj=identiteit) → karakter-invariant. f=1 → byte-identiek.
   const MIN_WARMUP = 8,
     MIN_COOLDOWN = 5;
-  const f = ctx.mesoWeek != null ? mesoFactor(ctx.mesoWeek) : 1;
+  // De DOSIS-TREDE vermenigvuldigt hier, op deze ENE plek, zodat beide takken hem erven: de
+  // f>1-opbouwramp én de f<1-deloadspiegel. Trede 0 geeft factor 1 en laat f ongemoeid, dus
+  // byte-identiek. De consumptie-volgorde fill → cooldown → warmup blijft zoals hij was.
+  // docs/DOSIS-TREDE-RECON.md §4: dezelfde logica staat óók in renderVariant_ — beide of geen.
+  const f =
+    (ctx.mesoWeek != null ? mesoFactor(ctx.mesoWeek) : 1) *
+    dosisTredeFactor(ctx.doel, ctx.dosisTrede);
   const warmupMin0 = rec.warmup.durMin;
   const cooldownMin0 = rec.cooldown.durMin;
   const nominalWork = archetypeWorkMin_(rec);

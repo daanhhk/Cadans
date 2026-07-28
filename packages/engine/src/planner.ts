@@ -26,6 +26,7 @@ import { segmentsFromBlokken_ } from "./niveau";
 import {
   bpmBelow,
   bpmRange,
+  dosisTredeFactor,
   formatDate,
   mesoFactor,
   stripTime_,
@@ -1131,6 +1132,10 @@ export function renderVariant_(
   mesoWeek: any,
   macroFase: any,
   mins?: any,
+  // DOSIS-TREDE, optioneel: weggelaten of 0 → factor 1 → byte-identiek. Reist als EXPLICIETE
+  // parameter en NIET via settings: settings is config uit D1, de trede is runtime-state die in
+  // fase 2 op sync_state landt. Zelfde idioom als `leg` hierboven en als mesoWeekOverride.
+  dosisTrede?: any,
 ): any {
   const ftp = settings.ftp,
     lthr = settings.lthr;
@@ -1160,7 +1165,12 @@ export function renderVariant_(
   // (adj=identiteit) → karakter-invariant. Totaal blijft ≤ mins. f=1 → byte-identiek.
   let workScale = 1;
   {
-    const f = mesoWeek != null ? mesoFactor(mesoWeek) : 1;
+    // Tweede van de twee work-scale-plekken (docs/DOSIS-TREDE-RECON.md §4). Zelfde
+    // vermenigvuldiging als in expandArchetype_ — landt de trede maar op één van beide, dan
+    // beweegt de helft van de sessies niet mee en is het de halve fix uit WERKWIJZE.md.
+    const f =
+      (mesoWeek != null ? mesoFactor(mesoWeek) : 1) *
+      dosisTredeFactor(settings && settings.doel, dosisTrede);
     if (f > 1 && mins) {
       let nomWork = 0,
         nomRest = 0;
@@ -1669,6 +1679,9 @@ export function buildWorkout(
   // T28 fase 3b-copy: richting van de pendelrit ('heen'/'terug'), alleen relevant voor
   // pendel_z2. Optioneel, default 'heen' → byte-identiek voor alle bestaande callers.
   leg: "heen" | "terug" = "heen",
+  // DOSIS-TREDE, optioneel: weggelaten of 0 → factor 1 → byte-identiek. Runtime-state, dus een
+  // EXPLICIETE parameter en niet iets op `settings`. Gaat door naar BEIDE work-scale-plekken.
+  dosisTrede?: any,
 ): any {
   // FASE 1 deel 2b.2 — een gekozen archetype expandeert direct (overrulet de type-dispatch).
   // LIVE (niet inert): keyIntensity zet de archetypeId op :859 en de week-allocator via
@@ -1689,6 +1702,9 @@ export function buildWorkout(
         doelMin: mins,
         // 3d stap 2: mesoWeek voedt de kwaliteits-ramp (mesoFactor) in expandArchetype_.
         mesoWeek,
+        // ROADMAP stap 2: doel + trede voeden dosisTredeFactor in diezelfde work-scale.
+        doel: settings.doel,
+        dosisTrede,
       });
       if (awo) {
         awo.archetypeId = archetypeId;
@@ -1712,7 +1728,14 @@ export function buildWorkout(
   if (getPool_(type)) {
     const variant = selectVariant_(type, weekIndexFromStart_(settings), slot);
     if (variant)
-      return renderVariant_(variant, settings, mesoWeek, macroFase, mins);
+      return renderVariant_(
+        variant,
+        settings,
+        mesoWeek,
+        macroFase,
+        mins,
+        dosisTrede,
+      );
   }
 
   // Klim-type-specifieke legacy workouts (nog callable; niet meer geselecteerd)

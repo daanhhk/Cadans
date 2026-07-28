@@ -49,6 +49,51 @@ export function mesoFactor(week: number): number {
   return MESO_MOD[week] || 1.0;
 }
 
+/** Kwaliteitsminuten (high + anaerobic) per sleutelprikkel, per doel. FTP draagt de zwaarste
+ * drempel-dosis; Onderhoud is een FREQUENTIE-opgave bij minder uren (DOELEN-SPEC §3.2), dus een
+ * kortere prikkel per keer.
+ *
+ * WOONT IN DE ENGINE, niet in de client. De dosis-trede-factor is
+ * (basis + stap × trede) / basis, en de NORM (client) en het PLAN (engine) moeten met
+ * DEZELFDE factor omhoog — anders zakt het plan onder zijn eigen meetlat
+ * (docs/DOSIS-TREDE-RECON.md §3). Staat de basis aan de ene kant en de factor aan de andere,
+ * dan leeft die invariant nergens en drijven de twee uit elkaar; precies het dubbel-patroon
+ * dat §4 beschrijft. apps/web/src/lib/blok.ts re-exporteert 'm onder dezelfde naam. */
+export const KWALITEIT_MIN_PER_PRIKKEL: Record<string, number> = {
+  FTP: 28,
+  Onderhoud: 22,
+};
+/** Conditie, Beklimmingen en VO2max: hun dosis-doel draagt óók lange-rit-minuten en week-kJ, en die
+ * as wordt in 5a BEWUST niet gebouwd. Deze waarde dekt alleen de kwaliteitskant. */
+export const KWALITEIT_MIN_PER_PRIKKEL_DEFAULT = 26;
+
+/** BELEID, GEEN GEIJKTE DREMPEL. Er bestaat geen reeks waarop "hoeveel mag de dosis per blok
+ * omhoog" te meten valt, en ijken op de eigen historie reproduceert juist de gewoonte die dit
+ * mechanisme vervangt (docs/WERKWIJZE.md). Vastgesteld met Daan; herzien gebeurt door
+ * docs/DOSIS-TREDE-RECON.md §6 te wijzigen, niet door er data voor te zoeken. */
+export const DOSIS_TREDE_STAP_MIN = 2;
+/** BELEID, GEEN GEIJKTE DREMPEL. Plafond op trede 4 — ruim binnen het gemeten lineaire gebied
+ * van de work-scale (docs/DOSIS-TREDE-RECON.md §5, lineair tot ongeveer factor 1,5). */
+export const DOSIS_TREDE_MAX = 4;
+
+/**
+ * Trede → work-scale-factor, in de stijl van mesoFactor: puur, en 1 als er niets te doen is.
+ *
+ * (basis + stap × trede) / basis, met basis = de kwaliteitsminuten per prikkel van dit doel.
+ * Trede 0 geeft EXACT 1 en is daarmee byte-identiek aan het gedrag zonder trede. null,
+ * undefined en niet-eindige waarden tellen als 0; buiten 0..DOSIS_TREDE_MAX wordt geklemd.
+ * Een onbekend doel valt op KWALITEIT_MIN_PER_PRIKKEL_DEFAULT terug.
+ */
+export function dosisTredeFactor(doel: any, trede: any): number {
+  const t = Number(trede);
+  const n = Number.isFinite(t) ? Math.min(DOSIS_TREDE_MAX, Math.max(0, t)) : 0;
+  if (n === 0) return 1;
+  const basis =
+    KWALITEIT_MIN_PER_PRIKKEL[String(doel ?? "")] ??
+    KWALITEIT_MIN_PER_PRIKKEL_DEFAULT;
+  return (basis + DOSIS_TREDE_STAP_MIN * n) / basis;
+}
+
 // Mapt een 0-gebaseerde weekindex (weken sinds doelStart, monotoon) naar de
 // cyclische 1..4-mesoweek die MESO_MOD en isMesoRecovery verwachten (GAS getMesoWeek-
 // pariteit: clamp/cyclus 1..4, advanceMeso wrapt >4 → 1). 3:1-mesocyclus = 3 opbouw-
