@@ -8,17 +8,21 @@ code.
 
 ## Stappen
 
-### STAP 1 — de dosis schaalt verkeerd met tijd · LOOPT
+### STAP 1 — de dosis schaalt verkeerd met tijd · AF
 
-Meer uren leveren vandaag MINDER kwaliteit op. Vanaf 136 beschikbare minuten kwalificeert geen
-enkel sjabloon meer en valt de dag door naar duurwerk zonder kwaliteit.
+Meer uren leverden MINDER kwaliteit op: vanaf 136 beschikbare minuten kwalificeerde geen enkel
+sjabloon meer en viel de dag door naar duurwerk zonder kwaliteit.
 
-- Spec: `docs/DUUR-SELECTIEREGEL.md` (VASTGESTELD, coach-canon). §3 draagt een WEERLEGDE eerste
-  poging — het plafond doet binnen de bibliotheek-band echt werk en blijft daarom staan.
-- Criterium (herzien na meting, zie spec §5): geen enkele weekvorm daalt ten opzichte van de
-  voor-meting, en een dag boven 135 minuten die een kwaliteitsslot krijgt draagt een archetype
-  met minstens 45 nominale werkminuten.
-- Raakt: ENGINE.
+Opgelost door het duur-plafond te LATEN STAAN — binnen de bibliotheek-band doet het echt werk,
+het weert korte sjablonen van middellange dagen — en er een fallback boven te zetten. Levert de
+kandidaat-filter nul kandidaten, dan volgt een tweede pass zonder plafond, gesorteerd op langste
+band eerst en bij gelijke band het zwaarste sjabloon.
+
+- Spec: `docs/DUUR-SELECTIEREGEL.md`. §3 draagt de WEERLEGDE eerste poging (een doelwerktijd-regel
+  zonder plafond) met de meting die hem omver haalde.
+- Gemeten op de weekvorm-as: kwaliteitsminuten 69 / 45 / 45 / 45 / 64 werd 69 / 81 / 45 / 81 / 64.
+  V1, V3 en V5 tot op de minuut ongewijzigd — de fallback vuurt nergens binnen de band.
+- Bouw-commit `ff2baf8`. NIET GEDEPLOYED.
 
 ### STAP 1b — kwaliteit in de lange rit buiten Build en Peak · OPEN
 
@@ -32,6 +36,10 @@ aan te pas — de duur-selectieregel uit STAP 1 kan dit dus niet oplossen.
   als vijf.
 - Criterium: een lange dag kan ook in Base een kwaliteitsslot dragen, zonder dat de weken
   daaronder inleveren.
+- DE VO2-GRENS. Boven 135 minuten kan de fallback uit stap 1 bij intent `vo2` hoogstens 28
+  nominale werkminuten leveren: de vo2-band houdt op bij 100 minuten en die sjablonen zijn kort
+  van ontwerp. Een lange dag met vo2-intent haalt de 45-werkminuten-eis dus niet, en dat is geen
+  fout in de fallback maar een grens van de bibliotheek.
 - Raakt: ENGINE.
 
 ### STAP 2 — er is geen plek waar dosis wordt vastgehouden · OPEN
@@ -64,10 +72,14 @@ zonder van elkaar te weten.
 
 ## Waarom deze volgorde
 
-Stap 2, 3 en 4 zijn regelkringen BOVENOP stap 1. Een dosis-trede bovenop 45 kwaliteitsminuten
-landt nog steeds onder de norm; een fase-indeling die het doel volgt verdeelt dezelfde te lage
-dosis anders. Zolang stap 1 open staat meet elke volgende stap zich tegen een verkeerde basis,
-en is elk resultaat daar niet van te scheiden.
+Stap 2, 3 en 4 zijn regelkringen BOVENOP stap 1. Een dosis-trede bovenop een te lage basis landt
+nog steeds onder de norm; een fase-indeling die het doel volgt verdeelt dezelfde te lage dosis
+alleen anders. Daarom ging stap 1 eerst, en daarom staat de weekvorm-as er nu als test: elke
+volgende stap meet zich tegen die basis en tegen niets anders.
+
+Stap 1b is wat er van stap 1 overblijft. De as laat het staan: V3 levert op acht uur nog steeds
+45 kwaliteitsminuten, want daar krijgt de lange dag helemaal geen kwaliteitsslot. Dat zit in de
+allocator, niet in de sjabloonkeuze.
 
 ## Meetlat
 
@@ -75,13 +87,17 @@ Bij ELKE bouw draait dezelfde weekvorm-as opnieuw, en gaan de kwaliteitsminuten 
 in `HANDOFF.md`. Geen nieuwe as per ronde — dezelfde as, zodat de reeks over de stappen heen
 vergelijkbaar blijft.
 
-Stand vandaag (doel FTP, fase Base, mesoweek 1): 5,0u 69 · 6,0u 45 · 8,0u 45 · za240 45
-kwaliteitsminuten.
+De as staat als test in `apps/web/src/lib/weekvormAs.test.ts`, met een HARDE invariant dat V1,
+V3 en V5 niet mogen dalen, en de volledige reeks als vingerafdruk. De invariant wordt niet
+herijkt; de vingerafdruk mag dat wel, bewust en verantwoord.
+
+Stand na stap 1 (doel FTP, fase Base, mesoweek 1), kwaliteitsminuten: V1 5,0u 69 · V2 8,0u 81 ·
+V3 8,0u 45 · V4 7,0u 81 · V5 7,0u 64. Week-TSS: 253 · 391 · 362 · 347 · 340.
 
 ## Parkeerlijst
 
-Alles wat nu als OPENSTAAND in `HANDOFF.md` staat, ongewijzigd van strekking en zonder oordeel
-over urgentie of volgorde. Deze lijst beoordeelt niet; hij verliest niet.
+Ongewijzigd van strekking en zonder oordeel over urgentie of volgorde. Deze lijst beoordeelt
+niet; hij verliest niet. Een punt gaat eruit zodra een STAP het opneemt — niet eerder.
 
 ### ENGINE
 
@@ -95,15 +111,10 @@ over urgentie of volgorde. Deze lijst beoordeelt niet; hij verliest niet.
   een rit van 60. Coach-canon, maar de resterende tijd verdwijnt stil uit het plan.
 - `combo_long_with_efforts` reist mee met bouwitem 2 stap 2 en 4; `pendel_intervals` is alleen
   in een Test-week bereikbaar.
-- BOUWITEM 2 STAP 2 EN 4 REIZEN SAMEN: het duur-plafond in de kandidaat-filter van
-  `goalWorkout_` staat er bewust nog; eraf zonder selectieregel laat de tie-break het kortste
-  sjabloon winnen. De selectieregel komt uit de coach-canon, niet uit de D1-meting.
 - De dode `longride`-tak in de redenCode-mapping van `planner.ts`.
 - Het commentaar bij de demotie dat in een alloc-actieve week niet meer klopt.
 - `weekIndexFromStart_` herhaalt een week bij de voorjaars-DST-sprong (28-03-2027).
-- De fase staat volledig in het teken van het event (`eventFase_`).
 - Gat-dag-types via meegegeven datum.
-- `docs/DOELEN-SPEC.md` §6 stap 3 doel-lijst herzien.
 
 ### CLIENT
 
@@ -123,9 +134,6 @@ over urgentie of volgorde. Deze lijst beoordeelt niet; hij verliest niet.
 - GEMENGDE WEGING, één overgangsweek: bewaarde weekplannen van verstreken dagen houden hun oude
   getal; `workoutFromFrozenEntry` leest opgeslagen TSS verbatim. Precies zoals bij de vorige
   ijking.
-- DE CTL-SIMULATIE MOET OPNIEUW: stond al open op de geijkte weging, nu ook met de pendelweging
-  erin. `STAP7-RECON` §6 leunde op de oude getallen en leverde de onhoudbare "negen uur per
-  week"-conclusie.
 - RESIDU UIT DE MEETOPZET: de ijk-query klonterde Z5, Z6 en Z7 al samen in de kruisproducten,
   dus één tarief 3,08 dekt een mix die in een gepland VO2-blok anders ligt (Daans reeks:
   60/27/12). Splitsen vraagt een NIEUWE read-only meting; uit deze data is het niet te halen.

@@ -13,46 +13,51 @@ live tot cutover.
 
 ## Stand
 
-Bouwvolgorde 1 is af en LIVE. De tweede TSS-familie is aangepakt: pendel_z2 en
-taper_z2_kort dragen nu één z2-blok over de volle rit en halen hun TSS uit
-tssFromBlokken_ (engine-commit 07de9224). Pendel van 75 min gaat van 45 naar 55, van 150
-min van 90 naar 110; taper_z2_kort van 45 min van 27 naar 33.
+**PROD DRAAIT WORKER VERSION `6e8e244e-bbec-4e34-9a88-1f74e086e645`**, gebouwd vanaf `d45bd0dc`. De
+geijkte pendel- en taperweging is daarmee LIVE: een pendel van 75 min telt 55 TSS in plaats van 45,
+van 150 min 110 in plaats van 90, en `taper_z2_kort` van 45 min 33 in plaats van 27. Pendeldagen
+dragen nu ook een zonebalk. Geen migratie, `0006` blijft de laatste remote.
 
-NIET GEDEPLOYD. Prod staat nog op Worker Version 3fef6cd0-a67a-436e-b8fd-1162a9ea2b1f en
-draagt dus nog de OUDE pendelweging. Geen migratie, 0006 blijft de laatste remote.
-Vloeren: vitest-totaal 687 · engine-selftest-assert-count 1329 — lees ze uit de suite,
-hardcode ze nooit.
+**STAP 1 IS GEBOUWD MAAR NIET GEDEPLOYED.** Bouw-commit `ff2baf8`, docs `23f367f`. Het duur-plafond
+in de kandidaat-filter van `goalWorkout_` BLIJFT staan — binnen de bibliotheek-band doet het echt
+werk, het weert korte sjablonen van middellange dagen — en krijgt er een fallback boven. Levert de
+filter nul kandidaten, dan volgt een tweede pass zonder plafond, langste band eerst en bij gelijke
+band het zwaarste sjabloon. Een dag boven de band kiest dus voortaan het sjabloon dat voor de
+langste ritten is ontworpen, in plaats van door te vallen naar duurwerk zonder kwaliteit.
 
-DE VAL, vastgelegd in de code bij ZONE_TSS_RATE_ in zones.ts. Die tabel is een
-ATTRIBUTIE-model: hij verdeelt de gemeten TSS van een hele rit over de zoneminuten, dus de
-som klopt per constructie en de tabel is juist voor een GEMENGDE sessie. Hij is NIET geldig
-voor een sessie die volledig uit één zone bestaat. Tegen duur × IF² × 100 op het
-band-midden: z2 +1% en tempo -1% (solo toepasbaar), rust +59%, drempel -16%, anaeroob +40%
-(niet solo toepasbaar). Het lek is direct gemeten op de eigen reeks: het impliciete
-Z1-tarief loopt van 0,404 bij 3,3% kwaliteit naar 0,900 bij 22,3%.
-
-RECOVERY BLIJFT BEWUST OP 0,35 en is niet aangeraakt. Het rust-tarief 0,598 is besmet; de
-geldige referent voor een solo herstelrit is 0,376 steady tot 0,404 op de rustigste band.
-Het verschil met 0,35 is kleiner dan de meetonzekerheid. Coach-canon voor een herstel-uur
-is 20 tot 25 TSS; de naieve route had 36 gegeven. Een volgende ronde mag dit tarief NIET
-"corrigeren" naar het rust-tarief.
-
-WEERLEGD: de eerdere claim dat de dosis-valuta op een pendeldag nul telt. Gemeten op de
-blob-pijplijn levert een pendeldag intent low 150 · high 0 · anaerobic 0. ensureIntent_
-vult low met totaalMin en zeroIntentOutsideZones behoudt dat. Wat leeg wás, is blokken —
-de zonebalk, niet de dosis-valuta. Die is nu gevuld.
-
-- **OPENSTAAND — DEPLOY VAN `07de9224` WACHT OP DAANS VISUELE CHECK.** De weekkaart met een pendeldag moet er eerst langs. Pendeldagen krijgen na deploy een zonebalk die er nu niet is — dat is de zichtbare verandering, naast het hogere getal.
-- **OPENSTAAND — GEMENGDE WEGING, één overgangsweek.** Bewaarde weekplannen van verstreken dagen houden hun oude getal; `workoutFromFrozenEntry` leest opgeslagen TSS verbatim. Eén week met gemengde weging, precies zoals bij de vorige ijking.
-- **OPENSTAAND — DE CTL-SIMULATIE MOET OPNIEUW.** Stond al open op de geijkte weging; nu ook met de pendelweging erin. `STAP7-RECON` §6 leunde op de oude getallen en leverde de onhoudbare "negen uur per week"-conclusie.
-- **OPENSTAAND — SCREENSHOTS VANUIT CC LUKTEN NIET.** De Browser-pane wordt niet weergegeven, de pagina componeert geen frames, elke poging valt na 5 seconden om. Er is niets geïnstalleerd. Voor een volgende poging: dev-server `127.0.0.1:5173`, route `/weekplanner` voor de dagkaart en `/` voor de weekkaart, lokale API op `8787`.
-- **OPENSTAAND — REST VAN DE VLAK-TARIEF-FAMILIE (circa 30 builders), NIET naïef te behandelen.** Hun structuur draagt reps-notatie ("3x 14 min", "4x 30 sec"), dus de werkminuten zijn niet als platte minuten afleesbaar, en hun werkblokken liggen in drempel en anaeroob — juist de twee besmette zones. Vraagt per-builder werk.
-- **OPENSTAAND — `tour_taper_z2`.** Drie platte regels, maar met een rust-cooldown van 5 min zonder voorafgaand hard blok. Besmette categorie, effect circa 1 TSS. Blijft staan.
-- **OPENSTAAND — `genericRecovery` capt de duur hard op 60 min.** Een deloaddag met 90 beschikbare minuten wordt een rit van 60. Coach-canon, maar de resterende tijd verdwijnt stil uit het plan. Genoteerd, niet in scope.
-- **OPENSTAAND — `combo_long_with_efforts` reist mee met bouwitem 2 stap 2 en 4.** `pendel_intervals` is alleen in een Test-week bereikbaar.
-- **OPENSTAAND — BOUWITEM 2 STAP 2 EN 4 REIZEN SAMEN.** Het duur-plafond in de kandidaat-filter van `goalWorkout_` staat er BEWUST nog; eraf zonder selectieregel laat de tie-break het kortste sjabloon winnen. De selectieregel komt uit de COACH-CANON, niet uit de D1-meting.
-- **OPENSTAAND — RESIDU UIT DE MEETOPZET.** De ijk-query klonterde Z5, Z6 en Z7 al samen in de kruisproducten, dus één tarief 3,08 dekt een mix die in een gepland VO2-blok anders ligt (Daans reeks: 60/27/12). Splitsen vraagt een NIEUWE read-only meting; uit deze data is het niet te halen.
-- **OPENSTAAND (geërfd, niet geraakt).** De dode `longride`-tak in de redenCode-mapping van `planner.ts` · het commentaar bij de demotie dat in een alloc-actieve week niet meer klopt · `weekIndexFromStart_` herhaalt een week bij de voorjaars-DST-sprong (ENGINE; 28-03-2027) · de fase staat volledig in het teken van het event (`eventFase_`) · UP-fixture in `Preview.tsx` realistischer maken · weken-terug-scrollen in de Schema-tab · gat-dag-types via meegegeven datum (ENGINE) · `docs/DOELEN-SPEC.md` §6 stap 3 doel-lijst herzien (ENGINE) · de weekreeks-fixture staat op drie plekken.
+- **GEMETEN OP DE WEEKVORM-AS.** Kwaliteitsminuten 69 / 45 / 45 / 45 / 64 werd 69 / 81 / 45 / 81 /
+  64; week-TSS 253 / 364 / 362 / 321 / 340 werd 253 / 391 / 362 / 347 / 340. V1, V3 en V5 zijn tot
+  op de minuut én tot op de TSS ongewijzigd — de fallback vuurt nergens binnen de band. V2 en V4
+  kiezen op de lange dag `sweetspot_long` met 60 nominale werkminuten.
+- **NUL VAN DE 48 VINGERAFDRUKKEN VERSCHOVEN.** Geen weekvorm daar komt boven 135 minuten, dus de
+  fallback kan ze per constructie niet raken. Twee selftest-assertions zijn wél herijkt — "kiPlug
+  goalWO-null trip-fallback" en "sim >135min trip-fallback" — omdat ze het DEFECT pinden: dat een
+  dag boven de band doorviel naar `long_z2`. Beide dragen nu de reden in commentaar.
+- **VLOEREN NU: vitest-totaal 689 · engine-selftest-assert-count 1329.** Lees ze uit de suite;
+  hardcode ze nooit.
+- **DE WEEKVORM-AS IS NU EEN TEST** — `apps/web/src/lib/weekvormAs.test.ts`. Twee soorten assertie,
+  en het verschil is opzettelijk: een HARDE invariant dat V1, V3 en V5 niet mogen dalen (die wordt
+  NIET herijkt; valt hij om, dan is de wijziging fout), en de volledige reeks als vingerafdruk (die
+  mag bewust herijkt worden, mits de invariant staat en de richting verantwoord is). Deze reeks
+  hoort bij ELKE bouw opnieuw in dit document.
+- **DE CTL-SIMULATIE IS OPNIEUW GEDRAAID**, op de geijkte weging inclusief pendel, en vooraf geijkt
+  op twee onafhankelijk gemeten eindwaarden. De weging reproduceert de gemeten jaar-TSS binnen 1,0
+  procent — model 15195 tegen gemeten 15345 — en Daans eigen 5-uursweken leveren een plateau-CTL
+  van 39,2 tot 45,7 tegen een gemeten CTL van 45,7. Uitkomst: het niveau houden tot AGR vraagt
+  ongeveer 8 uur per week zonder pendel, en ongeveer 7 uur met drie pendeldagen. De eerdere
+  conclusie van negen uur houdt geen stand. Wel blijft er een gat tussen plan en uitvoering: het
+  plan levert 44 tot 49 TSS per uur waar de werkelijke uitvoering 57,7 haalt, en bij vijf uur
+  letterlijk het plan volgen komt de CTL uit op 33,6 tegen 42,6 nu.
+- **HERSTELD — de verantwoording van de blokken-versus-intent-splitsing.** TSS komt uit `blokken`,
+  de dosis-valuta blijft `intent`. Dat rust op de meting dat beide DEZELFDE minuten dragen:
+  `blokken` teruggevouwen via `ARCHETYPE_LOAD_FROM_BUCKET_` is gelijk aan `intent`, en de
+  blokminuten tellen op tot `totaalMin`. Chat-zijde gemeten over 2950 renderingen, CC-zijde over
+  1020 op de duurRange-grenzen — nul afwijkingen aan beide kanten, en elke rendering draagt
+  blokken. De assert staat als `testBlokkenDekkenIntent` in de suite. Deze meting was bij een
+  eerdere close-out uit dit document verdwenen toen het STAND-blok werd vervangen in plaats van
+  aangevuld; ze staat hier terug omdat de hele ontwerpkeuze eraan hangt.
+- **RICHTING STAAT IN `docs/ROADMAP.md`**, niet meer hier. Dit document draagt de STAND. Alle
+  openstaande punten staan in de parkeerlijst daar; stap 1 is AF, stap 1b tot en met 4 staan open.
 
 **STAP 7 — DE D1-IJKING BINNEN + BOUWITEM 2 STAP 1 EN 3 OP MAIN, NIET GEDEPLOYED (juli 2026).** Meting `add0bd4` (`docs/STAP7-IJKING.sql` + `docs/STAP7-IJKING-DATA.md`), engine-commit `e6b3e4a`, CI success (run <https://github.com/daanhhk/Cadans/actions/runs/30264597144>), plus deze close-out. Prod ONVERANDERD: Worker Version `6bd05cd2-6aea-4b71-95de-81a226e74dd4`. GEEN migratie; `0006` blijft de laatste remote. De meting was een read-only SELECT: elke response meldde `rows_written` 0 en `changed_db` false.
 - **VLOEREN NU: vitest-totaal 683 · engine-selftest-assert-count 1260** (van 682/1245; +15 in het nieuwe `testStap7Hekken`). Lees ze uit de suite; hardcode ze nooit.
