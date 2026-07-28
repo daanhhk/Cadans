@@ -73,11 +73,16 @@ function plannerDays(
   }));
 }
 
+// dagOffset = welke dag van de week "vandaag" is (0 = maandag). Vormen die volledig vooruit
+// liggen houden 0; een week IN UITVOERING zet hem hoger, en de klok schuift mee — anders leest
+// de engine een andere dag dan todayISO zegt. De pin blijft BINNEN de test.
 function meet(
   min: Record<number, number>,
   pendel: number[],
   pendelDuurMin: number,
+  dagOffset = 0,
 ): { kwal: number; tss: number } {
+  vi.setSystemTime(new Date(2026, 6, 27 + dagOffset, 8, 0, 0));
   const r = buildWeekProposal({
     settings: settings(pendelDuurMin),
     plannerDays: plannerDays(min, pendel),
@@ -94,7 +99,7 @@ function meet(
     weekplans: [],
     wellness: [],
     rpe: [],
-    todayISO: iso(0),
+    todayISO: iso(dagOffset),
   } as never);
   let kwal = 0;
   let tss = 0;
@@ -116,6 +121,7 @@ const VORMEN: {
   min: Record<number, number>;
   pendel: number[];
   pendelDuurMin: number;
+  dagOffset?: number;
 }[] = [
   {
     naam: "V1 5,0u ma60 di60 do60 za120",
@@ -147,12 +153,24 @@ const VORMEN: {
     pendel: [1, 2, 3],
     pendelDuurMin: 40,
   },
+  // V6 — WEEK IN UITVOERING, en dat is de normale situatie: V1 t/m V5 liggen volledig vooruit.
+  // Zelfde dagen als V1, maar "vandaag" is DINSDAG en de maandag is verstreken zonder rit
+  // (train true, gedaan false, geen activities). Meet dus wat er nog te plannen valt in een week
+  // waar al een dag uit is. Staat NIET in de invariant-lijst — die blijft V1, V3 en V5.
+  {
+    naam: "V6 in uitvoering, gemiste maandag (di) ma60 di60 do60 za120",
+    min: { 0: 60, 1: 60, 3: 60, 5: 120 },
+    pendel: [],
+    pendelDuurMin: 80,
+    dagOffset: 1,
+  },
 ];
 
-// De vingerafdruk. Gemeten 2026-07-28, na docs/DUUR-SELECTIEREGEL.md §4 (plafond-fallback).
+// De vingerafdruk. V1 t/m V5 gemeten 2026-07-28 na docs/DUUR-SELECTIEREGEL.md §4
+// (plafond-fallback); V6 erbij gemeten op diezelfde, ongewijzigde engine.
 const VERWACHT = {
-  kwal: [69, 81, 45, 81, 64],
-  tss: [253, 391, 362, 347, 340],
+  kwal: [69, 81, 45, 81, 64, 69],
+  tss: [253, 391, 362, 347, 340, 212],
 };
 
 // De invariant. V1, V3 en V5 liggen binnen de bibliotheek-band; daar hoort geen enkele
@@ -164,7 +182,7 @@ describe("Weekvorm-as: kwaliteitsminuten en week-TSS per weekvorm", () => {
     for (const [idx, vloer] of Object.entries(VLOER)) {
       const v = VORMEN[Number(idx)];
       if (!v) throw new Error(`weekvorm ${idx} bestaat niet`);
-      const { kwal } = meet(v.min, v.pendel, v.pendelDuurMin);
+      const { kwal } = meet(v.min, v.pendel, v.pendelDuurMin, v.dagOffset);
       expect(
         kwal,
         `${v.naam}: ${kwal} kwaliteitsminuten, vloer is ${vloer}`,
@@ -176,7 +194,7 @@ describe("Weekvorm-as: kwaliteitsminuten en week-TSS per weekvorm", () => {
     const kwal: number[] = [];
     const tss: number[] = [];
     for (const v of VORMEN) {
-      const r = meet(v.min, v.pendel, v.pendelDuurMin);
+      const r = meet(v.min, v.pendel, v.pendelDuurMin, v.dagOffset);
       kwal.push(r.kwal);
       tss.push(r.tss);
     }
