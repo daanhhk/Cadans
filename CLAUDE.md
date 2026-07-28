@@ -41,7 +41,11 @@ Die kun je zelf doen. `tools/shots/shot.mjs` seedt de LOKALE D1 via de API, pint
 
 Twee regels die erbij horen: de klok is **ook in de browser** een fixture-variabele (`page.clock.setFixedTime`, vóór de eerste `goto`), en de app is `height: 100dvh` met een eigen scrollende `main` — een `fullPage`-shot snijdt af, dus de viewport gaat op de gemeten scrollhoogte.
 
-Dit vervangt Daans oog niet: **de harness gate't de commit, Daans oog gate't de deploy.**
+**Je beoordeelt de shot zelf.** Per verwachting één UITSPRAAK: klopt, klopt niet, of niet toetsbaar op dit geval. Beschrijven wat je ziet is niet genoeg — dan velt Daan alsnog het oordeel, en dat is precies het werk dat de harness overneemt. Bevat het geval de situatie niet, dan is het "niet toetsbaar", nooit "klopt".
+
+Kun je iets niet uit de PNG vaststellen, zeg dan **expliciet wat Daan moet openen, op welk scherm, en waar hij precies naar kijkt**. Dat is de enige route naar hem toe.
+
+Read-only tegen prod mag: geef `tools/shots/shot.mjs` een doel-URL mee — geen seed, geen backup, geen enkele schrijf-aanroep.
 
 ## Dev-omgeving
 
