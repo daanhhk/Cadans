@@ -60,15 +60,32 @@ EERSTE keuze byte-identiek, want beide termen doen alleen mee zodra er ankers zi
   sjablonen zijn kort van ontwerp. Geen fout in de fallback, een grens van de bibliotheek.
 - Raakt: ENGINE (`allocateQualityWeek_`). NIET GEDEPLOYED.
 
-### STAP 2 — er is geen plek waar dosis wordt vastgehouden · OPEN
+### STAP 2 — er is geen plek waar dosis wordt vastgehouden · AF
 
-De blok-check concludeert inmiddels twee blokken achtereen "het plan was te licht", en niets
-onthoudt dat. Elk blok begint op hetzelfde niveau; de conclusie verdampt zodra de kaart weg is.
+De blok-check concludeerde blok na blok "het plan was te licht" en niets onthield dat: elk blok
+begon op hetzelfde niveau en de conclusie verdampte zodra de kaart weg was. Nu draagt hij een
+DOSIS-TREDE, en die tilt de NORM en het PLAN met dezelfde factor op.
 
-- Vraagt een kolom, en daarmee een migratie.
-- Criterium: een blok-check verhoogt aantoonbaar de norm van het volgende blok — als VOORSTEL
-  met bevestiging, niet stilzwijgend.
-- Raakt: ENGINE, DATA (migratie), CLIENT.
+Spec: `docs/DOSIS-TREDE-RECON.md`. Gebouwd in drie fases met een stop ertussen — engine
+(`e789857`), data (`5b6a5cd`), client (`860a95f`) — en LIVE sinds Worker Version
+`38e185df-f28c-4d00-947e-b8d6e8c65906`, met migratie `0007_useful_johnny_storm.sql` remote
+toegepast.
+
+- De trede telt in MINUTEN PER SLEUTELSESSIE (FTP 28, stap 2, plafond 4). Stap en plafond staan
+  in de code expliciet als BELEID gelabeld: er valt niets te ijken aan "hoeveel mag de dosis per
+  blok omhoog", en ijken op de eigen historie reproduceert juist de gewoonte die dit vervangt.
+- GEMETEN LADDER via `buildWeekProposal`, kwaliteitsminuten over de zeven weekvormen: trede 0
+  geeft 93 / 113 / 113 / 105 / 84 / 93 / 90, trede 1 geeft 101 / 121 / 121 / 113 / 90 / 101 / 98,
+  trede 2 geeft 106 / 130 / 129 / 120 / 96 / 106 / 103. Normen 84 / 90 / 96.
+- DE REM is geasserteerd, niet alleen beweerd: bij trede 3 blijft de krapste vorm op 100 tegen
+  een norm van 102, bij trede 4 op 106 tegen 108. Stijgen mag alleen na "geleverd", dus de ladder
+  houdt daar vanzelf stil — op de weekvorm die de gebruiker werkelijk rijdt.
+- Trede 0 is byte-identiek, end-to-end: nul herijkingen op de weekvorm-as, de 48 vingerafdrukken
+  en `blok.test.ts`.
+- Persistentie op `sync_state` (drie kolommen) met `GET`/`PUT /api/dosis-trede`. AFWIJZEN schrijft
+  óók de blokstart, zodat het voorstel dit blok niet terugkomt; de volgende blokgrens stelt de
+  vraag opnieuw. Een trede van een ander doel leest als 0.
+- Raakt: ENGINE, DATA (migratie `0007`), CLIENT. LIVE.
 
 ### STAP 3 — het doel stuurt de periodisering niet · OPEN
 
@@ -92,12 +109,14 @@ zonder van elkaar te weten.
 
 Stap 2, 3 en 4 zijn regelkringen BOVENOP stap 1. Een dosis-trede bovenop een te lage basis landt
 nog steeds onder de norm; een fase-indeling die het doel volgt verdeelt dezelfde te lage dosis
-alleen anders. Daarom ging stap 1 eerst, en daarom staat de weekvorm-as er nu als test: elke
-volgende stap meet zich tegen die basis en tegen niets anders.
+alleen anders. Daarom gingen 1 en 1b eerst: eerst kreeg de lange dag een sjabloon dat bij zijn
+duur past, daarna kreeg hij überhaupt een kwaliteitsslot. V3 ging van 45 naar 113
+kwaliteitsminuten, en pas dáárna kon stap 2 een trede bovenop een basis zetten die de norm haalt.
 
-Stap 1 en 1b zijn samen de basis: eerst kreeg de lange dag een sjabloon dat bij zijn duur past,
-daarna kreeg hij überhaupt een kwaliteitsslot. V3 ging daarmee van 45 naar 113 kwaliteitsminuten.
-Vanaf hier meet elke volgende stap zich tegen een basis die de norm haalt.
+Stap 2 is nu ook AF, en daarmee is de regelkring rond: de blok-check produceert een conclusie, de
+trede houdt hem vast, en de weekvorm-as bewaakt dat trede 0 nog steeds byte-identiek is. Wat
+resteert is stap 3 (het doel stuurt de fase niet) en stap 4 (twee kaarten over hetzelfde blok).
+Beide meten zich tegen dezelfde as.
 
 ## Meetlat
 
@@ -132,6 +151,11 @@ niet; hij verliest niet. Een punt gaat eruit zodra een STAP het opneemt — niet
 
 ### ENGINE
 
+- DE DOSIS-MUNT NOEMT DE INTENSITEIT NIET. `tryPowerZoneTimes_` vouwt Z3 én Z4 samen tot `high`,
+  dus de meetlat telt tempo volledig als kwaliteit. GEMETEN op weekvorm V1 schrijft het plan NUL
+  tempo voor: rust 58 · z2 148 · tempo 0 · drempel 93 · anaeroob 0. Plan en meetlat lopen daar dus
+  uiteen, en sinds stap 2 VERMENIGVULDIGT een dosis-trede die munt. Raakt `DOELEN-SPEC` §2A;
+  eigen ronde.
 - REST VAN DE VLAK-TARIEF-FAMILIE (circa 30 builders), niet naïef te behandelen: hun structuur
   draagt reps-notatie ("3x 14 min", "4x 30 sec"), dus de werkminuten zijn niet als platte
   minuten afleesbaar, en hun werkblokken liggen in drempel en anaeroob — juist de twee besmette
@@ -163,6 +187,16 @@ niet; hij verliest niet. Een punt gaat eruit zodra een STAP het opneemt — niet
 
 ### CLIENT
 
+- DE DAGKAART TOONT EEN GEMISTE SLEUTELSESSIE ALS RUSTDAG. Gevonden door de eerste prod-shot: de
+  weekkaart telde 348 TSS / 6:45 / 4 dagen waar de zeven dagkaarten samen 305 / 360 min / 3 dagen
+  dragen. `assignWorkouts` bouwt `sessions` alleen voor `tePlannen` (trainbaar én niet gedaan én
+  datum ≥ vandaag), dus een VERSTREKEN dag heeft per constructie nul sessies. De weekkaart is daar
+  TWEE keer voor gerepareerd en valt nu voor alle drie de gepland-stats terug op
+  `plannedForDone`; de DAGKAART heeft die terugval nooit gekregen — `SchemaView` kijkt puur naar
+  `day.sessions.length === 0` en zet dan "Rustdag — van herstel word je beter". De `gemist`-
+  toestand kan er evenmin vuren, want die eist `hasSessions`. Netto feliciteert de coach je met
+  rust op een dag waarop je een sleutelsessie liet liggen, en telt hem tegelijk in de noemer.
+  DERDE keer dat deze wortel maar half is gerepareerd. Client-only, eigen ronde.
 - `GET /api/checkin/:datum` GEEFT 404 bij afwezigheid, terwijl de huisregel elders 200 met
   `null` of een lege lijst is (`/api/settings`, `/api/planner/:monday`). Cosmetisch — de client
   vangt het op — maar het is inconsistentie, en het vult de console bij elke `/schema`-load.
