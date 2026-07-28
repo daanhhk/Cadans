@@ -9,3 +9,4 @@ coverage
 .env*
 tools/audit/out/
 tools/shots/out/
+tools/shots/seed-backup.json

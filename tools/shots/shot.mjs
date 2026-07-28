@@ -3,13 +3,21 @@
 // Client tooling only: no engine, no migration, no deploy, NEVER --remote.
 //
 // Run: node tools/shots/shot.mjs   (both dev servers must be up; see README.md)
-import { mkdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT = join(HERE, "out");
+// OUTSIDE out/: that directory is wiped every run, so the pre-seed state would be lost.
+const SEED_BACKUP = join(HERE, "seed-backup.json");
 
 // Hard on loopback. Remote is NEVER touched — no --remote, no deployed origin.
 const WEB = "http://127.0.0.1:5173";
@@ -21,6 +29,12 @@ const HEIGHT_CAP = 4000;
 
 const DAGEN = ["ma", "di", "wo", "do", "vr", "za", "zo"];
 const DAY_RE = /^(ma|di|wo|do|vr|za|zo)\s*\d{1,2}$/i;
+
+// The pinned browser clock, filled in main() once the Monday is known. The weekvorm axis
+// measures a week that lies entirely AHEAD; on the real clock today is mid-week and the app
+// and the yardstick would not be measuring the same thing. See docs/WERKWIJZE.md — the clock
+// is a fixture variable.
+let PINNED = "";
 
 /** Monday of the current local week, yyyy-MM-dd. Never hardcoded. */
 function mondayISO() {
@@ -71,6 +85,26 @@ const SCENARIOS = [
       6: { minuten: 120, dagtype: "weekend" },
     },
   },
+  // V2 and V4 carry a long Saturday ABOVE the library band (210 and 240 min), which is where
+  // the duration-selection rule is supposed to show — v7's 180 stayed plain endurance.
+  {
+    name: "v2",
+    spec: {
+      0: { minuten: 90, dagtype: "vrij" },
+      1: { minuten: 90, dagtype: "vrij" },
+      3: { minuten: 90, dagtype: "vrij" },
+      5: { minuten: 210, dagtype: "weekend" },
+    },
+  },
+  {
+    name: "v4",
+    spec: {
+      0: { minuten: 60, dagtype: "vrij" },
+      1: { minuten: 60, dagtype: "vrij" },
+      3: { minuten: 60, dagtype: "vrij" },
+      5: { minuten: 240, dagtype: "weekend" },
+    },
+  },
 ];
 
 /** Poll a URL until it answers 200, or give up after `seconds`. */
@@ -112,6 +146,19 @@ async function apiPut(path, body) {
 async function seedSettings(log) {
   const current = await apiGet("/api/settings");
   log.push("--- GET /api/settings (raw, before) ---", JSON.stringify(current));
+  // Only on first run: after that the "current" state is already a seeded one, and writing
+  // it again would overwrite the real pre-seed backup with a seeded copy.
+  if (existsSync(SEED_BACKUP)) {
+    log.push("--- seed-backup.json: already existed, left alone");
+  } else {
+    writeFileSync(
+      SEED_BACKUP,
+      `${JSON.stringify(current, null, 2)}
+`,
+      "utf8",
+    );
+    log.push("--- seed-backup.json: created");
+  }
   const merged = { ...current, ...OVERRIDES };
   const body = {};
   for (const [k, v] of Object.entries(merged)) {
@@ -240,6 +287,7 @@ async function capture(page, dir, name, url, probe) {
     join(dir, `${name}.txt`),
     [
       `url: ${url}`,
+      `clock pinned to: ${PINNED}`,
       `viewport: ${VIEWPORT_W}x${height} (needed ${needed}${capped ? ", CAPPED" : ""})`,
       `errors: ${probe.errors.length ? "" : "none"}`,
       ...probe.errors.map((e) => `  ${e}`),
@@ -276,20 +324,20 @@ async function sweep(page, scenario, monday, results) {
 
   // The day strip must be exactly seven buttons. Fewer or more means the selector drifted,
   // and a harness that quietly shoots the wrong thing is worse than one that stops.
-  const strip = await page
-    .locator("button")
-    .filter({ hasText: DAY_RE })
-    .elementHandles();
-  if (strip.length !== 7) {
+  const strip = () => page.locator("button").filter({ hasText: DAY_RE });
+  const count = await strip().count();
+  if (count !== 7) {
     throw new Error(
-      `${scenario.name}: expected 7 day-strip buttons, found ${strip.length}`,
+      `${scenario.name}: expected 7 day-strip buttons, found ${count}`,
     );
   }
 
   for (let i = 0; i < 7; i++) {
     await page.setViewportSize({ width: VIEWPORT_W, height: VIEWPORT_H });
     probe.reset();
-    await strip[i].click();
+    // Re-locate every time: selecting a day re-renders the strip, so a handle grabbed up
+    // front detaches and the click fails with "Element is not attached to the DOM".
+    await strip().nth(i).click();
     await page.waitForTimeout(600);
     const name = `0${i + 2}-${DAGEN[i]}`;
     results.push({
@@ -317,7 +365,11 @@ async function main() {
   mkdirSync(OUT, { recursive: true });
 
   const monday = mondayISO();
-  const log = [`monday (from local clock): ${monday}`];
+  PINNED = `${monday} 08:00 (Europe/Amsterdam)`;
+  const log = [
+    `monday (from local clock): ${monday}`,
+    `browser clock pinned to: ${PINNED}`,
+  ];
   await seedSettings(log);
   const eventsState = await seedEvents(log);
   writeFileSync(join(OUT, "00-seed.txt"), `${log.join("\n")}\n`, "utf8");
@@ -334,6 +386,10 @@ async function main() {
       viewport: { width: VIEWPORT_W, height: VIEWPORT_H },
     });
     const page = await ctx.newPage();
+    // setFixedTime, NOT install: freeze Date only and leave timers running, otherwise the
+    // app's own polling and transitions stall. Set before the first goto so every navigation
+    // inherits it.
+    await page.clock.setFixedTime(new Date(`${monday}T08:00:00`));
     for (const scenario of SCENARIOS) {
       await sweep(page, scenario, monday, results);
     }
@@ -341,7 +397,7 @@ async function main() {
     await browser.close();
   }
 
-  const lines = [`monday: ${monday}  events: ${eventsState}`];
+  const lines = [`monday: ${monday}  clock: ${PINNED}  events: ${eventsState}`];
   for (const r of results) {
     const bytes = statSync(r.png).size;
     lines.push(
