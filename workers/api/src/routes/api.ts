@@ -7,6 +7,8 @@
  * pre-deploy). athleteId komt uit c.env.INTERVALS_ATHLETE_ID (niet geëxposed).
  * User = CURRENT_USER_ID (vervalt in de auth-fase).
  */
+
+import { DOSIS_TREDE_MAX } from "@cadans/engine";
 import {
   type DayOverride,
   type DispositionReason,
@@ -26,6 +28,7 @@ import {
   readCheckin,
   readDebtOptIn,
   readDispositions,
+  readDosisTrede,
   readEvents,
   readFatigueShift,
   readOverrides,
@@ -39,6 +42,7 @@ import {
   writeCheckin,
   writeDebtOptIn,
   writeDisposition,
+  writeDosisTrede,
   writeEvents,
   writeFatigueShift,
   writeOverride,
@@ -571,6 +575,54 @@ api.put("/fatigue-shift", async (c) => {
     CURRENT_USER_ID,
     monday,
     dir as "up" | "down" | null,
+  );
+  return c.json({ ok: true });
+});
+
+// ROADMAP stap 2 — DOSIS-TREDE (spiegelt /fatigue-shift). GET geeft niveau + beantwoord blok +
+// doel (of drie nullen); PUT zet de drie samen. Het PLAFOND komt uit de engine-beleidsconstante,
+// niet als eigen getal hier — anders staat dezelfde grens op twee plekken en drijven ze uit
+// elkaar (docs/DOSIS-TREDE-RECON.md §6).
+api.get("/dosis-trede", async (c) => {
+  const db = makeDb(c.env.DB);
+  const { trede, blok, doel } = await readDosisTrede(db, CURRENT_USER_ID);
+  return c.json({ trede, blok, doel });
+});
+
+api.put("/dosis-trede", async (c) => {
+  const db = makeDb(c.env.DB);
+  const body = await readJsonObject(c);
+  const trede = body.trede;
+  const blok = body.blok;
+  const doel = body.doel;
+  // NIET clampen: een trede buiten bereik is een client-fout, en clampen verbergt hem.
+  if (
+    trede !== null &&
+    (typeof trede !== "number" ||
+      !Number.isInteger(trede) ||
+      trede < 0 ||
+      trede > DOSIS_TREDE_MAX)
+  ) {
+    throw new HTTPException(400, {
+      message: `invalid trede, expected integer 0..${DOSIS_TREDE_MAX} or null`,
+    });
+  }
+  if (blok !== null && (typeof blok !== "string" || !isIsoDate(blok))) {
+    throw new HTTPException(400, {
+      message: "invalid blok, expected yyyy-MM-dd or null",
+    });
+  }
+  if (doel !== null && (typeof doel !== "string" || !doel.trim())) {
+    throw new HTTPException(400, {
+      message: "invalid doel, expected non-empty string or null",
+    });
+  }
+  await writeDosisTrede(
+    db,
+    CURRENT_USER_ID,
+    trede as number | null,
+    blok as string | null,
+    doel as string | null,
   );
   return c.json({ ok: true });
 });

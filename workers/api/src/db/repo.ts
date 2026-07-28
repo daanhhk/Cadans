@@ -632,6 +632,58 @@ export async function writeFatigueShift(
     });
 }
 
+/** ROADMAP stap 2 — lees de DOSIS-TREDE (niveau + beantwoord blok + doel), of drie nullen. */
+export async function readDosisTrede(
+  db: Db,
+  userId: number,
+): Promise<{
+  trede: number | null;
+  blok: string | null;
+  doel: string | null;
+}> {
+  const rows = await db
+    .select({
+      trede: syncState.dosisTrede,
+      blok: syncState.dosisTredeBlok,
+      doel: syncState.dosisTredeDoel,
+    })
+    .from(syncState)
+    .where(eq(syncState.userId, userId))
+    .limit(1);
+  return {
+    trede: rows[0]?.trede ?? null,
+    blok: rows[0]?.blok ?? null,
+    doel: rows[0]?.doel ?? null,
+  };
+}
+
+/** Zet de drie dosis-trede-waarden samen. Upsert: raakt ALLEEN deze drie kolommen → de
+ * sync-velden, debt-opt-in en fatigue-shift blijven intact. */
+export async function writeDosisTrede(
+  db: Db,
+  userId: number,
+  trede: number | null,
+  blok: string | null,
+  doel: string | null,
+): Promise<void> {
+  await db
+    .insert(syncState)
+    .values({
+      userId,
+      dosisTrede: trede,
+      dosisTredeBlok: blok,
+      dosisTredeDoel: doel,
+    })
+    .onConflictDoUpdate({
+      target: syncState.userId,
+      set: {
+        dosisTrede: trede,
+        dosisTredeBlok: blok,
+        dosisTredeDoel: doel,
+      },
+    });
+}
+
 // ── wellness (WELL_HEADERS 12-kol) — DTO = WellnessInput (@cadans/shared) ─
 // WellnessInput = de WIRE-vorm (datum als ISO-string); de repo-vorm heeft datum
 // als Date. vorm = ctl−atl (bij sync).

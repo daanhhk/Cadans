@@ -242,6 +242,18 @@ export const syncState = sqliteTable("sync_state", {
   fatigueShiftWeek: text("fatigue_shift_week"),
   /** 'up' (deload→normale week, doortrainen) | 'down' (opbouwweek→reduced-load-deload) | null. */
   fatigueShiftDir: text("fatigue_shift_dir"),
+  /** ROADMAP stap 2 — de DOSIS-TREDE: het niveau waarop de dosis per sleutelsessie staat.
+   * Ontbreekt of null betekent 0, en 0 is byte-identiek aan geen trede (factor 1). Hoort hier
+   * en niet in `settings`: `settings` is config die de gebruiker zet, de trede is runtime-state
+   * die de blok-check opbouwt. Zie docs/DOSIS-TREDE-RECON.md §7. */
+  dosisTrede: integer("dosis_trede"),
+  /** De blokstart-MAANDAG (yyyy-MM-dd) waarvoor de trede-vraag beantwoord is. Zowel bevestigen
+   * ALS afwijzen schrijft hem, anders komt hetzelfde voorstel elke week terug; de volgende
+   * blokgrens stelt de vraag vanzelf opnieuw. Spiegelt `debtOptInWeek`/`fatigueShiftWeek`. */
+  dosisTredeBlok: text("dosis_trede_blok"),
+  /** Het DOEL waarop de trede is opgebouwd. De minuten per prikkel zijn doel-eigen (FTP 28,
+   * Onderhoud 22), dus bij een doel-wissel vervalt de trede in plaats van mee te reizen. */
+  dosisTredeDoel: text("dosis_trede_doel"),
 });
 
 // ── power_curve_cache — RAW {list,activities}-respons per window. pcNormalize_
