@@ -24,31 +24,41 @@ band eerst en bij gelijke band het zwaarste sjabloon.
   V1, V3 en V5 tot op de minuut ongewijzigd — de fallback vuurt nergens binnen de band.
 - Bouw-commit `ff2baf8`. NIET GEDEPLOYED.
 
-### STAP 1b — de lange dag pakt geen kwaliteitsslot · OPEN
+### STAP 1b — de lange dag pakt geen kwaliteitsslot · AF
 
-Het KWALITEITSQUOTUM bleek een deel van het antwoord, niet alleen de efforts-arm.
-`PROFILES.ftp.kwaliteitPerWeek.Base` stond op 2 terwijl `DOELEN-SPEC` §3.1 vanaf vijf
-gedeclareerde uren drie sleutelprikkels voorschrijft. Op 3 gezet (commit `f020c2a`) steeg elke
-weekvorm, en V3 ging van 45 naar 77 kwaliteitsminuten.
+Twee hendels, in deze volgorde. Eerst het KWALITEITSQUOTUM: `PROFILES.ftp.kwaliteitPerWeek.Base`
+stond op 2 terwijl `DOELEN-SPEC` §3.1 vanaf vijf gedeclareerde uren drie sleutelprikkels
+voorschrijft. Op 3 gezet (commit `f020c2a`) steeg elke weekvorm en ging V3 van 45 naar 77. Daarna
+de ALLOCATOR zelf (bouw-commit `6c4149f`, recon `52f43ca`), waarmee V3 op 113 uitkomt.
 
-Wat RESTEERT is het oorspronkelijke gat. Ook met drie slots pakt de lange dag geen
-kwaliteitsslot: de efforts-arm in `allocateQualityWeek_` vuurt alleen bij macrofase Build of
-Peak, dus in Base krijgt een zaterdag van drie uur duurwerk terwijl de kortere dagen de
-kwaliteit dragen. `goalWorkout_` komt er niet aan te pas — de duur-selectieregel uit STAP 1 kan
-dit dus niet oplossen.
+DE OORSPRONKELIJK OPGESCHREVEN OORZAAK IS WEERLEGD, en dat blijft hier staan als vindplaats. De
+efforts-arm zou alleen in Build of Peak vuren, dus in Base geen kwaliteit op de lange dag kunnen
+zetten. Twee metingen halen dat omver. De fase-voorwaarde verruimen naar Base is BYTE-IDENTIEK aan
+de baseline — de arm hangt aan twee voorwaarden en `PROFILES.ftp.spreiding.effortsInLangeRit` is
+false, alleen `PROFILES.klim` draagt de vlag, dus de ingreep is per constructie inert. Verruimen
+ÉN de vlag aanzetten laat ELKE weekvorm dalen, naar 75 / 75 / 75 / 75 / 69 / 75: het sjabloon
+`combo_long_with_efforts` levert 30 kwaliteitsminuten ongeacht de dagduur en consumeert bovendien
+een slot.
 
-- Gemeten op weekvorm V3 (ma70 di70 do70 za180 zo90, 8,0 uur, doel FTP, fase Base, mesoweek 1):
-  77 kwaliteitsminuten, tegen een norm van 84 bij vijf gedeclareerde uren. Als enige van de zes
-  vormen blijft V3 onder de norm, en de reden is dat za180 geen kwaliteitsslot krijgt.
-- Criterium: een lange dag kan ook in Base een kwaliteitsslot dragen, zonder dat de weken
-  daaronder inleveren.
-- `spreiding.midweekMinGap` is NIET de hendel: gemeten is dat quotum 3 mét midweekMinGap 0
-  byte-identiek is aan quotum 3 met 1.
-- DE VO2-GRENS. Boven 135 minuten kan de fallback uit stap 1 bij intent `vo2` hoogstens 28
-  nominale werkminuten leveren: de vo2-band houdt op bij 100 minuten en die sjablonen zijn kort
-  van ontwerp. Een lange dag met vo2-intent haalt de 45-werkminuten-eis dus niet, en dat is geen
-  fout in de fallback maar een grens van de bibliotheek.
-- Raakt: ENGINE.
+WAT HET WEL WAS: `pickBestSpread_` koos kwaliteitsdagen op AFSTAND tot de reeds geplaatste dagen
+en was volledig blind voor draagkracht — in V3 won de zondag van 90 min van de zaterdag van 180,
+puur omdat hij verder van de maandag lag. Daaronder lag een tweede vondst: de dosis hing aan de
+VOLGORDE van de keuzes. Dezelfde drie dagen (ma70 + za180 + do70) leverden 113 kwaliteitsminuten
+in de volgorde ma>za>do en 87 in ma>do>za — 30 procent verschil zonder trainingsreden.
+
+DE OPGELOSTE REGEL: geen weekendpaar vormen, dan PLAATSBAARHEID, dan DRAAGKRACHT, dan afstand,
+dan pendel, dan laagste dagIdx. Plaatsbaarheid staat boven draagkracht omdat draagkracht alleen
+greedy is: een lange dag kan zijn buren blokkeren en zo een hele sleutelsessie kosten. Geen nieuwe
+constante; `gapOK_`, `minGap`, `formsWeekendPair_`, `weekendBlok` en de efforts-arm ongemoeid; de
+EERSTE keuze byte-identiek, want beide termen doen alleen mee zodra er ankers zijn.
+
+- Alle zeven weekvormen halen nu de norm van 84 bij vijf gedeclareerde uren.
+- `spreiding.midweekMinGap` was NIET de hendel: quotum 3 mét `midweekMinGap` 0 is byte-identiek
+  aan quotum 3 met 1.
+- DE VO2-GRENS blijft staan. Boven 135 minuten kan de fallback uit stap 1 bij intent `vo2`
+  hoogstens 28 nominale werkminuten leveren: de vo2-band houdt op bij 100 minuten en die
+  sjablonen zijn kort van ontwerp. Geen fout in de fallback, een grens van de bibliotheek.
+- Raakt: ENGINE (`allocateQualityWeek_`). NIET GEDEPLOYED.
 
 ### STAP 2 — er is geen plek waar dosis wordt vastgehouden · OPEN
 
@@ -85,29 +95,28 @@ nog steeds onder de norm; een fase-indeling die het doel volgt verdeelt dezelfde
 alleen anders. Daarom ging stap 1 eerst, en daarom staat de weekvorm-as er nu als test: elke
 volgende stap meet zich tegen die basis en tegen niets anders.
 
-Stap 1b is wat er van stap 1 overblijft. De as laat het staan: V3 levert op acht uur nog steeds
-45 kwaliteitsminuten, want daar krijgt de lange dag helemaal geen kwaliteitsslot. Dat zit in de
-allocator, niet in de sjabloonkeuze.
+Stap 1 en 1b zijn samen de basis: eerst kreeg de lange dag een sjabloon dat bij zijn duur past,
+daarna kreeg hij überhaupt een kwaliteitsslot. V3 ging daarmee van 45 naar 113 kwaliteitsminuten.
+Vanaf hier meet elke volgende stap zich tegen een basis die de norm haalt.
 
 ## Meetlat
 
-Bij ELKE bouw draait dezelfde weekvorm-as opnieuw, en gaan de kwaliteitsminuten én de week-TSS
-in `HANDOFF.md`. Geen nieuwe as per ronde — dezelfde as, zodat de reeks over de stappen heen
-vergelijkbaar blijft.
+Bij ELKE bouw draait dezelfde weekvorm-as opnieuw, en gaan de cijfers in `HANDOFF.md`. Geen
+nieuwe as per ronde — dezelfde as, zodat de reeks over de stappen heen vergelijkbaar blijft.
 
-De as staat als test in `apps/web/src/lib/weekvormAs.test.ts`, met een HARDE invariant dat V1,
-V3 en V5 niet mogen dalen, en de volledige reeks als vingerafdruk. De invariant wordt niet
-herijkt; de vingerafdruk mag dat wel, bewust en verantwoord.
+De as draagt ZEVEN vormen en DRIE rijen: kwaliteitsminuten, week-TSS en het AANTAL
+kwaliteitsdagen. Die derde rij is er bij stap 1b bij gekomen en is geen sier: het greedy-defect
+kostte een weekvorm een hele kwaliteitsdag terwijl de minuten maar 10 procent zakten. Op minuten
+alleen oogt zoiets als ruis.
 
-De as draagt ZES vormen. V6 meet een week IN UITVOERING — zelfde dagen als V1, maar "vandaag" is
-dinsdag en de maandag is verstreken zonder rit. V1 t/m V5 liggen volledig vooruit, dus zonder V6
-werd de normale situatie nergens gemeten. V6 staat NIET in de invariant-lijst; die blijft V1, V3
-en V5.
+V6 meet een week IN UITVOERING (gemiste maandag, klok op dinsdag). V7 (di60 vr90 za180 zo120) is
+de vorm waarin een LANGE WEEKENDDAG ZIJN BUREN BLOKKEERT — die familie zat in geen van beide
+meetsets, en juist daar zat het defect. V6 en V7 staan NIET in de invariant-lijst; die blijft
+V1, V3 en V5.
 
-Stand na het derde kwaliteitsslot (doel FTP, fase Base, mesoweek 1), kwaliteitsminuten:
-V1 5,0u 93 · V2 8,0u 113 · V3 8,0u 77 · V4 7,0u 105 · V5 7,0u 84 · V6 in uitvoering 93.
-Week-TSS: 268 · 410 · 437 · 362 · 352 · 227. Norm bij vijf gedeclareerde uren is 84; alleen V3
-blijft daaronder.
+Stand na stap 1b (doel FTP, fase Base, mesoweek 1):
+kwaliteitsminuten 93 / 113 / 113 / 105 / 84 / 93 / 90 · week-TSS 268 / 410 / 464 / 362 / 352 /
+227 / 375 · kwaliteitsdagen 3 / 3 / 3 / 3 / 3 / 3 / 3.
 
 ## Parkeerlijst
 
@@ -131,6 +140,18 @@ niet; hij verliest niet. Een punt gaat eruit zodra een STAP het opneemt — niet
 - `weekIndexFromStart_` herhaalt een week bij de voorjaars-DST-sprong (28-03-2027).
 - `kwaliteitPerWeek.Peak` staat voor doel FTP nog op 2 en draagt daarmee hetzelfde norm-gat dat
   in Base is gedicht. Niet geraakt; Base was de gemeten fase.
+- DRAAGKRACHT IS EEN PROXY. Beschikbare minuten voorspellen niet wat een dag OPLEVERT: negen
+  gemeten cellen — alle in Peak of op een dag boven de bibliotheekband — houden hetzelfde aantal
+  kwaliteitsdagen maar leveren minder minuten. De echte grootheid is de opbrengst van het gekozen
+  sjabloon. Dat koppelt de allocator aan de archetype-bibliotheek; eigen ronde.
+- DE WEEKENDPAAR-PENALTY IS STAP-LOKAAL. Hij beoordeelt de kandidaat van dit moment en kan niet
+  zien dat een EERDERE keuze een paar later onvermijdelijk maakt. Gemeten op fixture A: de
+  pendeldag wint op draagkracht, waarna de zondag de enige overgebleven dag is. Raakt alleen
+  profielen met `weekendBlok` true — vandaag uitsluitend klim, en daar is het paar volgens
+  `DOELEN-SPEC` §3.4 juist de bedoelde training. Bijt wel richting AGR.
+- `threshold_4x8_seiler` draagt `effectTags: ["drempel"]` en `zone: 4`, maar de core loopt op 103
+  tot 108 procent FTP, dus de minuten landen in de ANAEROBE bucket: 32 anaerobe minuten en TSS 124
+  op een dag van 70 minuten. Effecttag en zoneboekhouding spreken elkaar tegen.
 - Gat-dag-types via meegegeven datum.
 
 ### CLIENT
