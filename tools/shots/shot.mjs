@@ -19,9 +19,17 @@ const OUT = join(HERE, "out");
 // OUTSIDE out/: that directory is wiped every run, so the pre-seed state would be lost.
 const SEED_BACKUP = join(HERE, "seed-backup.json");
 
-// Hard on loopback. Remote is NEVER touched — no --remote, no deployed origin.
-const WEB = "http://127.0.0.1:5173";
-const API = "http://127.0.0.1:8787";
+// Default: hard on loopback, and remote is NEVER touched.
+//
+// PROD MODE: pass a target URL as the single argument and the harness switches to READ-ONLY —
+// it seeds nothing, writes no backup, makes no non-GET call of its own, runs no scenarios, and
+// does not pin the clock (on a live deployment the real date IS the point). Everything else is
+// unchanged. Without an argument the behaviour is byte-identical to before.
+const TARGET = (process.argv[2] || "").replace(/\/+$/, "");
+const PROD = !!TARGET;
+const WEB = PROD ? TARGET : "http://127.0.0.1:5173";
+// One origin on a deployment: the Worker serves the assets AND /api.
+const API = PROD ? TARGET : "http://127.0.0.1:8787";
 
 const VIEWPORT_W = 390;
 const VIEWPORT_H = 1800;
@@ -303,12 +311,16 @@ async function capture(page, dir, name, url, probe) {
   return { name, height, needed, capped, errors: probe.errors.length, png };
 }
 
+/** `scenario` null = prod mode: no planner seed, just look at whatever is there. */
 async function sweep(page, scenario, monday, results) {
-  const dir = join(OUT, scenario.name);
+  const label = scenario ? scenario.name : "prod";
+  const dir = join(OUT, label);
   mkdirSync(dir, { recursive: true });
-  await apiPut(`/api/planner/${monday}`, {
-    days: plannerDays(monday, scenario.spec),
-  });
+  if (scenario) {
+    await apiPut(`/api/planner/${monday}`, {
+      days: plannerDays(monday, scenario.spec),
+    });
+  }
 
   const probe = attach(page);
   const url = `${WEB}/schema`;
@@ -318,7 +330,7 @@ async function sweep(page, scenario, monday, results) {
   await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
   await settle(page);
   results.push({
-    scenario: scenario.name,
+    scenario: label,
     ...(await capture(page, dir, "01-week", url, probe)),
   });
 
@@ -327,9 +339,7 @@ async function sweep(page, scenario, monday, results) {
   const strip = () => page.locator("button").filter({ hasText: DAY_RE });
   const count = await strip().count();
   if (count !== 7) {
-    throw new Error(
-      `${scenario.name}: expected 7 day-strip buttons, found ${count}`,
-    );
+    throw new Error(`${label}: expected 7 day-strip buttons, found ${count}`);
   }
 
   for (let i = 0; i < 7; i++) {
@@ -341,7 +351,7 @@ async function sweep(page, scenario, monday, results) {
     await page.waitForTimeout(600);
     const name = `0${i + 2}-${DAGEN[i]}`;
     results.push({
-      scenario: scenario.name,
+      scenario: label,
       ...(await capture(page, dir, name, `${url} [${DAGEN[i]}]`, probe)),
     });
   }
@@ -351,12 +361,14 @@ async function sweep(page, scenario, monday, results) {
 async function main() {
   if (!(await waitFor(WEB, 60))) {
     throw new Error(
-      `vite dev server not answering on ${WEB} — start it before running this`,
+      PROD
+        ? `${WEB} not answering`
+        : `vite dev server not answering on ${WEB} — start it before running this`,
     );
   }
-  // Seeding needs the Worker; without it there is nothing to seed into.
+  // A GET only — even the preflight stays read-only in prod mode.
   const apiUp = await waitFor(`${API}/api/settings`, 20);
-  if (!apiUp) {
+  if (!apiUp && !PROD) {
     throw new Error(`worker not answering on ${API} — seeding needs it`);
   }
 
@@ -365,14 +377,20 @@ async function main() {
   mkdirSync(OUT, { recursive: true });
 
   const monday = mondayISO();
-  PINNED = `${monday} 08:00 (Europe/Amsterdam)`;
-  const log = [
-    `monday (from local clock): ${monday}`,
-    `browser clock pinned to: ${PINNED}`,
-  ];
-  await seedSettings(log);
-  const eventsState = await seedEvents(log);
-  writeFileSync(join(OUT, "00-seed.txt"), `${log.join("\n")}\n`, "utf8");
+  let eventsState = "n/a (prod, read-only)";
+  if (PROD) {
+    // On a live deployment the REAL date is the point, so no clock pin.
+    PINNED = "not pinned (prod, real clock)";
+  } else {
+    PINNED = `${monday} 08:00 (Europe/Amsterdam)`;
+    const log = [
+      `monday (from local clock): ${monday}`,
+      `browser clock pinned to: ${PINNED}`,
+    ];
+    await seedSettings(log);
+    eventsState = await seedEvents(log);
+    writeFileSync(join(OUT, "00-seed.txt"), `${log.join("\n")}\n`, "utf8");
+  }
 
   const browser = await chromium.launch({ headless: true });
   const results = [];
@@ -386,18 +404,27 @@ async function main() {
       viewport: { width: VIEWPORT_W, height: VIEWPORT_H },
     });
     const page = await ctx.newPage();
-    // setFixedTime, NOT install: freeze Date only and leave timers running, otherwise the
-    // app's own polling and transitions stall. Set before the first goto so every navigation
-    // inherits it.
-    await page.clock.setFixedTime(new Date(`${monday}T08:00:00`));
-    for (const scenario of SCENARIOS) {
-      await sweep(page, scenario, monday, results);
+    if (PROD) {
+      // One situation only: whatever the live data happens to be.
+      await sweep(page, null, monday, results);
+    } else {
+      // setFixedTime, NOT install: freeze Date only and leave timers running, otherwise the
+      // app's own polling and transitions stall. Set before the first goto so every
+      // navigation inherits it.
+      await page.clock.setFixedTime(new Date(`${monday}T08:00:00`));
+      for (const scenario of SCENARIOS) {
+        await sweep(page, scenario, monday, results);
+      }
     }
   } finally {
     await browser.close();
   }
 
-  const lines = [`monday: ${monday}  clock: ${PINNED}  events: ${eventsState}`];
+  const lines = [
+    PROD
+      ? `target: ${WEB}  READ-ONLY, clock ${PINNED}`
+      : `monday: ${monday}  clock: ${PINNED}  events: ${eventsState}`,
+  ];
   for (const r of results) {
     const bytes = statSync(r.png).size;
     lines.push(
