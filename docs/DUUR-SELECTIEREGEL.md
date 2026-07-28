@@ -21,47 +21,74 @@ drempel.
 
 Nominale werkminuten per intent, gemeten over `ARCHETYPES`:
 
-- drempel: 16 tot 42 minuten (`threshold_2x8` tot `threshold_long`)
-- sweetspot: 18 tot 60 minuten (`sweetspot_3x6_kort` tot `sweetspot_long`)
-- vo2: 8 tot 20 minuten (`vo2_sandwich` tot `vo2_4x5` / `vo2_long`)
+- drempel: 16 tot 50 minuten (`threshold_2x8` tot `threshold_pyramid`)
+- sweetspot: 18 tot 69 minuten (`sweetspot_3x6_kort` tot `sweetspot_pyramid`)
+- vo2: 5 tot 28 minuten (`vo2_microburst` tot `vo2_sandwich`)
+
+Geteld over ALLE core-vormen, niet alleen over de intervallen: een ladder, een over-under en
+een set staan in `core` als meerdere entries naast elkaar, en `steady` draagt zijn `durMin`.
+Er bestaan maar twee core-kinds — `int` en `steady`; wie alleen op `reps` en `onMin` telt,
+mist de helft.
+
+De DEKKING per intent is ononderbroken — binnen de band is er geen enkele beschikbare tijd
+zonder kandidaat. Het probleem zit uitsluitend aan de bovenkant, waar de band ophoudt:
+
+- drempel: band 33 tot 120 minuten, NUL kandidaten vanaf 121
+- sweetspot: band 34 tot 135 minuten, NUL kandidaten vanaf 136
+- vo2: band 35 tot 100 minuten, NUL kandidaten vanaf 101
 
 Drempel en hoger worden begrensd door HERSTEL, niet door tijd: een rit van vier uur maakt
 2x20 minuten drempel niet verteerbaarder dan een rit van anderhalf uur. Sweetspot en tempo
 schalen WEL met de ritduur. De bibliotheek draagt die grens al; er hoeft niets bijgebouwd te
 worden.
 
-## 3. De regel
+## 3. WEERLEGD — de doelwerktijd-regel
 
-`doelWerkMin_(beschikbareTijd, intent)` levert de gewenste nominale werktijd voor deze dag:
+Hier stond een regel `doelWerkMin_(beschikbareTijd, intent)`: vo2 20 vast, drempel 40 vast,
+sweetspot `min(60, round(0,25 * beschikbareTijd))`, met die afstand als sorteersleutel en
+zonder plafond. Gebouwd en GEMETEN, en daarmee weerlegd.
 
-- intent `vo2` (en anaeroob) -> 20 minuten, VAST, schaalt niet met de ritduur
-- intent `drempel` -> 40 minuten, VAST, schaalt niet met de ritduur
-- intent `sweetspot` (en tempo) -> `min(60, round(0,25 * beschikbareTijd))`
-- onbekend intent -> de sweetspot-regel
+Kwaliteitsminuten op de weekvorm-as, voor tegenover na: 69 / 45 / 45 / 45 / 64 werd
+62 / 90 / 56 / 92 / 51. De lange staart steeg fors (V2 en V4 van 45 naar 90 en 92), maar V1,
+V3 en V5 ZAKTEN — en V1 is juist de referentie waartegen de acceptatie meet.
 
-Uitkomst per ritduur voor sweetspot: 150 min -> 37 · 180 min -> 45 · 210 min -> 52 ·
-240 min -> 60 (dak).
+De oorzaak is exact aanwijsbaar. Bij 120 beschikbare minuten geeft 0,25 × 120 een doel van 30
+werkminuten. `sweetspot_2x15` heeft er precies 30 en wint daarmee van `sweetspot_4x12` met 48
+— terwijl het plafond `sweetspot_2x15` (duurRange 46 tot 68) juist buiten hield.
 
-BOVENGRENS-CHECK tegen de D1-meting: 45 tot 130 minuten Z3+ in een lange rit is aantoonbaar
-verteerd (`docs/STAP7-IJKING-DATA.md`, band d6_240plus: kwal_gem 128,7 · kwal_max 171,8). Een
-voorstel van 60 minuten op vier uur onderschrijdt dat ruim en is dus veilig. De meting stelt de
-regel niet VAST — hij begrenst hem alleen naar boven.
+CONCLUSIE, en dit is de les: BINNEN de bibliotheek-band DOET het plafond werk. Het weert korte
+sjablonen van middellange dagen. Het is geen overblijfsel dat weg kan; het is de enige rem op
+een 30-minuten-sjabloon op een rit van twee uur. Alleen BUITEN de band, waar het nul kandidaten
+oplevert, is het schadelijk.
 
-## 4. De ingreep
+## 4. De ingreep — plafond blijft, met een fallback
 
-1. Het plafond `beschikbareTijd <= a.duurRange[1]` VERVALT uit de kandidaat-filter van
-   `goalWorkout_`. De ondergrens `beschikbareTijd >= a.duurRange[0]` BLIJFT.
-2. De sorteervolgorde krijgt een nieuwe sleutel op de DERDE plaats, na voorkeur en staleness en
-   VOOR `duurRange[0]`: `abs(archetypeWorkMin_(a) - doelWerkMin_(beschikbareTijd, intent))`,
-   oplopend. De bestaande sleutels blijven eronder staan als stabiele afmaker.
-3. `archetypeWorkMin_(rec)` wordt de ENIGE definitie van nominale werktijd: steady -> `durMin`,
+1. Het plafond `beschikbareTijd <= a.duurRange[1]` BLIJFT in de kandidaat-filter van
+   `goalWorkout_`, samen met de ondergrens en `archetypeAllowedForProfile_`. Binnen de band
+   verandert er dus NIETS — geen enkele keuze verschuift.
+2. Levert die filter NUL kandidaten op, dan volgt een TWEEDE pass met dezelfde filter maar
+   ZONDER het plafond. Voorheen viel de dag hier door naar duurwerk zonder kwaliteit.
+3. De tweede pass sorteert op `duurRange[1]` AFLOPEND, daarna nominale werktijd AFLOPEND,
+   daarna `id`. Dus: het sjabloon dat het dichtst bij de gevraagde duur komt, en bij gelijke
+   duur het zwaarste. Voorkeur en staleness spelen in deze pass GEEN rol — er is niets te
+   rouleren als er maar één band-overschrijdende keuze overblijft.
+4. `archetypeWorkMin_(rec)` wordt de ENIGE definitie van nominale werktijd: steady -> `durMin`,
    interval -> `reps * onMin` (of `onSec / 60` als `onMin` ontbreekt). De bestaande lus in
    `expandArchetype_` roept die helper voortaan aan in plaats van het zelf te berekenen.
-4. `expandArchetype_` verandert VERDER NIET. De endurance-fill vult een rit al correct tot
+5. `expandArchetype_` verandert VERDER NIET. De endurance-fill vult een rit al correct tot
    `doelMin`; dat is gemeten op 120, 180 en 240 minuten.
 
 ## 5. Acceptatie
 
 Meetbaar, op de vaste weekvorm-as (doel FTP, fase Base, mesoweek 1, klok gepind op 2026-07-27):
-GEEN weekvorm van 6 uur of meer levert minder kwaliteitsminuten dan de weekvorm van 5,0 uur.
-Vandaag is dat 69 / 45 / 45 / 45; na de bouw mag de reeks niet meer dalen met de uren.
+
+1. GEEN enkele weekvorm daalt ten opzichte van de voor-meting. De fallback vuurt alleen waar
+   het plafond nul kandidaten gaf; raakt hij een weekvorm die daar niet onder valt, dan vuurt
+   hij waar hij niet hoort.
+2. Een dag boven 135 minuten die een kwaliteitsslot krijgt, draagt een archetype met minstens
+   45 nominale werkminuten.
+
+V3 valt BUITEN het bereik van deze regel. Daar krijgt de zaterdag van 180 minuten helemaal geen
+kwaliteitsslot: de allocator wijst de kwaliteitsdagen aan maandag en zondag toe en maakt
+zaterdag de lange duurrit. Dat is een eigen post — zie `docs/ROADMAP.md` stap 1b — en niet met
+`goalWorkout_` op te lossen.

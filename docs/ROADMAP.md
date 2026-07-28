@@ -13,9 +13,25 @@ code.
 Meer uren leveren vandaag MINDER kwaliteit op. Vanaf 136 beschikbare minuten kwalificeert geen
 enkel sjabloon meer en valt de dag door naar duurwerk zonder kwaliteit.
 
-- Spec: `docs/DUUR-SELECTIEREGEL.md` (VASTGESTELD, coach-canon).
-- Criterium: geen weekvorm van 6 uur of meer levert minder kwaliteitsminuten dan de weekvorm
-  van 5,0 uur.
+- Spec: `docs/DUUR-SELECTIEREGEL.md` (VASTGESTELD, coach-canon). §3 draagt een WEERLEGDE eerste
+  poging — het plafond doet binnen de bibliotheek-band echt werk en blijft daarom staan.
+- Criterium (herzien na meting, zie spec §5): geen enkele weekvorm daalt ten opzichte van de
+  voor-meting, en een dag boven 135 minuten die een kwaliteitsslot krijgt draagt een archetype
+  met minstens 45 nominale werkminuten.
+- Raakt: ENGINE.
+
+### STAP 1b — kwaliteit in de lange rit buiten Build en Peak · OPEN
+
+De efforts-arm in `allocateQualityWeek_` vuurt alleen bij macrofase Build of Peak. In Base
+krijgt een zaterdag van drie uur dus duurwerk, terwijl twee kortere dagen door de week de
+kwaliteit dragen. De lange dag is dan geen kwaliteitsdag, en `goalWorkout_` komt er niet eens
+aan te pas — de duur-selectieregel uit STAP 1 kan dit dus niet oplossen.
+
+- Gemeten op weekvorm V3 (ma70 di70 do70 za180 zo90, 8,0 uur, doel FTP, fase Base, mesoweek 1):
+  45 kwaliteitsminuten, omdat za180 geen kwaliteitsslot krijgt. Acht uur levert daarmee evenveel
+  als vijf.
+- Criterium: een lange dag kan ook in Base een kwaliteitsslot dragen, zonder dat de weken
+  daaronder inleveren.
 - Raakt: ENGINE.
 
 ### STAP 2 — er is geen plek waar dosis wordt vastgehouden · OPEN
