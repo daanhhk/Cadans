@@ -584,6 +584,30 @@ describe("engine selftest", () => {
       2,
     );
     assert_("buildWorkout archetype-tak stijgt", true, kwal(bA2) > kwal(bA0));
+
+    // (5) FASE 3 — buildOverrideWorkout_ geeft de trede door aan BEIDE takken. Een handmatig
+    // gekozen kwaliteitssessie hoort dezelfde dosis te dragen als een geplande; zonder deze
+    // doorgifte bleef de override op trede 0 staan terwijl de rest van de week meebewoog.
+    const ovVariant: any = {
+      type: "library",
+      workoutType: "threshold",
+      variantId: "thr_3x15",
+      durMin: 90,
+    };
+    const ovBuild: any = {
+      type: "library",
+      workoutType: "threshold",
+      durMin: 90,
+    };
+    for (const [naam, ov] of [
+      ["variantId-tak", ovVariant],
+      ["buildWorkout-tak", ovBuild],
+    ] as [string, any][]) {
+      const o0 = buildOverrideWorkout_(ov, S, 1, "Base", undefined, 1, 0);
+      const o2 = buildOverrideWorkout_(ov, S, 1, "Base", undefined, 1, 2);
+      assert_("override " + naam + " trede 0", 45, kwal(o0));
+      assert_("override " + naam + " trede 2", 51, kwal(o2));
+    }
   });
 
   // ── checkinDelta_ (puur, leest CHECKIN_LEVELS) ──────────────────────
@@ -5366,7 +5390,7 @@ describe("engine selftest", () => {
   // pre-claim, 4× de efforts-arm die blijft en een slot consumeert, en 7× assignWorkouts voor de
   // demotie (allocator-dag blijft staan, niet-allocator-dag én cross-week worden nog gedemoteerd).
   // Herijkt zonder telling-effect (1:1): "alloc Base longride role" longride→endurance. 1245→1260.
-  it("exactly 1354 assertions", () => {
-    expect(assertCount).toBe(1354);
+  it("exactly 1358 assertions", () => {
+    expect(assertCount).toBe(1358);
   });
 });

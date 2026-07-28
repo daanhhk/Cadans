@@ -1527,6 +1527,10 @@ export function buildOverrideWorkout_(
   macroFase: any,
   eventCtx: any,
   dagIdx: any,
+  // DOSIS-TREDE, optioneel; weggelaten of 0 → factor 1 → byte-identiek. mesoWeek reist hier al
+  // doorheen en de trede is dezelfde soort dosis-modulatie, dus hij hoort mee — ANDERS draagt
+  // een handmatig gekozen kwaliteitssessie de trede niet en dragen de geplande sessies hem wel.
+  dosisTrede?: any,
 ): any {
   if (!ov) return null;
   // T28 fase 2a-i: een bewuste RUSTDAG levert geen workout. null is hier geen fout-pad maar
@@ -1540,7 +1544,9 @@ export function buildOverrideWorkout_(
         ? recoveryPool_()
         : getPool_(ov.workoutType);
     const v = pool ? findVariantById_(pool, ov.variantId) : null;
-    if (v) return renderVariant_(v, settings, mesoWeek, macroFase, dur);
+    if (v) {
+      return renderVariant_(v, settings, mesoWeek, macroFase, dur, dosisTrede);
+    }
   }
   return buildWorkout(
     ov.workoutType,
@@ -1550,6 +1556,9 @@ export function buildOverrideWorkout_(
     macroFase,
     eventCtx,
     dagIdx,
+    undefined,
+    "heen",
+    dosisTrede,
   );
 }
 

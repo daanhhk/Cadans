@@ -1,7 +1,7 @@
 import { mesoFactor } from "@cadans/engine";
 import type { DispositionReason, SettingsInput } from "@cadans/shared";
 import { useMemo, useState } from "react";
-import type { BlokReview } from "../../lib/blok";
+import type { BlokReview, DosisTredeVoorstel } from "../../lib/blok";
 import {
   coachNarrative,
   normalizeCoachPersona,
@@ -31,6 +31,7 @@ import { DayStrip } from "./DayStrip";
 import { DispositionAffordance } from "./DispositionAffordance";
 import { DoneCompareCard } from "./DoneCompareCard";
 import { DoneDetail } from "./DoneDetail";
+import { DosisTredeCard } from "./DosisTredeCard";
 import { FaseOvergangCard } from "./FaseOvergangCard";
 import { FatigueCard, isFatigueAfgewezen } from "./FatigueCard";
 import { GarminPushButton } from "./GarminPushButton";
@@ -69,6 +70,7 @@ export function SchemaView({
   inhaal = null,
   fatigue = null,
   blokReview = null,
+  dosisTredeVoorstel = null,
   testVoorstel = null,
   optedIn = false,
   weekMonday,
@@ -86,6 +88,7 @@ export function SchemaView({
   fatigue?: FatigueVoorstel | null;
   /** 5a-ii — blok-terugblik (alleen in blokweek 4 en 1), of null. */
   blokReview?: BlokReview | null;
+  dosisTredeVoorstel?: DosisTredeVoorstel | null;
   /** 5b-ii — testvoorstel voor de rustweek, of null. */
   testVoorstel?: TestVoorstel | null;
   /** FASE 3a — is het inhaal-plan voor deze week goedgekeurd? */
@@ -283,6 +286,16 @@ export function SchemaView({
           vraagt niets, dus hij concurreert niet met de week-voorstellen. */}
       {blokReview && (
         <BlokReviewCard review={blokReview} coachNaam={view.coachNaam} />
+      )}
+
+      {/* ROADMAP stap 2 — de DOSIS-TREDE, DIRECT ONDER de terugblik: die vertelt wat er gebeurd
+          is, deze vraagt wat er verandert. Zelfbegrenzend (alle poorten in dosisTredeVoorstel),
+          dus geen render-guard hier. Afwijzen is persistent, niet sessie-lokaal. */}
+      {dosisTredeVoorstel && (
+        <DosisTredeCard
+          voorstel={dosisTredeVoorstel}
+          coachNaam={view.coachNaam}
+        />
       )}
 
       {day && (

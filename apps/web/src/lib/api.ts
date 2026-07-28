@@ -211,6 +211,43 @@ export async function putFatigueShift(
   }
 }
 
+/** ROADMAP stap 2 — GET /api/dosis-trede: niveau + het blok waarvoor de vraag beantwoord is +
+ * het doel waarop hij is opgebouwd (of drie nullen). */
+export async function getDosisTrede(): Promise<{
+  trede: number | null;
+  blok: string | null;
+  doel: string | null;
+}> {
+  const r = await apiGet<{
+    trede: number | null;
+    blok: string | null;
+    doel: string | null;
+  }>("/api/dosis-trede");
+  return {
+    trede: r?.trede ?? null,
+    blok: r?.blok ?? null,
+    doel: r?.doel ?? null,
+  };
+}
+
+/** ROADMAP stap 2 — PUT /api/dosis-trede: zet de drie samen. Bevestigen ÉN afwijzen schrijven
+ * blok+doel; alleen bevestigen verhoogt de trede. */
+export async function putDosisTrede(
+  trede: number | null,
+  blok: string | null,
+  doel: string | null,
+): Promise<void> {
+  const resp = await fetch("/api/dosis-trede", {
+    method: "PUT",
+    headers: { "content-type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ trede, blok, doel }),
+  });
+  if (!resp.ok) {
+    const parsed = await parseBody(resp);
+    throw new Error(errMessage(parsed, resp.status));
+  }
+}
+
 /** Eén te-pushen dag: datum + type + de ACTIEVE sessies (SchemaSession-shape; los getypeerd
  * om een schema↔api-importcyclus te vermijden). */
 export interface PushDayInput {

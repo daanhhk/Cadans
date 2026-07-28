@@ -2,7 +2,7 @@ import type { DispositionReason, SettingsInput } from "@cadans/shared";
 import { useEffect, useState } from "react";
 import { SchemaView } from "../components/schema/SchemaView";
 import { postSyncActivities, postSyncWellness } from "../lib/api";
-import type { BlokReview } from "../lib/blok";
+import type { BlokReview, DosisTredeVoorstel } from "../lib/blok";
 import { subscribePlannerVersion } from "../lib/plannerSignal";
 import type { ProposalWeek } from "../lib/proposal";
 import type { ReadinessResult } from "../lib/readiness";
@@ -37,6 +37,8 @@ interface SchemaData {
   blokReview: BlokReview | null;
   /** 5b-ii — testvoorstel voor de rustweek, of null. */
   testVoorstel: TestVoorstel | null;
+  /** ROADMAP stap 2 — dosis-trede-voorstel, of null. */
+  dosisTredeVoorstel: DosisTredeVoorstel | null;
   /** FASE 3a — goedkeuring van het inhaal-plan voor deze week. */
   optedIn: boolean;
   weekMonday: string;
@@ -189,6 +191,7 @@ export function Schema() {
       inhaal={data.inhaal}
       fatigue={data.fatigue}
       blokReview={data.blokReview}
+      dosisTredeVoorstel={data.dosisTredeVoorstel}
       testVoorstel={data.testVoorstel}
       optedIn={data.optedIn}
       weekMonday={data.weekMonday}

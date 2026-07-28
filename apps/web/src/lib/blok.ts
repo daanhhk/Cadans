@@ -13,6 +13,8 @@
 import {
   actualZoneMinutes_,
   CYCLING_TYPES,
+  DOSIS_TREDE_MAX,
+  DOSIS_TREDE_STAP_MIN,
   KWALITEIT_MIN_PER_PRIKKEL,
   KWALITEIT_MIN_PER_PRIKKEL_DEFAULT,
   mesoFactor,
@@ -129,13 +131,23 @@ export interface BlokDosisNorm {
 export function blokDosisNorm(
   doel: string | null,
   weekUren: number | null,
+  // ROADMAP stap 2 — de DOSIS-TREDE tilt de minuten per prikkel op met stap × trede. De ENGINE
+  // tilt het plan met dezelfde factor op (dosisTredeFactor); norm en plan moeten samen bewegen,
+  // anders zakt het plan onder zijn eigen meetlat (docs/DOSIS-TREDE-RECON.md §3). Constanten
+  // komen uit de engine, niet uit eigen getallen hier. Weggelaten of 0 → ongewijzigd.
+  dosisTrede?: number | null,
 ): BlokDosisNorm | null {
   if (weekUren == null || !Number.isFinite(weekUren) || weekUren <= 0) {
     return null;
   }
   const d = doel ?? "";
+  const t = Number(dosisTrede);
+  const trede = Number.isFinite(t)
+    ? Math.min(DOSIS_TREDE_MAX, Math.max(0, Math.trunc(t)))
+    : 0;
   const minPerPrikkel =
-    KWALITEIT_MIN_PER_PRIKKEL[d] ?? KWALITEIT_MIN_PER_PRIKKEL_DEFAULT;
+    (KWALITEIT_MIN_PER_PRIKKEL[d] ?? KWALITEIT_MIN_PER_PRIKKEL_DEFAULT) +
+    DOSIS_TREDE_STAP_MIN * trede;
   // Onderhoud: de FREQUENTIE is het beschermde deel — drie kwaliteitsdagen, ook bij drie uur
   // (DOELEN-SPEC §3.2). Bij de overige doelen schaalt het aantal prikkels met de uren.
   const prikkels =
@@ -236,8 +248,10 @@ export function buildBlokReferent(input: {
   weekUren: number | null;
   startMonday: string;
   todayISO: string;
+  /** ROADMAP stap 2 — tilt de norm mee met het plan. Weggelaten of 0 → ongewijzigd. */
+  dosisTrede?: number | null;
 }): BlokReferent | null {
-  const dosis = blokDosisNorm(input.doel, input.weekUren);
+  const dosis = blokDosisNorm(input.doel, input.weekUren, input.dosisTrede);
   if (!dosis) return null;
   // Doel zonder mesocyclus → geen kalender-deload, dus ook blokweek 4 draagt de volle norm.
   const heeftDeload = profileForDoel_(input.doel ?? "")?.mesoCyclus !== false;
@@ -425,6 +439,79 @@ export function blokReviewVenster(
   return null;
 }
 
+/** ROADMAP stap 2 — het DOSIS-TREDE-voorstel. Puur: alle poorten zitten in de bouwer, de kaart
+ * rendert alleen. `null` betekent GEEN kaart. */
+export interface DosisTredeVoorstel {
+  /** De trede waarop we nu staan, en waarnaar we zouden gaan. */
+  huidig: number;
+  volgend: number;
+  /** Minuten per sleutelsessie nu en straks, plus de weeknorm die daaruit volgt. */
+  minNu: number;
+  minStraks: number;
+  normNu: number;
+  normStraks: number;
+  prikkels: number;
+  /** Welke tak: gestegen → volgende opbouwtrede; niet gestegen → het plan was te licht. */
+  uitkomst: "geleverd_gestegen" | "geleverd_niet_gestegen";
+  /** De blokstart van het NU LOPENDE blok — de sleutel die bevestigen én afwijzen wegschrijft. */
+  blokStart: string;
+  doel: string | null;
+}
+
+/**
+ * Bouwt het dosis-trede-voorstel, of null. ALLE poorten zitten hier:
+ * blokweek 1 én venster-fase "afgerond", een blok-check die er is en "geleverd" zegt, een trede
+ * onder het plafond, en nog geen antwoord voor de blokstart van het lopende blok.
+ *
+ * Afwijzen is een PERSISTENTE actie (blok+doel bij de ongewijzigde trede), niet de lokale
+ * afwijs-vlag van FatigueCard/TestVoorstelCard: het voorstel hoort dit blok niet terug te komen,
+ * en de volgende blokgrens stelt de vraag vanzelf opnieuw.
+ */
+export function dosisTredeVoorstel(input: {
+  review: BlokReview | null;
+  doelStart: string | null;
+  weekMondayISO: string;
+  doel: string | null;
+  weekUren: number | null;
+  /** De huidige trede, al gefilterd op doel door de caller. */
+  trede: number;
+  /** De blokstart waarvoor al een antwoord is weggeschreven, of null. */
+  beantwoordBlok: string | null;
+}): DosisTredeVoorstel | null {
+  const r = input.review;
+  if (!r || r.fase !== "afgerond") return null;
+  if (blokWeekVanWeek(input.doelStart, input.weekMondayISO) !== 1) return null;
+  if (!r.check) return null;
+  const uitkomst = r.check.uitkomst;
+  if (
+    uitkomst !== "geleverd_gestegen" &&
+    uitkomst !== "geleverd_niet_gestegen"
+  ) {
+    return null;
+  }
+  const huidig = Math.max(0, Math.trunc(Number(input.trede) || 0));
+  if (huidig >= DOSIS_TREDE_MAX) return null;
+  const blokStart = blokStartVoorWeek(input.doelStart, input.weekMondayISO);
+  if (input.beantwoordBlok === blokStart) return null;
+
+  const nu = blokDosisNorm(input.doel, input.weekUren, huidig);
+  const straks = blokDosisNorm(input.doel, input.weekUren, huidig + 1);
+  if (!nu || !straks) return null;
+
+  return {
+    huidig,
+    volgend: huidig + 1,
+    minNu: nu.minPerPrikkel,
+    minStraks: straks.minPerPrikkel,
+    normNu: nu.norm,
+    normStraks: straks.norm,
+    prikkels: nu.prikkels,
+    uitkomst,
+    blokStart,
+    doel: input.doel,
+  };
+}
+
 export interface BlokReview {
   startMonday: string;
   /** Maandag van blokweek 4 van het beoordeelde blok — tevens het CTL-anker. */
@@ -466,6 +553,8 @@ export function buildBlokReview(input: {
   /** 5b-i — voeden de gelegenheid-detectie. Optioneel: bestaande aanroepen blijven compileren. */
   events?: EventItem[];
   overrides?: OverrideEntry[];
+  /** ROADMAP stap 2 — de dosis-trede tilt de NORM op waartegen dit blok beoordeeld wordt. */
+  dosisTrede?: number | null;
 }): BlokReview | null {
   const venster = blokReviewVenster(input.doelStart, input.weekMondayISO);
   if (!venster) return null;
@@ -476,6 +565,7 @@ export function buildBlokReview(input: {
     weekUren: input.weekUren,
     startMonday: venster.startMonday,
     todayISO: input.todayISO,
+    dosisTrede: input.dosisTrede,
   });
   if (!ref) return null;
 

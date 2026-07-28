@@ -28,6 +28,7 @@ import {
   getCheckin,
   getDebtOptIn,
   getDispositions,
+  getDosisTrede,
   getEvents,
   getFatigueShift,
   getOverrides,
@@ -38,7 +39,13 @@ import {
   getWellness,
   putWeekplan,
 } from "./api";
-import { type BlokReview, blokReviewVenster, buildBlokReview } from "./blok";
+import {
+  type BlokReview,
+  blokReviewVenster,
+  dosisTredeVoorstel as bouwDosisTredeVoorstel,
+  buildBlokReview,
+  type DosisTredeVoorstel,
+} from "./blok";
 import {
   type InhaalBucket,
   inhaalAanbodRegel,
@@ -1336,6 +1343,8 @@ export async function loadSchemaWeek(): Promise<{
   blokReview: BlokReview | null;
   /** 5b-ii — testvoorstel voor de rustweek, of null. Laag-2 rendert de kaart. */
   testVoorstel: TestVoorstel | null;
+  /** ROADMAP stap 2 — dosis-trede-voorstel (null = geen kaart). Laag-2 rendert 'm. */
+  dosisTredeVoorstel: DosisTredeVoorstel | null;
   /** FASE 3a — is het inhaal-plan voor DEZE week goedgekeurd? */
   optedIn: boolean;
   /** De maandag van de getoonde week (de sleutel van de goedkeuring). */
@@ -1356,6 +1365,7 @@ export async function loadSchemaWeek(): Promise<{
     checkin,
     debtOptInWeek,
     fatigueShift,
+    dosisTredeRow,
   ] = await Promise.all([
     getSettings(),
     getPlanner(monday),
@@ -1369,6 +1379,7 @@ export async function loadSchemaWeek(): Promise<{
     getCheckin(todayISO),
     getDebtOptIn(),
     getFatigueShift(),
+    getDosisTrede(),
   ]);
 
   const activities = parseActivityRows(activitiesRes);
@@ -1389,6 +1400,18 @@ export async function loadSchemaWeek(): Promise<{
   // sturen (die override gaat in proposal.ts vóór effectiveMesoWeek_ en zou de week alsnog naar deload 4
   // duwen). We laten die rij staan en schrijven NIETS naar D1 — hij vervalt vanzelf de maandag erna (M68).
   const weekFatigueOn = weekFatigueEnabled(settings?.doel);
+
+  // ROADMAP stap 2 — DE DOSIS-TREDE. LEESREGEL: de trede geldt alleen voor het doel waarop hij is
+  // opgebouwd; staat er nog een rij van vóór een doel-wissel, dan LEZEN we hem als 0. Bewust geen
+  // extra schrijfactie — de eerstvolgende bevestiging overschrijft de rij toch, en stilzwijgend
+  // opruimen bij een READ is precies het soort verborgen mutatie dat we niet willen (M68-lijn).
+  // Ontbrekend of null telt eveneens als 0.
+  const dosisTrede =
+    dosisTredeRow.doel != null &&
+    dosisTredeRow.doel === (settings?.doel ?? null) &&
+    Number.isFinite(Number(dosisTredeRow.trede))
+      ? Math.max(0, Math.trunc(Number(dosisTredeRow.trede)))
+      : 0;
 
   // 3d stap 4 — FATIGUE-shift opt-in (spiegelt de inhaal-opt-in, M68): geldt alleen voor DEZE
   // maandag + een geldige richting, vervalt vanzelf de week erna. Goedgekeurd → de ACTIEVE
@@ -1419,6 +1442,7 @@ export async function loadSchemaWeek(): Promise<{
     todayISO,
     planAdaptation: optedIn,
     mesoWeekOverride: fatigueOverride,
+    dosisTrede,
   };
   const proposalWeek = buildWeekProposal(proposalInput);
 
@@ -1486,8 +1510,24 @@ export async function loadSchemaWeek(): Promise<{
         // loadSchemaWeek; geen extra fetch.
         events,
         overrides,
+        dosisTrede,
       })
     : null;
+
+  // ROADMAP stap 2 — het DOSIS-TREDE-voorstel. Alle poorten zitten in de bouwer; hier alleen de
+  // invoer. `beantwoordBlok` is de blokstart waarvoor al bevestigd OF afgewezen is.
+  const dosisTredeKaart = bouwDosisTredeVoorstel({
+    review: blokReview,
+    doelStart: settings?.doelStart ?? null,
+    weekMondayISO: monday,
+    doel: settings?.doel ?? null,
+    weekUren: settings?.weekUren ?? null,
+    trede: dosisTrede,
+    beantwoordBlok:
+      dosisTredeRow.doel === (settings?.doel ?? null)
+        ? (dosisTredeRow.blok ?? null)
+        : null,
+  });
 
   // 5b-ii — het TESTVOORSTEL voor de rustweek. Leest uitsluitend uit wat hierboven al opgehaald
   // is (plannerDays, overrides, events, activities, settings) — GEEN extra fetch.
@@ -1616,6 +1656,7 @@ export async function loadSchemaWeek(): Promise<{
     fatigue,
     blokReview,
     testVoorstel,
+    dosisTredeVoorstel: dosisTredeKaart,
     optedIn,
     weekMonday: monday,
   };

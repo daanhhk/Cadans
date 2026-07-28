@@ -133,6 +133,10 @@ export interface BuildProposalInput {
    * opbouwweek als reduced-load-deload (→4) doorrekent. Weggelaten → de gewone kalender-mesoWeek.
    * De ENGINE blijft byte-identiek: hij leest de doorgegeven mesoWeek zonder wijziging. */
   mesoWeekOverride?: number;
+  /** ROADMAP stap 2 — de DOSIS-TREDE. Weggelaten, null of 0 → factor 1 → byte-identiek.
+   * Reist door naar buildWorkout én buildOverrideWorkout_, zodat een handmatig gekozen sessie
+   * dezelfde dosis draagt als een geplande. */
+  dosisTrede?: number | null;
 }
 
 // Intern mutabel dag-element — de vorm die assignWorkouts leest (d.type = dagtype,
@@ -253,6 +257,9 @@ export function planModusLabel(
  */
 export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
   const { settings, plannerDays, events, activities, weekplans } = input;
+  // ROADMAP stap 2 — LEESREGEL: de trede geldt alleen voor het doel waarop hij is opgebouwd.
+  // Die filtering zit in de caller (schema.ts); hier is weggelaten/null/0 gewoon factor 1.
+  const dosisTrede = input.dosisTrede ?? 0;
   // `wellness` en `rpe` blijven op BuildProposalInput (callers/fixtures ongewijzigd), maar
   // worden sinds laag 2 niet meer door de weekgeneratie gelezen: ze voedden uitsluitend het
   // week-brede demote-signaal. De readiness-afleiding leeft in readiness.ts/schema.ts.
@@ -566,6 +573,7 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
         macroFase,
         undefined,
         d.dagIdx,
+        dosisTrede,
       ) as ProposalWorkout | null;
       if (woOv) {
         sessions.push(woOv);
@@ -601,6 +609,7 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
           d.dagIdx,
           sessieArch,
           leg,
+          dosisTrede,
         ) as ProposalWorkout | null;
         if (wo) sessions.push(wo);
       }
@@ -636,6 +645,8 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
             undefined,
             d.dagIdx,
             d.archetypeId,
+            "heen",
+            dosisTrede,
           ) as ProposalWorkout | null) ?? null;
       }
     }
