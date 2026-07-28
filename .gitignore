@@ -10,3 +10,4 @@ coverage
 tools/audit/out/
 tools/shots/out/
 tools/shots/seed-backup.json
+tools/shots/.prod-auth

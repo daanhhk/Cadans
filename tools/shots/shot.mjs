@@ -6,6 +6,7 @@
 import {
   existsSync,
   mkdirSync,
+  readFileSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -30,6 +31,29 @@ const PROD = !!TARGET;
 const WEB = PROD ? TARGET : "http://127.0.0.1:5173";
 // One origin on a deployment: the Worker serves the assets AND /api.
 const API = PROD ? TARGET : "http://127.0.0.1:8787";
+
+// Prod sits behind a whole-origin Basic-auth gate (workers/api/src/index.ts). Local does not:
+// BASIC_AUTH_PASSWORD is a deploy-only secret and the gate is a no-op without it.
+const AUTH_FILE = join(HERE, ".prod-auth");
+const AUTH_USER = process.env.CADANS_BASIC_AUTH_USER || "daan";
+
+/** Password from the env var, else the first non-blank line of .prod-auth. Never logged. */
+function readAuthPassword() {
+  const fromEnv = (process.env.CADANS_BASIC_AUTH_PASSWORD || "").trim();
+  if (fromEnv) return fromEnv;
+  if (!existsSync(AUTH_FILE)) return "";
+  // Missing, empty or whitespace-only all count as ABSENT.
+  return (readFileSync(AUTH_FILE, "utf8").split("\n")[0] || "").trim();
+}
+
+const AUTH_PASSWORD = PROD ? readAuthPassword() : "";
+// Header for the preflight fetches; the browser context gets httpCredentials instead.
+const AUTH_HEADERS =
+  PROD && AUTH_PASSWORD
+    ? {
+        Authorization: `Basic ${Buffer.from(`${AUTH_USER}:${AUTH_PASSWORD}`).toString("base64")}`,
+      }
+    : undefined;
 
 const VIEWPORT_W = 390;
 const VIEWPORT_H = 1800;
@@ -116,11 +140,16 @@ const SCENARIOS = [
 ];
 
 /** Poll a URL until it answers 200, or give up after `seconds`. */
-async function waitFor(url, seconds) {
+async function waitFor(url, seconds, headers) {
   const deadline = Date.now() + seconds * 1000;
   while (Date.now() < deadline) {
     try {
-      const r = await fetch(url, { signal: AbortSignal.timeout(3000) });
+      const r = await fetch(url, {
+        signal: AbortSignal.timeout(3000),
+        headers,
+      });
+      // Without credentials a gated origin answers 401 and r.ok stays false, so the
+      // preflight would report "not answering" while the deployment is perfectly up.
       if (r.ok) return true;
     } catch {
       // not up yet
@@ -159,12 +188,7 @@ async function seedSettings(log) {
   if (existsSync(SEED_BACKUP)) {
     log.push("--- seed-backup.json: already existed, left alone");
   } else {
-    writeFileSync(
-      SEED_BACKUP,
-      `${JSON.stringify(current, null, 2)}
-`,
-      "utf8",
-    );
+    writeFileSync(SEED_BACKUP, `${JSON.stringify(current, null, 2)}\n`, "utf8");
     log.push("--- seed-backup.json: created");
   }
   const merged = { ...current, ...OVERRIDES };
@@ -359,7 +383,13 @@ async function sweep(page, scenario, monday, results) {
 }
 
 async function main() {
-  if (!(await waitFor(WEB, 60))) {
+  // Fail before touching the network, and name the two places to look — never a value.
+  if (PROD && !AUTH_PASSWORD) {
+    throw new Error(
+      `prod mode needs a Basic-auth password: set CADANS_BASIC_AUTH_PASSWORD, or put it on the first line of ${AUTH_FILE}`,
+    );
+  }
+  if (!(await waitFor(WEB, 60, AUTH_HEADERS))) {
     throw new Error(
       PROD
         ? `${WEB} not answering`
@@ -367,7 +397,7 @@ async function main() {
     );
   }
   // A GET only — even the preflight stays read-only in prod mode.
-  const apiUp = await waitFor(`${API}/api/settings`, 20);
+  const apiUp = await waitFor(`${API}/api/settings`, 20, AUTH_HEADERS);
   if (!apiUp && !PROD) {
     throw new Error(`worker not answering on ${API} — seeding needs it`);
   }
@@ -402,6 +432,10 @@ async function main() {
       reducedMotion: "reduce",
       deviceScaleFactor: 2,
       viewport: { width: VIEWPORT_W, height: VIEWPORT_H },
+      // Prod is behind a whole-origin Basic-auth gate; without this every navigation 401s.
+      ...(PROD
+        ? { httpCredentials: { username: AUTH_USER, password: AUTH_PASSWORD } }
+        : {}),
     });
     const page = await ctx.newPage();
     if (PROD) {
@@ -422,7 +456,7 @@ async function main() {
 
   const lines = [
     PROD
-      ? `target: ${WEB}  READ-ONLY, clock ${PINNED}`
+      ? `target: ${WEB}  READ-ONLY, clock ${PINNED}, basic-auth as "${AUTH_USER}" (password supplied, not shown)`
       : `monday: ${monday}  clock: ${PINNED}  events: ${eventsState}`,
   ];
   for (const r of results) {
