@@ -114,6 +114,13 @@ de vorm waarin een LANGE WEEKENDDAG ZIJN BUREN BLOKKEERT — die familie zat in 
 meetsets, en juist daar zat het defect. V6 en V7 staan NIET in de invariant-lijst; die blijft
 V1, V3 en V5.
 
+DE AS IS GEEN VOORSPELLING VAN WAT DE APP TOONT. Hij meet op LEGE `activities`, `weekplans` en
+`wellness`; de levende D1 draagt historie, en de recency-seed kiest daardoor andere varianten
+binnen dezelfde duur-band. Gemeten met de screenshot-harness, app tegenover as: V2 389 tegen
+410, V4 347 tegen 362, V7 367 tegen 375 — met overal hetzelfde aantal kwaliteitsdagen, dus geen
+dosisverschil maar variant-rotatie. De as blijft geldig als VERGELIJKBARE reeks over bouwen
+heen; een verschil tussen as en app is geen regressie en nooit een herijk-aanleiding.
+
 Stand na stap 1b (doel FTP, fase Base, mesoweek 1):
 kwaliteitsminuten 93 / 113 / 113 / 105 / 84 / 93 / 90 · week-TSS 268 / 410 / 464 / 362 / 352 /
 227 / 375 · kwaliteitsdagen 3 / 3 / 3 / 3 / 3 / 3 / 3.
@@ -156,12 +163,11 @@ niet; hij verliest niet. Een punt gaat eruit zodra een STAP het opneemt — niet
 
 ### CLIENT
 
-- VISUELE CHECK — DE PENDEL-ZONEBALK. Gedeployd; nog niet met eigen ogen gezien. Een pendeldag
-  hoort sinds `07de9224` een zonebalk te dragen die er eerder niet was, naast een hoger getal.
-- SCREENSHOTS VANUIT CC LUKTEN NIET: de Browser-pane wordt niet weergegeven, de pagina
-  componeert geen frames, elke poging valt na 5 seconden om. Er is niets geïnstalleerd. Voor
-  een volgende poging: dev-server `127.0.0.1:5173`, route `/weekplanner` voor de dagkaart en
-  `/` voor de weekkaart, lokale API op `8787`.
+- `GET /api/checkin/:datum` GEEFT 404 bij afwezigheid, terwijl de huisregel elders 200 met
+  `null` of een lege lijst is (`/api/settings`, `/api/planner/:monday`). Cosmetisch — de client
+  vangt het op — maar het is inconsistentie, en het vult de console bij elke `/schema`-load.
+  De request-telling uit de harness verklaart de drie aanroepen: StrictMode-dubbelinvoke plus
+  één her-derive na de sync. Geen lek.
 - UP-fixture in `Preview.tsx` realistischer maken.
 - Weken-terug-scrollen in de Schema-tab.
 - De weekreeks-fixture staat op drie plekken.

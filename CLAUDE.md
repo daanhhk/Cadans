@@ -35,9 +35,13 @@ Bevat altijd: commit-hash; de gepinde RAW HANDOFF-URL op die hash (`https://raw.
 
 Zie je een betere aanpak, een fout in de prompt, of moet je iets doen wat er niet in staat: doe het als het duidelijk juist is en **meld het expliciet in het rapport**. Is het risicovol of raakt het een harde grens: **stop en meld**. Eerlijke afwijkingen zijn meermaals waardevoller gebleken dan de prompt zelf.
 
-## Wat je niet kunt
+## Visuele verificatie
 
-Visuele verificatie — er is geen visual-harness (bewust geparkeerde debt). Daans oog gate't de deploy, niet de commit.
+Die kun je zelf doen. `tools/shots/shot.mjs` seedt de LOKALE D1 via de API, pint de browser-klok en schiet de weekkaart plus alle zeven dagkaarten weg als PNG, met een `.txt` ernaast (console-errors mét falende URL, request-telling, innerText). Je leest die PNG's zelf terug. Draaien: zie `tools/shots/README.md`.
+
+Twee regels die erbij horen: de klok is **ook in de browser** een fixture-variabele (`page.clock.setFixedTime`, vóór de eerste `goto`), en de app is `height: 100dvh` met een eigen scrollende `main` — een `fullPage`-shot snijdt af, dus de viewport gaat op de gemeten scrollhoogte.
+
+Dit vervangt Daans oog niet: **de harness gate't de commit, Daans oog gate't de deploy.**
 
 ## Dev-omgeving
 
