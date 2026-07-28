@@ -24,18 +24,26 @@ band eerst en bij gelijke band het zwaarste sjabloon.
   V1, V3 en V5 tot op de minuut ongewijzigd — de fallback vuurt nergens binnen de band.
 - Bouw-commit `ff2baf8`. NIET GEDEPLOYED.
 
-### STAP 1b — kwaliteit in de lange rit buiten Build en Peak · OPEN
+### STAP 1b — de lange dag pakt geen kwaliteitsslot · OPEN
 
-De efforts-arm in `allocateQualityWeek_` vuurt alleen bij macrofase Build of Peak. In Base
-krijgt een zaterdag van drie uur dus duurwerk, terwijl twee kortere dagen door de week de
-kwaliteit dragen. De lange dag is dan geen kwaliteitsdag, en `goalWorkout_` komt er niet eens
-aan te pas — de duur-selectieregel uit STAP 1 kan dit dus niet oplossen.
+Het KWALITEITSQUOTUM bleek een deel van het antwoord, niet alleen de efforts-arm.
+`PROFILES.ftp.kwaliteitPerWeek.Base` stond op 2 terwijl `DOELEN-SPEC` §3.1 vanaf vijf
+gedeclareerde uren drie sleutelprikkels voorschrijft. Op 3 gezet (commit `f020c2a`) steeg elke
+weekvorm, en V3 ging van 45 naar 77 kwaliteitsminuten.
+
+Wat RESTEERT is het oorspronkelijke gat. Ook met drie slots pakt de lange dag geen
+kwaliteitsslot: de efforts-arm in `allocateQualityWeek_` vuurt alleen bij macrofase Build of
+Peak, dus in Base krijgt een zaterdag van drie uur duurwerk terwijl de kortere dagen de
+kwaliteit dragen. `goalWorkout_` komt er niet aan te pas — de duur-selectieregel uit STAP 1 kan
+dit dus niet oplossen.
 
 - Gemeten op weekvorm V3 (ma70 di70 do70 za180 zo90, 8,0 uur, doel FTP, fase Base, mesoweek 1):
-  45 kwaliteitsminuten, omdat za180 geen kwaliteitsslot krijgt. Acht uur levert daarmee evenveel
-  als vijf.
+  77 kwaliteitsminuten, tegen een norm van 84 bij vijf gedeclareerde uren. Als enige van de zes
+  vormen blijft V3 onder de norm, en de reden is dat za180 geen kwaliteitsslot krijgt.
 - Criterium: een lange dag kan ook in Base een kwaliteitsslot dragen, zonder dat de weken
   daaronder inleveren.
+- `spreiding.midweekMinGap` is NIET de hendel: gemeten is dat quotum 3 mét midweekMinGap 0
+  byte-identiek is aan quotum 3 met 1.
 - DE VO2-GRENS. Boven 135 minuten kan de fallback uit stap 1 bij intent `vo2` hoogstens 28
   nominale werkminuten leveren: de vo2-band houdt op bij 100 minuten en die sjablonen zijn kort
   van ontwerp. Een lange dag met vo2-intent haalt de 45-werkminuten-eis dus niet, en dat is geen
@@ -91,8 +99,15 @@ De as staat als test in `apps/web/src/lib/weekvormAs.test.ts`, met een HARDE inv
 V3 en V5 niet mogen dalen, en de volledige reeks als vingerafdruk. De invariant wordt niet
 herijkt; de vingerafdruk mag dat wel, bewust en verantwoord.
 
-Stand na stap 1 (doel FTP, fase Base, mesoweek 1), kwaliteitsminuten: V1 5,0u 69 · V2 8,0u 81 ·
-V3 8,0u 45 · V4 7,0u 81 · V5 7,0u 64. Week-TSS: 253 · 391 · 362 · 347 · 340.
+De as draagt ZES vormen. V6 meet een week IN UITVOERING — zelfde dagen als V1, maar "vandaag" is
+dinsdag en de maandag is verstreken zonder rit. V1 t/m V5 liggen volledig vooruit, dus zonder V6
+werd de normale situatie nergens gemeten. V6 staat NIET in de invariant-lijst; die blijft V1, V3
+en V5.
+
+Stand na het derde kwaliteitsslot (doel FTP, fase Base, mesoweek 1), kwaliteitsminuten:
+V1 5,0u 93 · V2 8,0u 113 · V3 8,0u 77 · V4 7,0u 105 · V5 7,0u 84 · V6 in uitvoering 93.
+Week-TSS: 268 · 410 · 437 · 362 · 352 · 227. Norm bij vijf gedeclareerde uren is 84; alleen V3
+blijft daaronder.
 
 ## Parkeerlijst
 
@@ -114,13 +129,14 @@ niet; hij verliest niet. Een punt gaat eruit zodra een STAP het opneemt — niet
 - De dode `longride`-tak in de redenCode-mapping van `planner.ts`.
 - Het commentaar bij de demotie dat in een alloc-actieve week niet meer klopt.
 - `weekIndexFromStart_` herhaalt een week bij de voorjaars-DST-sprong (28-03-2027).
+- `kwaliteitPerWeek.Peak` staat voor doel FTP nog op 2 en draagt daarmee hetzelfde norm-gat dat
+  in Base is gedicht. Niet geraakt; Base was de gemeten fase.
 - Gat-dag-types via meegegeven datum.
 
 ### CLIENT
 
-- DEPLOY VAN `07de9224` WACHT OP DAANS VISUELE CHECK: de weekkaart met een pendeldag moet er
-  eerst langs. Pendeldagen krijgen na deploy een zonebalk die er nu niet is — dat is de
-  zichtbare verandering, naast het hogere getal.
+- VISUELE CHECK — DE PENDEL-ZONEBALK. Gedeployd; nog niet met eigen ogen gezien. Een pendeldag
+  hoort sinds `07de9224` een zonebalk te dragen die er eerder niet was, naast een hoger getal.
 - SCREENSHOTS VANUIT CC LUKTEN NIET: de Browser-pane wordt niet weergegeven, de pagina
   componeert geen frames, elke poging valt na 5 seconden om. Er is niets geïnstalleerd. Voor
   een volgende poging: dev-server `127.0.0.1:5173`, route `/weekplanner` voor de dagkaart en

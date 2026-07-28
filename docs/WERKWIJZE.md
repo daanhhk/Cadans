@@ -84,6 +84,7 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
 - **IJk niet op gedrag dat je wilt vervangen.** Een drempel die een SIGNAAL bemonstert hoort op de echte reeks; een regel die een BEDOELING uitdrukt niet. Gedragsdata van vóór het mechanisme is een verslag van de OUDE GEWOONTE, dus een regel die daarop fit reproduceert die gewoonte en noemt hem vervolgens een norm. Er ontbreekt bovendien per constructie een tegenvoorbeeld: dezelfde omstandigheid is nooit met een andere invulling doorlopen, dus over wat BETER werkt zegt de reeks niets. Aanleiding: de selectieregel voor een lange dag stond in `docs/STAP7-BOUW12-RECON.md` §9 punt 4 toegewezen aan de D1-meting, terwijl Daan vóór Cadans op gevoel trainde — deels groepsritten en een evenement. Zelfde categorie als de testfrequentie: dat is coach-canon, geen geijkte drempel. Wat zulke data WEL levert is een BOVENGRENS-CHECK: wat aantoonbaar verteerd is, mag een voorstel niet onderschrijden.
 - **Een anomalie in je eigen meetuitvoer is een gat in je INSTRUMENT, geen ruis.** Zie je nullen waar getallen horen, of een categorie die je telling niet vangt, dan mag géén enkel getal uit die meting in een spec landen — ook niet de getallen die er wél plausibel uitzien. Meet met de functie die de app zelf gebruikt, óók als de meting in de chat gebeurt en niet in de code. Dit is dezelfde regel als "enumereer met de functie die de app zelf aanroept", nu ook geldend voor metingen die de chat zelf doet. Aanleiding: bij de duur-selectieregel telde een wegwerp-script alleen core-entries van kind `int` via reps × onMin, zette ladders en pyramids daarmee op nul, en dat werd expliciet als onbelangrijk afgedaan — waarna de cap van 60 werkminuten er wél op werd gebouwd. Gemeten met de nominale-werktijd-lus uit `expandArchetype_` zijn de maxima 50 voor drempel, 69 voor sweetspot en 28 voor vo2.
 - **Een acceptatie-eis toetst alleen wat de ingreep kán raken.** Stel eerst vast wélk mechanisme het tekort veroorzaakt, en formuleer de eis pas daarna. Anders vraag je iets wat de bouw per constructie niet kan leveren, en stopt CC terecht op een eis die zelf niet klopte. Aanleiding: de eis "geen weekvorm van 6 uur of meer levert minder kwaliteitsminuten dan de 5-uursweek" viel over weekvorm V3 — daar komt het tekort niet uit `goalWorkout_` maar uit de allocator, die de lange dag geen kwaliteitsslot geeft.
+- **Een omvallende assertie ZONDER hardcoded getal is een fixture-vraag, geen herijk-vraag.** Een relationele mechanisme-check ("A is precies één minder dan B", "X trekt niets af") heeft geen constante om 1-op-1 te verzetten. Valt zo'n assertie om, dan is óf de fixture óf het mechanisme fout — zoek de oorzaak, corrigeer de fixture, en verzwak de assertie niet. Aanleiding: de "rustige" fixture in `quotaAftrek.test.ts` was puur Z2 maar erfde de standaard-IF 0,85 van `act()`, en `recentHardDate_` noemt een rit hard vanaf IF 0,85 — die blokkeerde dus de dinsdag via avoid-consecutive-hard. Bij een quotum van 2 vielen de tellingen toevallig samen en slaagde de test om de VERKEERDE reden; pas bij 3 brak het op.
 
 ## Vorm van een CC-prompt
 
@@ -130,14 +131,16 @@ Na het close-out-rapport schrijft de chat de opener voor de volgende chat uit, v
 
 ## Opener-sjabloon
 
-**De afsluitende chat schrijft de opener uit** — verbatim uit dit sjabloon, in één code-blok, ná het close-out-rapport (dan pas is de hash bekend). Invullen: `<hash>` (beide URL's op de close-out-hash), STAND uit de HANDOFF, en FOCUS. Verder niets toevoegen: de werkwijze staat hier, niet in de opener. Daan hoeft niets samen te stellen — hij krijgt één kant-en-klaar blok.
+**De afsluitende chat schrijft de opener uit** — verbatim uit dit sjabloon, in één code-blok, ná het close-out-rapport (dan pas is de hash bekend). Invullen: `<hash>` (op ALLE DRIE de URL's dezelfde close-out-hash), STAND uit de HANDOFF, en FOCUS. Verder niets toevoegen: de werkwijze staat hier, niet in de opener. Daan hoeft niets samen te stellen — hij krijgt één kant-en-klaar blok.
 
 --- BEGIN OPENER ---
-Lees eerst deze twee via web_fetch (RAW, gepind op commit-hash — NIET de blob-URL, die is stale):
+Lees eerst deze drie via web_fetch (RAW, gepind op commit-hash — NIET de blob-URL, die is stale):
 https://raw.githubusercontent.com/daanhhk/Cadans/<hash>/docs/WERKWIJZE.md
 https://raw.githubusercontent.com/daanhhk/Cadans/<hash>/HANDOFF.md
+https://raw.githubusercontent.com/daanhhk/Cadans/<hash>/docs/DOELEN-SPEC.md
 
-WERKWIJZE.md is canoniek voor hoe we werken en leidend bij tegenspraak; HANDOFF.md is de projectstand.
+WERKWIJZE.md is canoniek voor hoe we werken en leidend bij tegenspraak; HANDOFF.md is de
+projectstand; DOELEN-SPEC.md draagt de VASTGESTELDE doel-besluiten en wordt niet heropend.
 Cadans = Cloudflare-herbouw van de trainings-app: pnpm-monorepo, pure engine + Workers/D1 + React-PWA.
 Je kunt mijn uncommitte lokale staat (C:\Users\daan\Projects\cadans, Windows/PowerShell, via Remote
 Control) niet lezen; de gecommitte Cadans-code en de bevroren GAS-bron lees je wel gewoon zelf.
@@ -163,3 +166,5 @@ FOCUS DEZE CHAT: <vul in>
 - 2026-07-27 — les toegevoegd in *Recon en bewijslast*: ijk niet op gedrag dat je wilt vervangen. Aanleiding: de selectieregel voor een lange dag was aan de D1-meting toegewezen, terwijl die ritten een verslag zijn van hoe Daan vóór Cadans op gevoel trainde; een regel die daarop fit reproduceert de oude gewoonte.
 - 2026-07-27 — in *Prod en veiligheid* vastgelegd dat `wrangler d1 execute --file` het bestand als import verwerkt en geen resultaatrijen teruggeeft; een meting draait per statement met `--command --json`.
 - 2026-07-27 — in *Bronhiërarchie voor parity* vastgelegd dat de bevroren GAS-bron een PORT-referentie is en geen normbron: een op de echte reeks geijkt getal wint van de bron, en een afwijking hoeft niet als fork verantwoord te worden. Aanleiding: bij de TSS-ijking ging een ronde op aan het opzoeken van de GAS-herkomst van 0,7/0,95/1,05 terwijl de meting het antwoord al gaf.
+- 2026-07-28 — het opener-sjabloon haalt voortaan ook `docs/DOELEN-SPEC.md` op, als derde verplichte fetch naast WERKWIJZE en HANDOFF. Aanleiding: een VASTGESTELD besluit uit dat document — de gedeclareerde uren zijn een gegeven, de app vraagt niet om meer tijd — kwam deze chat opnieuw ter discussie omdat de opener het document niet ophaalde en het besluit dus nergens in beeld was.
+- 2026-07-28 — les toegevoegd in *Recon en bewijslast*: een omvallende assertie zonder hardcoded getal is een fixture-vraag, geen herijk-vraag. Aanleiding: de rustige fixture in `quotaAftrek.test.ts` erfde de standaard-IF 0,85 en telde daarmee als harde rit, waardoor de test bij quotum 2 om de verkeerde reden slaagde en pas bij 3 opbrak.
