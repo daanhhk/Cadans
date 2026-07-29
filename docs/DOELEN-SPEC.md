@@ -374,6 +374,10 @@ daarmee geen los doel maar een dragende laag.
 
 ## 6. Bouwvolgorde
 
+DE AFVINKLIJST STAAT IN `docs/ROADMAP.md`, paragraaf *De reeks*: daar zijn deze punten
+samengevoegd met de stappen uit dat document tot één genummerde volgorde met een status en een
+raakvlak per punt. Deze paragraaf blijft de inhoudelijke onderbouwing.
+
 1. Onderhoud-profiel (quotum 3, tussenruimte 1, meso-uitzondering). Klein, gemeten, winterfix. **AF** — commit `09e6a07`, precedentie-test `ea567e5`.
 1b. Onderhoud-herstelroute op DAGniveau (§3.2 VASTGESTELD): bij een doel zonder mesocyclus vuurt de WEEK-BREDE vermoeidheidskaart niet; de bestaande PER-DAG Verlicht-kaart blijft en dekt "vandaag kapot". Het eerder ontworpen mechanisme — de twee deload-klemmen in `allocateQualityWeek_` overslaan plus een week-brede duurcap — is GESCHRAPT: gemeten levert het weghalen van de klemmen TSS 184 naar 179 bij ongewijzigd volume, een kaart die verlichting belooft en niets levert. **AF** — client-side gate op de profiel-vlag `mesoCyclus === false` in `apps/web/src/lib/fatigue.ts` + `schema.ts`, GEEN engine-wijziging.
 2. Archetypes 33-68 erbij. Zonder deze stap wordt stap 1 monotoon. **AF** — commit `0bb79ee`, bibliotheek 23 naar 35.
@@ -383,7 +387,10 @@ daarmee geen los doel maar een dragende laag.
    uitvoeringsmaat van week naar blok. Daarna pas de effect-referent per doel. Dit KEERT de
    volgorde van `docs/DOEL-REFERENT-RECON.md` paragraaf 8 om, die de meetlat als fase 1 zet: effect
    zonder uitvoering is betekenisloos, wat die recon in paragraaf 7 zelf vaststelt. Client-only
-   verwacht; drempels op de echte reeks ijken, nooit hier.
+   verwacht; drempels op de echte reeks ijken, nooit hier. **AF** — `apps/web/src/lib/blok.ts`
+   (blok-object, dosis-norm, uitvoerings-referent, blok-check), `effect.ts` (effect-referent op
+   `rolling_ftp`) en `testvoorstel.ts` (het testaanbod); live. Zie `docs/ROADMAP.md` *De reeks*
+   punt 4.
 6. Doel-passendheid. De coach stelt een passend doel voor, afwijsbaar, hoogstens een keer per blok
    op een blokgrens. Hangt aan stap 5 (zonder referent weet het voorstel niet waartegen het meet).
 7. Consolidatie. Doortrain-kaart, kalender-deload, dosis-ramp en inhaal-kaart onder de weeklus
