@@ -65,7 +65,7 @@ punten staat onder *Gesloten — vindplaats*.
    ZONE-SYNC, IS OPEN: `blok.ts:176` roept `bibliotheekSignatuur(ZONE5_GRENZEN_DEFAULT)` aan
    terwijl `zone5Grenzen` (`zonemunt.ts:48`) de echte grenzen uit `power_zones` kan lezen en
    geen bron heeft. GEMETEN: Daans grenzen zijn [55, 75, 90, 105] — exact
-   `ZONE5_GRENZEN_DEFAULT — dus fase 2 is bij hém gedragsneutraal; de winst is een tweede
+   `ZONE5_GRENZEN_DEFAULT` — dus fase 2 is bij hém gedragsneutraal; de winst is een tweede
    gebruiker en een latere zone-wijziging. Twee eisen gaan vooraf: de shot-harness seedt geen
    `weekUren` en is daardoor blind voor de kaart, en drie fixtures (`weekRit` in
    `blok.test.ts`, `act` in `effect.test.ts`, `previewAct` in `Preview.tsx`) hardcoden de
@@ -97,7 +97,9 @@ punten staat onder *Gesloten — vindplaats*.
     een sjabloon, en `combo_long_with_efforts` vuurt in Build en Peak voor het klimprofiel. De
     MEETLAT bestaat niet: 20-minutenvermogen na 15 kJ/kg als percentage van vers is nergens
     afgeleid; `arbeidKj` bestaat uitsluitend als weergave per rit (`RideDetailSheet.tsx`).
-    Draagt óók de effect-meter van punt 7 — `DOELEN-SPEC` §3.3 en §3.5 gebruiken dezelfde maat.
+    Draagt óók de effect-meter van het doel korte beklimmingen dat punt 7 aanmaakt:
+    `DOELEN-SPEC` §3.3 en §3.5 wijzen daarvoor dezelfde maat aan. Niet te verwarren met punt
+    8 — dat gaat over het goal-profiel in de Niveau-tab, niet over deze durability-maat.
 12. **Doel-passendheid** — open · CLIENT. (`DOELEN-SPEC` §6 stap 6.) De coach stelt een passend
     doel voor als het ingestelde doel niet binnen de uren past; afwijsbaar, hoogstens één keer
     per blok op een blokgrens. GEMETEN: er bestaat vandaag geen enkel mechanisme. Hangt aan
