@@ -52,8 +52,17 @@ punten staat onder *Gesloten — vindplaats*.
    weerlegd in `docs/SWEETSPOT-SLEUTEL-RECON.md`: `plIntent` komt in de app altijd uit het
    type-label, want de client geeft de geplande segmenten niet mee. Wat NIET onder dit punt
    valt en er wél uit voortkwam, staat in punt 5b.
-5b. **Het inhaalvoorstel bereikt het scherm niet** — open · CLIENT. GEMETEN bij de
-   prod-verificatie van punt 5: de engine levert `adapt` bij een gemiste sleutelsessie, en de
+5b. **Het inhaalvoorstel bereikt het scherm niet** — af · CLIENT. GEBOUWD:
+   `apps/web/src/lib/sleutelinhaal.ts` (`isSleutelIntent`, `sleutelPrikkelOpen`,
+   `openSleutelDagen` — de sleutel-toets leest `COACH_KEY_INTENTS_` en `intentFromType_` uit de
+   engine, geen eigen lijst) plus `SleutelInhaalBlok.tsx`, een feitenblok zonder knop. Twee
+   call-sites in `SchemaView`: de done-tak na `DoneCompareCard` en de gemist-tak na het
+   `SessieBlok`. Het dode clientveld `adapt` is vervangen door `plannedIntent` en `doneIntent`;
+   de engine en de selftest-asserties op `adapt` bleven ongemoeid. Live sinds Worker `14629dd4`,
+   op prod geverifieerd op MA 27-07-2026 en DI 28-07-2026: beide dragen het blok met `do 30`
+   (Sweet Spot 3×8, 60 min) en `za 1` (Drempel lang 3×14, 240 min), en van de acht prod-shots
+   dragen er precies twee het blok. HOE HET PUNT BINNENKWAM, en waarom het criterium onderweg is
+   bijgesteld: de engine levert `adapt` bij een gemiste sleutelsessie, en de
    client zet het in het view-model (`apps/web/src/lib/schema.ts:626` en `:667`), maar geen
    enkele component leest het veld — buiten die twee schrijvers bestaat alleen de
    type-declaratie op regel 249, met een comment dat het "beschikbaar blijft voor 2c/3b". Dat
