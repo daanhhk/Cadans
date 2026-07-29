@@ -11,7 +11,6 @@
 // draagt de WEEK-vraag ("niet gedaan") met zijn eigen venster en M63-fork. Week uit de blob, blok uit
 // de norm. De engine wordt hier niet aangeraakt (client-only, geen autorisatie gegeven).
 import {
-  actualZoneMinutes_,
   CYCLING_TYPES,
   DOSIS_TREDE_MAX,
   DOSIS_TREDE_STAP_MIN,
@@ -31,6 +30,16 @@ import {
   type MetingBron,
 } from "./effect";
 import { NO_BUILD_CTL_DELTA } from "./fatigue";
+import {
+  actualZone5_,
+  bibliotheekSignatuur,
+  ZONE5_GRENZEN_DEFAULT,
+  type Zone5Key,
+} from "./zonemunt";
+
+/** De drie WERKzones waarop geoordeeld wordt, in vaste volgorde. Rust en Duur dragen geen norm:
+ * zij zijn vulling om de sleutelsessies heen (DOELEN-SPEC §2A, residu). */
+export const WERKZONES: readonly Zone5Key[] = ["tempo", "drempel", "anaeroob"];
 
 /** Vaste bloklengte: drie opbouwweken plus een deload. VAST — een blok dat zichzelf verlengt is niet
  * uit te leggen en maakt het plan onvoorspelbaar (DOELEN-SPEC §2A). */
@@ -120,6 +129,13 @@ export interface BlokDosisNorm {
   prikkels: number;
   minPerPrikkel: number;
   norm: number;
+  /** ZONE-MUNT fase 1b — de norm krijgt een VORM. De schaal blijft `norm`; de drie normen
+   * hieronder verdelen diezelfde dosis over de werkzones met de bibliotheek-signatuur. Elk is
+   * ÉÉN keer afgerond uit de ONAFGERONDE dosis; hun som is daarom niet noodzakelijk `norm` en
+   * die som is ook geen gerapporteerde grootheid — vergelijk hem nergens mee. */
+  normTempo: number;
+  normDrempel: number;
+  normAnaeroob: number;
 }
 
 /**
@@ -152,16 +168,28 @@ export function blokDosisNorm(
   // (DOELEN-SPEC §3.2). Bij de overige doelen schaalt het aantal prikkels met de uren.
   const prikkels =
     d === "Onderhoud" ? 3 : weekUren >= PRIKKEL_UREN_DREMPEL ? 3 : 2;
+  // ZONE-MUNT fase 1b — de VORM komt uit de BIBLIOTHEEK-signatuur, niet uit de gerenderde week:
+  // `threshold_2x20` vraagt 0 tempo en `sweetspot_2x15` 0 drempel, dus een norm die de week
+  // uitleest zwaait mee met de variant-rotatie van de recency-seed (ZONE-MUNT-ONTWERP §3.2). De
+  // fracties worden AFGELEID, nooit ingetypt: eigen zones geven vanzelf een eigen vorm.
+  const dosis = prikkels * minPerPrikkel;
+  const sig = bibliotheekSignatuur(ZONE5_GRENZEN_DEFAULT);
   return {
     prikkels,
     minPerPrikkel,
-    norm: Math.round(prikkels * minPerPrikkel),
+    norm: Math.round(dosis),
+    normTempo: Math.round(dosis * sig.tempo),
+    normDrempel: Math.round(dosis * sig.drempel),
+    normAnaeroob: Math.round(dosis * sig.anaeroob),
   };
 }
 
 export interface WeekKwaliteit {
-  high: number;
-  anaerobic: number;
+  rust: number;
+  z2: number;
+  tempo: number;
+  drempel: number;
+  anaeroob: number;
   kwaliteit: number;
   ritMinuten: number;
   zoneMinuten: number;
@@ -170,10 +198,19 @@ export interface WeekKwaliteit {
 /**
  * GELEVERDE zoneminuten van één kalenderweek, uit de activiteiten. Venster
  * [maandag 00:00 .. maandag+7d 00:00) lokaal; alleen fiets-types (CYCLING_TYPES).
- * De route idx15 → `zoneTimesFromCell_` → `actualZoneMinutes_` is EXACT die van `buildDoneEntry`
+ * De route idx15 → `zoneTimesFromCell_` → `actualZone5_` is EXACT die van `buildDoneEntry`
  * (schema.ts), zodat de referent dezelfde grootheid leest als de rest van de app.
  * Een rit zonder zonedata telt wel in `ritMinuten` maar niet in `zoneMinuten` — dat verschil voedt
  * de dekkings-poort in `buildBlokReferent`.
+ *
+ * ZONE-MUNT fase 1b — VIJF buckets in plaats van drie. HET TOTAAL BEWEEGT GEEN MINUUT: het oude
+ * `actualZoneMinutes_` vouwde Z1+Z2 naar `low`, Z3+Z4 naar `high` en Z5..Z7 naar `anaerobic`, en
+ * `actualZone5_` vouwt exact dezelfde ids met dezelfde skip van SS en overlays — alleen fijner.
+ * `kwaliteit` (tempo + drempel + anaeroob) is daarmee per constructie gelijk aan het oude
+ * `high + anaerobic`, en `zoneMinuten` aan het oude `low + high + anaerobic`. De HR-fallback in
+ * `actualZoneMinutes_` was hier per constructie DOOD: er ging alleen `icu_zone_times` in en
+ * `tryHrZoneTimes_` leest `icu_hr_zone_times`. Nieuw zijn dus uitsluitend de SPLITSING en het
+ * OORDEEL dat erop volgt.
  */
 export function weekKwaliteitMinuten(
   activities: ActValuesRow[],
@@ -181,9 +218,11 @@ export function weekKwaliteitMinuten(
 ): WeekKwaliteit {
   const start = parseLocalDate(weekMondayISO).getTime();
   const eind = start + 7 * MS_PER_DAY;
-  let high = 0;
-  let anaerobic = 0;
-  let low = 0;
+  let rust = 0;
+  let z2 = 0;
+  let tempo = 0;
+  let drempel = 0;
+  let anaeroob = 0;
   let ritMinuten = 0;
   for (const row of activities || []) {
     const d = row?.[0];
@@ -192,23 +231,23 @@ export function weekKwaliteitMinuten(
     if (t < start || t >= eind) continue;
     if (CYCLING_TYPES.indexOf(String(row[1] ?? "")) < 0) continue;
     ritMinuten += Number(row[3]) || 0;
-    const iczt = zoneTimesFromCell_(row[15]);
-    const zm = actualZoneMinutes_({ icu_zone_times: iczt }, null) as {
-      low: number;
-      high: number;
-      anaerobic: number;
-    } | null;
+    const zm = actualZone5_(zoneTimesFromCell_(row[15]));
     if (!zm) continue;
-    low += zm.low;
-    high += zm.high;
-    anaerobic += zm.anaerobic;
+    rust += zm.rust;
+    z2 += zm.z2;
+    tempo += zm.tempo;
+    drempel += zm.drempel;
+    anaeroob += zm.anaeroob;
   }
   return {
-    high,
-    anaerobic,
-    kwaliteit: high + anaerobic,
+    rust,
+    z2,
+    tempo,
+    drempel,
+    anaeroob,
+    kwaliteit: tempo + drempel + anaeroob,
     ritMinuten,
-    zoneMinuten: low + high + anaerobic,
+    zoneMinuten: rust + z2 + tempo + drempel + anaeroob,
   };
 }
 
@@ -217,10 +256,20 @@ export type BlokWeekStatus = "compleet" | "lopend" | "toekomst";
 export interface BlokWeek {
   weekMonday: string;
   blokWeek: number;
+  /** Het TOTAAL, informatief; het oordeel valt per zone hieronder. */
   gevraagd: number;
   geleverd: number;
-  geleverdHigh: number;
-  geleverdAnaerobic: number;
+  gevraagdTempo: number;
+  gevraagdDrempel: number;
+  gevraagdAnaeroob: number;
+  geleverdTempo: number;
+  geleverdDrempel: number;
+  geleverdAnaeroob: number;
+  /** Rust en Duur dragen geen norm, maar wél de vraag "waar zaten die minuten dan wel". */
+  geleverdRust: number;
+  geleverdZ2: number;
+  /** Hoeveel van de drie werkzones hun eigen norm halen (0..3). */
+  zonesOpNorm: number;
   ritMinuten: number;
   zoneDekking: number | null;
   status: BlokWeekStatus;
@@ -235,6 +284,11 @@ export interface BlokReferent {
   weekUren: number | null;
   prikkelsPerWeek: number;
   norm: number;
+  /** De drie zone-normen van een OPBOUWweek — de getallen waarop het oordeel valt. De deload
+   * schaalt ze per week (zie `BlokWeek.gevraagdTempo` c.s.). */
+  normTempo: number;
+  normDrempel: number;
+  normAnaeroob: number;
   weeks: BlokWeek[];
 }
 
@@ -264,10 +318,15 @@ export function buildBlokReferent(input: {
     // drie weken terwijl de uitvoering week op week 27 minuten varieert (recon §2.6) — meebewegen
     // zou ruis bemonsteren. Blokweek 4 krijgt norm × mesoFactor(4): een INFORMATIEVE waarde uit
     // dezelfde bron als de engine-ramp, die niet in het oordeel meetelt (telt = false).
-    const gevraagd =
-      blokWeek > BLOK_OPBOUWWEKEN && heeftDeload
-        ? Math.round(dosis.norm * mesoFactor(BLOK_WEKEN))
-        : dosis.norm;
+    const deload = blokWeek > BLOK_OPBOUWWEKEN && heeftDeload;
+    // Elk van de vier gevraagd-waarden schaalt APART en rondt ÉÉN keer af — nooit de afgeronde
+    // deelnormen optellen en die som schalen (WERKWIJZE, rond één keer af).
+    const schaal = (n: number) =>
+      deload ? Math.round(n * mesoFactor(BLOK_WEKEN)) : n;
+    const gevraagd = schaal(dosis.norm);
+    const gevraagdTempo = schaal(dosis.normTempo);
+    const gevraagdDrempel = schaal(dosis.normDrempel);
+    const gevraagdAnaeroob = schaal(dosis.normAnaeroob);
 
     const k = weekKwaliteitMinuten(input.activities, weekMonday);
     const zondag = shiftIso_(weekMonday, 6);
@@ -289,15 +348,31 @@ export function buildBlokReferent(input: {
     // GEEN tolerantiemarge: de ijk-reeks ligt bij vijf uur op 71 tot 121 kwaliteitsminuten met
     // mediaan circa 97 (recon §2.7), dus een marge zou precies in het dichtste deel van de
     // verdeling snijden en het oordeel op ruis laten kantelen.
-    const geleverdOk = telt ? k.kwaliteit >= gevraagd : null;
+    //
+    // ZONE-MUNT fase 1b — GEEN COMPENSATIE TUSSEN ZONES. Elke werkzone haalt zijn EIGEN norm, of
+    // de week valt. Een overschot in tempo dicht nooit een tekort in drempel: dat is precies de
+    // grijs-rijden-signatuur die de oude munt (één pot vanaf 76% FTP) als "geleverd" boekte
+    // (ZONE-MUNT-ONTWERP §4).
+    const zonesOpNorm =
+      (k.tempo >= gevraagdTempo ? 1 : 0) +
+      (k.drempel >= gevraagdDrempel ? 1 : 0) +
+      (k.anaeroob >= gevraagdAnaeroob ? 1 : 0);
+    const geleverdOk = telt ? zonesOpNorm === WERKZONES.length : null;
 
     weeks.push({
       weekMonday,
       blokWeek,
       gevraagd,
       geleverd: k.kwaliteit,
-      geleverdHigh: k.high,
-      geleverdAnaerobic: k.anaerobic,
+      gevraagdTempo,
+      gevraagdDrempel,
+      gevraagdAnaeroob,
+      geleverdTempo: k.tempo,
+      geleverdDrempel: k.drempel,
+      geleverdAnaeroob: k.anaeroob,
+      geleverdRust: k.rust,
+      geleverdZ2: k.z2,
+      zonesOpNorm,
       ritMinuten: k.ritMinuten,
       zoneDekking,
       status,
@@ -313,6 +388,9 @@ export function buildBlokReferent(input: {
     weekUren: input.weekUren,
     prikkelsPerWeek: dosis.prikkels,
     norm: dosis.norm,
+    normTempo: dosis.normTempo,
+    normDrempel: dosis.normDrempel,
+    normAnaeroob: dosis.normAnaeroob,
     weeks,
   };
 }
@@ -321,7 +399,43 @@ export interface BlokUitvoering {
   geleverd: boolean | null;
   geleverdeWeken: number;
   beoordeeldeWeken: number;
+  /** ZONE-MUNT fase 1b — de DIAGNOSE, over de MEEGETELDE weken die niet geleverd zijn. De
+   * werkzone(s) die daar het vaakst tekortkwamen; bij gelijkstand in de vaste volgorde tempo,
+   * drempel, anaeroob. Leeg als er geen zulke weken zijn. */
+  tekortZones: Zone5Key[];
+  /** De VERKEERDE-INTENSITEIT-signatuur: in minstens de helft van die weken zit een werkzone
+   * BOVEN norm terwijl een andere eronder zit — er is genoeg getraind, maar verkeerd verdeeld. */
+  verschuiving: boolean;
 }
+
+/** Haalt deze week de norm van deze zone? Eén plek, zodat oordeel en diagnose niet uiteenlopen. */
+function zoneOpNorm_(w: BlokWeek, z: Zone5Key): boolean {
+  return zoneGeleverd_(w, z) >= zoneGevraagd_(w, z);
+}
+
+function zoneGeleverd_(w: BlokWeek, z: Zone5Key): number {
+  return z === "tempo"
+    ? w.geleverdTempo
+    : z === "drempel"
+      ? w.geleverdDrempel
+      : w.geleverdAnaeroob;
+}
+
+function zoneGevraagd_(w: BlokWeek, z: Zone5Key): number {
+  return z === "tempo"
+    ? w.gevraagdTempo
+    : z === "drempel"
+      ? w.gevraagdDrempel
+      : w.gevraagdAnaeroob;
+}
+
+/**
+ * BELEID, GEEN GEIJKTE DREMPEL. "Minstens de helft" is een COPY-SELECTIEREGEL: hij kiest welke
+ * van twee coach-boodschappen past, en beweegt geen enkel oordeel — `geleverdOk` is er niet van
+ * afhankelijk. Er valt hier dus NIETS te ijken en er hoort geen reeks bij gezocht te worden
+ * (WERKWIJZE: een drempel die de uitkomst stuurt hoort geijkt, een die de woordkeuze stuurt niet).
+ */
+const VERSCHUIVING_MIN_FRACTIE = 0.5;
 
 /** De UITVOERINGS-uitkomst van een blok. Te weinig beoordeelbare weken → null (zwijgen, M5). */
 export function blokUitvoering(ref: BlokReferent): BlokUitvoering {
@@ -332,7 +446,33 @@ export function blokUitvoering(ref: BlokReferent): BlokUitvoering {
     beoordeeldeWeken < BLOK_MIN_BEOORDEELBARE_WEKEN
       ? null
       : geleverdeWeken >= BLOK_GELEVERD_MIN_WEKEN;
-  return { geleverd, geleverdeWeken, beoordeeldeWeken };
+
+  const gemist = beoordeeld.filter((w) => w.geleverdOk === false);
+  const tekortPerZone = WERKZONES.map(
+    (z) => gemist.filter((w) => !zoneOpNorm_(w, z)).length,
+  );
+  const maxTekort = Math.max(0, ...tekortPerZone);
+  const tekortZones =
+    maxTekort > 0
+      ? WERKZONES.filter((_, i) => tekortPerZone[i] === maxTekort)
+      : [];
+
+  const metVerschuiving = gemist.filter(
+    (w) =>
+      WERKZONES.some((z) => zoneGeleverd_(w, z) > zoneGevraagd_(w, z)) &&
+      WERKZONES.some((z) => zoneGeleverd_(w, z) < zoneGevraagd_(w, z)),
+  ).length;
+  const verschuiving =
+    gemist.length > 0 &&
+    metVerschuiving >= gemist.length * VERSCHUIVING_MIN_FRACTIE;
+
+  return {
+    geleverd,
+    geleverdeWeken,
+    beoordeeldeWeken,
+    tekortZones: [...tekortZones],
+    verschuiving,
+  };
 }
 
 /**
@@ -519,6 +659,10 @@ export interface BlokReview {
   fase: BlokReviewFase;
   doel: string | null;
   norm: number;
+  /** De drie zone-normen van een opbouwweek — waarop het oordeel viel, en wat de copy noemt. */
+  normTempo: number;
+  normDrempel: number;
+  normAnaeroob: number;
   weekUren: number | null;
   weeks: BlokWeek[];
   uitvoering: BlokUitvoering;
@@ -595,6 +739,9 @@ export function buildBlokReview(input: {
     fase: venster.fase,
     doel: input.doel,
     norm: ref.norm,
+    normTempo: ref.normTempo,
+    normDrempel: ref.normDrempel,
+    normAnaeroob: ref.normAnaeroob,
     weekUren: input.weekUren,
     weeks: ref.weeks,
     uitvoering,

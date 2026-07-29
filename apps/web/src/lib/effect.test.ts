@@ -80,9 +80,17 @@ function act(
   row[3] = o.minuten ?? 60;
   row[14] = o.rollingFtp === undefined ? null : o.rollingFtp;
   if (o.high != null) {
+    // ZONE-MUNT fase 1b — `high` zijn WERKminuten, verdeeld in de vorm die het plan vraagt
+    // (bibliotheek-signatuur, circa 28/56/16). Alles in Z4 zetten zou deze weken op de zone-poort
+    // laten vallen, en dan meten deze tests de effect-poort niet meer maar de munt.
+    const totaal = Math.round(o.high * 60);
+    const tempoS = Math.round(totaal * 0.282137);
+    const drempelS = Math.round(totaal * 0.562462);
     row[15] = JSON.stringify([
       { id: "Z2", secs: 120 * 60 },
-      { id: "Z4", secs: Math.round(o.high * 60) },
+      { id: "Z3", secs: tempoS },
+      { id: "Z4", secs: drempelS },
+      { id: "Z5", secs: totaal - tempoS - drempelS },
     ]);
   }
   return row;

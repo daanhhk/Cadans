@@ -17,12 +17,13 @@ import {
 
 const DOEL_START = "2026-06-29";
 
-/** Eén activiteiten-rij: idx0 Date, idx1 type, idx3 duur (min), idx15 zone-tijden als JSON-string. */
+/** Eén activiteiten-rij: idx0 Date, idx1 type, idx3 duur (min), idx15 zone-tijden als JSON-string.
+ * `low` → Z2, `tempo` → Z3, `high` → Z4, `anaer` → Z5. */
 function act(
   datumISO: string,
   type: string,
   minuten: number,
-  z: { low?: number; high?: number; anaer?: number } | null,
+  z: { low?: number; tempo?: number; high?: number; anaer?: number } | null,
 ): ActValuesRow {
   const [y, m, d] = datumISO.split("-").map(Number);
   const row: ActValuesRow = new Array(17).fill(null);
@@ -34,16 +35,46 @@ function act(
       ? null
       : JSON.stringify([
           { id: "Z2", secs: Math.round((z.low ?? 0) * 60) },
+          { id: "Z3", secs: Math.round((z.tempo ?? 0) * 60) },
           { id: "Z4", secs: Math.round((z.high ?? 0) * 60) },
           { id: "Z5", secs: Math.round((z.anaer ?? 0) * 60) },
         ]);
   return row;
 }
 
-/** Eén rit per week die exact `kwaliteit` high-minuten draagt, plus ruime low (dekking hoog). */
+/**
+ * Eén rit per week die exact `kwaliteit` werkminuten draagt, plus ruime low (dekking hoog).
+ *
+ * ZONE-MUNT fase 1b — de werkminuten worden verdeeld in de VORM die het plan vraagt (de
+ * bibliotheek-signatuur, circa 28/56/16). Vóór 1b zette deze fixture álles in Z4, en dat is onder
+ * de per-zone-munt geen geleverde week meer: nul tempo en nul anaeroob. Een fixture die maar één
+ * zone voedt, voorspelt de app niet (WERKWIJZE) — de recon-weken uit §2.6 blijven zo meten wat ze
+ * bedoelden te meten: de week-boekhouding en de drie check-uitkomsten, niet de zone-poort. Die
+ * poort krijgt zijn eigen, apart rode gevallen verderop.
+ */
 function weekRit(datumISO: string, kwaliteit: number): ActValuesRow {
   const low = 120;
-  return act(datumISO, "Ride", low + kwaliteit, { low, high: kwaliteit });
+  // In hele SECONDEN verdelen, met de laatste zone als rest: dan is de som exact `kwaliteit`
+  // minuten en drijft het weektotaal niet weg op afrondingsruis.
+  const totaal = Math.round(kwaliteit * 60);
+  const tempoS = Math.round(totaal * 0.282137);
+  const highS = Math.round(totaal * 0.562462);
+  const anaerS = totaal - tempoS - highS;
+  return act(datumISO, "Ride", low + kwaliteit, {
+    low,
+    tempo: tempoS / 60,
+    high: highS / 60,
+    anaer: anaerS / 60,
+  });
+}
+
+/** Eén week met een VRIJ opgegeven zone-verdeling; ruime low zodat de dekking niet in de weg zit. */
+function zoneWeek(
+  datumISO: string,
+  z: { tempo: number; high: number; anaer: number },
+): ActValuesRow {
+  const low = 120;
+  return act(datumISO, "Ride", low + z.tempo + z.high + z.anaer, { low, ...z });
 }
 
 describe("blokWeekVanWeek — kalender-blokweek uit de weekmaandag", () => {
@@ -72,26 +103,45 @@ describe("blokStartVoorWeek / vorigBlokStart", () => {
 });
 
 describe("blokDosisNorm — doel plus gedeclareerde weekuren", () => {
-  it("FTP bij 5 uur → 3 prikkels, norm 84", () => {
+  it("FTP bij 5 uur → 3 prikkels, norm 84, zones 24/47/13", () => {
     expect(blokDosisNorm("FTP", 5)).toEqual({
       prikkels: 3,
       minPerPrikkel: 28,
       norm: 84,
+      normTempo: 24,
+      normDrempel: 47,
+      normAnaeroob: 13,
     });
   });
-  it("FTP bij 4 uur → 2 prikkels, norm 56", () => {
+  it("FTP bij 4 uur → 2 prikkels, norm 56, zones 16/31/9", () => {
     expect(blokDosisNorm("FTP", 4)).toEqual({
       prikkels: 2,
       minPerPrikkel: 28,
       norm: 56,
+      normTempo: 16,
+      normDrempel: 31,
+      normAnaeroob: 9,
     });
   });
-  it("Onderhoud bij 3 uur → 3 prikkels (frequentie is beschermd), norm 66", () => {
+  it("Onderhoud bij 3 uur → 3 prikkels (frequentie is beschermd), norm 66, zones 19/37/10", () => {
     expect(blokDosisNorm("Onderhoud", 3)).toEqual({
       prikkels: 3,
       minPerPrikkel: 22,
       norm: 66,
+      normTempo: 19,
+      normDrempel: 37,
+      normAnaeroob: 10,
     });
+  });
+  it("de dosis-trede tilt alle drie de zone-normen mee", () => {
+    const zones = (t: number) => {
+      const n = blokDosisNorm("FTP", 5, t);
+      return [n?.normTempo, n?.normDrempel, n?.normAnaeroob];
+    };
+    expect(zones(1)).toEqual([25, 51, 14]);
+    expect(zones(2)).toEqual([27, 54, 15]);
+    expect(zones(3)).toEqual([29, 57, 16]);
+    expect(zones(4)).toEqual([30, 61, 17]);
   });
   it("geen gedeclareerde weekuren → null (geen norm, dus geen oordeel)", () => {
     expect(blokDosisNorm("FTP", null)).toBeNull();
@@ -120,15 +170,25 @@ describe("weekKwaliteitMinuten — geleverde zoneminuten per kalenderweek", () =
     expect(weekKwaliteitMinuten(rows, "2026-07-20").kwaliteit).toBe(70);
   });
 
-  it("high + anaerobic vormen samen de kwaliteit", () => {
+  // (a) — Z3 en Z4 staan nu APART, en het totaal beweegt geen minuut. Onder de oude vouwing
+  // (Z3+Z4 → high) was 18 + 25 één getal van 43; nu zijn het twee, met dezelfde som.
+  it("splitst Z3 en Z4 apart, met een kwaliteitstotaal gelijk aan de oude vouwing", () => {
     const rows = [
-      act("2026-07-21", "Ride", 90, { low: 60, high: 25, anaer: 5 }),
+      act("2026-07-21", "Ride", 108, {
+        low: 60,
+        tempo: 18,
+        high: 25,
+        anaer: 5,
+      }),
     ];
     const k = weekKwaliteitMinuten(rows, "2026-07-20");
-    expect(k.high).toBe(25);
-    expect(k.anaerobic).toBe(5);
-    expect(k.kwaliteit).toBe(30);
-    expect(k.zoneMinuten).toBe(90);
+    expect(k.tempo).toBe(18);
+    expect(k.drempel).toBe(25);
+    expect(k.anaeroob).toBe(5);
+    expect(k.z2).toBe(60);
+    // 18 + 25 + 5 — exact het oude high (Z3+Z4 = 43) plus anaerobic (5).
+    expect(k.kwaliteit).toBe(48);
+    expect(k.zoneMinuten).toBe(108);
   });
 
   it("rij zonder zonedata telt in ritMinuten, niet in zoneMinuten", () => {
@@ -168,9 +228,20 @@ describe("buildBlokReferent — het gemeten blok 29-06 t/m 20-07", () => {
     expect(reconRef().weeks.map((w) => w.gevraagd)).toEqual([84, 84, 84, 50]);
   });
 
+  it("elke zone-norm schaalt apart mee in de deload: 24/47/13 wordt 14/28/8", () => {
+    const w = reconRef().weeks;
+    expect(w.map((x) => x.gevraagdTempo)).toEqual([24, 24, 24, 14]);
+    expect(w.map((x) => x.gevraagdDrempel)).toEqual([47, 47, 47, 28]);
+    expect(w.map((x) => x.gevraagdAnaeroob)).toEqual([13, 13, 13, 8]);
+  });
+
   it("drie beoordeelde weken, alle drie geleverd; de deload telt niet mee", () => {
     const w = reconRef().weeks;
-    expect(w.map((x) => x.geleverd)).toEqual([110, 97, 118, 91]);
+    // `geleverd` is een som van secs/60-termen over vijf buckets: binair niet exact. Toetsen op
+    // de waarde met tolerantie, niet op bit-gelijkheid (WERKWIJZE, rond één keer af).
+    [110, 97, 118, 91].forEach((verwacht, i) => {
+      expect(w[i]?.geleverd).toBeCloseTo(verwacht, 6);
+    });
     expect(w.map((x) => x.telt)).toEqual([true, true, true, false]);
     expect(w.map((x) => x.geleverdOk)).toEqual([true, true, true, null]);
     const u = blokUitvoering(reconRef());
@@ -178,6 +249,8 @@ describe("buildBlokReferent — het gemeten blok 29-06 t/m 20-07", () => {
       geleverd: true,
       geleverdeWeken: 3,
       beoordeeldeWeken: 3,
+      tekortZones: [],
+      verschuiving: false,
     });
   });
 
@@ -186,6 +259,109 @@ describe("buildBlokReferent — het gemeten blok 29-06 t/m 20-07", () => {
     expect(vier?.status).toBe("compleet");
     expect(vier?.blokWeek).toBe(4);
     expect(vier?.telt).toBe(false);
+  });
+});
+
+// ── ZONE-MUNT fase 1b — de poort per zone ────────────────────────────────────
+// De norm bij FTP/5 uur is 24 Tempo · 47 Drempel · 13 VO2max. Elk geval hieronder zet TWEE zones
+// ruim boven norm en laat er ÉÉN vallen: een poort die niet apart rood te krijgen is, is geen poort.
+
+function zoneRef(weken: ActValuesRow[]) {
+  const r = buildBlokReferent({
+    activities: weken,
+    doel: "FTP",
+    weekUren: 5,
+    startMonday: "2026-06-29",
+    todayISO: "2026-07-27",
+  });
+  if (!r) throw new Error("referent onverwacht null");
+  return r;
+}
+
+describe("het oordeel valt per zone — geen compensatie", () => {
+  it("(b1) alleen TEMPO tekort laat de week vallen", () => {
+    const w = zoneRef([
+      zoneWeek("2026-06-30", { tempo: 23, high: 80, anaer: 40 }),
+    ]).weeks[0];
+    expect(w?.geleverdTempo).toBe(23);
+    expect(w?.zonesOpNorm).toBe(2);
+    expect(w?.geleverdOk).toBe(false);
+  });
+
+  it("(b2) alleen DREMPEL tekort laat de week vallen", () => {
+    const w = zoneRef([
+      zoneWeek("2026-06-30", { tempo: 60, high: 46, anaer: 40 }),
+    ]).weeks[0];
+    expect(w?.geleverdDrempel).toBe(46);
+    expect(w?.zonesOpNorm).toBe(2);
+    expect(w?.geleverdOk).toBe(false);
+  });
+
+  it("(b3) alleen ANAEROOB tekort laat de week vallen", () => {
+    const w = zoneRef([
+      zoneWeek("2026-06-30", { tempo: 60, high: 80, anaer: 12 }),
+    ]).weeks[0];
+    expect(w?.geleverdAnaeroob).toBe(12);
+    expect(w?.zonesOpNorm).toBe(2);
+    expect(w?.geleverdOk).toBe(false);
+  });
+
+  it("alle drie op norm → geleverd", () => {
+    const w = zoneRef([
+      zoneWeek("2026-06-30", { tempo: 24, high: 47, anaer: 13 }),
+    ]).weeks[0];
+    expect(w?.zonesOpNorm).toBe(3);
+    expect(w?.geleverdOk).toBe(true);
+  });
+
+  // (c) — beide kanten in één test: de nieuwe munt laat de week vallen, de OUDE zou hem hebben
+  // goedgekeurd. Dat is precies het grijs-rijden dat de app als "geleverd" boekte.
+  it("(c) tempo ver boven norm dicht een drempel-tekort NIET, terwijl de oude munt dat wel deed", () => {
+    const week = zoneWeek("2026-06-30", { tempo: 90, high: 20, anaer: 14 });
+    const w = zoneRef([week]).weeks[0];
+    if (!w) throw new Error("week onverwacht leeg");
+    expect(w.geleverdTempo).toBe(90);
+    expect(w.geleverdDrempel).toBe(20);
+    expect(w.zonesOpNorm).toBe(2);
+    expect(w.geleverdOk).toBe(false);
+    // De OUDE munt: tempo + drempel + anaeroob tegen één norm van 84 → 124 ≥ 84 → geleverd.
+    expect(w.geleverd).toBe(124);
+    expect(w.geleverd >= w.gevraagd).toBe(true);
+  });
+});
+
+describe("de diagnose — tekortZones en verschuiving", () => {
+  it("(d) verschuiving is waar als er in elke gemiste week een zone boven én een onder norm zit", () => {
+    const u = blokUitvoering(
+      zoneRef([
+        zoneWeek("2026-06-30", { tempo: 90, high: 20, anaer: 14 }),
+        zoneWeek("2026-07-07", { tempo: 85, high: 25, anaer: 15 }),
+        zoneWeek("2026-07-14", { tempo: 95, high: 18, anaer: 14 }),
+      ]),
+    );
+    expect(u.geleverd).toBe(false);
+    expect(u.verschuiving).toBe(true);
+    expect(u.tekortZones).toEqual(["drempel"]);
+  });
+
+  it("(d) verschuiving is onwaar als een week overal tekortkomt", () => {
+    const u = blokUitvoering(
+      zoneRef([
+        zoneWeek("2026-06-30", { tempo: 5, high: 8, anaer: 2 }),
+        zoneWeek("2026-07-07", { tempo: 4, high: 6, anaer: 1 }),
+        zoneWeek("2026-07-14", { tempo: 6, high: 9, anaer: 3 }),
+      ]),
+    );
+    expect(u.geleverd).toBe(false);
+    expect(u.verschuiving).toBe(false);
+    expect(u.tekortZones).toEqual(["tempo", "drempel", "anaeroob"]);
+  });
+
+  it("een geleverd blok draagt geen diagnose", () => {
+    const u = blokUitvoering(reconRef());
+    expect(u.geleverd).toBe(true);
+    expect(u.tekortZones).toEqual([]);
+    expect(u.verschuiving).toBe(false);
   });
 });
 

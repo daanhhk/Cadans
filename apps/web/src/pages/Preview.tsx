@@ -547,34 +547,69 @@ const PREVIEW_KWALITEIT: Record<string, number> = {
 };
 
 /** Eén fiets-rit per kalenderweek: idx3 duur, idx14 rolling_ftp, idx15 zonetijden.
- * De duur is low + high, dus de zonedekking is 1,0 en ligt ruim boven ZONEDATA_DEKKING_MIN. */
+ * De duur is low + high, dus de zonedekking is 1,0 en ligt ruim boven ZONEDATA_DEKKING_MIN.
+ *
+ * ZONE-MUNT fase 1b — `high` zijn WERKminuten en worden verdeeld in de VORM die het plan vraagt
+ * (bibliotheek-signatuur, circa 28/56/16), in hele seconden met de laatste zone als rest. Alles in
+ * Z4 zetten zou elke fixture op de zone-poort laten vallen — nul tempo en nul anaeroob — en dan
+ * rendert deze pagina iets anders dan haar eigen labels beloven. */
 function previewAct(
   datum: string,
   rollingFtp: number | null,
   high: number,
+  /** Expliciete zone-verdeling in minuten; weggelaten → de bibliotheek-vorm over `high`. */
+  vorm?: { tempo: number; drempel: number; anaeroob: number },
 ): ActValuesRow {
   const [y, m, d] = datum.split("-").map(Number);
   const row: ActValuesRow = new Array(17).fill(null);
   row[0] = new Date(y ?? 2026, (m ?? 1) - 1, d ?? 1);
   row[1] = "Ride";
-  row[3] = 150 + high;
   row[14] = rollingFtp;
+  if (vorm) {
+    row[3] = 150 + vorm.tempo + vorm.drempel + vorm.anaeroob;
+    row[15] = JSON.stringify([
+      { id: "Z2", secs: 150 * 60 },
+      { id: "Z3", secs: Math.round(vorm.tempo * 60) },
+      { id: "Z4", secs: Math.round(vorm.drempel * 60) },
+      { id: "Z5", secs: Math.round(vorm.anaeroob * 60) },
+    ]);
+    return row;
+  }
+  row[3] = 150 + high;
+  const totaal = Math.round(high * 60);
+  const tempoS = Math.round(totaal * 0.282137);
+  const drempelS = Math.round(totaal * 0.562462);
   row[15] = JSON.stringify([
     { id: "Z2", secs: 150 * 60 },
-    { id: "Z4", secs: high * 60 },
+    { id: "Z3", secs: tempoS },
+    { id: "Z4", secs: drempelS },
+    { id: "Z5", secs: totaal - tempoS - drempelS },
   ]);
   return row;
 }
 
-function previewActs(overrideFtp: Record<string, number> = {}): ActValuesRow[] {
+function previewActs(
+  overrideFtp: Record<string, number> = {},
+  /** ZONE-MUNT fase 1b — per blokweek een afwijkende zone-vorm, voor de niet-geleverd-takken. */
+  vormen: Record<
+    string,
+    { tempo: number; drempel: number; anaeroob: number }
+  > = {},
+): ActValuesRow[] {
   return PREVIEW_ROLLING_FTP.map(([datum, v]) =>
     previewAct(
       datum,
       overrideFtp[datum] ?? v,
       PREVIEW_KWALITEIT[datum] ?? 30, // buiten het blok doet de kwaliteit er niet toe
+      vormen[datum],
     ),
   );
 }
+
+/** Een week die genoeg trainde maar in de VERKEERDE zone: tempo ver boven norm, drempel eronder. */
+const VERSCHOVEN = { tempo: 90, drempel: 20, anaeroob: 14 };
+/** Een week die overal tekortkomt — geen verschuiving, gewoon te weinig. */
+const TE_WEINIG = { tempo: 6, drempel: 9, anaeroob: 2 };
 
 /** De gereden A-wedstrijd van 21-05-2026 — de laatste maximale inspanning in de echte data. */
 const PREVIEW_RACE_MEI: EventItem = {
@@ -604,9 +639,10 @@ function previewReview(o: {
   ctlDelta: number | null;
   events?: EventItem[];
   overrideFtp?: Record<string, number>;
+  vormen?: Record<string, { tempo: number; drempel: number; anaeroob: number }>;
 }): BlokReview | null {
   return buildBlokReview({
-    activities: previewActs(o.overrideFtp),
+    activities: previewActs(o.overrideFtp, o.vormen),
     doel: "FTP",
     weekUren: 5,
     doelStart: "2026-06-29",
@@ -657,6 +693,34 @@ const blokReviewFixtures: { label: string; r: BlokReview | null }[] = [
       events: [PREVIEW_RACE],
       // Alleen de REEKSWAARDE gaat omhoog; de drempel blijft ROLLING_FTP_STIJGING_W.
       overrideFtp: { "2026-07-06": 275 },
+    }),
+  },
+  // ZONE-MUNT fase 1b — de twee niet-geleverd-takken. Zonder deze twee is de nieuwe coach-copy
+  // nergens te zien vóór prod: alle fixtures hierboven leveren juist wél.
+  {
+    label:
+      "Blok · NIET GELEVERD · VERSCHUIVING (genoeg getraind, verkeerde zone) — 0/3, coach zegt verschuiven naar Drempel",
+    r: previewReview({
+      weekMondayISO: "2026-07-27",
+      ctlDelta: -2.7,
+      vormen: {
+        "2026-06-29": VERSCHOVEN,
+        "2026-07-06": VERSCHOVEN,
+        "2026-07-13": VERSCHOVEN,
+      },
+    }),
+  },
+  {
+    label:
+      "Blok · NIET GELEVERD · TE WEINIG (overal tekort, geen verschuiving) — 0/3, de dosis blijft staan",
+    r: previewReview({
+      weekMondayISO: "2026-07-27",
+      ctlDelta: -2.7,
+      vormen: {
+        "2026-06-29": TE_WEINIG,
+        "2026-07-06": TE_WEINIG,
+        "2026-07-13": TE_WEINIG,
+      },
     }),
   },
 ];

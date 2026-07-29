@@ -128,9 +128,18 @@ describe("blokReviewRegel — de vijf takken", () => {
       fase: "afgerond",
       doel: "FTP",
       norm: 84,
+      normTempo: 24,
+      normDrempel: 47,
+      normAnaeroob: 13,
       weekUren: 5,
       weeks: [],
-      uitvoering: { geleverd: true, geleverdeWeken: 3, beoordeeldeWeken: 3 },
+      uitvoering: {
+        geleverd: true,
+        geleverdeWeken: 3,
+        beoordeeldeWeken: 3,
+        tekortZones: [],
+        verschuiving: false,
+      },
       check: {
         uitkomst: "geleverd_niet_gestegen",
         geleverdeWeken: 3,
@@ -144,10 +153,13 @@ describe("blokReviewRegel — de vijf takken", () => {
     };
   }
 
+  // ZONE-MUNT fase 1b — het getal dat de coach noemt is het getal waarop het oordeel viel, en dat
+  // zijn sinds 1b de drie zone-normen, niet één totaal van 84.
   it("geleverd_niet_gestegen: het plan was te licht, de dosis mag omhoog", () => {
     const r = blokReviewRegel(review());
     expect(r).toContain("3 van de 3 opbouwweken");
-    expect(r).toContain("84 minuten");
+    expect(r).toContain("24 Tempo, 47 Drempel en 13 VO2max minuten");
+    expect(r).not.toContain("84 minuten");
     expect(r).toContain("zakte je CTL met 5,0");
     expect(r).toMatch(/dosis/);
   });
@@ -173,7 +185,13 @@ describe("blokReviewRegel — de vijf takken", () => {
   it("niet_geleverd: de dosis blijft staan", () => {
     const r = blokReviewRegel(
       review({
-        uitvoering: { geleverd: false, geleverdeWeken: 1, beoordeeldeWeken: 3 },
+        uitvoering: {
+          geleverd: false,
+          geleverdeWeken: 1,
+          beoordeeldeWeken: 3,
+          tekortZones: ["drempel"],
+          verschuiving: false,
+        },
         check: {
           uitkomst: "niet_geleverd",
           geleverdeWeken: 1,
@@ -194,7 +212,13 @@ describe("blokReviewRegel — de vijf takken", () => {
     const r = blokReviewRegel(
       review({
         startMonday: "2026-05-04",
-        uitvoering: { geleverd: false, geleverdeWeken: 2, beoordeeldeWeken: 3 },
+        uitvoering: {
+          geleverd: false,
+          geleverdeWeken: 2,
+          beoordeeldeWeken: 3,
+          tekortZones: ["drempel"],
+          verschuiving: false,
+        },
         check: {
           uitkomst: "niet_geleverd",
           geleverdeWeken: 2,
@@ -221,11 +245,68 @@ describe("blokReviewRegel — de vijf takken", () => {
       review({
         doel: "Onderhoud",
         check: null,
-        uitvoering: { geleverd: false, geleverdeWeken: 1, beoordeeldeWeken: 3 },
+        uitvoering: {
+          geleverd: false,
+          geleverdeWeken: 1,
+          beoordeeldeWeken: 3,
+          tekortZones: ["tempo"],
+          verschuiving: false,
+        },
       }),
     );
     expect(r).toContain("1 van de 3 kwaliteitsweken");
     expect(r).toMatch(/frequentie/i);
+  });
+
+  // (e) — de tak niet_geleverd splitst op de VERSCHUIVING. Bij true is de bruikbare boodschap
+  // "verschuiven", niet "meer": de dosis gaat expliciet NIET omhoog.
+  it("niet_geleverd MET verschuiving: verschuiven naar de tekortzone, niet meer dosis", () => {
+    const r = blokReviewRegel(
+      review({
+        uitvoering: {
+          geleverd: false,
+          geleverdeWeken: 0,
+          beoordeeldeWeken: 3,
+          tekortZones: ["drempel"],
+          verschuiving: true,
+        },
+        check: {
+          uitkomst: "niet_geleverd",
+          geleverdeWeken: 0,
+          beoordeeldeWeken: 3,
+          ctlDelta: -5,
+          gestegen: false,
+        },
+      }),
+    );
+    expect(r).toMatch(/verschuif|verschuiven/i);
+    expect(r).toContain("Drempel");
+    expect(r).not.toMatch(/dosis (mag|kan) .*omhoog/);
+    expect(r).not.toMatch(/blijft staan/);
+  });
+
+  it("niet_geleverd ZONDER verschuiving: de bestaande boodschap, plus de tekortzone", () => {
+    const r = blokReviewRegel(
+      review({
+        uitvoering: {
+          geleverd: false,
+          geleverdeWeken: 0,
+          beoordeeldeWeken: 3,
+          tekortZones: ["tempo"],
+          verschuiving: false,
+        },
+        check: {
+          uitkomst: "niet_geleverd",
+          geleverdeWeken: 0,
+          beoordeeldeWeken: 3,
+          ctlDelta: -5,
+          gestegen: false,
+        },
+      }),
+    );
+    expect(r).toMatch(/blijft staan|niet zien of het plan klopt/);
+    expect(r).toContain("Tempo");
+    expect(r).not.toMatch(/verschuiv/i);
   });
 
   it("fase-woordpaar: afgerond zegt 'vorig blok' + 'dit blok', lopend zegt 'dit blok' + 'het volgende blok'", () => {

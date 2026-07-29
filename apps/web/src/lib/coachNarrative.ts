@@ -8,6 +8,7 @@
 
 import type { BlokReview } from "./blok";
 import type { MetingBron } from "./effect";
+import type { Zone5Key } from "./zonemunt";
 
 export type CoachPersona = "warm" | "disciplined" | "statistical";
 
@@ -378,13 +379,36 @@ function blokLabels_(fase: "lopend" | "afgerond"): {
       };
 }
 
+/** Zonenamen exact zoals de UI ze al voert (ZoneBars): één naam per zone in de hele app. */
+const ZONE_NAAM_: Record<Zone5Key, string> = {
+  rust: "Herstel",
+  z2: "Duur",
+  tempo: "Tempo",
+  drempel: "Drempel",
+  anaeroob: "VO2max",
+};
+
+/** "Tempo", "Tempo en Drempel", "Tempo, Drempel en VO2max" — bij gelijkstand noemt de coach ze
+ * allemaal; welke zone het meest tekortkwam is dan geen keuze maar een gelijkspel. */
+function zoneLijst_(zones: Zone5Key[]): string {
+  const namen = zones.map((z) => ZONE_NAAM_[z]);
+  if (namen.length <= 1) return namen[0] ?? "";
+  return `${namen.slice(0, -1).join(", ")} en ${namen[namen.length - 1]}`;
+}
+
 export function blokReviewRegel(r: BlokReview): string {
   const g = r.uitvoering.geleverdeWeken;
   const b = r.uitvoering.beoordeeldeWeken;
   const { beoordeeld, beoordeeldNP, volgend } = blokLabels_(r.fase);
+  // ZONE-MUNT fase 1b — het getal dat de coach noemt moet het getal zijn waarop het oordeel viel.
+  // Dat is niet langer één totaal maar drie zone-normen, dus die staan hier in de zin.
+  const zoneNorm = `${r.normTempo} Tempo, ${r.normDrempel} Drempel en ${r.normAnaeroob} VO2max`;
+  const tekort = zoneLijst_(r.uitvoering.tekortZones);
   // Congruentie: "1 van de 3 opbouwweken HAALDE", "2 van de 3 opbouwweken HAALDEN".
   const haalde = g === 1 ? "haalde" : "haalden";
   const kwam = g === 1 ? "kwam" : "kwamen";
+  // Idem voor de zone-lijst: "Drempel KWAM tekort", "Tempo en Drempel KWAMEN tekort".
+  const tekortKwam = r.uitvoering.tekortZones.length > 1 ? "kwamen" : "kwam";
   const d = r.ctlDelta ?? 0;
   const x = ctlLabel_(Math.abs(d));
   // Negatief → "zakte met X"; nul of licht positief onder de opbouw-drempel → "bleef vlak".
@@ -395,20 +419,31 @@ export function blokReviewRegel(r: BlokReview): string {
   if (r.check?.uitkomst === "geleverd_niet_gestegen") {
     key = "geleverd_niet_gestegen";
     pool = [
-      `Je leverde ${beoordeeld} ${g} van de ${b} opbouwweken boven de gevraagde ${r.norm} minuten, en tóch ${ctlZin}. Dan lag het niet aan de uitvoering — het plan was te licht. De dosis mag ${volgend} omhoog.`,
-      `${g} van de ${b} opbouwweken zaten ${beoordeeld} boven de gevraagde ${r.norm} minuten, en toch ${ctlZin}. Aan de uitvoering lag het dus niet; het plan was te licht. Er mag ${volgend} meer dosis in.`,
+      `Je leverde ${beoordeeld} ${g} van de ${b} opbouwweken op alle drie de zones — ${zoneNorm} minuten — en tóch ${ctlZin}. Dan lag het niet aan de uitvoering: het plan was te licht. De dosis mag ${volgend} omhoog.`,
+      `${g} van de ${b} opbouwweken haalden ${beoordeeld} elke zone: ${zoneNorm} minuten. En toch ${ctlZin}. Aan de uitvoering lag het dus niet; het plan was te licht. Er mag ${volgend} meer dosis in.`,
     ];
   } else if (r.check?.uitkomst === "geleverd_gestegen") {
     key = "geleverd_gestegen";
     pool = [
-      `${g} van de ${b} opbouwweken op norm, en je CTL steeg met ${x}. Dat is precies wat een blok hoort te doen — ${volgend} mag er een trede bij.`,
-      `${g} van de ${b} opbouwweken gehaald en je CTL ging ${x} omhoog. Zo hoort een blok te lopen — ${volgend} kan een trede zwaarder.`,
+      `${g} van de ${b} opbouwweken op norm in elke zone — ${zoneNorm} minuten — en je CTL steeg met ${x}. Dat is precies wat een blok hoort te doen; ${volgend} mag er een trede bij.`,
+      `${g} van de ${b} opbouwweken haalden ${zoneNorm} minuten, en je CTL ging ${x} omhoog. Zo hoort een blok te lopen — ${volgend} kan een trede zwaarder.`,
+    ];
+  } else if (
+    r.check?.uitkomst === "niet_geleverd" &&
+    r.uitvoering.verschuiving
+  ) {
+    // ZONE-MUNT fase 1b — de VERSCHUIVING. Er is genoeg getraind, maar in de verkeerde zone. De
+    // bruikbare boodschap is dan "verschuiven", niet "meer": de dosis gaat NIET omhoog.
+    key = "niet_geleverd_verschuiving";
+    pool = [
+      `Je trainde ${beoordeeld} genoeg, maar niet waar het telt: ${tekort} bleef onder norm terwijl je in een andere zone juist overhield. ${g} van de ${b} opbouwweken kwamen zo rond. De dosis gaat niet omhoog — die minuten moeten verschuiven naar ${tekort}.`,
+      `${g} van de ${b} opbouwweken haalden alle drie de zones, en dat lag niet aan de hoeveelheid: je zat boven norm in de ene zone en onder norm in ${tekort}. Niet méér trainen dus, maar verschuiven naar ${tekort}.`,
     ];
   } else if (r.check?.uitkomst === "niet_geleverd") {
     key = "niet_geleverd";
     pool = [
-      `${g} van de ${b} opbouwweken ${haalde} de gevraagde ${r.norm} minuten. Dan zegt ${beoordeeldNP} nog niets over het plan — de dosis blijft staan tot je een blok een keer helemaal draait.`,
-      `${g} van de ${b} opbouwweken ${kwam} aan de gevraagde ${r.norm} minuten. Zo laat ${beoordeeldNP} niet zien of het plan klopt — de dosis blijft staan tot een blok een keer rond is.`,
+      `${g} van de ${b} opbouwweken ${haalde} elke zone; ${tekort} ${tekortKwam} het vaakst tekort. Dan zegt ${beoordeeldNP} nog niets over het plan — de dosis blijft staan tot je een blok een keer helemaal draait.`,
+      `${g} van de ${b} opbouwweken ${kwam} aan alle drie de zone-normen, met ${tekort} als grootste gat. Zo laat ${beoordeeldNP} niet zien of het plan klopt — de dosis blijft staan tot een blok een keer rond is.`,
     ];
   } else if (r.uitvoering.geleverd) {
     // Niet-opbouwdoel (Onderhoud): de CTL is hier geen meter — die HOORT te zakken.

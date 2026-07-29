@@ -161,6 +161,9 @@ export function actualZone5_(iczt: unknown): Zone5 | null {
 const SIGNATUUR_FTP = 280;
 const SIGNATUUR_LTHR = 178;
 
+/** Memo op de grenzen-sleutel; zie de kop van `bibliotheekSignatuur`. */
+const SIGNATUUR_CACHE = new Map<string, Zone5>();
+
 /**
  * De VORM van de norm: welk deel van de WERKminuten (tempo + drempel + anaeroob) de
  * trainingsbibliotheek per zone voorschrijft. Rust en z2 zijn per definitie 0 — zij zijn de
@@ -175,10 +178,18 @@ const SIGNATUUR_LTHR = 178;
  * dragen, en gemeten is dat hij dat nu niet doet: over de hele bibliotheek beweegt de
  * verhouding van 26/74 (midpunt) naar 28/72 (proportioneel) — `docs/ZONE-MUNT-ONTWERP.md`
  * §3.1. Splitsen per doel voegt vandaag dus geen beslissing toe.
+ *
+ * GEMEMOISEERD op de grenzen: de vouwing gaat door 35 archetypes en wordt vanaf fase 1b per
+ * referent-bouw aangeroepen (vier weken per blok, elke render). De functie is puur en de
+ * bibliotheek is een constante, dus dezelfde grenzen geven per definitie dezelfde uitkomst. De
+ * cache geeft een KOPIE terug, zodat een aanroeper de bewaarde waarde niet kan muteren.
  */
 export function bibliotheekSignatuur(
   grenzen: readonly number[] = ZONE5_GRENZEN_DEFAULT,
 ): Zone5 {
+  const sleutel = grenzen.join("|");
+  const bewaard = SIGNATUUR_CACHE.get(sleutel);
+  if (bewaard) return { ...bewaard };
   const som = leegZone5();
   for (const rec of ARCHETYPES) {
     const uit = expandArchetype_(rec, {
@@ -190,9 +201,11 @@ export function bibliotheekSignatuur(
   }
   const werk = som.tempo + som.drempel + som.anaeroob;
   const uit = leegZone5();
-  if (werk <= 0) return uit;
-  uit.tempo = som.tempo / werk;
-  uit.drempel = som.drempel / werk;
-  uit.anaeroob = som.anaeroob / werk;
+  if (werk > 0) {
+    uit.tempo = som.tempo / werk;
+    uit.drempel = som.drempel / werk;
+    uit.anaeroob = som.anaeroob / werk;
+  }
+  SIGNATUUR_CACHE.set(sleutel, { ...uit });
   return uit;
 }
