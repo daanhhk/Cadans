@@ -99,6 +99,17 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
 - **Elk getal in een voorstel draagt zijn HERKOMST in één woord.** PLAN (bibliotheek of coach-canon), SIGNAAL (op de echte reeks geijkt, met plateau) of BELEID (een besluit van Daan). Een voorstel zonder die labels is niet reviewbaar: de lezer kan niet zien of een getal geijkt hoort te worden of juist niet. Getallen uit de eigen historie mogen alleen als bovengrens-check optreden, nooit als grond voor een regel. Aanleiding: de per-zone-norm werd als PLAN afgeleid maar de POORT-keuze eromheen sloop als SIGNAAL naar binnen, en dat viel pas op toen Daan het opmerkte.
 - **Citeer een meting met het predicaat dat gemeten is.** "Nul weken struikelen ALLEEN op Z3" is niet "Z3 bindt nooit" en al helemaal niet "de Z3-poort is decoratie" — elke herformulering liet een kwalificatie vallen tot de claim onwaar was. Gemeten was 12 van de 46 weken onder de Z3-norm, nooit als enige. Verandert de formulering, dan is de claim niet meer gedekt door de meting; herhaal het predicaat letterlijk of meet opnieuw.
 - **Een fixture die een POORT passeert om iets anders te kunnen meten, asserteert die passage.** Anders gaat de test stil dood zodra de poort verschuift: hij blijft groen en meet niets meer. Zelfde familie als "getest is niet aangesloten". Aanleiding: drie fixtures voedden alles in Z4 en moesten voor de per-zone-munt de vorm van de norm gaan dragen; verzet de zone-sync straks de grenzen, dan zakken ze onder norm en verdwijnt de effect-poort uit beeld zonder dat er iets rood wordt.
+- **Een gepind document bewijst zijn eigen GELDIGHEID niet.** Toets vóór je op een document
+  stuurt of het nog leeft — een commit-hash garandeert dat je leest wat er stond, niet dat
+  het nog geldt. Aanleiding, TWEE KEER in één chat en in beide richtingen. Eerst zette de
+  FOCUS de zone-sync neer als iets dat "de signatuur en dus de normen verplaatst", terwijl
+  `zone5Grenzen` de eerste vier waarden uit `power_zones` neemt en die bij Daan
+  [55, 75, 90, 105] zijn — exact `ZONE5_GRENZEN_DEFAULT`, dus per constructie
+  gedragsneutraal. Daarna verhief de chat `docs/R4-CUTOVER-VERDICT.md` tot stip aan de
+  horizon terwijl de cutover al geweest was; één grep gaf het antwoord dat vooraf gedaan had
+  moeten worden: `cutover` komt NUL keer voor in `CLAUDE.md`, `ROADMAP.md`, `WERKWIJZE.md`
+  en `DOELEN-SPEC.md`. De R-serie is historisch. Een document dat de levende documenten niet
+  meer noemen, stuurt niets.
 
 ## Vorm van een CC-prompt
 
@@ -148,6 +159,17 @@ De HANDOFF-update is **altijd een aparte docs-only commit**, nooit gebundeld met
 Het nieuwe STAND-blok gaat BOVENAAN in `HANDOFF.md`, boven het vorige, en vervangt of verwijdert niets. Het eindigt ALTIJD op een `FOCUS VOLGENDE CHAT`-regel. Die twee zijn geen stijl maar een afhankelijkheid: de opener draagt de stand niet meer zelf en wijst naar dat blok, dus een blok dat onderaan belandt of geen FOCUS draagt laat de volgende chat met lege handen staan.
 
 Na het close-out-rapport schrijft de chat de opener voor de volgende chat uit, verbatim uit *§ Opener-sjabloon*.
+
+DE FOCUS-REGEL WORDT NIET VRIJ GEFORMULEERD. Hij wijst naar het eerstvolgende open punt uit
+de volgorde in `docs/ROADMAP.md`, en noemt dat punt bij naam. Wijkt een chat daarvan af —
+en dat mag, een gemeten vondst kan voorrang hebben — dan staat de REDEN in hetzelfde
+STAND-blok. Een punt wordt afgevinkt in `ROADMAP.md` in DEZELFDE close-out waarin het af
+is, nooit later.
+
+Aanleiding: het openstaande werk leefde op vier plekken — de stappen in ROADMAP, de
+parkeerlijst daaronder, `DOELEN-SPEC.md` §6, en de OPENSTAAND-bullets in elk STAND-blok —
+en elke chat koos zijn focus uit het laatste blok. Dat is lokaal logisch en globaal
+ondoorzichtig: er is per ronde vooruitgang zichtbaar maar nooit de afstand tot de streep.
 
 ## Opener-sjabloon
 

@@ -6,6 +6,28 @@ gesprek suggereert. Voorrang bij tegenspraak: `docs/WERKWIJZE.md` (werkwijze) >
 `docs/DOELEN-SPEC.md` (invulling per doel) > dit document (richting). Dit document wijzigt geen
 code.
 
+## De stip — het seizoen naar AGR
+
+De cutover is geweest; de GAS-app is verlaten en wordt niet meer als poort gevoerd.
+`docs/R4-CUTOVER-VERDICT.md` en de R-serie zijn HISTORISCH: bruikbaar als vindplaats,
+niet als afvinklijst.
+
+Het einddoel is het seizoen uit `docs/DOELEN-SPEC.md` §5, en de eerste harde datum ligt
+vóór het event:
+
+- winter 2026-2027 — doel Onderhoud, weinig uren, mogelijk geen lange rit;
+- half februari 2027 — de fase gaat naar Build, het doel wisselt naar korte beklimmingen;
+- 17 april 2027 — A-event AGR Toerversie;
+- zomer 2027 — Stelvio-week, lange klimmen.
+
+Inhoudelijk komt alles uit op het coach-model in `DOELEN-SPEC.md` §2A: TWEE LUSSEN in
+plaats van vijf losse drempels — een weeklus op het blok en een daglus op vandaag.
+
+DE VOLGORDE STAAT OP TWEE PLEKKEN EN DRAAGT GEEN TIJDSLIJN: de stappen hierboven in dit
+document, en de bouwvolgorde in `DOELEN-SPEC.md` §6. Ze samenvoegen tot één genummerde,
+afvinkbare reeks met een status en een raakvlak per punt is het eerstvolgende werk; tot dat
+gedaan is draagt deze sectie de RICHTING en niet de stand.
+
 ## Stappen
 
 ### STAP 1 — de dosis schaalt verkeerd met tijd · AF
