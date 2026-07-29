@@ -59,9 +59,29 @@ punten staat onder *Gesloten — vindplaats*.
    type-declaratie op regel 249, met een comment dat het "beschikbaar blijft voor 2c/3b". Dat
    geldt voor ÉLKE sleutelsessie, ook drempel en vo2, en dateert van vóór punt 5. Netto zegt de
    coach dat hij de sessie niet laat vallen en doet hij vervolgens geen zichtbaar voorstel.
-   CRITERIUM: een gemiste sleutelsessie levert een zichtbaar, afwijsbaar voorstel op de
-   dagkaart. ONTWERPVRAAG die erbij hoort: is dit dezelfde stem als de bestaande inhaal-kaart —
-   dan horen ze samen, en raakt dit punt 10.
+   CRITERIUM, HERZIEN na de recon: een gemiste sleutelsessie levert een zichtbare regel die
+   GEDEKT is door het actieve plan. NIET een voorstel: `adapt` draagt generieke copy over een
+   ingekorte sessie die het plan niet uitvoert, en is bovendien geen sleutel-signaal — drie van
+   de vijf takken die het veld vullen horen bij een endurance-ruil. GEMETEN dat het plan al
+   herschikt (het quotum telt gereden harde dagen, gemiste niet): in 20 van de 23 gemeten
+   cellen draagt het restplan nog minstens één sleutelsessie, in 3 is de week op. De regel toont
+   dus waar de prikkel deze week nog staat, of meldt eerlijk dat er geen dag meer over is. De
+   ONTWERPVRAAG naar samenvallen met de week-inhaal-kaart is BEANTWOORD: die kaart kan niet
+   verschijnen (punt 5c), dus er is geen tweede stem en punt 10 wordt hier niet geraakt. Recon:
+   `docs/INHAAL-5B-RECON.md`.
+5c. **De week-inhaal-kaart kan niet verschijnen** — open · ENGINE. GEMETEN over 48 combinaties
+   (4 weekvormen × 4 doelen × 3 doelStarts): in élke Base-, Build- en Peak-cel nul
+   `catchup_*`-codes en nul inhaalvoorstellen; de 24 codes en 18 voorstellen die er zijn liggen
+   ALLE in fase Test, en doel Onderhoud raakt het pad nooit (`debtEnabled` false). MECHANISME:
+   de allocator-tak (`planner.ts:776`) staat vóór de pendel-, weekend- en vrij-takken en de
+   endurance-fill (`planner.ts:553`) claimt elke eligible dag, dus de codes op `planner.ts:819`
+   en `:849` zijn onbereikbaar — en `buildInhaalVoorstel` (`schema.ts:1086`) diff't juist
+   daarop. De debt bestaat wel: `zoneDebt_` over een gemiste maandag plus dinsdag geeft low 57 ·
+   high 48 · anaerobic 0. Ook de wat-als-run is byte-identiek aan het actieve plan, dus zelfs
+   zonder de code-poort zou de diff leeg zijn. `inhaal.test.ts` bewijst niets: die injecteert
+   `catchup_high` met de hand. CRITERIUM: een geleverd tekort levert een zichtbaar
+   WEEK-voorstel op, of het mechanisme wordt opgeruimd als punt 10 het opneemt. Raakt de
+   allocator, dus ENGINE en expliciete autorisatie. Recon: `docs/INHAAL-5B-RECON.md` §2.
 6. **De dosis-munt per zone** — deels · CLIENT (fase 1, af) / DATA (fase 2, open). Fase 1a en
    1b zijn live: `weekKwaliteitMinuten` vouwt per zone, `blokDosisNorm` haalt zijn vorm uit
    `bibliotheekSignatuur`, en het oordeel is per zone zonder compensatie. FASE 2, DE
