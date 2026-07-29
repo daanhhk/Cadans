@@ -139,11 +139,17 @@ Nederlands voor uitwisseling en UI-strings; Engels voor code, commit messages en
 
 De HANDOFF-update is **altijd een aparte docs-only commit**, nooit gebundeld met code. CC committe, pusht en print de gepinde RAW-URL op de commit-hash. Een chat is pas klaar voor overgang als die push gedaan is. Nieuwe of gewijzigde werkwijze-afspraken uit die chat gaan in dezelfde close-out naar dit document.
 
+Het nieuwe STAND-blok gaat BOVENAAN in `HANDOFF.md`, boven het vorige, en vervangt of verwijdert niets. Het eindigt ALTIJD op een `FOCUS VOLGENDE CHAT`-regel. Die twee zijn geen stijl maar een afhankelijkheid: de opener draagt de stand niet meer zelf en wijst naar dat blok, dus een blok dat onderaan belandt of geen FOCUS draagt laat de volgende chat met lege handen staan.
+
 Na het close-out-rapport schrijft de chat de opener voor de volgende chat uit, verbatim uit *§ Opener-sjabloon*.
 
 ## Opener-sjabloon
 
-**De afsluitende chat schrijft de opener uit** — verbatim uit dit sjabloon, in één code-blok, ná het close-out-rapport (dan pas is de hash bekend). Invullen: `<hash>` (op ALLE DRIE de URL's dezelfde close-out-hash), STAND uit de HANDOFF, en FOCUS. Verder niets toevoegen: de werkwijze staat hier, niet in de opener. Daan hoeft niets samen te stellen — hij krijgt één kant-en-klaar blok.
+**De afsluitende chat schrijft de opener uit** — verbatim uit dit sjabloon, in één code-blok, ná het close-out-rapport (dan pas is de hash bekend). Er valt nog maar ÉÉN ding in te vullen: `<hash>`, op alle drie de URL's dezelfde close-out-hash. STAND en FOCUS worden NIET overgenomen — de opener WIJST naar het bovenste STAND-blok in `HANDOFF.md` in plaats van het na te vertellen. Verder niets toevoegen: de werkwijze staat hier, niet in de opener. Daan hoeft niets samen te stellen; hij krijgt één kant-en-klaar blok.
+
+Reden voor die vorm: een opener die de stand overschrijft laat dezelfde tekst op twee plekken leven die elk per chat muteren — precies de drift die dit document moest opheffen. Eén bron, en de opener verwijst ernaar.
+
+Dat leunt op twee eisen aan de close-out, en zonder die twee is de verwijzing loos: het nieuwste STAND-blok staat BOVENAAN in `HANDOFF.md`, en élk STAND-blok eindigt op een expliciete `FOCUS VOLGENDE CHAT`-regel. Zie *Close-out van een chat*.
 
 --- BEGIN OPENER ---
 Lees eerst deze drie via web_fetch (RAW, gepind op commit-hash — NIET de blob-URL, die is stale):
@@ -157,8 +163,7 @@ Cadans = Cloudflare-herbouw van de trainings-app: pnpm-monorepo, pure engine + W
 Je kunt mijn uncommitte lokale staat (C:\Users\daan\Projects\cadans, Windows/PowerShell, via Remote
 Control) niet lezen; de gecommitte Cadans-code en de bevroren GAS-bron lees je wel gewoon zelf.
 
-STAND: <vul in vanuit HANDOFF.md>
-FOCUS DEZE CHAT: <vul in>
+Volg de FOCUS uit het bovenste STAND-blok.
 --- EINDE OPENER ---
 
 ## Wijzigingslog
@@ -193,3 +198,4 @@ FOCUS DEZE CHAT: <vul in>
 - 2026-07-28 — in *Prod en veiligheid* de Basic-auth-route van de harness vastgelegd, plus het BESLUIT dat er geen read-only-modus komt die de mount-sync onderdrukt: een harness die een speciale modus fotografeert kan liegen over de normale.
 - 2026-07-29 — les toegevoegd in *Recon en bewijslast*: een render-conditie die op een afwezigheid leunt is geen state. Aanleiding: de rustdag-copy werd aan state `rest` gehangen en brak daarmee vandaag-zonder-trainingsdag, dat state `today` draagt.
 - 2026-07-29 — les toegevoegd in *Recon en bewijslast*: een byte-vergelijking tussen twee harness-runs geldt alleen zonder tussentijds werk dat de lokale D1 raakt, en een gecontroleerde pixeldiff is een begrenzingsbewijs. Aanleiding: acht vermeende afwijkende shots reproduceerden onder gecontroleerde meting niet, terwijl de diff binnen `v7-midweek` het verschil tot twee rechthoeken terugbracht.
+- 2026-07-29 — het opener-sjabloon vertelt de STAND niet meer na maar WIJST naar het bovenste STAND-blok in `HANDOFF.md`; alleen `<hash>` valt nog in te vullen. De twee eisen die dat draagt — nieuwste blok bovenaan, en elk blok eindigt op een FOCUS-regel — staan nu expliciet in *Close-out van een chat*. Aanleiding: Daan gebruikte deze kortere vorm en hij is strikt beter, want de oude opener kopieerde de stand naar een tweede plek die per chat muteert.
