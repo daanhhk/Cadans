@@ -242,13 +242,25 @@ export const DISPOSITION_LABELS: Record<DispositionReason, string> = {
 
 /** Rauwe per-dag coach-feedback (2a): de coachFeedback_-velden op dagniveau. `state` is de RAUWE
  * engine-state ('on-plan'|'deviated'|'different'|'missed'), NIET de AlignKind-mapping. `narrative` =
- * de coach-proza-string (done → DoneCompareCard-box, gemist → GemistCard). `planned`/`adapt` blijven
- * beschikbaar voor 2c/3b (feiten-gedreven coach-copy resp. de override-picker). */
+ * de coach-proza-string (done → DoneCompareCard-box, gemist → GemistCard).
+ *
+ * ROADMAP punt 5b — `adapt` is hier WEG. Dat veld droeg generieke copy over een ingekorte sessie
+ * die het plan niet uitvoert, en het is geen sleutel-signaal: drie van de vijf takken die het
+ * vullen horen bij een endurance-ruil (`docs/INHAAL-5B-RECON.md` §1). In plaats daarvan staan hier
+ * `plannedIntent` en `doneIntent`: MACHINELEESBAAR, geen copy, en de enige twee termen die de
+ * sleutel-vraag nodig heeft. De ENGINE blijft `adapt` gewoon leveren. */
 export interface SchemaDayCoach {
   state: string;
-  adapt: string | null;
+  plannedIntent: string | null;
+  doneIntent: string | null;
   planned: unknown;
   narrative: string | null;
+}
+
+/** `fb.planned` / `fb.done` zijn `any` (engine-shape); defensief één veld eruit lezen. */
+function intentVan_(blok: unknown): string | null {
+  const i = (blok as { intent?: unknown } | null | undefined)?.intent;
+  return typeof i === "string" && i ? i : null;
 }
 
 export interface SchemaDay {
@@ -623,7 +635,8 @@ function buildDoneCompareFull(
   };
   const coach: SchemaDayCoach = {
     state: fb.state,
-    adapt: fb.adapt ?? null,
+    plannedIntent: intentVan_(fb.planned),
+    doneIntent: intentVan_(fb.done),
     planned: fb.planned,
     narrative:
       typeof fb.narrative === "string" && fb.narrative.trim()
@@ -664,7 +677,8 @@ function missedCoach_(
   if (!fb) return null;
   return {
     state: fb.state,
-    adapt: fb.adapt ?? null,
+    plannedIntent: intentVan_(fb.planned),
+    doneIntent: intentVan_(fb.done),
     planned: fb.planned,
     narrative:
       typeof fb.narrative === "string" && fb.narrative.trim()

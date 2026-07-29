@@ -22,6 +22,7 @@ import {
   verlengResultaat,
   verlichtResultaat,
 } from "../../lib/schema";
+import { openSleutelDagen, sleutelPrikkelOpen } from "../../lib/sleutelinhaal";
 import type { TestVoorstel } from "../../lib/testvoorstel";
 import { Card, Overline } from "../ui";
 import { ActionButtons } from "./ActionButtons";
@@ -41,6 +42,7 @@ import { GemistCard } from "./GemistCard";
 import { InhaalCard } from "./InhaalCard";
 import { OverriddenDetail } from "./OverriddenDetail";
 import { PeriodTimeline } from "./PeriodTimeline";
+import { SleutelInhaalBlok } from "./SleutelInhaalBlok";
 import { isTestVoorstelAfgewezen, TestVoorstelCard } from "./TestVoorstelCard";
 import { isVerlengAfgewezen, VerlengCard } from "./VerlengCard";
 import { isVerlichtAfgewezen, VerlichtCard } from "./VerlichtCard";
@@ -187,6 +189,12 @@ export function SchemaView({
   // canDispose (GAS canDispose_, Script.html:448): een dag met voorstel, niet voltooid, nog niet
   // gedisponeerd, en datum <= vandaag → toon de "Niet gedaan?"-affordance.
   const canDispose = canDisposeDay(day, todayISO);
+  // ROADMAP punt 5b — staat de sleutelprikkel van DEZE dag nog open (gemist, of lichter gereden),
+  // en waar staat hij deze week dan nog? Beide poorten in de pure laag; hier alleen renderen.
+  const sleutelOpen = sleutelPrikkelOpen(day);
+  const openSleutelDagenLijst = sleutelOpen
+    ? openSleutelDagen(view.days, todayISO)
+    : [];
 
   // 2b: per-dag coach-narrative (boven de training). Alleen op een dag mét een reden (plan-dagen;
   // done/gemist-dagen hebben geen redenCode → geen dubbel coach-blok). Op een OVERRIDE-dag onderdrukt
@@ -379,13 +387,20 @@ export function SchemaView({
             day.doneCompare ? (
               // §5c voltooid-volle → volle kaart (incl. ritdetails-link + impact-box). Het gedeelde
               // knoppen-blok volgt NA de state-conditional (een keer, onder elke state).
-              <DoneCompareCard
-                card={day.doneCompare}
-                coachNaam={view.coachNaam}
-                date={day.datum}
-                rpe={rpeByDate[day.datum] ?? null}
-                idExt={day.done?.idExt ?? ""}
-              />
+              <>
+                <DoneCompareCard
+                  card={day.doneCompare}
+                  coachNaam={view.coachNaam}
+                  date={day.datum}
+                  rpe={rpeByDate[day.datum] ?? null}
+                  idExt={day.done?.idExt ?? ""}
+                />
+                {/* ROADMAP punt 5b — sleutelsessie LICHTER gereden (state 'different'): waar de
+                    prikkel deze week nog staat. Zelfde blok als in de gemist-tak. */}
+                {sleutelOpen && (
+                  <SleutelInhaalBlok dagen={openSleutelDagenLijst} />
+                )}
+              </>
             ) : (
               // §5d voltooid-verleden (gereduceerde kaart-inhoud, bewust geparkeerd).
               <DoneDetail done={day.done} />
@@ -404,6 +419,11 @@ export function SchemaView({
                 coachNaam={view.coachNaam}
               />
               {day.planSessions.length > 0 && <SessieBlok day={day} />}
+              {/* ROADMAP punt 5b — NA de sessie-weergave: eerst zien wat er lag, dan waar de
+                  prikkel nu staat. De gemiste dag zelf valt per constructie buiten de lijst. */}
+              {sleutelOpen && (
+                <SleutelInhaalBlok dagen={openSleutelDagenLijst} />
+              )}
             </>
           ) : isOverrideCard && day.override ? (
             // 3b: handmatig gekozen training → OverriddenDetail + "Terug naar voorstel". `isOverrideCard`
