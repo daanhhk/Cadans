@@ -85,6 +85,12 @@ import {
   mergeReconEntries,
   sameForwardEntries,
 } from "./weekplanBlob";
+// De 5-bucket-vouwing van de GEREDEN kant woont sinds fase 1a van de zone-munt in
+// `zonemunt.ts` (docs/ZONE-MUNT-ONTWERP.md §2): één bron voor beide kanten van de munt.
+// Hier alleen geïmporteerd en her-geëxporteerd, zodat bestaande aanroepers ongemoeid blijven.
+import { actualZone5_, type Zone5, type Zone5Key } from "./zonemunt";
+
+export { actualZone5_, type Zone5, type Zone5Key };
 
 // View-model voor de Schema-tab. ALLE derivatie hier (componenten = puur). De engine-
 // ProposalWorkout is los `any`-getypeerd; we casten 'm hier 1-op-1 naar SchemaSession
@@ -308,22 +314,10 @@ export interface DoneEntry {
 }
 
 // ── Done-rit-afleidingen (fase 2a): PURE, getest ──────────────────────────
-// 5-bucket reële zones (brok 5, GAS-parity met WebApp.gs coachActualZoneMin_). De zone-bars +
-// coachFeedback_ lezen de VOLLE 5-bucket-verdeling; de engine-3-bucket `actualZoneMinutes_`
-// (load/debt, weekprep) blijft ongemoeid. rust=Z1 · z2=Z2 · tempo=Z3 · drempel=Z4 · anaeroob=Z5.
-export type Zone5Key = "rust" | "z2" | "tempo" | "drempel" | "anaeroob";
-export type Zone5 = Record<Zone5Key, number>;
-
+// De 5-bucket-typen, de ZT→zone-map en `actualZone5_` zijn VERHUISD naar `zonemunt.ts`
+// (fase 1a van de zone-munt); hierboven geïmporteerd en her-geëxporteerd. Wat hieronder
+// staat is presentatie — volgorde, kleur, label — en blijft van `schema.ts`.
 const ZONE5_ORDER: Zone5Key[] = ["rust", "z2", "tempo", "drempel", "anaeroob"];
-const ZT_TO_ZONE5: Record<string, Zone5Key> = {
-  Z1: "rust",
-  Z2: "z2",
-  Z3: "tempo",
-  Z4: "drempel",
-  Z5: "anaeroob",
-  Z6: "anaeroob",
-  Z7: "anaeroob",
-};
 // Per bucket: zone-nummer + kleur + staafhoogte (parity met de plan-BAR_BUCKET) + NL-label.
 const DONE5_META: Record<
   Zone5Key,
@@ -340,26 +334,6 @@ const DONE5_META: Record<
     label: "VO2max",
   },
 };
-
-/**
- * Ruwe icu_zone_times (Z1..Z7 + SS) → 5-bucket reële zone-minuten. EXACTE spiegel van GAS
- * `coachActualZoneMin_` (WebApp.gs:728): Z1→rust · Z2→z2 · Z3→tempo · Z4→drempel · Z5-7→anaeroob;
- * SS/overlays → skip; minuten = secs/60. Leeg/geen power-zonedata → null.
- */
-export function actualZone5_(iczt: unknown): Zone5 | null {
-  if (!Array.isArray(iczt) || iczt.length === 0) return null;
-  const zm: Zone5 = { rust: 0, z2: 0, tempo: 0, drempel: 0, anaeroob: 0 };
-  let saw = false;
-  for (const z of iczt) {
-    const id = (z as { id?: unknown } | null)?.id;
-    if (typeof id !== "string") continue;
-    const bk = ZT_TO_ZONE5[id];
-    if (!bk) continue;
-    zm[bk] += (Number((z as { secs?: unknown }).secs) || 0) / 60;
-    saw = true;
-  }
-  return saw ? zm : null;
-}
 
 /** Eén activity-rij → done-object (type idx1, naam idx2, duur idx3, IF idx7, tss idx8, reële zones uit idx15). */
 export function buildDoneEntry(row: ActValuesRow): DoneEntry {
