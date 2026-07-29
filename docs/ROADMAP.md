@@ -48,17 +48,18 @@ punten staat onder *Gesloten — vindplaats*.
    valt naar "een aanvullende sessie gemist; je week ligt ruim op koers" en krijgt geen
    inhaalvoorstel, terwijl `DOELEN-SPEC` §3.1 sweet spot als dragend aanwijst en de
    blok-referent hem wél als kwaliteit telt. Gemeten geval: MA 27-07-2026,
-   `Sweet Spot over/under 4×(2-3)`, 45 min, 43 TSS. DE FIX IS NIET ÉÉN REGEL, gelezen in de
-   bron: `COACH_KEY_INTENTS_` (`coach.ts:72`) draagt `{ vo2, drempel }`, maar `isKey`
-   (`coach.ts:463`) leest `plIntent`, en die komt primair uit `coachIntentFromZones_`
-   (`coach.ts:114`) — een functie met vijf mogelijke uitkomsten (vo2, drempel, tempo, duur,
-   herstel) die `sweetspot` per constructie NOOIT teruggeeft; het type-label is alleen
-   fallback. Sweet-spot-werk onder 90% FTP landt dus als `tempo` en valt buiten de
-   sleutel-lijst, boven 90% als `drempel` en telt al mee. `sweetspot` aan de lijst toevoegen
-   repareert daarom niets zolang de zone-vouwing het pad draagt. NIET GEMETEN: welk deel van
-   de sweet-spot-sjablonen aan welke kant van 90% valt. CRITERIUM: een geplande
-   sweet-spot-sessie is een sleutelsessie, ongeacht waar zijn minuten in de zone-indeling
-   vallen.
+   `Sweet Spot over/under 4×(2-3)`, 45 min, 43 TSS — in de chat gereproduceerd op de gebundelde
+   engine, inclusief de exacte copy. DE EERDERE DIAGNOSE HIER IS WEERLEGD, zie
+   `docs/SWEETSPOT-SLEUTEL-RECON.md`: `plIntent` komt in de APP niet uit `coachIntentFromZones_`
+   maar ALTIJD uit het type-label, want `coachPlannedArg_` (`apps/web/src/lib/schema.ts:564`)
+   zet `segmenten` hard op null op de enige twee call-sites. Het zone-pad is dood; het aanpassen
+   ervan bouwt op een pad dat de app niet gebruikt. GEMETEN: 7 van de 13 sweet-spot-archetypes
+   en 3 van de 5 pool-varianten vouwen naar `tempo`, dus dat pad aansluiten zou de sleutelstatus
+   juist WEGNEMEN; `vo2_microburst` zakt er met 5 anaerobe minuten tegen een drempel van 8
+   eveneens uit. CRITERIUM, ongewijzigd: een geplande sweet-spot-sessie is een sleutelsessie,
+   ongeacht waar zijn minuten in de zone-indeling vallen. FIX: `sweetspot` in
+   `COACH_KEY_INTENTS_` (`coach.ts:72`) plus een aanvullende type-verankering in `isKey`
+   (`coach.ts:463`); twee termen, elk met een eigen rood-test. Engine-autorisatie nog te geven.
 6. **De dosis-munt per zone** — deels · CLIENT (fase 1, af) / DATA (fase 2, open). Fase 1a en
    1b zijn live: `weekKwaliteitMinuten` vouwt per zone, `blokDosisNorm` haalt zijn vorm uit
    `bibliotheekSignatuur`, en het oordeel is per zone zonder compensatie. FASE 2, DE
