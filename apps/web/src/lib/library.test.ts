@@ -31,6 +31,7 @@ function sd(
     reden: null,
     redenCode: null,
     sessions: [],
+    planSessions: [],
     doneTss: 0,
     done: null,
     doneCompare: null,

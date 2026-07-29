@@ -22,6 +22,7 @@ function day(o: Partial<SchemaDay> = {}): SchemaDay {
     voorgesteldType: "threshold",
     reden: null,
     redenCode: null,
+    planSessions: [],
     sessions: [
       {
         naam: "Drempel 3×10",

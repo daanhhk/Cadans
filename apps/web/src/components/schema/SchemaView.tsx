@@ -11,11 +11,13 @@ import { isDayPlannable } from "../../lib/library";
 import type { ProposalWeek } from "../../lib/proposal";
 import type { ReadinessResult } from "../../lib/readiness";
 import {
+  canDisposeDay,
   type DayState,
   type DoneEntry,
   deriveSchemaView,
   type FatigueVoorstel,
   type InhaalVoorstel,
+  type SchemaDay,
   testResultaat,
   verlengResultaat,
   verlichtResultaat,
@@ -59,6 +61,48 @@ const STATE_LABEL: Record<DayState, string> = {
 // Sectie-volgorde volgt schema.jsx: PeriodTimeline → WeekLoad → DayStrip → dag-detail.
 // Het inhaal-voorstel (2b) staat tussen de dag-strip en de dagkaart: de weekcontext blijft
 // erboven, maar het voorstel plakt visueel aan de training waar het over gaat.
+
+/** De sessie-weergave van een dag. Leest `planSessions`, dus hij werkt óók op een VERSTREKEN dag:
+ * daar is `sessions` leeg en draagt de bevroren entry het plan. Los getrokken zodat de gemist-tak
+ * dezelfde weergave kan tonen als de planned-tak — "Niet gereden" zonder de sessie erbij vertelt
+ * niet wat er lag. */
+function SessieBlok({ day }: { day: SchemaDay }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "var(--s-4)",
+        marginTop: "var(--s-4)",
+      }}
+    >
+      {day.planSessions.map((s, i) => (
+        <div
+          // biome-ignore lint/suspicious/noArrayIndexKey: statische read-only per-dag-sessielijst (geen reorder) → index-key is veilig. `${s.naam}-${s.tss}` was NIET uniek: pendel heen+terug zijn in een Base-week identiek (beide pendel_z2, zelfde naam én tss) → dubbele keys → React-reconciliatie-fout (duplicaat "SESSIE 1/2" + cross-day-fantoom). `day.datum` forceert een schone remount bij dag-wissel.
+          key={`${day.datum}-${i}`}
+          style={
+            i > 0
+              ? {
+                  borderTop: "1px solid var(--border-subtle)",
+                  paddingTop: "var(--s-4)",
+                }
+              : undefined
+          }
+        >
+          <WorkoutDetail
+            session={s}
+            overline={
+              day.planSessions.length > 1
+                ? `Sessie ${i + 1}/${day.planSessions.length}`
+                : undefined
+            }
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function SchemaView({
   proposalWeek,
   readiness,
@@ -142,12 +186,7 @@ export function SchemaView({
   const isOverrideCard = !!day?.override && !day.done && day.state !== "gemist";
   // canDispose (GAS canDispose_, Script.html:448): een dag met voorstel, niet voltooid, nog niet
   // gedisponeerd, en datum <= vandaag → toon de "Niet gedaan?"-affordance.
-  const canDispose =
-    !!day &&
-    day.sessions.length > 0 &&
-    !day.done &&
-    !day.dispositie &&
-    day.datum <= todayISO;
+  const canDispose = canDisposeDay(day, todayISO);
 
   // 2b: per-dag coach-narrative (boven de training). Alleen op een dag mét een reden (plan-dagen;
   // done/gemist-dagen hebben geen redenCode → geen dubbel coach-blok). Op een OVERRIDE-dag onderdrukt
@@ -354,12 +393,18 @@ export function SchemaView({
           ) : day.state === "gemist" ? (
             // gemist (A4): gedisponeerde dag mét voorstel, niet gereden → GemistCard + "Terug" +
             // de gemist-coach-narrative (missedCoach_) in de gedeelde CoachCallout.
-            <GemistCard
-              reason={day.dispositie}
-              date={day.datum}
-              narrative={day.coach?.narrative ?? null}
-              coachNaam={view.coachNaam}
-            />
+            // "Niet gereden" ZONDER de sessie erbij vertelt nog steeds niet wat er lag; daarom
+            // rendert de gemist-tak de GemistCard ÉN daaronder dezelfde sessie-weergave. Geldt
+            // ook voor de al bestaande gedisponeerde dagen — dat is bedoeld.
+            <>
+              <GemistCard
+                reason={day.dispositie}
+                date={day.datum}
+                narrative={day.coach?.narrative ?? null}
+                coachNaam={view.coachNaam}
+              />
+              {day.planSessions.length > 0 && <SessieBlok day={day} />}
+            </>
           ) : isOverrideCard && day.override ? (
             // 3b: handmatig gekozen training → OverriddenDetail + "Terug naar voorstel". `isOverrideCard`
             // = dezelfde bron als de overline-"Gekozen" (kunnen niet uit elkaar lopen). NA done/gemist
@@ -382,8 +427,12 @@ export function SchemaView({
               }
               coachNaam={view.coachNaam}
             />
-          ) : day.sessions.length === 0 ? (
-            // §5a rustdag → lege-staat-copy. Knoppen-blok volgt NA de state-conditional.
+          ) : day.planSessions.length === 0 ? (
+            // §5a rustdag → lege-staat-copy. Hangt aan "GEEN PLAN", niet aan `sessions.length`:
+            // een VERSTREKEN dag heeft altijd nul sessions en kreeg hier ten onrechte de
+            // rustdag-copy terwijl er een sleutelsessie gepland stond. NIET aan state "rest"
+            // hangen — VANDAAG zonder trainingsdag draagt state "today" en zou dan helemaal
+            // geen copy meer krijgen. Knoppen-blok volgt NA de state-conditional.
             <div
               style={{
                 fontFamily: "var(--font-sans)",
@@ -397,38 +446,7 @@ export function SchemaView({
               Rustdag — van herstel word je beter.
             </div>
           ) : (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "var(--s-4)",
-                marginTop: "var(--s-4)",
-              }}
-            >
-              {day.sessions.map((s, i) => (
-                <div
-                  // biome-ignore lint/suspicious/noArrayIndexKey: statische read-only per-dag-sessielijst (geen reorder) → index-key is veilig. `${s.naam}-${s.tss}` was NIET uniek: pendel heen+terug zijn in een Base-week identiek (beide pendel_z2, zelfde naam én tss) → dubbele keys → React-reconciliatie-fout (duplicaat "SESSIE 1/2" + cross-day-fantoom). `day.datum` forceert een schone remount bij dag-wissel.
-                  key={`${day.datum}-${i}`}
-                  style={
-                    i > 0
-                      ? {
-                          borderTop: "1px solid var(--border-subtle)",
-                          paddingTop: "var(--s-4)",
-                        }
-                      : undefined
-                  }
-                >
-                  <WorkoutDetail
-                    session={s}
-                    overline={
-                      day.sessions.length > 1
-                        ? `Sessie ${i + 1}/${day.sessions.length}`
-                        : undefined
-                    }
-                  />
-                </div>
-              ))}
-            </div>
+            <SessieBlok day={day} />
           )}
           {/* LAAG 2 — verlicht-VOORSTEL op vandaag (readiness caution/rest + harde sessie).
               Staat NA de sessie-render zodat de gebruiker eerst ziet waar het over gaat, en

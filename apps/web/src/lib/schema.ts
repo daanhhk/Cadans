@@ -259,6 +259,13 @@ export interface SchemaDay {
   /** Machineleesbare reden-code (2a) → voedt de coach-narrative-laag; null = droge reden/geen. */
   redenCode: string | null;
   sessions: SchemaSession[];
+  /** DE GEPLANDE SESSIES van deze dag, ongeacht of hij nog vooruit ligt. `sessions` is leeg zodra
+   * een dag VERSTREKEN is — assignWorkouts bouwt hem alleen voor tePlannen (train && !gedaan &&
+   * datum >= vandaag) — en daardoor toonde de dagkaart een gemiste sleutelsessie als rustdag.
+   * Hier valt hij terug op de BEVROREN entry `plannedForDone`, met dezelfde nul-conditie die de
+   * weekkaart al hanteert, zodat week en dag per constructie niet uiteen kunnen lopen. LEZEN, nooit
+   * herberekenen: de bevroren entry draagt wat er destijds is gerenderd. */
+  planSessions: SchemaSession[];
   doneTss: number;
   /** De gereden rit van die dag (of null) — voedt de VOLTOOID-kaart (fase 2a). */
   done: DoneEntry | null;
@@ -719,6 +726,29 @@ export interface SchemaView {
   verlicht: VerlichtVoorstel | null;
 }
 
+/**
+ * "Niet gedaan?"-affordance (GAS canDispose_, Script.html:448). Leunt op `planSessions`, niet op
+ * `sessions`: een VERSTREKEN dag heeft geen sessions meer, en juist daar moet de reden alsnog in
+ * te vullen zijn. Verder ongewijzigd — niet voltooid, nog niet gedisponeerd, datum <= vandaag.
+ */
+export function canDisposeDay(
+  day: {
+    planSessions: SchemaSession[];
+    done: DoneEntry | null;
+    dispositie: DispositionReason | null;
+    datum: string;
+  } | null,
+  todayISO: string,
+): boolean {
+  return (
+    !!day &&
+    day.planSessions.length > 0 &&
+    !day.done &&
+    !day.dispositie &&
+    day.datum <= todayISO
+  );
+}
+
 export function toSession(w: ProposalWorkout): SchemaSession {
   const zones = (Array.isArray(w.zones) ? w.zones : []).filter(
     (z): z is ZoneKey => z === "low" || z === "high" || z === "anaerobic",
@@ -1163,22 +1193,38 @@ export function deriveSchemaView(
     const done = doneByDate[d.datum];
     const doneTss = done?.tss ?? 0;
     const dt = parseLocalDate(d.datum);
-    const hasSessions = sessions.length > 0;
     const isToday = d.datum === todayISO;
     const isDone = doneTss > 0;
+    const isVerstreken = d.datum < todayISO;
     const dispositie = dispositionByDate[d.datum] ?? null;
+
+    // DE AFGELEIDE, één keer. Vooruit-dagen dragen hun plan in `sessions`; een verstreken dag heeft
+    // er nul en valt terug op de bevroren entry. De nul-conditie is dezelfde die de weekkaart al
+    // hanteerde (`plannedMinDay > 0`), dus een naar-rust-gezette dag (0 min) telt nergens mee.
+    const planSessions: SchemaSession[] =
+      sessions.length > 0
+        ? sessions
+        : d.plannedForDone && (d.plannedForDone.totaalMin ?? 0) > 0
+          ? [toSession(d.plannedForDone)]
+          : [];
+    const heeftPlan = planSessions.length > 0;
     // STAP 1 (same-day-flip): een VOLTOOIDE activity wint van 'vandaag' → done-kaart, ook
     // vandaag (zoals GAS: readiness vervalt zodra er gereden is). isToday blijft apart voor
     // de dag-strip-markering. Vandaag zónder rit → 'today' (readiness + geplande workout).
     // 'gemist' (A2/A4): gedisponeerde dag mét voorstel en GEEN rit — NÁ done, VÓÓR today
     // (byte-exact GAS WebApp.gs:1143: disp && voorstel && !actual overschrijft, behalve done).
+    // 'gemist' vuurt nu ook op een VERSTREKEN dag met plan en zonder rit — niet alleen op een
+    // gedisponeerde. Daarmee houdt een gedisponeerde dag zijn gemist-state ook nádat hij
+    // verstrijkt (voorheen viel hij dan terug naar "rest"), en toont een gemiste sleutelsessie
+    // niet langer de rustdag-copy. Een verstreken RUSTdag, of een dag zonder bevroren entry,
+    // draagt geen plan en blijft dus gewoon "rest".
     const state: DayState = isDone
       ? "done"
-      : dispositie && hasSessions
+      : heeftPlan && (dispositie || isVerstreken)
         ? "gemist"
         : isToday
           ? "today"
-          : hasSessions
+          : heeftPlan
             ? "planned"
             : "rest";
 
@@ -1192,12 +1238,11 @@ export function deriveSchemaView(
     // "Dagen"-noemer (GAS-parity, weekPlanSummary_ WebApp.gs:973: geplandDagen = weekplan-entries met
     // minuten > 0; een rustdag telt niet, een pendel/multi-sessie-dag is één entry → telt 1). Conditie =
     // duur > 0 (NIET louter `!= null`): een naar-rust-gezette dag (0 min) telt nergens mee.
-    const plannedMinDay = hasSessions
-      ? sessions.reduce((sum, s) => sum + s.totaalMin, 0)
-      : (d.plannedForDone?.totaalMin ?? 0);
-    const plannedTssDay = hasSessions
-      ? sessions.reduce((sum, s) => sum + s.tss, 0)
-      : (d.plannedForDone?.tss ?? 0);
+    // Leunt nu op DEZELFDE afgeleide als de dagkant, zodat week en dag niet meer uiteen kunnen
+    // lopen. Gelijkwaardige herschrijving: `planSessions` is `sessions` als die er zijn, anders de
+    // bevroren entry als één sessie — precies de terugval die hier al stond.
+    const plannedMinDay = planSessions.reduce((sum, x) => sum + x.totaalMin, 0);
+    const plannedTssDay = planSessions.reduce((sum, x) => sum + x.tss, 0);
     minuten.gepland += plannedMinDay;
     tss.gepland += plannedTssDay;
     if (plannedMinDay > 0) dagen.gepland += 1;
@@ -1247,6 +1292,7 @@ export function deriveSchemaView(
       reden: d.reden,
       redenCode: d.redenCode,
       sessions,
+      planSessions,
       doneTss,
       done: done ?? null,
       doneCompare,

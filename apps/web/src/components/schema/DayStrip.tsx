@@ -21,7 +21,11 @@ function Indicator({ day }: { day: SchemaDay }) {
       </svg>
     );
   }
-  if (day.sessions.length === 0) {
+  // Leest `planSessions`, niet `sessions`: een VERSTREKEN dag heeft er nul en kreeg daardoor het
+  // rustdag-streepje terwijl er een sessie gepland stond. Een gemiste dag draagt dus voortaan
+  // gewoon zijn zone-stippen. BEWUSTE GRENS: geen eigen visuele taal voor "gemist" op de strip —
+  // de dagkaart draagt de "Niet gereden"-kop.
+  if (day.planSessions.length === 0) {
     return (
       <span
         style={{
@@ -35,7 +39,7 @@ function Indicator({ day }: { day: SchemaDay }) {
   }
   return (
     <span style={{ display: "flex", gap: 2 }}>
-      {day.sessions.map((s, i) => (
+      {day.planSessions.map((s, i) => (
         <span
           // biome-ignore lint/suspicious/noArrayIndexKey: statische read-only per-dag-sessielijst (geen reorder) → index-key is veilig. `${s.naam}-${s.tss}` was NIET uniek voor twee identieke pendel_z2-sessies (heen+terug in Base) → dubbele keys.
           key={`${day.datum}-${i}`}

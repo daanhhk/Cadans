@@ -9,6 +9,7 @@ import {
   blokFromEngine,
   buildDoneCompare,
   buildDoneEntry,
+  canDisposeDay,
   type DoneEntry,
   deriveSchemaView,
   doneBadge,
@@ -677,6 +678,104 @@ describe("deriveSchemaView dispatch (flip + doneCompare)", () => {
     expect(v.tss.gepland).toBe(156);
     // di (verstreken zonder plannedForDone) + do (rustdag 0 min) dragen nul bij → Dagen = ma+wo = 2.
     expect(v.dagen.gepland).toBe(2);
+  });
+
+  // ── VANGNET 1 — de STATE-KETTING op een verstreken dag ────────────────
+  // Zonder de fix hangt de gemist-tak aan `sessions.length`, en een verstreken dag heeft er nul
+  // (assignWorkouts bouwt sessions alleen voor tePlannen). Die viel dus door naar "rest" en kreeg
+  // de rustdag-copy, terwijl er een sleutelsessie gepland stond.
+  it("verstreken trainingsdag met bevroren plan, geen rit → state 'gemist'", () => {
+    const day = pday("2026-03-09", {
+      voorgesteldType: "sweet_spot",
+      sessions: [],
+      plannedForDone: plannedSS,
+    });
+    const v = deriveSchemaView(pweek([day]), {}, TODAY, {});
+    expect(v.days[0].state).toBe("gemist");
+    expect(v.days[0].planSessions).toHaveLength(1);
+  });
+  it("gedisponeerde dag HOUDT 'gemist' nadat hij verstrijkt", () => {
+    const day = pday("2026-03-09", {
+      voorgesteldType: "sweet_spot",
+      sessions: [],
+      plannedForDone: plannedSS,
+    });
+    const v = deriveSchemaView(pweek([day]), {}, TODAY, {
+      "2026-03-09": "geen_tijd",
+    });
+    expect(v.days[0].state).toBe("gemist");
+    expect(v.days[0].dispositie).toBe("geen_tijd");
+  });
+
+  // WAT NIET MAG BEWEGEN.
+  it("verstreken RUSTdag blijft 'rest'", () => {
+    const day = pday("2026-03-09", { sessions: [], plannedForDone: null });
+    const v = deriveSchemaView(pweek([day]), {}, TODAY, {});
+    expect(v.days[0].state).toBe("rest");
+    expect(v.days[0].planSessions).toHaveLength(0);
+  });
+  it("bevroren entry van NUL minuten levert geen plan → 'rest'", () => {
+    const day = pday("2026-03-09", {
+      sessions: [],
+      plannedForDone: { ...plannedSS, totaalMin: 0 },
+    });
+    const v = deriveSchemaView(pweek([day]), {}, TODAY, {});
+    expect(v.days[0].state).toBe("rest");
+    expect(v.days[0].planSessions).toHaveLength(0);
+  });
+  it("verstreken dag MET rit blijft 'done'", () => {
+    const day = pday("2026-03-09", {
+      voorgesteldType: "sweet_spot",
+      sessions: [],
+      plannedForDone: plannedSS,
+    });
+    const v = deriveSchemaView(
+      pweek([day]),
+      { "2026-03-09": de({ tss: 70 }) },
+      TODAY,
+      {},
+    );
+    expect(v.days[0].state).toBe("done");
+  });
+
+  // ── VANGNET 2 — canDisposeDay op diezelfde dag ────────────────────────
+  // Met de oude `sessions.length > 0`-conditie verdween de "Niet gedaan?"-knop zodra een dag
+  // verstreek, precies wanneer je de reden pas kúnt invullen.
+  it("canDisposeDay: verstreken gemiste dag geeft true", () => {
+    const day = pday("2026-03-09", {
+      voorgesteldType: "sweet_spot",
+      sessions: [],
+      plannedForDone: plannedSS,
+    });
+    const v = deriveSchemaView(pweek([day]), {}, TODAY, {});
+    expect(canDisposeDay(v.days[0], TODAY)).toBe(true);
+    // en de oude conditie zou false hebben gegeven:
+    expect(v.days[0].sessions).toHaveLength(0);
+  });
+  it("canDisposeDay: al gedisponeerd, gereden of zonder plan geeft false", () => {
+    const basis = pday("2026-03-09", {
+      voorgesteldType: "sweet_spot",
+      sessions: [],
+      plannedForDone: plannedSS,
+    });
+    const gedisponeerd = deriveSchemaView(pweek([basis]), {}, TODAY, {
+      "2026-03-09": "geen_tijd",
+    });
+    expect(canDisposeDay(gedisponeerd.days[0], TODAY)).toBe(false);
+    const gereden = deriveSchemaView(
+      pweek([basis]),
+      { "2026-03-09": de({ tss: 70 }) },
+      TODAY,
+      {},
+    );
+    expect(canDisposeDay(gereden.days[0], TODAY)).toBe(false);
+    const rust = deriveSchemaView(
+      pweek([pday("2026-03-09", { sessions: [], plannedForDone: null })]),
+      {},
+      TODAY,
+      {},
+    );
+    expect(canDisposeDay(rust.days[0], TODAY)).toBe(false);
   });
 });
 

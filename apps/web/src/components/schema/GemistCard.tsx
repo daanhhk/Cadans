@@ -55,26 +55,31 @@ export function GemistCard({
         >
           Gemist{reason ? ` · ${DISPOSITION_LABELS[reason]}` : ""}
         </div>
-        <button
-          type="button"
-          onClick={undo}
-          disabled={saving}
-          style={{
-            flexShrink: 0,
-            height: "var(--btn-height)",
-            padding: "0 16px",
-            borderRadius: "var(--r-pill)",
-            cursor: saving ? "default" : "pointer",
-            background: "var(--bg-sunken)",
-            border: "1px solid var(--border-strong)",
-            color: "var(--text-secondary)",
-            fontFamily: "var(--font-sans)",
-            fontSize: "var(--fs-label)",
-            fontWeight: 600,
-          }}
-        >
-          Terug
-        </button>
+        {/* "Terug" wist de OPGEGEVEN REDEN. Zonder reden valt er niets te wissen — de dag is
+            gemist doordat hij verstreek — en zou de knop suggereren dat je dat ongedaan maakt.
+            Dan blijft de kop kaal "Gemist". */}
+        {reason && (
+          <button
+            type="button"
+            onClick={undo}
+            disabled={saving}
+            style={{
+              flexShrink: 0,
+              height: "var(--btn-height)",
+              padding: "0 16px",
+              borderRadius: "var(--r-pill)",
+              cursor: saving ? "default" : "pointer",
+              background: "var(--bg-sunken)",
+              border: "1px solid var(--border-strong)",
+              color: "var(--text-secondary)",
+              fontFamily: "var(--font-sans)",
+              fontSize: "var(--fs-label)",
+              fontWeight: 600,
+            }}
+          >
+            Terug
+          </button>
+        )}
       </div>
       {narrative && (
         <CoachCallout
