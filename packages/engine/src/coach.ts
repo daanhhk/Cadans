@@ -69,7 +69,10 @@ export const COACH_INTENT_ZONE_: any = {
   vrij: "--zone-2",
   onbekend: "--zone-2",
 };
-export const COACH_KEY_INTENTS_: any = { vo2: 1, drempel: 1 }; // sleutelprikkels (week-bepalend)
+// Sleutelprikkels (week-bepalend). `sweetspot` staat erbij met HERKOMST PLAN: `DOELEN-SPEC`
+// §3.1 wijst sweet spot bij doel FTP als dragend aan, en de blok-referent telt hem al als
+// kwaliteit. Er valt hier dus NIETS te ijken op een reeks (docs/SWEETSPOT-SLEUTEL-RECON.md §4).
+export const COACH_KEY_INTENTS_: any = { vo2: 1, drempel: 1, sweetspot: 1 };
 export const COACH_CHIP_LABEL_: any = {
   "on-plan": "Op plan",
   deviated: "Licht afgeweken",
@@ -454,13 +457,21 @@ export function coachFeedback_(
   // FIX 4: planned-prikkel uit de ECHTE zone-minuten (IDENTIEKE significantie-
   // regel + rust-exclusie als de done-kant); type-label alleen als fallback.
   const plZm = coachZmFromSegs_(planned.segmenten);
-  const plIntent =
-    (plZm ? coachIntentFromZones_(plZm) : null) ||
-    intentFromType_(planned.type);
+  const plTypeIntent = intentFromType_(planned.type);
+  const plIntent = (plZm ? coachIntentFromZones_(plZm) : null) || plTypeIntent;
   const plDur = planned.duurMin || 0,
     plTss = planned.tss || 0;
   const plIf = cfIf_(plTss, plDur);
-  const isKey = !!COACH_KEY_INTENTS_[plIntent];
+  // De sleutel-vraag hangt AANVULLEND aan het geplande TYPE, niet alleen aan de zone-afleiding.
+  // Strikt additief: dit kan sleutelstatus alleen TOEVOEGEN, nooit wegnemen. Vandaag is de
+  // tweede term INERT — de client geeft de geplande segmenten niet mee (`coachPlannedArg_` zet
+  // `segmenten` op null), dus `plIntent` IS al de type-afgeleide. Hij staat er om het criterium
+  // te dragen: een geplande sweet-spot-sessie is een sleutelsessie, ongeacht waar zijn minuten
+  // in de zone-indeling vallen. Zonder deze term zou het aansluiten van het zone-pad zeven van
+  // de dertien sweet-spot-archetypes hun sleutelstatus stil afnemen, en `vo2_microburst`
+  // erbij. Zie docs/SWEETSPOT-SLEUTEL-RECON.md §2, §3 en §4.
+  const isKey =
+    !!COACH_KEY_INTENTS_[plIntent] || !!COACH_KEY_INTENTS_[plTypeIntent];
   const plBlock = {
     typeLabel: COACH_INTENT_LABEL_[plIntent],
     naam: planned.titel || COACH_INTENT_LABEL_[plIntent],

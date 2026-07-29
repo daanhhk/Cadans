@@ -3370,6 +3370,79 @@ describe("engine selftest", () => {
       fc.narrative.indexOf("Girona") >= 0,
     );
     assert_("coach same-intent geen adapt", null, fc.adapt);
+
+    // ── ROADMAP punt 5 — een geplande SWEET SPOT is een sleutelsessie ──────────
+    // docs/SWEETSPOT-SLEUTEL-RECON.md. Twee termen, elk met een eigen rood-test:
+    // (1) `sweetspot` in COACH_KEY_INTENTS_, (2) de type-verankering in isKey.
+    const baseCtx = { fase: "Base" };
+    // (a) TERM 1. De app-situatie: segmenten null, dus plIntent komt uit het type-label.
+    // Zonder `sweetspot` in de lijst geeft dit geen adapt en dus geen inhaalvoorstel.
+    const fss = coachFeedback_(
+      {
+        type: "sweet_spot",
+        titel: "Sweet Spot over/under 4x(2-3)",
+        duurMin: 45,
+        tss: 43,
+        segmenten: null,
+      },
+      null,
+      baseCtx,
+      true,
+    );
+    assert_("coach sweetspot planned intent", "sweetspot", fss.planned.intent);
+    assert_("coach sweetspot missed adapt", true, !!fss.adapt);
+    // (b) TERM 2. Dezelfde sessie MET segmenten die naar `tempo` vouwen (sweetspot_2x15 op
+    // 46 min). EERST asserteren dat het zone-pad écht loopt en BUITEN de sleutel-lijst
+    // landt — anders meet dit geval stil niets meer zodra de vouwing verschuift.
+    const fssZone = coachFeedback_(
+      {
+        type: "sweet_spot",
+        titel: "Sweet Spot 2x15",
+        duurMin: 46,
+        tss: 45,
+        segmenten: [
+          { minuten: 10, bucket: "rust" },
+          { minuten: 6, bucket: "z2" },
+          { minuten: 30, bucket: "tempo" },
+        ],
+      },
+      null,
+      baseCtx,
+      true,
+    );
+    assert_("coach sweetspot zone-pad tempo", "tempo", fssZone.planned.intent);
+    assert_("coach sweetspot type-verankering", true, !!fssZone.adapt);
+    // (c) De wijziging maakt NIET alles sleutel: een geplande duurrit blijft aanvullend.
+    const fDuur = coachFeedback_(
+      {
+        type: "long_z2",
+        titel: "Lange Z2",
+        duurMin: 120,
+        tss: 80,
+        segmenten: null,
+      },
+      null,
+      baseCtx,
+      true,
+    );
+    assert_("coach duur geen sleutel", null, fDuur.adapt);
+    // (d) Regressie-wacht op de bestaande zone-tak: duur-type met een drempel-blok blijft key.
+    const fDuurZone = coachFeedback_(
+      {
+        type: "long_z2",
+        titel: "Lange Z2 + blok",
+        duurMin: 120,
+        tss: 90,
+        segmenten: [
+          { minuten: 90, bucket: "z2" },
+          { minuten: 24, bucket: "drempel" },
+        ],
+      },
+      null,
+      baseCtx,
+      true,
+    );
+    assert_("coach duur zone-tak blijft key", true, !!fDuurZone.adapt);
   });
 
   // ── coachAdaptatie_ (puur) — make-up-payload deterministisch + GELDIGE variant ──
@@ -5390,7 +5463,10 @@ describe("engine selftest", () => {
   // pre-claim, 4× de efforts-arm die blijft en een slot consumeert, en 7× assignWorkouts voor de
   // demotie (allocator-dag blijft staan, niet-allocator-dag én cross-week worden nog gedemoteerd).
   // Herijkt zonder telling-effect (1:1): "alloc Base longride role" longride→endurance. 1245→1260.
-  it("exactly 1358 assertions", () => {
-    expect(assertCount).toBe(1358);
+  // ROADMAP punt 5 (sweet spot als sleutelsessie): +6 in testCoachFeedback — twee per term
+  // (a en b), plus de niet-alles-is-sleutel-controle (c) en de regressie-wacht op de bestaande
+  // zone-tak (d). 1358→1364.
+  it("exactly 1364 assertions", () => {
+    expect(assertCount).toBe(1364);
   });
 });
