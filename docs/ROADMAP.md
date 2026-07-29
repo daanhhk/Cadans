@@ -44,22 +44,24 @@ punten staat onder *Gesloten — vindplaats*.
 4. **Het blok-object en de twee vragen** — af · CLIENT. (`DOELEN-SPEC` §6 stap 5.) `blok.ts`
    draagt blok, dosis-norm, uitvoerings-referent en blok-check; `effect.ts` de effect-referent
    op `rolling_ftp`; `testvoorstel.ts` het testaanbod. Live.
-5. **Sweet spot telt niet als sleutelsessie** — open · ENGINE. Een gemiste sweet-spot-sessie
-   valt naar "een aanvullende sessie gemist; je week ligt ruim op koers" en krijgt geen
-   inhaalvoorstel, terwijl `DOELEN-SPEC` §3.1 sweet spot als dragend aanwijst en de
-   blok-referent hem wél als kwaliteit telt. Gemeten geval: MA 27-07-2026,
-   `Sweet Spot over/under 4×(2-3)`, 45 min, 43 TSS — in de chat gereproduceerd op de gebundelde
-   engine, inclusief de exacte copy. DE EERDERE DIAGNOSE HIER IS WEERLEGD, zie
-   `docs/SWEETSPOT-SLEUTEL-RECON.md`: `plIntent` komt in de APP niet uit `coachIntentFromZones_`
-   maar ALTIJD uit het type-label, want `coachPlannedArg_` (`apps/web/src/lib/schema.ts:564`)
-   zet `segmenten` hard op null op de enige twee call-sites. Het zone-pad is dood; het aanpassen
-   ervan bouwt op een pad dat de app niet gebruikt. GEMETEN: 7 van de 13 sweet-spot-archetypes
-   en 3 van de 5 pool-varianten vouwen naar `tempo`, dus dat pad aansluiten zou de sleutelstatus
-   juist WEGNEMEN; `vo2_microburst` zakt er met 5 anaerobe minuten tegen een drempel van 8
-   eveneens uit. CRITERIUM, ongewijzigd: een geplande sweet-spot-sessie is een sleutelsessie,
-   ongeacht waar zijn minuten in de zone-indeling vallen. FIX: `sweetspot` in
-   `COACH_KEY_INTENTS_` (`coach.ts:72`) plus een aanvullende type-verankering in `isKey`
-   (`coach.ts:463`); twee termen, elk met een eigen rood-test. Engine-autorisatie nog te geven.
+5. **Sweet spot telt niet als sleutelsessie** — af · ENGINE. `COACH_KEY_INTENTS_`
+   (`coach.ts:72`) draagt nu ook `sweetspot`, en `isKey` (`coach.ts:463`) verankert aanvullend
+   op het geplande TYPE, zodat het criterium ook houdt als de zone-afleiding ooit wordt
+   aangesloten. Live sinds Worker `8e0f66cc`, geverifieerd op prod: MA 27-07-2026 en DI
+   28-07-2026 dragen de sleutelprikkel-copy. DE EERDERE DIAGNOSE HIER WAS ONJUIST en is
+   weerlegd in `docs/SWEETSPOT-SLEUTEL-RECON.md`: `plIntent` komt in de app altijd uit het
+   type-label, want de client geeft de geplande segmenten niet mee. Wat NIET onder dit punt
+   valt en er wél uit voortkwam, staat in punt 5b.
+5b. **Het inhaalvoorstel bereikt het scherm niet** — open · CLIENT. GEMETEN bij de
+   prod-verificatie van punt 5: de engine levert `adapt` bij een gemiste sleutelsessie, en de
+   client zet het in het view-model (`apps/web/src/lib/schema.ts:626` en `:667`), maar geen
+   enkele component leest het veld — buiten die twee schrijvers bestaat alleen de
+   type-declaratie op regel 249, met een comment dat het "beschikbaar blijft voor 2c/3b". Dat
+   geldt voor ÉLKE sleutelsessie, ook drempel en vo2, en dateert van vóór punt 5. Netto zegt de
+   coach dat hij de sessie niet laat vallen en doet hij vervolgens geen zichtbaar voorstel.
+   CRITERIUM: een gemiste sleutelsessie levert een zichtbaar, afwijsbaar voorstel op de
+   dagkaart. ONTWERPVRAAG die erbij hoort: is dit dezelfde stem als de bestaande inhaal-kaart —
+   dan horen ze samen, en raakt dit punt 10.
 6. **De dosis-munt per zone** — deels · CLIENT (fase 1, af) / DATA (fase 2, open). Fase 1a en
    1b zijn live: `weekKwaliteitMinuten` vouwt per zone, `blokDosisNorm` haalt zijn vorm uit
    `bibliotheekSignatuur`, en het oordeel is per zone zonder compensatie. FASE 2, DE
