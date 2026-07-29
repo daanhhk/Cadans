@@ -13,6 +13,52 @@ live tot cutover.
 
 ## Stand
 
+**ER IS ÉÉN AFVINKBARE VOLGORDE — leesronde, GEEN code (juli 2026).** Docs-only: commit
+`bb91d16` (`docs/ROADMAP.md` + `docs/DOELEN-SPEC.md`) plus deze close-out. Prod
+ONVERANDERD: Worker Version `27355f14-bb64-4ba8-a0eb-2bbdcb65e4fc`; `0007` blijft de laatste
+remote. GEEN migratie en geen enkel wrangler-commando, ook geen read.
+- **VLOEREN ONGEWIJZIGD: vitest-totaal 753 over 61 bestanden · engine-selftest-assert-count
+  1358.** Lees ze uit de suite; hardcode ze nooit.
+- **WAT ER STAAT.** `docs/ROADMAP.md` draagt nu *De reeks*: twaalf genummerde punten waarin de
+  nummering de bouwvolgorde IS, elk met STATUS (af / deels / open) en RAAKVLAK (ENGINE / DATA /
+  CLIENT), samengevoegd uit de ROADMAP-stappen en `DOELEN-SPEC` §6. Daaronder *De tijdslijn*
+  met de seizoenskalender uit §5. De oude stap-teksten staan onder *Gesloten — vindplaats*;
+  STAP 3 en STAP 4 zijn opgegaan in punt 9 en punt 10. `DOELEN-SPEC` §6 wijst naar de reeks en
+  stap 5 is daar afgevinkt. ELKE STATUS IS TEGEN DE CODE GETOETST op `4f7736f5`, niet tegen een
+  STAND-blok.
+- **DE DECEMBER-DEADLINE IS WEERLEGD, GEDRAAID OP DE GEBUNDELDE ENGINE** (esbuild buiten de
+  repo-tree, TZ=Europe/Amsterdam). Met AGR op 17-04-2027 geeft de fase voor doel FTP, Onderhoud
+  én Beklimmingen exact dezelfde grenzen: Base t/m 2027-02-15, Build vanaf 2027-02-22, Peak
+  vanaf 2027-03-22, Taper vanaf 2027-04-12. Het doel stuurt de fase dus inderdaad niet (punt
+  9), maar in DECEMBER levert dat geen defect op: de event-fase staat daar toch al op Base, en
+  `PROFILES.onderhoud` draagt quotum 3 in élke fase met `mesoCyclus: false` en de mesoweek
+  gepind op 1. Onderhoud aanzetten in december doet precies wat `DOELEN-SPEC` §3.2
+  voorschrijft. DE EERSTE HARDE DATUM IS HALF FEBRUARI 2027: dan wisselt het doel naar korte
+  beklimmingen, en dat doel bestaat niet (punt 7), net zomin als de meetlat ervoor (punt 8).
+  Wat in de winter wél bijt is punt 8 — elk niet-FTP-doel meet zich tegen het girona-profiel.
+- **DE SWEET-SPOT-FIX IS NIET ÉÉN REGEL, gelezen in de bron.** `COACH_KEY_INTENTS_`
+  (`coach.ts:72`) mist sweetspot, maar `isKey` (`coach.ts:463`) leest `plIntent`, en die komt
+  primair uit `coachIntentFromZones_` (`coach.ts:114`) — vijf mogelijke uitkomsten (vo2,
+  drempel, tempo, duur, herstel) en `sweetspot` per constructie NOOIT; het type-label is alleen
+  fallback. Sweet-spot-werk onder 90% FTP landt als `tempo` en valt buiten de sleutel-lijst,
+  boven 90% als `drempel` en telt al mee. Het onderscheid dat de vorige chat "niet gemeten"
+  noemde is dus geen verdeling over twee paden maar een grens binnen één pad. NIET GEMETEN
+  blijft: welk deel van de sweet-spot-sjablonen aan welke kant van 90% valt.
+- **TWEE PARKEERLIJST-ITEMS ZIJN OPGENOMEN EN VERWIJDERD.** De dosis-munt-post gaat op in punt
+  6; de drie-bucket-vouwing `actualZoneMinutes_` leeft nog bij `schema.ts` (VOLTOOID-kaart) en
+  `proposal.ts` (dekking- en doneHard-afleiding), maar dat zijn drempel-checks en geen
+  dosis-sommen. De dagkaart-post is gemeten in de code gesloten: `planSessions` en
+  `canDisposeDay` staan er, live sinds Worker `3ea25f61`.
+- **OPENSTAAND, ONGEWIJZIGD.** `indoor_ftp` 260 tegen `ftp` 280 · `404 /api/checkin/<datum>` op
+  twee van de acht prod-shots · de gepland-noemer verschuift terwijl de week vordert · de
+  shot-harness is blind voor de blok-kaart (geen `weekUren`-seed, geen schrijfroute voor
+  activiteiten).
+- **FOCUS VOLGENDE CHAT: punt 5 uit `docs/ROADMAP.md` — sweet spot telt niet als
+  sleutelsessie.** Recon-first op de intent-afleiding: meet welk deel van de
+  sweet-spot-archetypes zijn werkminuten boven en onder 90% FTP legt, en bepaal daarop of de
+  fix in `coachIntentFromZones_` landt, in het `isKey`-pad, of in beide. ENGINE, dus expliciete
+  autorisatie vóór de bouw; selftest-vloer kan meestijgen. Verse chat.
+
 **DE RICHTING IS TERUGGELEGD OP HET SEIZOEN — leesronde, GEEN code (juli 2026).** Deze chat is recon plus besluiten; alleen deze close-out is een commit. Prod ONVERANDERD: Worker Version `27355f14-bb64-4ba8-a0eb-2bbdcb65e4fc`; `0007` blijft de laatste remote. GEEN migratie en geen enkel wrangler-commando, ook geen read. Docs-only.
 - **VLOEREN ONGEWIJZIGD: vitest-totaal 753 over 61 bestanden · engine-selftest-assert-count 1358.** Lees ze uit de suite; hardcode ze nooit.
 - **DE PREMISSE VAN DE VORIGE FOCUS IS ONJUIST, EN DAT VERPLAATST DE URGENTIE.** De zone-sync "verplaatst de signatuur en dus de normen" — niet bij Daan. `zone5Grenzen` neemt de eerste vier waarden uit `power_zones`, en die zijn [55, 75, 90, 105]: exact `ZONE5_GRENZEN_DEFAULT`. Signatuur en normen komen er identiek uit. Fase 2 is bij hem gedragsneutraal; het risico zit in de migratie en de route. Voor een tweede gebruiker of een zone-wijziging schuift het wél.
