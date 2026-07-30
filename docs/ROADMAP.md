@@ -343,13 +343,19 @@ niet; hij verliest niet. Een punt gaat eruit zodra een STAP het opneemt — niet
 - UP-fixture in `Preview.tsx` realistischer maken.
 - Weken-terug-scrollen in de Schema-tab.
 - De weekreeks-fixture staat op drie plekken.
-- PENDEL-BUG — de tweede rit verdwijnt uit de dagdetail. GEZIEN op 30 juli op prod. De dagdetail
-  schakelt op één `done`-vlag PER DAG: zodra er één activiteit binnenkomt rendert de hele dag als
-  voltooid en wordt de resterende geplande sessie niet meer getekend. De pendeldag is de enige dag
-  met twee ritten en dus de enige plek waar het zichtbaar wordt. Het plan zelf is intact — de
-  weekkaart telt beide ritten nog. GEEN regressie van de zone-sync: `SchemaView.tsx` is voor het
-  laatst geraakt in `330f522`, ruim vóór die reeks. Te verifiëren bij de recon: stuurt "Push naar
-  Garmin" de terugrit wél mee (die leest uit het plan, niet uit deze weergave)?
+- PENDEL-BUG — de tweede rit verdwijnt uit de dagdetail ÉN uit de Garmin-push. GEZIEN op 30 juli op
+  prod, daarna gemeten: `docs/PENDEL-RECON.md`. EEN per-dag-vlag slaat op TWEE lagen toe.
+  `derivePlannerGedaan` zet de dag op gedaan zodra één rit binnenkomt, waarna de dag uit `tePlannen`
+  valt en `assignWorkouts` er nul sessies voor bouwt; daarna zet `isDone = doneTss > 0` de state op
+  `done`, waarna de dagkaart de sessielijst niet meer rendert en `collectPushDays` de dag wegfiltert.
+  Gemeten dat BEIDE uiteinden dood zijn: met alleen de producent gepatcht beweegt er niets.
+  GECORRIGEERD t.o.v. de eerste post op twee punten. (1) De push stuurt de terugrit NIET mee —
+  `collectPushDays` leest dezelfde per-dag-state als de dagdetail; van week 31 ging alleen zaterdag
+  mee. (2) "Het plan zelf is intact" geldt alleen voor een VERSTREKEN pendeldag: op de dag zelf zakt
+  de hele dag uit de geplande noemer, gemeten 446 TSS / 530 min / 5 dagen naar 375 / 450 / 4. Die
+  noemer-val is niet pendel-specifiek (een gewone maandag doet hetzelfde) en blijft bij het item "de
+  gepland-noemer verschuift terwijl de week vordert". GEEN regressie van de zone-sync:
+  `SchemaView.tsx` is voor het laatst geraakt in `330f522`, ruim vóór die reeks.
 - DE ZONE-POORT IS EEN HALVE MINUUT STRENGER DAN DE NORM. GEMETEN: een week die exact de norm levert
   in exact de bibliotheek-vorm haalt de poort op geen enkel doorgerekend dosisniveau (84, 90, 96,
   102, 108, 66, 56, 50) — hij valt telkens op minstens één zone om, omdat de drie zone-normen elk
