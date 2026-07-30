@@ -75,8 +75,10 @@ punten staat onder *Gesloten — vindplaats*.
    herschikt (het quotum telt gereden harde dagen, gemiste niet): in 20 van de 23 gemeten
    cellen draagt het restplan nog minstens één sleutelsessie, in 3 is de week op. De regel toont
    dus waar de prikkel deze week nog staat, of meldt eerlijk dat er geen dag meer over is. De
-   ONTWERPVRAAG naar samenvallen met de week-inhaal-kaart is BEANTWOORD: die kaart kan niet
-   verschijnen (punt 5c), dus er is geen tweede stem en punt 10 wordt hier niet geraakt. Recon:
+   ONTWERPVRAAG naar samenvallen met de week-inhaal-kaart is BEANTWOORD: die kaart kon niet
+   verschijnen en is in punt 5c OPGERUIMD, dus deze bouw introduceerde geen tweede stem. LET OP,
+   GEWIJZIGD DOOR 5c: de week-tekort-vraag zelf is niet vervallen maar bij punt 10 belegd — dit
+   dagkaart-blok beantwoordt hem niet. Recon:
    `docs/INHAAL-5B-RECON.md`.
 5c. **De week-inhaal-kaart kan niet verschijnen** — af (OPGERUIMD) · CLIENT + WORKER. Het
    mechanisme is verwijderd in plaats van gerepareerd; dat is de tweede tak van het criterium.
