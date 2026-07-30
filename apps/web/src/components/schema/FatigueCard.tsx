@@ -14,11 +14,11 @@ import { tsbZone } from "../../lib/tsb";
 import { Card, Overline } from "../ui";
 import { CoachCallout } from "./CoachCallout";
 
-// 3d stap 4 laag-2 — het FATIGUE-VOORSTEL op weekniveau. Twee toestanden (spiegelt InhaalCard):
+// 3d stap 4 laag-2 — het FATIGUE-VOORSTEL op weekniveau. Twee toestanden:
 //  1. OFFER — de trigger vuurde (kalender-fase ≠ vermoeidheid): TSB-zone + aanbod-copy + accept/dismiss.
 //  2. APPLIED — de gebruiker gaf akkoord: feitelijke bevestiging + een "Terug naar de kalender"-knop.
 // Voorstel-en-bevestig, per KALENDERWEEK, omkeerbaar (vervalt vanzelf de week erna). Schrijf-patroon =
-// InhaalCard/putDebtOptIn: schrijven, dan de weekdata verversen (bumpPlannerVersion); een mislukte
+// putFatigueShift: schrijven, dan de weekdata verversen (bumpPlannerVersion); een mislukte
 // schrijf laat het scherm intact. Dismiss (secundair in offer) is sessie-scoped, geen D1 (mirror
 // VerlichtCard's afgewezen-Set).
 

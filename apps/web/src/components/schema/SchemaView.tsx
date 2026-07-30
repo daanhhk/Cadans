@@ -16,7 +16,6 @@ import {
   type DoneEntry,
   deriveSchemaView,
   type FatigueVoorstel,
-  type InhaalVoorstel,
   type SchemaDay,
   testResultaat,
   verlengResultaat,
@@ -39,7 +38,6 @@ import { FaseOvergangCard } from "./FaseOvergangCard";
 import { FatigueCard, isFatigueAfgewezen } from "./FatigueCard";
 import { GarminPushButton } from "./GarminPushButton";
 import { GemistCard } from "./GemistCard";
-import { InhaalCard } from "./InhaalCard";
 import { OverriddenDetail } from "./OverriddenDetail";
 import { PeriodTimeline } from "./PeriodTimeline";
 import { SleutelInhaalBlok } from "./SleutelInhaalBlok";
@@ -61,8 +59,8 @@ const STATE_LABEL: Record<DayState, string> = {
 // PURE Schema-presentatie op het view-model. Interne state = geselecteerde datum
 // (default today). Geen fetch/derivatie hier — de container (pages/Schema.tsx) voedt 'm.
 // Sectie-volgorde volgt schema.jsx: PeriodTimeline → WeekLoad → DayStrip → dag-detail.
-// Het inhaal-voorstel (2b) staat tussen de dag-strip en de dagkaart: de weekcontext blijft
-// erboven, maar het voorstel plakt visueel aan de training waar het over gaat.
+// De week-kaarten (fatigue, testvoorstel, terugblik) staan tussen de dag-strip en de dagkaart:
+// de weekcontext blijft erboven, de kaart plakt visueel aan de training waar hij over gaat.
 
 /** De sessie-weergave van een dag. Leest `planSessions`, dus hij werkt óók op een VERSTREKEN dag:
  * daar is `sessions` leeg en draagt de bevroren entry het plan. Los getrokken zodat de gemist-tak
@@ -113,12 +111,10 @@ export function SchemaView({
   rpeByDate,
   dispositionByDate,
   settings,
-  inhaal = null,
   fatigue = null,
   blokReview = null,
   dosisTredeVoorstel = null,
   testVoorstel = null,
-  optedIn = false,
   weekMonday,
 }: {
   proposalWeek: ProposalWeek;
@@ -128,8 +124,6 @@ export function SchemaView({
   rpeByDate: Record<string, number>;
   dispositionByDate: Record<string, DispositionReason>;
   settings: SettingsInput;
-  /** FASE 2b — read-only inhaal-voorstel op weekniveau (null = niets tonen). */
-  inhaal?: InhaalVoorstel | null;
   /** 3d stap 4 — fatigue-voorstel op weekniveau (offer/applied), of null. */
   fatigue?: FatigueVoorstel | null;
   /** 5a-ii — blok-terugblik (alleen in blokweek 4 en 1), of null. */
@@ -137,8 +131,6 @@ export function SchemaView({
   dosisTredeVoorstel?: DosisTredeVoorstel | null;
   /** 5b-ii — testvoorstel voor de rustweek, of null. */
   testVoorstel?: TestVoorstel | null;
-  /** FASE 3a — is het inhaal-plan voor deze week goedgekeurd? */
-  optedIn?: boolean;
   /** Maandag van de getoonde week (sleutel van de goedkeuring); default = view.weekMonday. */
   weekMonday?: string;
 }) {
@@ -286,9 +278,8 @@ export function SchemaView({
         onSelect={setSelected}
       />
 
-      {/* 3d stap 4 — FATIGUE-voorstel op WEEKNIVEAU (offer/applied). Staat vóór de inhaal-kaart;
-          een DOWN-voorstel onderdrukt de inhaal al in laag-1 (inhaal=null), en de render-guard
-          hieronder houdt ze sowieso uit elkaar (één week-kaart tegelijk). */}
+      {/* 3d stap 4 — FATIGUE-voorstel op WEEKNIVEAU (offer/applied). Eerste week-kaart in de
+          rij; de guards hieronder houden het bij één week-kaart tegelijk. */}
       {fatigueVoorstel && (
         <FatigueCard
           fatigue={fatigueVoorstel}
@@ -299,21 +290,7 @@ export function SchemaView({
         />
       )}
 
-      {/* FASE 2b — inhaal-voorstel op WEEKNIVEAU (read-only). Onderdrukt zodra er een
-          verlicht-voorstel voor vandaag staat: M66 laat herstel winnen van inhalen, dus
-          die twee horen elkaar nooit te overlappen. De band-poort in buildInhaalVoorstel
-          sluit dat al uit; deze guard is de tweede grendel op de render-kant. Ook onderdrukt
-          zodra een fatigue-week-kaart staat (één week-kaart tegelijk). */}
-      {(optedIn || inhaal) && !verlichtVoorstel && !fatigueVoorstel && (
-        <InhaalCard
-          voorstel={inhaal}
-          coachNaam={view.coachNaam}
-          weekMonday={weekMonday ?? view.weekMonday}
-          optedIn={optedIn}
-        />
-      )}
-
-      {/* 5b-ii — TESTVOORSTEL (rustweek). Staat NA de inhaal-kaart en VÓÓR de terugblik: een
+      {/* 5b-ii — TESTVOORSTEL (rustweek). Staat VÓÓR de terugblik: een
           actievragend voorstel hoort boven een terugblik. ONDERDRUKT zolang er een fatigue-
           voorstel OPEN staat — twee vragende kaarten tegelijk is geen coach. Bij state "applied"
           is de vraag al beantwoord en mag hij wel. */}
@@ -327,7 +304,7 @@ export function SchemaView({
           />
         )}
 
-      {/* 5a-ii — BLOK-TERUGBLIK. Staat NA de fatigue- en inhaal-kaart en vóór het dag-detail:
+      {/* 5a-ii — BLOK-TERUGBLIK. Staat NA de fatigue-kaart en vóór het dag-detail:
           voorstellen die een actie vragen horen boven, een terugblik die context geeft eronder.
           Geen render-guard nodig — de kaart is zelfbegrenzend (alleen in blokweek 4 en 1) en
           vraagt niets, dus hij concurreert niet met de week-voorstellen. */}

@@ -4,14 +4,12 @@ import { useState } from "react";
 import { BlokReviewCard } from "../components/schema/BlokReviewCard";
 import { FaseOvergangCard } from "../components/schema/FaseOvergangCard";
 import { FatigueCard } from "../components/schema/FatigueCard";
-import { InhaalCard } from "../components/schema/InhaalCard";
 import { SchemaView } from "../components/schema/SchemaView";
 import { TestVoorstelCard } from "../components/schema/TestVoorstelCard";
 import { VerlichtCard } from "../components/schema/VerlichtCard";
 import type { ActValuesRow } from "../lib/activities";
 import { type BlokReview, buildBlokReview } from "../lib/blok";
 import {
-  inhaalAanbodRegel,
   verlichtAanbodRegel,
   verlichtActieLabel,
   verlichtBadgeLabel,
@@ -26,7 +24,6 @@ import type { ReadinessResult } from "../lib/readiness";
 import type {
   DoneEntry,
   FatigueVoorstel,
-  InhaalVoorstel,
   VerlichtVoorstel,
 } from "../lib/schema";
 import { buildTestVoorstel, type TestVoorstel } from "../lib/testvoorstel";
@@ -290,75 +287,10 @@ const FIXTURES: Fixture[] = [
   },
 ];
 
-// ── PREVIEWONLYFIXTURE — voorstel-kaarten (fase 2b / laag 2) ──────────────────────────
-// InhaalCard en VerlichtCard renderen alleen bij een echt kwalificerend tekort resp. een lage
-// gereedheid op een harde dag; die combinatie doet zich zelden voor. Deze fixtures maken de
-// POSITIEVE weergave beoordeelbaar (layout, copy, van→naar) zonder op zo'n dag te wachten.
-// DEV-only, net als de rest van deze pagina.
-
-const inhaalFixtures: { label: string; v: InhaalVoorstel }[] = [
-  {
-    label: "Inhaal · intensiteit, 1 dag",
-    v: {
-      bucket: "high",
-      dagen: [
-        {
-          datum: "2026-07-24",
-          fromType: "long_z2",
-          toType: "sweet_spot",
-          fromNaam: "Duur",
-          toNaam: "Sweet Spot",
-          redenCode: "catchup_high",
-        },
-      ],
-      regel: inhaalAanbodRegel("high", 1),
-    },
-  },
-  {
-    label: "Inhaal · anaeroob, 1 dag",
-    v: {
-      bucket: "anaerobic",
-      dagen: [
-        {
-          datum: "2026-07-25",
-          fromType: "long_z2",
-          toType: "vo2max",
-          fromNaam: "Duur",
-          toNaam: "VO2max",
-          redenCode: "catchup_anaerobic",
-        },
-      ],
-      regel: inhaalAanbodRegel("anaerobic", 1),
-    },
-  },
-  {
-    label: "Inhaal · intensiteit, 2 dagen",
-    v: {
-      bucket: "high",
-      dagen: [
-        {
-          datum: "2026-07-24",
-          fromType: "long_z2",
-          toType: "threshold",
-          fromNaam: "Duur",
-          toNaam: "Drempel",
-          redenCode: "catchup_high",
-        },
-        // NB: een inhaal eet nooit een hersteldag op (M72) — de "van"-kant is dus een
-        // duur-/endurance-dag, precies wat de motor herverdeelt.
-        {
-          datum: "2026-07-26",
-          fromType: "long_z2",
-          toType: "sweet_spot",
-          fromNaam: "Duur",
-          toNaam: "Sweet Spot",
-          redenCode: "catchup_high",
-        },
-      ],
-      regel: inhaalAanbodRegel("high", 2),
-    },
-  },
-];
+// ── PREVIEWONLYFIXTURE — voorstel-kaarten (laag 2) ────────────────────────────────────
+// VerlichtCard rendert alleen bij een lage gereedheid op een harde dag; dat doet zich zelden
+// voor. Deze fixtures maken de POSITIEVE weergave beoordeelbaar (layout, copy) zonder op zo'n
+// dag te wachten. DEV-only, net als de rest van deze pagina.
 
 const verlichtFixtures: { label: string; v: VerlichtVoorstel }[] = [
   {
@@ -838,32 +770,6 @@ function VoorstelPreview() {
         }}
       >
         Voorstel-kaarten (fixtures)
-      </div>
-      {inhaalFixtures.map((f) => (
-        <div key={f.label}>
-          <div style={fixtureLabel}>{f.label}</div>
-          {/* knoppen uit: de goedkeur-knop schrijft een ECHTE per-week opt-in. */}
-          <div style={{ pointerEvents: "none" }}>
-            <InhaalCard
-              voorstel={f.v}
-              coachNaam="Coach"
-              weekMonday="2026-07-20"
-            />
-          </div>
-        </div>
-      ))}
-      <div key="inhaal-actief">
-        <div style={fixtureLabel}>
-          Inhaal · GOEDGEKEURD (actieve toestand) — knoppen uitgeschakeld
-        </div>
-        <div style={{ pointerEvents: "none" }}>
-          <InhaalCard
-            voorstel={null}
-            coachNaam="Coach"
-            weekMonday="2026-07-20"
-            optedIn
-          />
-        </div>
       </div>
       {verlichtFixtures.map((f) => (
         <div key={f.label}>

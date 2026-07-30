@@ -17,16 +17,10 @@ import {
   type OverrideWorkoutType,
   type SettingsInput,
 } from "@cadans/shared";
-import {
-  type ActValuesRow,
-  derivePlannerGedaan,
-  type GedaanPlannerDay,
-  parseActivityRows,
-} from "./activities";
+import { type ActValuesRow, parseActivityRows } from "./activities";
 import {
   getActivities,
   getCheckin,
-  getDebtOptIn,
   getDispositions,
   getDosisTrede,
   getEvents,
@@ -47,8 +41,6 @@ import {
   type DosisTredeVoorstel,
 } from "./blok";
 import {
-  type InhaalBucket,
-  inhaalAanbodRegel,
   testBadgeLabel,
   testResultaatRegel,
   type VerlichtBand,
@@ -982,31 +974,6 @@ export function testResultaat(
   return testResultaatRegel(weekdag);
 }
 
-// ── FASE 2b — het INHAAL-VOORSTEL (week-niveau, READ-ONLY) ─────────────────────────────
-// Toont naast het actieve plan wat er zou veranderen als het tekort van deze week wordt
-// ingehaald. Muteert NIETS: het actieve `proposalWeek` blijft het origineel, en er is in
-// deze fase geen goedkeuring en geen persistentie (M10 — voorstellen, niet stil muteren).
-
-/** Eén dag die in het voorstel zou wijzigen. */
-export interface InhaalVoorstelDag {
-  datum: string;
-  fromType: string;
-  toType: string;
-  /** NL-weergavenamen (via de engine-intentlabels) — nooit de ruwe type-keys tonen. */
-  fromNaam: string;
-  toNaam: string;
-  redenCode: string;
-}
-
-export interface InhaalVoorstel {
-  /** Dominante ontbrekende prikkel (high > anaerobic > low) — stuurt de copy. */
-  bucket: InhaalBucket;
-  /** De dagen ≥ vandaag die zouden wijzigen. */
-  dagen: InhaalVoorstelDag[];
-  /** Aanbod-copy (voorwaardelijk; claimt de daad niet). */
-  regel: string;
-}
-
 /** 3d stap 4 — het FATIGUE-voorstel (laag-1 data; laag-2 rendert de kaart). `offer` = de trigger
  * vuurde, nog niet goedgekeurd → `preview` is de wat-als-week voor de delta. `applied` = de
  * gebruiker gaf akkoord voor deze week → de ACTIEVE proposalWeek draagt de shift al. */
@@ -1070,98 +1037,6 @@ export function pushGuard(
 export function typeNaam(type: string | null): string {
   if (!type) return "geen training";
   return String(COACH_INTENT_LABEL_[intentFromType_(type)] ?? "Training");
-}
-
-const CATCHUP_BUCKET: Record<string, InhaalBucket> = {
-  catchup_high: "high",
-  catchup_anaerobic: "anaerobic",
-  catchup_low: "low",
-};
-
-/**
- * buildInhaalVoorstel — diff tussen het ACTIEVE plan en een plan-met-inhaal.
- *
- * `voorgesteld` is een tweede `buildWeekProposal`-run met `planAdaptation: true`; die run is
- * UITSLUITEND voor dit voorstel en raakt het actieve plan niet.
- *
- * Poorten (null zodra er één blokkeert):
- *  - **M66** — bij band 'caution'/'rest' wint verlichten of loslaten van inhalen; dan geen
- *    inhaal-voorstel. Dat maakt inhaal en het verlicht-voorstel wederzijds exclusief.
- *  - **M64 + M65** — alleen een betekenisvol tekort telt, en kwaliteit gaat vóór volume: er
- *    moet minstens één `catchup_high` of `catchup_anaerobic` in de diff zitten. Een diff met
- *    uitsluitend `catchup_low` (duurvolume) levert geen voorstel — dat wordt gespreid of
- *    losgelaten, niet ingehaald.
- *  - **M73** — de REDEN-weging. Draagt ELKE niet-geleverde verstreken trainingsdag van deze
- *    week een rust-vragende reden (bewuste rust, of bewust iets anders gedaan), dan is er
- *    niets in te halen: dat was een keuze, geen gemis. Alleen tijdgebrek — of een dag zónder
- *    ingevulde reden — houdt het aanbod open. Grove WEEK-poort: alles-onderdrukt → geen
- *    voorstel; één open dag → het voorstel mag door.
- */
-export function buildInhaalVoorstel(
-  origineel: ProposalWeek,
-  voorgesteld: ProposalWeek | null,
-  band: "ready" | "caution" | "rest" | null,
-  todayISO: string,
-  redenCtx?: {
-    plannerDays: readonly GedaanPlannerDay[];
-    activities: readonly ActValuesRow[];
-    dispositionByDate: Record<string, DispositionReason>;
-  },
-): InhaalVoorstel | null {
-  if (!voorgesteld) return null;
-  if (band === "caution" || band === "rest") return null; // M66
-
-  // M73 — reden-weging over de niet-geleverde VERSTREKEN trainingsdagen.
-  if (redenCtx) {
-    const gedaan = derivePlannerGedaan(
-      redenCtx.plannerDays,
-      redenCtx.activities,
-    );
-    const nietGeleverd = redenCtx.plannerDays.filter(
-      (d) => d.train && d.datum < todayISO && !gedaan.has(d.datum),
-    );
-    // Alleen onderdrukken als er ÉCHT zulke dagen zijn: een tekort dat uit te-licht
-    // geleverde (dus wél gedane) dagen komt, valt buiten deze poort.
-    if (nietGeleverd.length > 0) {
-      const allesOnderdrukt = nietGeleverd.every((d) => {
-        const r = redenCtx.dispositionByDate[d.datum];
-        return r === "bewust_gerust" || r === "iets_anders";
-      });
-      if (allesOnderdrukt) return null;
-    }
-  }
-
-  const originExtra = new Map<string, string | null>();
-  for (const d of origineel.days) originExtra.set(d.datum, d.redenCode);
-
-  const dagen: InhaalVoorstelDag[] = [];
-  for (const d of voorgesteld.days) {
-    if (d.datum < todayISO) continue;
-    const code = d.redenCode ?? "";
-    if (!CATCHUP_BUCKET[code]) continue;
-    if (originExtra.get(d.datum) === code) continue; // stond er al → geen wijziging
-    const from = origineel.days.find((o) => o.datum === d.datum) ?? null;
-    dagen.push({
-      datum: d.datum,
-      fromType: from?.voorgesteldType ?? "",
-      toType: d.voorgesteldType ?? "",
-      fromNaam: typeNaam(from?.voorgesteldType ?? null),
-      toNaam: typeNaam(d.voorgesteldType ?? null),
-      redenCode: code,
-    });
-  }
-  if (!dagen.length) return null;
-
-  // M64/M65: kwaliteit moet erbij zitten; alleen duurvolume is geen inhaal-aanleiding.
-  const buckets = dagen.map((d) => CATCHUP_BUCKET[d.redenCode]);
-  const bucket: InhaalBucket | null = buckets.includes("high")
-    ? "high"
-    : buckets.includes("anaerobic")
-      ? "anaerobic"
-      : null;
-  if (!bucket) return null;
-
-  return { bucket, dagen, regel: inhaalAanbodRegel(bucket, dagen.length) };
 }
 
 export function deriveSchemaView(
@@ -1369,8 +1244,6 @@ export async function loadSchemaWeek(): Promise<{
   rpeByDate: Record<string, number>;
   dispositionByDate: Record<string, DispositionReason>;
   settings: SettingsInput;
-  /** FASE 2b — read-only inhaal-voorstel (null = geen voorstel of al goedgekeurd). */
-  inhaal: InhaalVoorstel | null;
   /** 3d stap 4 — fatigue-voorstel (offer/applied), of null. Laag-2 rendert de kaart. */
   fatigue: FatigueVoorstel | null;
   /** 5a-ii — blok-terugblik (alleen in blokweek 4 en 1), of null. Laag-2 rendert de kaart. */
@@ -1379,8 +1252,6 @@ export async function loadSchemaWeek(): Promise<{
   testVoorstel: TestVoorstel | null;
   /** ROADMAP stap 2 — dosis-trede-voorstel (null = geen kaart). Laag-2 rendert 'm. */
   dosisTredeVoorstel: DosisTredeVoorstel | null;
-  /** FASE 3a — is het inhaal-plan voor DEZE week goedgekeurd? */
-  optedIn: boolean;
   /** De maandag van de getoonde week (de sleutel van de goedkeuring). */
   weekMonday: string;
 }> {
@@ -1397,7 +1268,6 @@ export async function loadSchemaWeek(): Promise<{
     dispositions,
     overrides,
     checkin,
-    debtOptInWeek,
     fatigueShift,
     dosisTredeRow,
   ] = await Promise.all([
@@ -1411,7 +1281,6 @@ export async function loadSchemaWeek(): Promise<{
     getDispositions(),
     getOverrides(),
     getCheckin(todayISO),
-    getDebtOptIn(),
     getFatigueShift(),
     getDosisTrede(),
   ]);
@@ -1420,12 +1289,6 @@ export async function loadSchemaWeek(): Promise<{
   // deriveReadiness is puur → veilig vóór buildWeekProposal berekenen; de holistische band stuurt
   // het plan-signaal (band-gedreven demote). Hergebruikt voor de return (niet 2× berekend).
   const readiness = deriveReadiness(wellness, checkin);
-
-  // FASE 3a — per-week GOEDKEURING. `debtOptInWeek` is de maandag van de week waarvoor de
-  // gebruiker akkoord gaf; hij telt alleen als hij de maandag van de GETOONDE week is, dus
-  // de goedkeuring vervalt vanzelf zodra er een nieuwe week begint (M68 — geen stilzwijgend
-  // doorlopende aanpassing, en geen opruim-job).
-  const optedIn = debtOptInWeek === monday;
 
   // Stap 1b (DOELEN-SPEC 3.2) — de WEEK-BREDE vermoeidheidskaart vuurt niet bij een doel zonder
   // mesocyclus (vandaag Onderhoud). ÉÉN keer berekend uit het doel; ZOWEL de opt-in-tak als de
@@ -1460,9 +1323,11 @@ export async function loadSchemaWeek(): Promise<{
       : 4
     : undefined;
 
-  // Het ACTIEVE plan. Niet-goedgekeurd → planAdaptation false, exact zoals vóór 3a
-  // (byte-identiek; mesoWeekOverride undefined → de kalender-mesoWeek). Goedgekeurd (inhaal en/of
-  // fatigue) → het aangepaste plan IS het plan voor deze week.
+  // Het ACTIEVE plan. `planAdaptation` wordt NIET meegegeven sinds de opruiming van de
+  // week-inhaal-kaart (ROADMAP punt 5c, `docs/INHAAL-5C-VERDICT.md` §7) en valt dus terug op
+  // `PLAN_ADAPTATION_ENABLED` (false) — precies de waarde waarmee het plan vandaag al draait,
+  // want de goedkeuring kon alleen via die kaart waar worden. `mesoWeekOverride` undefined →
+  // de kalender-mesoWeek; is de fatigue-deload goedgekeurd, dan IS dat het plan voor deze week.
   const proposalInput = {
     settings: settings ?? EMPTY_SETTINGS,
     plannerDays,
@@ -1474,7 +1339,6 @@ export async function loadSchemaWeek(): Promise<{
     overrides,
     readinessBand: readiness.band,
     todayISO,
-    planAdaptation: optedIn,
     mesoWeekOverride: fatigueOverride,
     dosisTrede,
   };
@@ -1519,7 +1383,6 @@ export async function loadSchemaWeek(): Promise<{
         overrides,
         readinessBand: readiness.band,
         todayISO,
-        planAdaptation: optedIn,
         mesoWeekOverride: dir === "up" ? 1 : 4,
       });
       fatigue = { state: "offer", dir, tsbTrend: trend, blok, preview };
@@ -1576,9 +1439,6 @@ export async function loadSchemaWeek(): Promise<{
     todayISO,
   });
 
-  // DOWN (vervroegde deload) onderdrukt de inhaal-kaart: herstel wint van inhalen (M66/M72).
-  const fatigueDownActive = fatigue?.dir === "down";
-
   // PLAN-VAN-RECORD-GAT (aanpak A — docs/PLAN-VAN-RECORD-GAT-RECON.md). Een geplande dag die
   // gereden is vóórdat de app 'm als vooruit-dag zag, kreeg nooit een entry en valt uit de
   // weekkaart-noemer + compare. Detecteer zo'n gat; alleen dán een TWEEDE buildWeekProposal met
@@ -1612,54 +1472,11 @@ export async function loadSchemaWeek(): Promise<{
     reconWeek,
   );
 
-  // FASE 2b — het INHAAL-VOORSTEL. Tweede weekplan-run met de deciders geforceerd aan
-  // (`planAdaptation: true`), UITSLUITEND om te tonen wát er zou veranderen. Het actieve
-  // `proposalWeek` hierboven is en blijft de originele run; deze tweede run wordt nergens
-  // anders gebruikt en niet gepersisteerd.
-  //
-  // Optimalisatie + M66: bij band 'caution'/'rest' wint verlichten van inhalen, dus dan
-  // blokkeert de poort toch — die dubbele berekening slaan we over.
-  // Is de week al goedgekeurd, dan is er niets meer voor te stellen — het voorstel IS het
-  // actieve plan. De wat-als-run draait dus alleen voor niet-goedgekeurde weken.
-  const inhaalBandOk =
-    !optedIn &&
-    !fatigueDownActive &&
-    readiness.band !== "caution" &&
-    readiness.band !== "rest";
-  const voorgesteldeWeek = inhaalBandOk
-    ? buildWeekProposal({
-        settings: settings ?? EMPTY_SETTINGS,
-        plannerDays,
-        events,
-        activities,
-        weekplans,
-        wellness,
-        rpe,
-        overrides,
-        readinessBand: readiness.band,
-        todayISO,
-        planAdaptation: true,
-      })
-    : null;
   // disposition-per-datum (A2) voor de gemist-state-afleiding + GemistCard.
   const dispositionByDate: Record<string, DispositionReason> = {};
   for (const d of dispositions) {
     dispositionByDate[d.datum] = d.reason;
   }
-
-  const inhaal = fatigueDownActive
-    ? null
-    : buildInhaalVoorstel(
-        proposalWeek,
-        voorgesteldeWeek,
-        readiness.band,
-        todayISO,
-        {
-          plannerDays,
-          activities,
-          dispositionByDate,
-        },
-      );
 
   const weekDates = new Set(proposalWeek.days.map((d) => d.datum));
   const doneByDate: Record<string, DoneEntry> = {};
@@ -1686,12 +1503,10 @@ export async function loadSchemaWeek(): Promise<{
     rpeByDate,
     dispositionByDate,
     settings: settings ?? EMPTY_SETTINGS,
-    inhaal,
     fatigue,
     blokReview,
     testVoorstel,
     dosisTredeVoorstel: dosisTredeKaart,
-    optedIn,
     weekMonday: monday,
   };
 }

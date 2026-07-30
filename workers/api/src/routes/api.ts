@@ -26,7 +26,6 @@ import {
   readActivities,
   readActivityByExtId,
   readCheckin,
-  readDebtOptIn,
   readDispositions,
   readDosisTrede,
   readEvents,
@@ -40,7 +39,6 @@ import {
   readWellness,
   type WellnessRecord,
   writeCheckin,
-  writeDebtOptIn,
   writeDisposition,
   writeDosisTrede,
   writeEvents,
@@ -524,29 +522,7 @@ api.put("/override/:date", async (c) => {
   return c.json({ ok: true });
 });
 
-// ── FASE 3a — per-week goedkeuring van het inhaal-voorstel ────────────
-// GET geeft de goedgekeurde week-maandag (of null); PUT zet 'm of wist 'm (monday: null).
-// Spiegelt de override-route: één body-veld, expliciete validatie, CURRENT_USER_ID.
-api.get("/debt-optin", async (c) => {
-  const db = makeDb(c.env.DB);
-  const monday = await readDebtOptIn(db, CURRENT_USER_ID);
-  return c.json({ monday });
-});
-
-api.put("/debt-optin", async (c) => {
-  const db = makeDb(c.env.DB);
-  const body = await readJsonObject(c);
-  const monday = body.monday;
-  if (monday !== null && (typeof monday !== "string" || !isIsoDate(monday))) {
-    throw new HTTPException(400, {
-      message: "invalid monday, expected yyyy-MM-dd or null",
-    });
-  }
-  await writeDebtOptIn(db, CURRENT_USER_ID, monday);
-  return c.json({ ok: true });
-});
-
-// 3d stap 4 — FATIGUE-SHIFT-opt-in (spiegelt /debt-optin). GET geeft de goedgekeurde maandag +
+// 3d stap 4 — FATIGUE-SHIFT-opt-in. GET geeft de goedgekeurde maandag +
 // richting (of null,null); PUT zet/wist beide samen (monday null of ISO; dir null of 'up'|'down').
 api.get("/fatigue-shift", async (c) => {
   const db = makeDb(c.env.DB);

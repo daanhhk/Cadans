@@ -615,33 +615,6 @@ export function blokReviewNarrative(r: BlokReview): string {
 }
 
 // ── FASE 2b — inhaal-voorstel (week-niveau, read-only) ───────────────────────
-// VOORWAARDELIJKE aanbod-copy: biedt aan, claimt de daad NIET (M10/M55). De catchup_*-pools
-// hierboven zijn DAAD-copy ("Ik heb je schema bijgesteld") en horen bij de TOEGEPASTE staat;
-// die worden hier bewust niet hergebruikt.
-//
-// Het "waarom" volgt M62: herverdelen binnen het bestaande budget — geen extra uren, geen
-// belasting bovenop het plan. Dat is precies wat de motor doet (gemeten in
-// docs/INHAAL-DEBT-RECON.md §7.1: week-TSS en minuten blijven gelijk).
-
-export type InhaalBucket = "high" | "anaerobic" | "low";
-
-/** NL-naamwoordgroep voor de ontbrekende prikkel (compleet, niet met een streepje te
- * plakken: "anaerobe" is een bijvoeglijk naamwoord, "intensiteit" een zelfstandig). */
-export function inhaalBucketTerm(bucket: InhaalBucket): string {
-  return bucket === "high"
-    ? "intensiteitsprikkel"
-    : bucket === "anaerobic"
-      ? "anaerobe prikkel"
-      : "duurprikkel";
-}
-
-/** Aanbod-regel voor het inhaal-voorstel; `dagen` = aantal dagen dat zou wijzigen. */
-export function inhaalAanbodRegel(bucket: InhaalBucket, dagen: number): string {
-  const term = inhaalBucketTerm(bucket);
-  const wat = dagen === 1 ? "één sessie" : `${dagen} sessies`;
-  return `Voorstel: ik kan je gemiste ${term} deze week inhalen. Ik verschuif daarvoor ${wat} binnen je bestaande uren — je traint dus niet méér, maar wel wat er miste.`;
-}
-
 // ── M51/M10 — fase-overgang aankondigen (week-niveau, alleen tekst) ───────────
 // Vooruitkijkend, GEEN daad-claim (M55: "vanaf deze week", nooit "Ik heb ..."). De regel noemt
 // ALTIJD drie dingen: wat verandert, waarom (het event + het aantal weken, als er een event is),

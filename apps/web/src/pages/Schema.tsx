@@ -9,7 +9,6 @@ import type { ReadinessResult } from "../lib/readiness";
 import {
   type DoneEntry,
   type FatigueVoorstel,
-  type InhaalVoorstel,
   loadSchemaWeek,
 } from "../lib/schema";
 import {
@@ -29,8 +28,6 @@ interface SchemaData {
   rpeByDate: Record<string, number>;
   dispositionByDate: Record<string, DispositionReason>;
   settings: SettingsInput;
-  /** FASE 2b — read-only inhaal-voorstel (null = geen voorstel of al goedgekeurd). */
-  inhaal: InhaalVoorstel | null;
   /** 3d stap 4 — fatigue-voorstel (offer/applied), of null. */
   fatigue: FatigueVoorstel | null;
   /** 5a-ii — blok-terugblik (alleen in blokweek 4 en 1), of null. */
@@ -39,8 +36,6 @@ interface SchemaData {
   testVoorstel: TestVoorstel | null;
   /** ROADMAP stap 2 — dosis-trede-voorstel, of null. */
   dosisTredeVoorstel: DosisTredeVoorstel | null;
-  /** FASE 3a — goedkeuring van het inhaal-plan voor deze week. */
-  optedIn: boolean;
   weekMonday: string;
 }
 
@@ -188,12 +183,10 @@ export function Schema() {
       rpeByDate={data.rpeByDate}
       dispositionByDate={data.dispositionByDate}
       settings={data.settings}
-      inhaal={data.inhaal}
       fatigue={data.fatigue}
       blokReview={data.blokReview}
       dosisTredeVoorstel={data.dosisTredeVoorstel}
       testVoorstel={data.testVoorstel}
-      optedIn={data.optedIn}
       weekMonday={data.weekMonday}
     />
   );
