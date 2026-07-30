@@ -28,7 +28,16 @@ export function parseActivityRows(payload: ActivitiesResponse): ActValuesRow[] {
 //   1. dagvenster [lokale middernacht, +24u)  — nooit een UTC-round-trip
 //   2. type-string bevat 'ride' OF 'run'
 //   3. duur >= 50% van de GEPLANDE minuten (geplande minuten 0/afwezig → eis vervalt)
-//   4. eerste match wint, daarna stoppen
+//   4. eerste match wint, daarna stoppen — GEFORKT, zie het model-besluit hieronder
+//
+// MODEL-BESLUIT (PENDEL-fix, docs/PENDEL-RECON.md §5). Regel 4 is de ENIGE fork: "eerste match
+// wint" is "tel de matches" geworden, en een PENDELdag geldt pas als afgewerkt bij
+//  `pendelAantal` kwalificerende ritten. Regels 1 t/m 3 zijn ongemoeid en byte-getrouw.
+// REDEN dat de duurdrempel niet volstaat: een pendelbeen IS per constructie exact 50% van de
+// round trip, dus geen enkele duurdrempel kan "half gereden" van "klaar" onderscheiden. GEMETEN
+// op een pendeldag van 2x40: met de drempel op het dagtotaal (80) telt 39 minuten niet meer maar
+// 40 nog steeds wel — precies het geval dat uitgesloten moest worden. De vlag moet dus een
+// TELLING zijn, geen drempel. Bij `pendelSessies` 1 is de uitkomst byte-identiek aan de mirror.
 //
 // GAS zet een boolean vinkje; wij leiden dezelfde boolean af bij het lezen (recon-optie A,
 // docs/INHAAL-DEBT-RECON.md §2.2) i.p.v. een D1-kolom te vullen — één bron (de activities),
@@ -45,24 +54,34 @@ export interface GedaanPlannerDay {
   datum: string; // yyyy-MM-dd
   train: boolean;
   minuten: number | null;
+  /** PENDEL-fix: een pendeldag plant `pendelAantal` sessies, geen één. */
+  dagtype?: string | null;
 }
 
 /**
  * De datums (yyyy-MM-dd) waarvan de GEPLANDE sessie als afgewerkt geldt.
  * Niet-train-dagen en dagen zonder match ontbreken in de set.
+ *
+ * `pendelSessies` = hoeveel ritten een PENDELdag nodig heeft voordat hij als afgewerkt geldt
+ * (`settings.pendelAantal`). Weggelaten of 1 → uitkomst byte-identiek aan vóór de pendel-fix,
+ * want dan is `nodig` overal 1 en valt de telling samen met "eerste match wint".
  */
 export function derivePlannerGedaan(
   plannerDays: readonly GedaanPlannerDay[] | null | undefined,
   activities: readonly ActValuesRow[] | null | undefined,
+  pendelSessies: number = 1,
 ): Set<string> {
   const out = new Set<string>();
   if (!plannerDays?.length || !activities?.length) return out;
+  const pendelNodig = Math.max(1, Math.round(pendelSessies) || 1);
   for (const d of plannerDays) {
     if (!d?.train || typeof d.datum !== "string") continue;
     const dayStart = parseLocalDate(d.datum);
     if (Number.isNaN(dayStart.getTime())) continue;
     const dayEnd = dayStart.getTime() + 24 * 60 * 60 * 1000;
     const gepland = Number(d.minuten) || 0;
+    const nodig = d.dagtype === "pendel" ? pendelNodig : 1;
+    let gezien = 0;
     for (const a of activities) {
       const ad = a[0];
       if (!(ad instanceof Date)) continue;
@@ -71,9 +90,12 @@ export function derivePlannerGedaan(
       const type = String(a[1] ?? "").toLowerCase();
       if (type.indexOf("ride") < 0 && type.indexOf("run") < 0) continue;
       const actMin = Number(a[3]) || 0;
-      if (gepland > 0 && actMin < gepland * 0.5) continue; // 50%-duur-drempel
-      out.add(d.datum);
-      break; // eerste match wint
+      if (gepland > 0 && actMin < gepland * 0.5) continue; // 50%-duur-drempel, PER RIT
+      gezien++;
+      if (gezien >= nodig) {
+        out.add(d.datum);
+        break; // genoeg ritten gezien
+      }
     }
   }
   return out;

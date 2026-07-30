@@ -134,7 +134,7 @@ gepland terug op 446 / 530 / 5 met gedaan 29 / 40 / 1. Beide ritten gereden: `op
 ## 6. Wat NIET meegaat, expliciet
 
 - DE GEPLAND-NOEMER OP DE DAG ZELF (paragraaf 2). Niet pendel-specifiek; blijft parkeerlijst.
-- DE VERGELIJKING OP DE DONE-KAART. `plannedForCompare` (`proposal.ts:1126`) pakt de LAATSTE geplande
+- DE VERGELIJKING OP DE DONE-KAART. `plannedForCompare` (`schema.ts:1129`) pakt de LAATSTE geplande
   sessie. Gemeten neveneffect van de fix: op de half-gereden pendeldag gaat de kaart van gereduceerd
   (`DoneDetail`) naar de VOLLE `DoneCompareCard`, en die vergelijkt de heenrit dan tegen de TERUGrit.
   Dat is een nieuwe onware bewering en mag zo niet live. BESLUIT: `plannedForCompare` krijgt dezelfde

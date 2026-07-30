@@ -282,6 +282,11 @@ export interface SchemaDay {
    * weekkaart al hanteert, zodat week en dag per constructie niet uiteen kunnen lopen. LEZEN, nooit
    * herberekenen: de bevroren entry draagt wat er destijds is gerenderd. */
   planSessions: SchemaSession[];
+  /** PENDEL-fix (docs/PENDEL-RECON.md §5): de geplande sessies die nog GEEN rit tegenover zich
+   * hebben, op VOLGORDE gekoppeld (heen vóór terug). Op een pendeldag met twee sessies en één
+   * rit staat er dus nog één open. `state` verandert hier NIET van: er komt geen half-gedaan-
+   * state bij, want meer dan één state kan die toestand dragen. */
+  openSessions: SchemaSession[];
   doneTss: number;
   /** De gereden rit van die dag (of null) — voedt de VOLTOOID-kaart (fase 2a). */
   done: DoneEntry | null;
@@ -321,6 +326,11 @@ export interface DoneEntry {
   /** intervals.icu activity-id (idx16 = activity_id_ext); leeg = pre-migratie rit → geen
    * ritdetail-affordance. Voedt de "Bekijk ritdetails"-knop → GET /api/ride/:idExt. */
   idExt: string;
+  /** PENDEL-fix (docs/PENDEL-RECON.md §5): HOEVEEL ritten deze dag draagt. Eén per activiteit,
+   * opgeteld door `mergeDone`. Voedt `openSessions`: op een pendeldag met twee geplande sessies
+   * en één rit staat er nog één open. VERPLICHT en niet optioneel, zodat de compiler elke
+   * constructie-plek aanwijst in plaats van er stil een 0 in te laten vallen. */
+  ritten: number;
 }
 
 // ── Done-rit-afleidingen (fase 2a): PURE, getest ──────────────────────────
@@ -366,6 +376,7 @@ export function buildDoneEntry(row: ActValuesRow): DoneEntry {
     ifReal:
       row[7] !== "" && row[7] != null && Number.isFinite(rawIf) ? rawIf : null,
     idExt: String(row[16] ?? ""),
+    ritten: 1,
   };
 }
 
@@ -400,6 +411,7 @@ export function mergeDone(a: DoneEntry, b: DoneEntry): DoneEntry {
     zoneMin5,
     ifReal: primary.ifReal,
     idExt: primary.idExt,
+    ritten: a.ritten + b.ritten,
   };
 }
 
@@ -1017,11 +1029,15 @@ export function collectPushDays(
   return days
     .filter(
       (d) =>
-        (d.state === "today" || d.state === "planned") &&
-        d.sessions.length > 0 &&
+        // PENDEL-fix (docs/PENDEL-RECON.md §5): "done" staat er nu bij, want een pendeldag met één
+        // gereden rit is done ÉN heeft nog een open sessie. DE STATE-LIJST BLIJFT STAAN in plaats
+        // van te vervallen: hem laten vallen zou een op vandaag GEDISPONEERDE dag (state "gemist",
+        // sessies wél gevuld) alsnog pushen, en dat is precies wat "Niet gedaan?" moet voorkomen.
+        (d.state === "today" || d.state === "planned" || d.state === "done") &&
+        d.openSessions.length > 0 &&
         d.datum >= todayISO,
     )
-    .map((d) => ({ dateISO: d.datum, type: "Ride", sessions: d.sessions }));
+    .map((d) => ({ dateISO: d.datum, type: "Ride", sessions: d.openSessions }));
 }
 
 /** FASE-C C3 — pure poort vóór de push: geen FTP → geen push (de stille-0-watt-hoek); geen
@@ -1076,6 +1092,10 @@ export function deriveSchemaView(
         : d.plannedForDone && (d.plannedForDone.totaalMin ?? 0) > 0
           ? [toSession(d.plannedForDone)]
           : [];
+    // PENDEL-fix: welke geplande sessies staan nog OPEN. `ritten` telt de activiteiten van de
+    // dag; k ritten dekken de EERSTE k sessies. Zonder rit is dit gewoon `sessions`.
+    const gereden = done?.ritten ?? 0;
+    const openSessions = sessions.slice(Math.min(gereden, sessions.length));
     const heeftPlan = planSessions.length > 0;
     // STAP 1 (same-day-flip): een VOLTOOIDE activity wint van 'vandaag' → done-kaart, ook
     // vandaag (zoals GAS: readiness vervalt zodra er gereden is). isToday blijft apart voor
@@ -1126,8 +1146,19 @@ export function deriveSchemaView(
     // (verstreken dag) OF — voor een done-VANDAAG die nog in tePlannen zit (gedaan=0) — via de
     // al-gebouwde dag-sessie `d.sessions[laatste]`. Spiegelt GAS' `voorstel && actual`
     // (WebApp.gs:1152), los van de gedaan-vlag. Beide zijn dezelfde ProposalWorkout-shape.
+    //
+    // PENDEL-fix (docs/PENDEL-RECON.md §6): de counterpart is een VOLGORDE-koppeling — heen vóór
+    // terug, dus rit k hoort bij sessie k. Zonder dit zou de half-gereden pendeldag de HEENrit
+    // tegen de TERUGrit vergelijken, en dat is een onware bewering. `plannedForDone` houdt
+    // voorrang, waardoor een volledig gereden of VERSTREKEN dag byte-identiek blijft. Bij
+    // pendelAantal 3 met twee ritten gereden blijft de vergelijking een benadering (de
+    // samengevoegde dag-entry tegen sessie 2); dat is in de test vastgelegd, niet verzwegen.
     const plannedForCompare =
-      d.plannedForDone ?? d.sessions[d.sessions.length - 1] ?? null;
+      d.plannedForDone ??
+      d.sessions[
+        Math.min(Math.max(gereden - 1, 0), Math.max(d.sessions.length - 1, 0))
+      ] ??
+      null;
     // Per-dag coach-feedback (2a): done → hergebruik de fb die de compare al berekent (ÉÉN
     // coachFeedback_-aanroep via buildDoneCompareFull); gemist → een missed-fb (actual=null,
     // isMissed=true). Anders null. Voedt de coach-box (done) / GemistCard (gemist).
@@ -1162,6 +1193,7 @@ export function deriveSchemaView(
       redenCode: d.redenCode,
       sessions,
       planSessions,
+      openSessions,
       doneTss,
       done: done ?? null,
       doneCompare,

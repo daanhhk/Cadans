@@ -32,6 +32,7 @@ function sd(
     redenCode: null,
     sessions: [],
     planSessions: [],
+    openSessions: [],
     doneTss: 0,
     done: null,
     doneCompare: null,

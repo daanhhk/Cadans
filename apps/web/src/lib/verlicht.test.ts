@@ -23,6 +23,7 @@ function day(o: Partial<SchemaDay> = {}): SchemaDay {
     reden: null,
     redenCode: null,
     planSessions: [],
+    openSessions: [],
     sessions: [
       {
         naam: "Drempel 3×10",

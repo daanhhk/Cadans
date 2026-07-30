@@ -365,7 +365,13 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
   // wordt door de worker altijd als 0 weggeschreven (repo.ts) en is dus betekenisloos.
   // ÉÉN bron voor alle consumenten hieronder: grid, zoneDebt_, dekking-loop,
   // tePlannen-filter en dayPlannable. Zie docs/INHAAL-DEBT-RECON.md §2.
-  const gedaanSet = derivePlannerGedaan(plannerDays || [], activities || []);
+  // PENDEL-fix (docs/PENDEL-RECON.md §5): een pendeldag plant `pendelAantal` sessies, dus hij
+  // geldt pas als afgewerkt bij evenveel kwalificerende ritten. Bij 1 byte-identiek aan voorheen.
+  const gedaanSet = derivePlannerGedaan(
+    plannerDays || [],
+    activities || [],
+    Math.max(1, Math.round(settings.pendelAantal ?? 1) || 1),
+  );
   // OR, geen vervanging: een expliciet gezette `pd.gedaan` blijft gelden. In productie is
   // die altijd false (de worker schrijft 0), dus daar telt uitsluitend de afleiding; maar zo
   // blijft de vlag betekenisvol als hij ooit wél gevuld wordt, en blijven fixtures die een

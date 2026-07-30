@@ -259,6 +259,7 @@ describe("mergeDone", () => {
     zoneMin5: null,
     ifReal: null,
     idExt: "",
+    ritten: 1,
     ...o,
   });
   it("houdt naam/type/idExt van de LANGSTE rit; sommeert tss/minuten", () => {
@@ -286,6 +287,7 @@ describe("doneLabel + formatDuurU", () => {
         zoneMin5: { rust: 0, z2: 20, tempo: 40, drempel: 5, anaeroob: 0 },
         ifReal: null,
         idExt: "",
+        ritten: 1,
       }),
     ).toBe("Tempo"); // het 3-bucket-model lumpte dit als "Drempel"
   });
@@ -298,6 +300,7 @@ describe("doneLabel + formatDuurU", () => {
       zoneMin5: null,
       ifReal: null,
       idExt: "",
+      ritten: 1,
     };
     expect(doneLabel({ ...base, type: "Ride" })).toBe("Ride");
     expect(doneLabel({ ...base, type: "" })).toBe("Rit");
@@ -334,6 +337,7 @@ const doneSS: DoneEntry = {
   zoneMin5: { rust: 0, z2: 18, tempo: 0, drempel: 43, anaeroob: 0 },
   ifReal: 0.89,
   idExt: "",
+  ritten: 1,
 };
 
 describe("formatIf", () => {
@@ -428,6 +432,7 @@ describe("buildDoneCompare (coachFeedback_-brug)", () => {
       zoneMin5: { rust: 0, z2: 70, tempo: 0, drempel: 5, anaeroob: 0 },
       ifReal: 0.68,
       idExt: "",
+      ritten: 1,
     };
     const plannedVo2: ProposalWorkout = {
       naam: "VO2max 5×4",
@@ -490,6 +495,7 @@ describe("deriveSchemaView dispatch (flip + doneCompare)", () => {
     zoneMin5: null,
     ifReal: null,
     idExt: "",
+    ritten: 1,
     ...o,
   });
 

@@ -80,6 +80,7 @@ const done = (o: Partial<DoneEntry>): DoneEntry => ({
   zoneMin5: null,
   ifReal: null,
   idExt: "",
+  ritten: 1,
   ...o,
 });
 

@@ -17,6 +17,7 @@ import {
   deriveSchemaView,
   type FatigueVoorstel,
   type SchemaDay,
+  type SchemaSession,
   testResultaat,
   verlengResultaat,
   verlichtResultaat,
@@ -66,7 +67,15 @@ const STATE_LABEL: Record<DayState, string> = {
  * daar is `sessions` leeg en draagt de bevroren entry het plan. Los getrokken zodat de gemist-tak
  * dezelfde weergave kan tonen als de planned-tak — "Niet gereden" zonder de sessie erbij vertelt
  * niet wat er lag. */
-function SessieBlok({ day }: { day: SchemaDay }) {
+function SessieBlok({
+  day,
+  sessies,
+}: {
+  day: SchemaDay;
+  /** Welke sessies te tonen; default de geplande. De done-tak geeft `openSessions` mee. */
+  sessies?: SchemaSession[];
+}) {
+  const lijst = sessies ?? day.planSessions;
   return (
     <div
       style={{
@@ -76,7 +85,7 @@ function SessieBlok({ day }: { day: SchemaDay }) {
         marginTop: "var(--s-4)",
       }}
     >
-      {day.planSessions.map((s, i) => (
+      {lijst.map((s, i) => (
         <div
           // biome-ignore lint/suspicious/noArrayIndexKey: statische read-only per-dag-sessielijst (geen reorder) → index-key is veilig. `${s.naam}-${s.tss}` was NIET uniek: pendel heen+terug zijn in een Base-week identiek (beide pendel_z2, zelfde naam én tss) → dubbele keys → React-reconciliatie-fout (duplicaat "SESSIE 1/2" + cross-day-fantoom). `day.datum` forceert een schone remount bij dag-wissel.
           key={`${day.datum}-${i}`}
@@ -92,9 +101,7 @@ function SessieBlok({ day }: { day: SchemaDay }) {
           <WorkoutDetail
             session={s}
             overline={
-              day.planSessions.length > 1
-                ? `Sessie ${i + 1}/${day.planSessions.length}`
-                : undefined
+              lijst.length > 1 ? `Sessie ${i + 1}/${lijst.length}` : undefined
             }
           />
         </div>
@@ -361,27 +368,36 @@ export function SchemaView({
           )}
 
           {day.done ? (
-            day.doneCompare ? (
-              // §5c voltooid-volle → volle kaart (incl. ritdetails-link + impact-box). Het gedeelde
-              // knoppen-blok volgt NA de state-conditional (een keer, onder elke state).
-              <>
-                <DoneCompareCard
-                  card={day.doneCompare}
-                  coachNaam={view.coachNaam}
-                  date={day.datum}
-                  rpe={rpeByDate[day.datum] ?? null}
-                  idExt={day.done?.idExt ?? ""}
-                />
-                {/* ROADMAP punt 5b — sleutelsessie LICHTER gereden (state 'different'): waar de
+            <>
+              {day.doneCompare ? (
+                // §5c voltooid-volle → volle kaart (incl. ritdetails-link + impact-box). Het gedeelde
+                // knoppen-blok volgt NA de state-conditional (een keer, onder elke state).
+                <>
+                  <DoneCompareCard
+                    card={day.doneCompare}
+                    coachNaam={view.coachNaam}
+                    date={day.datum}
+                    rpe={rpeByDate[day.datum] ?? null}
+                    idExt={day.done?.idExt ?? ""}
+                  />
+                  {/* ROADMAP punt 5b — sleutelsessie LICHTER gereden (state 'different'): waar de
                     prikkel deze week nog staat. Zelfde blok als in de gemist-tak. */}
-                {sleutelOpen && (
-                  <SleutelInhaalBlok dagen={openSleutelDagenLijst} />
-                )}
-              </>
-            ) : (
-              // §5d voltooid-verleden (gereduceerde kaart-inhoud, bewust geparkeerd).
-              <DoneDetail done={day.done} />
-            )
+                  {sleutelOpen && (
+                    <SleutelInhaalBlok dagen={openSleutelDagenLijst} />
+                  )}
+                </>
+              ) : (
+                // §5d voltooid-verleden (gereduceerde kaart-inhoud, bewust geparkeerd).
+                <DoneDetail done={day.done} />
+              )}
+              {/* PENDEL-fix (docs/PENDEL-RECON.md §5): de geplande sessies die nog GEEN rit
+                  tegenover zich hebben. Op een pendeldag met één gereden rit staat de terugrit
+                  dus nog gewoon op de kaart, ONDER de voltooid-weergave — zelfde vorm als de
+                  gemist-tak. Buiten een pendeldag is deze lijst per constructie leeg. */}
+              {day.openSessions.length > 0 && (
+                <SessieBlok day={day} sessies={day.openSessions} />
+              )}
+            </>
           ) : day.state === "gemist" ? (
             // gemist (A4): gedisponeerde dag mét voorstel, niet gereden → GemistCard + "Terug" +
             // de gemist-coach-narrative (missedCoach_) in de gedeelde CoachCallout.
