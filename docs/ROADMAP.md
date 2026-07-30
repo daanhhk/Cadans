@@ -108,16 +108,27 @@ punten staat onder *Gesloten — vindplaats*.
    48 shots byte-identiek, en op prod noemt de blok-kaart na de deploy dezelfde getallen als
    ervoor. Bouwdoc: `docs/ZONE-SYNC-BOUWDOC.md`. Fase 3 (de week-baan) is daar VOORWAARDELIJK en
    staat niet in deze reeks.
-7. **De doel-lijst klopt niet** — open · ENGINE. (`DOELEN-SPEC` §6 stap 3.) `DOEL_OPTIONS`
-   (`phase.ts:12`) draagt nog VO2max en één `Beklimmingen`. GEMETEN: `climbTypeWorkout_`
-   (`planner.ts:1051`) is sinds punt 1 in de praktijk onbereikbaar — hij staat in
-   `keyIntensity` (`planner.ts:995`) achter `goalWorkout_`, en die levert sinds de fallback
-   altijd een kandidaat. CRITERIUM: VO2max eruit, Beklimmingen gesplitst in kort en lang, twee
-   profielen, dode tak opgeruimd. HARDE DATUM: half februari 2027.
-8. **De meetlat kent maar twee doelen** — open · ENGINE. `activeGoalProfile_`
-   (`niveau.ts:629`) geeft FTP het ftp-profiel en élk ander doel het girona-EVENT-profiel; dat
-   label staat letterlijk in de Niveau-tab. Bijt bij de winterwissel naar Onderhoud en opnieuw
-   bij korte beklimmingen. Reist met punt 7.
+7. **De doel-lijst klopt niet** — open · ENGINE. (`DOELEN-SPEC` §6 stap 3.) SPEC:
+   `docs/DOEL-LIJST-RECON.md`. `DOEL_OPTIONS` (`phase.ts:12`) draagt nog VO2max en één
+   `Beklimmingen`. De eerdere post noemde `climbTypeWorkout_` (`planner.ts:1051`) "in de
+   praktijk onbereikbaar"; dat is nu exact begrensd. GEMETEN over alle 15 combinaties (5
+   doelen x 3 fases): `goalWorkout_` levert vanaf 33 minuten een kandidaat, in elke
+   combinatie dezelfde grens, en `eligible_` (`planner.ts:237`) kent geen
+   minimum-minuten-poort. De tak kan dus uitsluitend vuren op een kwaliteits-eligible dag van
+   32 minuten of korter, in fase Build of Peak, met een `klimType` op het hoofdevent. Smal,
+   niet nul — opruimen is een gedragswijziging op die grens en daarmee toetsbaar. CRITERIUM:
+   VO2max eruit, Beklimmingen gesplitst in kort en lang, twee profielen, dode tak opgeruimd.
+   HARDE DATUM: half februari 2027.
+8. **De meetlat kent maar twee doelen** — open · ENGINE plus CLIENT. SPEC:
+   `docs/DOEL-LIJST-RECON.md` §8. `activeGoalProfile_` (`niveau.ts:629`) geeft FTP het
+   ftp-profiel en élk ander doel het girona-EVENT-profiel; dat label staat letterlijk in de
+   Niveau-tab. Bijt bij de winterwissel naar Onderhoud en opnieuw bij korte beklimmingen.
+   GEMETEN GRENS: `Niveau.tsx:124-128` kent precies DRIE meetgrootheden — `ftpWkg`, `ctl` en
+   `longRideH`; elke andere maat vraagt clientwerk. Doel Onderhoud krijgt daarom geen
+   groei-target maar een BEHOUD-vloer van 5 procent onder de instapwaarde uit `instapNiveau()`
+   (`effect.ts`): `DOELEN-SPEC` §3.2 sluit een CTL-target expliciet uit en schrijft die vloer
+   al voor. Die target is AFGELEID in plaats van constant, wat `Niveau.tsx` raakt — vandaar
+   een eigen fase met een eigen commit. Reist met punt 7.
 9. **Het doel stuurt de periodisering niet** — open · ENGINE. GEMETEN met AGR op 17-04-2027,
    identiek voor doel FTP, Onderhoud en Beklimmingen: Base t/m 2027-02-15, Build vanaf
    2027-02-22, Peak vanaf 2027-03-22, Taper vanaf 2027-04-12. De fase komt volledig uit de
