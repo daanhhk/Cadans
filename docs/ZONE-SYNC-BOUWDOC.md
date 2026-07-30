@@ -38,36 +38,50 @@ inclusief een repo-schrijver die ALLEEN zijn eigen kolommen raakt.
 BESLUIT: één nieuwe kolom `sync_state.power_zones_json` (TEXT, de rauwe array als JSON-string). Geen
 tweede kolom voor een tijdstip: niets zou hem lezen, en een kolom zonder lezer is dode code.
 
-## 4. De bron
+## 4. De bron — de nieuwste fiets-rit, niet een tweede endpoint
 
-ENDPOINT: `GET /athlete/{id}/sport-settings`. GEMETEN in `docs/DOSIS-MUNT-MEETDATA.md` §B2 dat dit
-endpoint en het veld `sportSettings` op `GET /athlete/{id}` identieke waarden geven; de eerste is
-smaller en levert de array direct.
+GEMETEN, en dit vervangt de eerste opzet. `fetchActivities`
+(`workers/api/src/integrations/intervals.ts`) haalt VOLLEDIGE activiteit-objecten op — geen
+`fields`-param, "zoals de GAS-sync" — over een venster van 28 dagen, en elk activiteit-object draagt
+`icu_power_zones`. Gemeten `[55,75,90,105,120,150,999]`: exact dezelfde bovengrenzen als
+`power_zones` in de sport-settings (`docs/DOSIS-MUNT-MEETDATA.md` §B2). De grenzen zijn dus AL
+binnen; ze worden vandaag alleen weggegooid.
 
-RIJ-SELECTIE. De respons is een array met één rij per sportgroep. Daans fiets-rij draagt
-`power_zones [55,75,90,105,120,150,999]`, de hardloop-rij draagt `power_zones: null`. Regel: de EERSTE
-rij waarvan `types` een van `CYCLING_TYPES` bevat (`Ride`, `VirtualRide`, `GravelRide`,
-`MountainBikeRide`) én waarvan `power_zones` een bruikbare array is; vindt die niets, dan de eerste rij
-met een bruikbare `power_zones`; vindt ook die niets, dan wordt er NIETS weggeschreven.
+BESLUIT: de zone-grenzen worden afgeleid binnen de BESTAANDE `syncActivities`, uit de NIEUWSTE
+activiteit waarvan `type` in `CYCLING_TYPES` valt (`Ride`, `VirtualRide`, `GravelRide`,
+`MountainBikeRide`) én waarvan `icu_power_zones` een bruikbare oplopende array van minstens vier
+getallen is. Levert de sync er geen, dan wordt er NIETS weggeschreven en blijft de vorige waarde
+staan.
+
+WAT DAT UITSPAART tegenover een `GET /athlete/{id}/sport-settings`: een tweede upstream-endpoint,
+een integratie-module, een `POST /api/sync/zones`-route, en een VIERDE schrijfactie per pageload.
+Wat overblijft is één extra upsert binnen een sync die toch al schrijft.
+
+WAT HET KOST, eerlijk. Wijzigt een gebruiker zijn zones in intervals en rijdt hij daarna niet, dan
+volgt de norm pas bij de eerstvolgende rit. Dat is aanvaardbaar en waarschijnlijk correcter: zonder
+rit is er ook geen geleverde kant die verschoven is. Wat GEEN van beide routes oplost is een
+zone-wijziging MIDDEN in een blok — daarvoor moeten de grenzen PER RIT bewaard worden, en dat is de
+geparkeerde post in §9.
 
 ## 5. De weg door de app
 
-1. `POST /api/sync/zones` — naast `sync/activities`, `sync/wellness` en `sync/power-curve`, met
-   hetzelfde patroon: fetch-wrapper met Basic-auth, niet-2xx upstream → 502.
-2. `writePowerZones` in `repo.ts` — upsert die ALLEEN de nieuwe kolom raakt, naar het model van
-   `writeDosisTrede`.
-3. `GET /api/power-zones` → `{ powerZones: number[] | null }`, naar het model van `GET /api/dosis-trede`.
+1. `syncActivities` leidt de grenzen af zoals in §4 en schrijft ze weg. Geen nieuwe route, geen
+   nieuwe fetch, geen nieuwe integratie-module.
+2. `writePowerZones` in `workers/api/src/db/repo.ts` — upsert die ALLEEN de nieuwe kolom raakt, naar
+   het model van `writeDosisTrede`.
+3. `GET /api/power-zones` → `{ powerZones: number[] | null }`, naar het model van
+   `GET /api/dosis-trede`.
 4. `loadSchemaWeek` haalt hem op in dezelfde `Promise.all`.
-5. `deriveSchemaView` maakt er `zone5Grenzen(powerZones)` van en geeft die door aan `buildBlokReferent`
-   en aan het dosis-trede-voorstel.
-6. `blokDosisNorm` krijgt een OPTIONELE TRAILING PARAMETER `grenzen`, default `ZONE5_GRENZEN_DEFAULT` —
-   idioom van `dosisTrede`. Elke bestaande aanroep en elke fixture blijft daarmee byte-identiek.
+5. `deriveSchemaView` maakt er `zone5Grenzen(powerZones)` van en geeft die door aan
+   `buildBlokReferent` en aan het dosis-trede-voorstel.
+6. `blokDosisNorm` krijgt een OPTIONELE TRAILING PARAMETER `grenzen`, default
+   `ZONE5_GRENZEN_DEFAULT` — idioom van `dosisTrede`. Elke bestaande aanroep en elke fixture blijft
+   daarmee byte-identiek.
 
-WANNEER HIJ VUURT. Mee in de bestaande `Promise.allSettled` in `apps/web/src/pages/Schema.tsx`, achter
-dezelfde staleness-guard als de twee andere syncs. Zones veranderen vrijwel nooit, maar de waarde moet
-er zijn vóór de eerste blok-kaart-render en er is geen ander betrouwbaar moment. GEVOLG dat expliciet
-opgeschreven hoort te worden: een pageload schreef drie dingen en schrijft er straks VIER. Dezelfde
-afweging als toen: de schrijfactie is idempotent, en een aparte modus zou de normale kunnen verbergen.
+WANNEER HIJ VUURT. Vanzelf, mee met de activiteiten-sync die `apps/web/src/pages/Schema.tsx` al bij
+mount doet, achter dezelfde staleness-guard. HET AANTAL SCHRIJFACTIES PER PAGELOAD BLIJFT DRIE: er
+komt alleen één rij-update bij binnen een route die toch al schrijft. Het besluit in
+`docs/WERKWIJZE.md` over de mount-sync blijft daarmee ongemoeid — er valt niets aan te herzien.
 
 ## 6. Inertheid en falen
 
@@ -94,7 +108,7 @@ bewijs valt daarom in tweeën.
 
 ## 8. Fasering
 
-1. DATA — migratie, kolom, repo-schrijver, integratie-module, `POST /api/sync/zones`,
+1. DATA — migratie, kolom, repo-schrijver, de afleiding binnen `syncActivities`,
    `GET /api/power-zones`, routetests. Nog geen lezer. STOP.
 2. CLIENT — api-client, `loadSchemaWeek`, `deriveSchemaView`, de trailing parameter op
    `blokDosisNorm`, tests inclusief de aangesloten-toets. STOP.
@@ -105,7 +119,9 @@ bewijs valt daarom in tweeën.
 
 - DE HISTORISCHE GRENZEN. Elke activiteit draagt `icu_power_zones` mee, maar die wordt niet
   opgeslagen, dus een zone-wijziging is niet met terugwerkende kracht te herleiden. Ongewijzigd
-  geparkeerd; de grenzen staan sinds het begin van de reeks stil.
+  geparkeerd; de grenzen staan sinds het begin van de reeks stil. Sinds §4 komen de grenzen zélf
+  uit een rit, dus dit is het enige dat nog aan de per-rit-kant ontbreekt: de grenzen worden niet
+  per activiteit bewaard, alleen de nieuwste wint.
 - `indoor_ftp` 260 TEGEN `ftp` 280. Dezelfde respons draagt `indoor_ftp`, dus deze post wordt door
   deze bouw goedkoper — maar hij hoort er niet bij en wordt hier niet aangeraakt.
 - DE POORT IS EEN HALVE MINUUT STRENGER DAN DE NORM. GEMETEN: een week die exact de norm levert in
