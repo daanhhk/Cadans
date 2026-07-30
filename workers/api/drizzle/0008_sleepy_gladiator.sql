@@ -1,0 +1,1 @@
+ALTER TABLE `sync_state` ADD `power_zones_json` text;

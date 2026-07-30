@@ -650,6 +650,48 @@ export async function writeDosisTrede(
     });
 }
 
+// ── power-zones (sync_state.power_zones_json) — ROADMAP punt 6 fase 2 ──────
+// De RAUWE icu_power_zones-array, afgeleid uit de nieuwste fiets-rit door `syncActivities`.
+// Zie docs/ZONE-SYNC-BOUWDOC.md §3 t/m §5.
+
+/** De opgeslagen zone-grenzen, of null. Onleesbare of niet-array-inhoud leest óók als null:
+ * de client valt dan terug op `ZONE5_GRENZEN_DEFAULT` en het gedrag is dat van vandaag. */
+export async function readPowerZones(
+  db: Db,
+  userId: number,
+): Promise<number[] | null> {
+  const rows = await db
+    .select({ json: syncState.powerZonesJson })
+    .from(syncState)
+    .where(eq(syncState.userId, userId))
+    .limit(1);
+  const raw = rows[0]?.json;
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Zet de zone-grenzen. Upsert: raakt ALLEEN deze kolom → de sync-velden, de fatigue-shift en de
+ * dosis-trede blijven intact. Zelfde vorm als `writeDosisTrede`. */
+export async function writePowerZones(
+  db: Db,
+  userId: number,
+  zones: number[],
+): Promise<void> {
+  const powerZonesJson = JSON.stringify(zones);
+  await db
+    .insert(syncState)
+    .values({ userId, powerZonesJson })
+    .onConflictDoUpdate({
+      target: syncState.userId,
+      set: { powerZonesJson },
+    });
+}
+
 // ── wellness (WELL_HEADERS 12-kol) — DTO = WellnessInput (@cadans/shared) ─
 // WellnessInput = de WIRE-vorm (datum als ISO-string); de repo-vorm heeft datum
 // als Date. vorm = ctl−atl (bij sync).

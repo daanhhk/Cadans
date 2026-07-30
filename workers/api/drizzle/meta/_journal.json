@@ -57,6 +57,13 @@
       "when": 1785264115482,
       "tag": "0007_useful_johnny_storm",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1785397907451,
+      "tag": "0008_sleepy_gladiator",
+      "breakpoints": true
     }
   ]
 }

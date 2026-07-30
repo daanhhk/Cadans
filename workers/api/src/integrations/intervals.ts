@@ -8,10 +8,10 @@
  * De key komt UITSLUITEND uit env (workerd: env.INTERVALS_API_KEY; lokaal via
  * .dev.vars). Niets gehardcode.
  */
-import { activityToRow_ } from "@cadans/engine";
+import { activityToRow_, CYCLING_TYPES } from "@cadans/engine";
 import { CURRENT_USER_ID, makeDb } from "../db/client";
 import { toD1Date } from "../db/dates";
-import { upsertActivity } from "../db/repo";
+import { upsertActivity, writePowerZones } from "../db/repo";
 
 export const BASE_URL = "https://intervals.icu/api/v1";
 
@@ -111,5 +111,29 @@ export async function syncActivities(
     await upsertActivity(db, userId, row);
     upserted++;
   }
+
+  // ROADMAP punt 6 fase 2 — DE ZONE-GRENZEN KOMEN GRATIS MEE. Elk activiteit-object draagt
+  // `icu_power_zones` (de bovengrenzen in %FTP), gemeten identiek aan `power_zones` uit de
+  // sport-settings; ze werden tot nu toe alleen weggegooid. Geen tweede endpoint, geen extra
+  // route, geen vierde schrijfactie per pageload — één upsert binnen een sync die toch al
+  // schrijft. Zie docs/ZONE-SYNC-BOUWDOC.md §4.
+  //
+  // `activities` staat OUDSTE-EERST (de sort hierboven), dus vanaf het nieuwste eind terug
+  // scannen geeft de NIEUWSTE bruikbare fiets-rit. Geen tweede sortering.
+  //
+  // SERVER-ZIJDE ALLEEN "is het een niet-lege array". De volledige toets — vier eerste waarden
+  // eindig én oplopend — zit in `zone5Grenzen` client-zijde, met terugval op de default. Die
+  // regel op twee plekken zetten geeft twee waarheden.
+  for (let i = activities.length - 1; i >= 0; i--) {
+    const a = activities[i];
+    if (CYCLING_TYPES.indexOf(String(a?.type ?? "")) < 0) continue;
+    const zones = a?.icu_power_zones;
+    if (!Array.isArray(zones) || zones.length === 0) continue;
+    await writePowerZones(db, userId, zones);
+    break;
+  }
+  // Geen kandidaat → NIETS schrijven. Een null-write zou een eerder gevonden indeling wissen
+  // op een sync die toevallig geen fiets-rit ophaalde.
+
   return { fetched: activities.length, upserted };
 }

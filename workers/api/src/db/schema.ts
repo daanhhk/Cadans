@@ -254,6 +254,15 @@ export const syncState = sqliteTable("sync_state", {
   /** Het DOEL waarop de trede is opgebouwd. De minuten per prikkel zijn doel-eigen (FTP 28,
    * Onderhoud 22), dus bij een doel-wissel vervalt de trede in plaats van mee te reizen. */
   dosisTredeDoel: text("dosis_trede_doel"),
+  /** ROADMAP punt 6 fase 2 — de RAUWE `icu_power_zones`-array als JSON-string, afgeleid uit de
+   * NIEUWSTE fiets-rit die de activiteiten-sync ophaalt (de bovengrenzen in %FTP, bijvoorbeeld
+   * `[55,75,90,105,120,150,999]`). Null = nog nooit een bruikbare rit gezien; de client valt dan
+   * terug op `ZONE5_GRENZEN_DEFAULT`.
+   *
+   * HOORT OP `sync_state`, NIET OP `settings`: `PUT /api/settings` is FULL-REPLACE (`writeSettings`
+   * schrijft `?? null` voor élk veld), dus een gesynchroniseerde kolom daar zou bij elke opslag
+   * vanuit de Instellingen-pagina leeggemaakt worden. Zie docs/ZONE-SYNC-BOUWDOC.md §3. */
+  powerZonesJson: text("power_zones_json"),
 });
 
 // ── power_curve_cache — RAW {list,activities}-respons per window. pcNormalize_

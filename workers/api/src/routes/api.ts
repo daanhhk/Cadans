@@ -32,6 +32,7 @@ import {
   readFatigueShift,
   readOverrides,
   readPlannerDays,
+  readPowerZones,
   readRecentWeekplans,
   readRpe,
   readSettings,
@@ -553,6 +554,15 @@ api.put("/fatigue-shift", async (c) => {
     dir as "up" | "down" | null,
   );
   return c.json({ ok: true });
+});
+
+// ROADMAP punt 6 fase 2 — DE ZONE-GRENZEN. READ-ONLY: geschreven wordt er uitsluitend door
+// `syncActivities`, uit de nieuwste fiets-rit (docs/ZONE-SYNC-BOUWDOC.md §4). Nog nooit een
+// bruikbare rit gezien → null, en de client valt dan terug op ZONE5_GRENZEN_DEFAULT.
+api.get("/power-zones", async (c) => {
+  const db = makeDb(c.env.DB);
+  const powerZones = await readPowerZones(db, CURRENT_USER_ID);
+  return c.json({ powerZones });
 });
 
 // ROADMAP stap 2 — DOSIS-TREDE (spiegelt /fatigue-shift). GET geeft niveau + beantwoord blok +
