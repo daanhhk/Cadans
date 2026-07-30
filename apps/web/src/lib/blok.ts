@@ -155,7 +155,7 @@ export function blokDosisNorm(
   // ROADMAP punt 6 fase 2 — de ZONE-GRENZEN waarop de vorm van de norm wordt afgeleid. OPTIONEEL
   // met de default, want deze functie heeft veel aanroepers die byte-identiek moeten blijven;
   // de aanroepers die de gesynchroniseerde waarde WEL moeten doorgeven krijgen hem verplicht
-  // (zie buildBlokReview en dosisTredeVoorstel). Zie docs/ZONE-SYNC-BOUWDOC.md §5.
+  // (zie `buildBlokReview`). Zie docs/ZONE-SYNC-BOUWDOC.md §5.
   grenzen: readonly number[] = ZONE5_GRENZEN_DEFAULT,
 ): BlokDosisNorm | null {
   if (weekUren == null || !Number.isFinite(weekUren) || weekUren <= 0) {
@@ -629,13 +629,13 @@ export function dosisTredeVoorstel(input: {
   trede: number;
   /** De blokstart waarvoor al een antwoord is weggeschreven, of null. */
   beantwoordBlok: string | null;
-  /** ROADMAP punt 6 fase 2 — de ZONE-GRENZEN, VERPLICHT en niet optioneel. Een optioneel veld
-   * kan bij een aanroeper wegvallen en valt dan STIL terug op de default: precies het
-   * dode-invoer-patroon uit docs/WERKWIJZE.md, waarbij de grep naar de aanroep slaagt, de tests
-   * groen zijn en de app de gesynchroniseerde waarde toch nooit ziet. Verplicht maakt vergeten
-   * een compileerfout. */
-  grenzen: readonly number[];
 }): DosisTredeVoorstel | null {
+  // ROADMAP punt 6 fase 2 — GEEN `grenzen`-parameter, en dat is gemeten en niet aangenomen. Dit
+  // voorstel toont alleen de SCHAAL (minNu/minStraks en de weeknorm-totalen); een zone-splitsing
+  // staat er niet in, dus de grenzen kunnen zijn uitkomst per constructie niet veranderen. Een
+  // VERPLICHTE parameter die niets kan doen is een belofte die de functie niet waarmaakt. De
+  // grenzen bereiken dit voorstel via de REVIEW: strakkere grenzen laten het blok vallen, de
+  // check leest niet-geleverd en het voorstel vervalt. Zie de test in blok.test.ts.
   const r = input.review;
   if (!r || r.fase !== "afgerond") return null;
   if (blokWeekVanWeek(input.doelStart, input.weekMondayISO) !== 1) return null;
@@ -652,13 +652,8 @@ export function dosisTredeVoorstel(input: {
   const blokStart = blokStartVoorWeek(input.doelStart, input.weekMondayISO);
   if (input.beantwoordBlok === blokStart) return null;
 
-  const nu = blokDosisNorm(input.doel, input.weekUren, huidig, input.grenzen);
-  const straks = blokDosisNorm(
-    input.doel,
-    input.weekUren,
-    huidig + 1,
-    input.grenzen,
-  );
+  const nu = blokDosisNorm(input.doel, input.weekUren, huidig);
+  const straks = blokDosisNorm(input.doel, input.weekUren, huidig + 1);
   if (!nu || !straks) return null;
 
   return {

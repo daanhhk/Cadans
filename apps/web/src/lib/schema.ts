@@ -1435,7 +1435,6 @@ export async function loadSchemaWeek(): Promise<{
     doel: settings?.doel ?? null,
     weekUren: settings?.weekUren ?? null,
     trede: dosisTrede,
-    grenzen,
     beantwoordBlok:
       dosisTredeRow.doel === (settings?.doel ?? null)
         ? (dosisTredeRow.blok ?? null)

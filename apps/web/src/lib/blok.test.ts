@@ -282,13 +282,10 @@ describe("de zone-grenzen dragen door tot in de norm", () => {
     expect(eigen?.normDrempel).toBeGreaterThan(standaard?.normDrempel ?? 0);
   });
 
-  // dosisTredeVoorstel: het VOORSTEL-object draagt alleen de SCHAAL (`normNu`, `normStraks`,
-  // `minNu`, `minStraks`) en geen zone-splitsing, dus de grenzen zijn hier per constructie NIET
-  // in de uitvoer waarneembaar — een rood-test op de uitkomst bestaat niet. Wat wél te toetsen
-  // is: de voorstel-norm komt uit DEZELFDE `blokDosisNorm`-weg als de rest, met de meegegeven
-  // grenzen. De verplichte parameter is vooruit-bedrading: zodra het voorstel een zone-term
-  // toont, is hij al aangesloten en hoeft er niets te worden opgespoord.
-  it("(b) dosisTredeVoorstel leest de norm via dezelfde weg, met de meegegeven grenzen", () => {
+  // dosisTredeVoorstel heeft GEEN eigen `grenzen`-parameter: zijn uitvoer draagt alleen de schaal
+  // (minNu/minStraks en de weeknorm-totalen), dus de grenzen kunnen daar per constructie niets
+  // veranderen. Wat hier te toetsen is: de voorstel-norm komt uit dezelfde `blokDosisNorm`-weg.
+  it("(b) dosisTredeVoorstel leest de norm via dezelfde weg", () => {
     const review = buildBlokReview({
       activities: RECON_ACTS,
       doel: "FTP",
@@ -307,21 +304,16 @@ describe("de zone-grenzen dragen door tot in de norm", () => {
       weekUren: 5,
       trede: 0,
       beantwoordBlok: null,
-      grenzen: ZONE5_GRENZEN_DEFAULT,
     });
     expect(v).not.toBeNull();
-    expect(v?.normNu).toBe(
-      blokDosisNorm("FTP", 5, 0, ZONE5_GRENZEN_DEFAULT)?.norm,
-    );
-    expect(v?.normStraks).toBe(
-      blokDosisNorm("FTP", 5, 1, ZONE5_GRENZEN_DEFAULT)?.norm,
-    );
+    expect(v?.normNu).toBe(blokDosisNorm("FTP", 5, 0)?.norm);
+    expect(v?.normStraks).toBe(blokDosisNorm("FTP", 5, 1)?.norm);
   });
 
-  // GEMETEN GEVOLG van (b) hierboven: met een STRAKKERE Z3/Z4-grens stijgt de drempel-norm en
-  // haalt het recon-blok hem niet meer, dus de review leest niet-geleverd en het voorstel
-  // VERVALT. Dat is de zichtbare weg waarlangs de grenzen het voorstel bereiken — via de
-  // review, niet via het voorstel-object zelf.
+  // DIT IS DE WEG WAARLANGS DE GRENZEN HET VOORSTEL BEREIKEN: niet via een eigen parameter, maar
+  // via de REVIEW. Met een strakkere Z3/Z4-grens stijgt de drempel-norm, haalt het recon-blok hem
+  // niet meer, leest de check niet-geleverd en vervalt het voorstel. Zonder deze test zou het
+  // weghalen van de parameter op `dosisTredeVoorstel` niets aantoonbaar achterlaten.
   it("(b) strakkere grenzen laten het blok vallen en dus het voorstel vervallen", () => {
     const review = buildBlokReview({
       activities: RECON_ACTS,
@@ -343,7 +335,6 @@ describe("de zone-grenzen dragen door tot in de norm", () => {
         weekUren: 5,
         trede: 0,
         beantwoordBlok: null,
-        grenzen: STRAKKER,
       }),
     ).toBeNull();
   });
