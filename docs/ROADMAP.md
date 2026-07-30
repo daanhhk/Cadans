@@ -78,19 +78,20 @@ punten staat onder *Gesloten — vindplaats*.
    ONTWERPVRAAG naar samenvallen met de week-inhaal-kaart is BEANTWOORD: die kaart kan niet
    verschijnen (punt 5c), dus er is geen tweede stem en punt 10 wordt hier niet geraakt. Recon:
    `docs/INHAAL-5B-RECON.md`.
-5c. **De week-inhaal-kaart kan niet verschijnen** — open · ENGINE. GEMETEN over 48 combinaties
-   (4 weekvormen × 4 doelen × 3 doelStarts): in élke Base-, Build- en Peak-cel nul
-   `catchup_*`-codes en nul inhaalvoorstellen; de 24 codes en 18 voorstellen die er zijn liggen
-   ALLE in fase Test, en doel Onderhoud raakt het pad nooit (`debtEnabled` false). MECHANISME:
-   de allocator-tak (`planner.ts:776`) staat vóór de pendel-, weekend- en vrij-takken en de
-   endurance-fill (`planner.ts:553`) claimt elke eligible dag, dus de codes op `planner.ts:819`
-   en `:849` zijn onbereikbaar — en `buildInhaalVoorstel` (`schema.ts:1086`) diff't juist
-   daarop. De debt bestaat wel: `zoneDebt_` over een gemiste maandag plus dinsdag geeft low 57 ·
-   high 48 · anaerobic 0. Ook de wat-als-run is byte-identiek aan het actieve plan, dus zelfs
-   zonder de code-poort zou de diff leeg zijn. `inhaal.test.ts` bewijst niets: die injecteert
-   `catchup_high` met de hand. CRITERIUM: een geleverd tekort levert een zichtbaar
-   WEEK-voorstel op, of het mechanisme wordt opgeruimd als punt 10 het opneemt. Raakt de
-   allocator, dus ENGINE en expliciete autorisatie. Recon: `docs/INHAAL-5B-RECON.md` §2.
+5c. **De week-inhaal-kaart kan niet verschijnen** — af (OPGERUIMD) · CLIENT + WORKER. Het
+   mechanisme is verwijderd in plaats van gerepareerd; dat is de tweede tak van het criterium.
+   DRIE onafhankelijke doodsoorzaken, alle gemeten: de `catchup_*`-codes zijn onbereikbaar
+   zodra de allocator actief is; `debtPreferredType_` kiest de grootste bucket en dat is altijd
+   `low` (nul van 88 geplande sessies draagt meer high plus anaeroob dan low), dus de arm
+   levert `long_z2` en zijn eigen guard blokkeert hem; en de debt rekent in de door punt 6
+   vervangen 3-bucket-munt, waarin een grijze en een scherpe rit een identieke debt geven.
+   DOORSLAGGEVEND was niet de doodheid maar de UITKOMST: over 72 cellen levert de wat-als-run
+   in 60 MINDER high plus anaerobe intentminuten dan het actieve plan, in 12 meer, in nul
+   gelijk. Repareren zou de coach een gemiste intensiteitsprikkel laten inhalen met een
+   lichtere week. De ENGINE is niet geraakt en er is geen migratie; de kolom
+   `sync_state.debt_opt_in_week` blijft staan. Begrenzingsbewijs: 40 van 40 harness-shots
+   byte-identiek. Live sinds Worker `8cde1d3d`. Verdict: `docs/INHAAL-5C-VERDICT.md`.
+   DE WEEK-TEKORT-VRAAG ZELF IS NIET VERVALLEN — die is naar punt 10 verhuisd.
 6. **De dosis-munt per zone** — deels · CLIENT (fase 1, af) / DATA (fase 2, open). Fase 1a en
    1b zijn live: `weekKwaliteitMinuten` vouwt per zone, `blokDosisNorm` haalt zijn vorm uit
    `bibliotheekSignatuur`, en het oordeel is per zone zonder compensatie. FASE 2, DE
@@ -123,7 +124,13 @@ punten staat onder *Gesloten — vindplaats*.
    VOORSTEL. Raakt `DOELEN-SPEC`.
 10. **Twee kaarten spreken los over hetzelfde blok** — open · CLIENT. (`DOELEN-SPEC` §6 stap
     7.) De doortrain-kaart en de terugblik lezen hetzelfde ΔCTL-signaal en doen er elk een
-    eigen uitspraak over. CRITERIUM: een blok krijgt ÉÉN uitspraak, niet twee.
+    eigen uitspraak over. CRITERIUM: een blok krijgt ÉÉN uitspraak, niet twee. DIT PUNT DRAAGT
+    SINDS 5c OOK DE WEEK-TEKORT-VRAAG: wat de coach zegt als een week zijn dosis niet levert.
+    Die stem is er nu niet — de losse inhaal-kaart is opgeruimd omdat hij niet kon verschijnen
+    en, waar hij wél beet, een lichtere week voorstelde. Voorwaarde voor de nieuwe vorm: het
+    tekort wordt PER ZONE geteld, in de munt van punt 6, niet in de 3-bucket-vouwing die
+    tempo van drempel niet kan onderscheiden. `DOELEN-SPEC` §2A rekent de inhaal-kaart al tot
+    de uitingen van de weeklus, dus dit is geen uitbreiding maar het inlossen daarvan.
 11. **De duurvermogen-meetlat** — deels · DATA + CLIENT. (`DOELEN-SPEC` §6 stap 4.) De helft
     die prikkel-in-de-rit heet is met punt 1 gedicht: een dag boven de bibliotheekband krijgt
     een sjabloon, en `combo_long_with_efforts` vuurt in Build en Peak voor het klimprofiel. De
