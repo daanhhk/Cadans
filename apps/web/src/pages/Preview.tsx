@@ -27,6 +27,7 @@ import type {
   VerlichtVoorstel,
 } from "../lib/schema";
 import { buildTestVoorstel, type TestVoorstel } from "../lib/testvoorstel";
+import { signatuurSeconden } from "../lib/zonemunt";
 
 // DEV-ONLY preview-loop: voedt de ECHTE SchemaView (PeriodTimeline/WeekLoad/DayStrip + de
 // dagkaart-dispatch) met FIXTURE-data in de exacte ProposalWeek/ProposalDay/DoneEntry-shape,
@@ -508,14 +509,12 @@ function previewAct(
     return row;
   }
   row[3] = 150 + high;
-  const totaal = Math.round(high * 60);
-  const tempoS = Math.round(totaal * 0.282137);
-  const drempelS = Math.round(totaal * 0.562462);
+  const s = signatuurSeconden(high);
   row[15] = JSON.stringify([
     { id: "Z2", secs: 150 * 60 },
-    { id: "Z3", secs: tempoS },
-    { id: "Z4", secs: drempelS },
-    { id: "Z5", secs: totaal - tempoS - drempelS },
+    { id: "Z3", secs: s.tempo },
+    { id: "Z4", secs: s.drempel },
+    { id: "Z5", secs: s.anaeroob },
   ]);
   return row;
 }

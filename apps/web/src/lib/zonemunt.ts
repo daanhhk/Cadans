@@ -209,3 +209,26 @@ export function bibliotheekSignatuur(
   SIGNATUUR_CACHE.set(sleutel, { ...uit });
   return uit;
 }
+
+/**
+ * `werkMinuten` verdeeld over de drie werkzones in HELE SECONDEN, in de vorm die de bibliotheek
+ * voorschrijft. `tempo` en `drempel` worden elk één keer afgerond, `anaeroob` is de REST — zo is
+ * de som EXACT `Math.round(werkMinuten * 60)` en drijft geen weektotaal weg op afrondingsruis.
+ *
+ * WAAROM DEZE FUNCTIE HIER WOONT. Hij leidt zich af uit `bibliotheekSignatuur`, en zijn enige
+ * bestaansreden is dat fixtures (`blok.test.ts`, `effect.test.ts`) en de preview-pagina de vorm
+ * AFLEIDEN in plaats van hem uit te typen. Vóór fase 2 stonden 0,282137 en 0,562462 op drie
+ * plekken ingetypt; verzet de zone-sync straks de grenzen, dan verschuift de signatuur en zakken
+ * die fixtures stil onder norm — groen, maar niet meer metend wat ze bedoelen (ROADMAP punt 6,
+ * eerste eis). Productiecode gebruikt hem niet: die rekent met de fracties zelf.
+ */
+export function signatuurSeconden(
+  werkMinuten: number,
+  grenzen: readonly number[] = ZONE5_GRENZEN_DEFAULT,
+): { tempo: number; drempel: number; anaeroob: number } {
+  const totaal = Math.round(werkMinuten * 60);
+  const sig = bibliotheekSignatuur(grenzen);
+  const tempo = Math.round(totaal * sig.tempo);
+  const drempel = Math.round(totaal * sig.drempel);
+  return { tempo, drempel, anaeroob: totaal - tempo - drempel };
+}

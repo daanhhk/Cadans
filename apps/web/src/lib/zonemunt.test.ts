@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import {
   bibliotheekSignatuur,
   planZone5_,
+  signatuurSeconden,
   ZONE5_GRENZEN_DEFAULT,
   zone5Grenzen,
 } from "./zonemunt";
@@ -217,5 +218,29 @@ describe("bibliotheekSignatuur — de vorm van de norm", () => {
     const sig = bibliotheekSignatuur();
     expect(Math.round(84 * sig.tempo)).toBe(24);
     expect(Math.round(84 * (sig.drempel + sig.anaeroob))).toBe(60);
+  });
+});
+
+describe("signatuurSeconden — de vorm afgeleid in hele seconden", () => {
+  // De fixtures en de preview-pagina leiden hun zone-vorm hiermee af in plaats van 0,282137 en
+  // 0,562462 uit te typen (ROADMAP punt 6, eerste eis).
+  it("de som is EXACT Math.round(werkMinuten * 60), zonder afrondingsdrift", () => {
+    for (const min of [110, 97, 118, 117, 91, 70, 45, 25, 20, 1, 0]) {
+      const s = signatuurSeconden(min);
+      expect(s.tempo + s.drempel + s.anaeroob, `${min} min`).toBe(
+        Math.round(min * 60),
+      );
+    }
+  });
+
+  it("eigen grenzen schuiven minuten van tempo naar drempel", () => {
+    const standaard = signatuurSeconden(120);
+    const strakker = signatuurSeconden(120, [55, 75, 85, 105]);
+    expect(strakker.tempo).toBeLessThan(standaard.tempo);
+    expect(strakker.drempel).toBeGreaterThan(standaard.drempel);
+    // De som blijft exact, ook op andere grenzen.
+    expect(strakker.tempo + strakker.drempel + strakker.anaeroob).toBe(
+      120 * 60,
+    );
   });
 });

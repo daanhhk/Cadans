@@ -12,6 +12,7 @@ import {
   vorigBlokStart,
   weekKwaliteitMinuten,
 } from "./blok";
+import { signatuurSeconden } from "./zonemunt";
 
 // Geen vi.setSystemTime nodig: elke datum is een parameter (blok.ts leest de klok nergens).
 
@@ -54,17 +55,14 @@ function act(
  */
 function weekRit(datumISO: string, kwaliteit: number): ActValuesRow {
   const low = 120;
-  // In hele SECONDEN verdelen, met de laatste zone als rest: dan is de som exact `kwaliteit`
-  // minuten en drijft het weektotaal niet weg op afrondingsruis.
-  const totaal = Math.round(kwaliteit * 60);
-  const tempoS = Math.round(totaal * 0.282137);
-  const highS = Math.round(totaal * 0.562462);
-  const anaerS = totaal - tempoS - highS;
+  // De vorm wordt AFGELEID uit `bibliotheekSignatuur`, niet uitgetypt: verzet de zone-sync de
+  // grenzen, dan schuift deze fixture mee in plaats van stil onder norm te zakken.
+  const s = signatuurSeconden(kwaliteit);
   return act(datumISO, "Ride", low + kwaliteit, {
     low,
-    tempo: tempoS / 60,
-    high: highS / 60,
-    anaer: anaerS / 60,
+    tempo: s.tempo / 60,
+    high: s.drempel / 60,
+    anaer: s.anaeroob / 60,
   });
 }
 
@@ -366,6 +364,16 @@ describe("de diagnose — tekortZones en verschuiving", () => {
 });
 
 describe("blokCheck — drie uitkomsten", () => {
+  // POORT-ASSERTIE (ROADMAP punt 6, eerste eis): deze takken leunen erop dat de recon-weken ALLE
+  // DRIE de zone-normen halen. Verschuift de signatuur, dan zakken ze onder norm en meet deze
+  // describe de zone-poort in plaats van de check-uitkomst — zonder dat er iets faalt.
+  it("de recon-weken halen alle drie de zone-normen (poort vóór de uitkomst)", () => {
+    const geteld = reconRef().weeks.filter((w) => w.telt);
+    expect(geteld).toHaveLength(3);
+    expect(geteld.map((w) => w.zonesOpNorm)).toEqual([3, 3, 3]);
+    expect(geteld.map((w) => w.geleverdOk)).toEqual([true, true, true]);
+  });
+
   it("geleverd maar CTL niet gestegen → geleverd_niet_gestegen (het plan was te licht)", () => {
     const c = blokCheck(reconRef(), -5, "FTP");
     expect(c?.uitkomst).toBe("geleverd_niet_gestegen");
@@ -443,6 +451,10 @@ describe("dekkings-poort — te weinig zonedata is niet te beoordelen", () => {
       todayISO: "2026-07-27",
     });
     if (!ref) throw new Error("referent onverwacht null");
+    // POORT-ASSERTIE: de twee GEREDEN weken moeten alle drie de zone-normen halen, anders meet
+    // dit geval niet de niet-gereden week maar de signatuur.
+    expect(ref.weeks[0]?.zonesOpNorm).toBe(3);
+    expect(ref.weeks[2]?.zonesOpNorm).toBe(3);
     const twee = ref.weeks[1];
     expect(twee?.ritMinuten).toBe(0);
     expect(twee?.telt).toBe(true);
@@ -475,6 +487,13 @@ describe("Onderhoud — uitvoering wél, effect niet (CTL hoort te dalen)", () =
   });
 
   it("blokUitvoering geeft wél een uitkomst, blokCheck is null", () => {
+    // POORT-ASSERTIE: de Onderhoud-normen (19/37/10) moeten door alle drie de weken gehaald
+    // worden, anders toetst dit geval de zone-poort in plaats van de blokCheck-null.
+    expect(
+      ref()
+        .weeks.filter((w) => w.telt)
+        .map((w) => w.zonesOpNorm),
+    ).toEqual([3, 3, 3]);
     expect(blokUitvoering(ref()).geleverd).toBe(true);
     expect(blokCheck(ref(), -5, "Onderhoud")).toBeNull();
   });
@@ -541,6 +560,8 @@ describe("buildBlokReview", () => {
     expect(r?.fase).toBe("afgerond");
     expect(r?.norm).toBe(84);
     expect(r?.uitvoering.beoordeeldeWeken).toBe(3);
+    // POORT-ASSERTIE: eerst dat de uitvoering GELEVERD is, dan pas de check-uitkomst.
+    expect(r?.uitvoering.geleverd).toBe(true);
     expect(r?.check?.uitkomst).toBe("geleverd_niet_gestegen");
   });
 

@@ -15,6 +15,7 @@ import {
   sprongDagen,
 } from "./effect";
 import { NO_BUILD_CTL_DELTA } from "./fatigue";
+import { signatuurSeconden } from "./zonemunt";
 
 // Geen vi.setSystemTime nodig: elke datum is een parameter (effect.ts leest de klok nergens).
 
@@ -80,17 +81,15 @@ function act(
   row[3] = o.minuten ?? 60;
   row[14] = o.rollingFtp === undefined ? null : o.rollingFtp;
   if (o.high != null) {
-    // ZONE-MUNT fase 1b — `high` zijn WERKminuten, verdeeld in de vorm die het plan vraagt
-    // (bibliotheek-signatuur, circa 28/56/16). Alles in Z4 zetten zou deze weken op de zone-poort
-    // laten vallen, en dan meten deze tests de effect-poort niet meer maar de munt.
-    const totaal = Math.round(o.high * 60);
-    const tempoS = Math.round(totaal * 0.282137);
-    const drempelS = Math.round(totaal * 0.562462);
+    // ZONE-MUNT fase 1b — `high` zijn WERKminuten, verdeeld in de vorm die het plan vraagt,
+    // AFGELEID uit `bibliotheekSignatuur` en niet uitgetypt. Alles in Z4 zetten zou deze weken op de
+    // zone-poort laten vallen, en dan meten deze tests de effect-poort niet meer maar de munt.
+    const s = signatuurSeconden(o.high);
     row[15] = JSON.stringify([
       { id: "Z2", secs: 120 * 60 },
-      { id: "Z3", secs: tempoS },
-      { id: "Z4", secs: drempelS },
-      { id: "Z5", secs: totaal - tempoS - drempelS },
+      { id: "Z3", secs: s.tempo },
+      { id: "Z4", secs: s.drempel },
+      { id: "Z5", secs: s.anaeroob },
     ]);
   }
   return row;
@@ -455,6 +454,10 @@ describe("buildBlokReview — de twee effect-poorten", () => {
   it("fase lopend → effect null (het venster is nog niet compleet)", () => {
     const r = review({ weekMondayISO: "2026-07-20" });
     expect(r?.fase).toBe("lopend");
+    // POORT-ASSERTIE (ROADMAP punt 6, eerste eis): eerst dat de uitvoering GELEVERD is, dan pas de
+    // effect-uitkomst. Zonder deze regel zou een fixture die stil onder de zone-norm zakt dezelfde
+    // null geven — om de verkeerde reden, en de test blijft groen.
+    expect(r?.uitvoering.geleverd).toBe(true);
     expect(r?.effect).toBeNull();
   });
 
