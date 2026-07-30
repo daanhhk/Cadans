@@ -27,6 +27,7 @@ import {
   getFatigueShift,
   getOverrides,
   getPlanner,
+  getPowerZones,
   getRpe,
   getSettings,
   getWeekplans,
@@ -80,7 +81,12 @@ import {
 // De 5-bucket-vouwing van de GEREDEN kant woont sinds fase 1a van de zone-munt in
 // `zonemunt.ts` (docs/ZONE-MUNT-ONTWERP.md §2): één bron voor beide kanten van de munt.
 // Hier alleen geïmporteerd en her-geëxporteerd, zodat bestaande aanroepers ongemoeid blijven.
-import { actualZone5_, type Zone5, type Zone5Key } from "./zonemunt";
+import {
+  actualZone5_,
+  type Zone5,
+  type Zone5Key,
+  zone5Grenzen,
+} from "./zonemunt";
 
 export { actualZone5_, type Zone5, type Zone5Key };
 
@@ -1270,6 +1276,7 @@ export async function loadSchemaWeek(): Promise<{
     checkin,
     fatigueShift,
     dosisTredeRow,
+    powerZonesRow,
   ] = await Promise.all([
     getSettings(),
     getPlanner(monday),
@@ -1283,6 +1290,7 @@ export async function loadSchemaWeek(): Promise<{
     getCheckin(todayISO),
     getFatigueShift(),
     getDosisTrede(),
+    getPowerZones(),
   ]);
 
   const activities = parseActivityRows(activitiesRes);
@@ -1388,6 +1396,12 @@ export async function loadSchemaWeek(): Promise<{
       fatigue = { state: "offer", dir, tsbTrend: trend, blok, preview };
     }
   }
+  // ROADMAP punt 6 fase 2 — DE ZONE-GRENZEN. Eén afgeleide, gevoed uit de route en NOOIT uit een
+  // constante: zowel de blok-terugblik als het dosis-trede-voorstel krijgen deze waarde verplicht
+  // mee. `zone5Grenzen` doet de volledige toets en valt bij null of onbruikbaar terug op
+  // ZONE5_GRENZEN_DEFAULT, dus zonder gesynchroniseerde zones is het gedrag dat van vandaag.
+  const grenzen = zone5Grenzen(powerZonesRow);
+
   // 5a-ii — de BLOK-TERUGBLIK. Eigen CTL-anker: `blokReviewVenster` levert de maandag van blokweek 4
   // van het BEOORDEELDE blok, zodat computeBlockCtlDelta exact de drie opbouwweken meet. Het
   // fatigue-pad hierboven blijft ONGEWIJZIGD en houdt zijn eigen anker op de huidige maandag — dat
@@ -1408,6 +1422,7 @@ export async function loadSchemaWeek(): Promise<{
         events,
         overrides,
         dosisTrede,
+        grenzen,
       })
     : null;
 
@@ -1420,6 +1435,7 @@ export async function loadSchemaWeek(): Promise<{
     doel: settings?.doel ?? null,
     weekUren: settings?.weekUren ?? null,
     trede: dosisTrede,
+    grenzen,
     beantwoordBlok:
       dosisTredeRow.doel === (settings?.doel ?? null)
         ? (dosisTredeRow.blok ?? null)

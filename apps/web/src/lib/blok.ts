@@ -152,6 +152,11 @@ export function blokDosisNorm(
   // anders zakt het plan onder zijn eigen meetlat (docs/DOSIS-TREDE-RECON.md §3). Constanten
   // komen uit de engine, niet uit eigen getallen hier. Weggelaten of 0 → ongewijzigd.
   dosisTrede?: number | null,
+  // ROADMAP punt 6 fase 2 — de ZONE-GRENZEN waarop de vorm van de norm wordt afgeleid. OPTIONEEL
+  // met de default, want deze functie heeft veel aanroepers die byte-identiek moeten blijven;
+  // de aanroepers die de gesynchroniseerde waarde WEL moeten doorgeven krijgen hem verplicht
+  // (zie buildBlokReview en dosisTredeVoorstel). Zie docs/ZONE-SYNC-BOUWDOC.md §5.
+  grenzen: readonly number[] = ZONE5_GRENZEN_DEFAULT,
 ): BlokDosisNorm | null {
   if (weekUren == null || !Number.isFinite(weekUren) || weekUren <= 0) {
     return null;
@@ -173,7 +178,7 @@ export function blokDosisNorm(
   // uitleest zwaait mee met de variant-rotatie van de recency-seed (ZONE-MUNT-ONTWERP §3.2). De
   // fracties worden AFGELEID, nooit ingetypt: eigen zones geven vanzelf een eigen vorm.
   const dosis = prikkels * minPerPrikkel;
-  const sig = bibliotheekSignatuur(ZONE5_GRENZEN_DEFAULT);
+  const sig = bibliotheekSignatuur(grenzen);
   return {
     prikkels,
     minPerPrikkel,
@@ -304,8 +309,15 @@ export function buildBlokReferent(input: {
   todayISO: string;
   /** ROADMAP stap 2 — tilt de norm mee met het plan. Weggelaten of 0 → ongewijzigd. */
   dosisTrede?: number | null;
+  /** ROADMAP punt 6 fase 2 — de zone-grenzen; weggelaten → ZONE5_GRENZEN_DEFAULT. */
+  grenzen?: readonly number[];
 }): BlokReferent | null {
-  const dosis = blokDosisNorm(input.doel, input.weekUren, input.dosisTrede);
+  const dosis = blokDosisNorm(
+    input.doel,
+    input.weekUren,
+    input.dosisTrede,
+    input.grenzen,
+  );
   if (!dosis) return null;
   // Doel zonder mesocyclus → geen kalender-deload, dus ook blokweek 4 draagt de volle norm.
   const heeftDeload = profileForDoel_(input.doel ?? "")?.mesoCyclus !== false;
@@ -617,6 +629,12 @@ export function dosisTredeVoorstel(input: {
   trede: number;
   /** De blokstart waarvoor al een antwoord is weggeschreven, of null. */
   beantwoordBlok: string | null;
+  /** ROADMAP punt 6 fase 2 — de ZONE-GRENZEN, VERPLICHT en niet optioneel. Een optioneel veld
+   * kan bij een aanroeper wegvallen en valt dan STIL terug op de default: precies het
+   * dode-invoer-patroon uit docs/WERKWIJZE.md, waarbij de grep naar de aanroep slaagt, de tests
+   * groen zijn en de app de gesynchroniseerde waarde toch nooit ziet. Verplicht maakt vergeten
+   * een compileerfout. */
+  grenzen: readonly number[];
 }): DosisTredeVoorstel | null {
   const r = input.review;
   if (!r || r.fase !== "afgerond") return null;
@@ -634,8 +652,13 @@ export function dosisTredeVoorstel(input: {
   const blokStart = blokStartVoorWeek(input.doelStart, input.weekMondayISO);
   if (input.beantwoordBlok === blokStart) return null;
 
-  const nu = blokDosisNorm(input.doel, input.weekUren, huidig);
-  const straks = blokDosisNorm(input.doel, input.weekUren, huidig + 1);
+  const nu = blokDosisNorm(input.doel, input.weekUren, huidig, input.grenzen);
+  const straks = blokDosisNorm(
+    input.doel,
+    input.weekUren,
+    huidig + 1,
+    input.grenzen,
+  );
   if (!nu || !straks) return null;
 
   return {
@@ -699,6 +722,12 @@ export function buildBlokReview(input: {
   overrides?: OverrideEntry[];
   /** ROADMAP stap 2 — de dosis-trede tilt de NORM op waartegen dit blok beoordeeld wordt. */
   dosisTrede?: number | null;
+  /** ROADMAP punt 6 fase 2 — de ZONE-GRENZEN, VERPLICHT en niet optioneel. Een optioneel veld
+   * kan bij een aanroeper wegvallen en valt dan STIL terug op de default: precies het
+   * dode-invoer-patroon uit docs/WERKWIJZE.md, waarbij de grep naar de aanroep slaagt, de tests
+   * groen zijn en de app de gesynchroniseerde waarde toch nooit ziet. Verplicht maakt vergeten
+   * een compileerfout. */
+  grenzen: readonly number[];
 }): BlokReview | null {
   const venster = blokReviewVenster(input.doelStart, input.weekMondayISO);
   if (!venster) return null;
@@ -710,6 +739,7 @@ export function buildBlokReview(input: {
     startMonday: venster.startMonday,
     todayISO: input.todayISO,
     dosisTrede: input.dosisTrede,
+    grenzen: input.grenzen,
   });
   if (!ref) return null;
 

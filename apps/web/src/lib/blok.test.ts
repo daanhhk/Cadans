@@ -9,10 +9,15 @@ import {
   blokWeekVanWeek,
   buildBlokReferent,
   buildBlokReview,
+  dosisTredeVoorstel,
   vorigBlokStart,
   weekKwaliteitMinuten,
 } from "./blok";
-import { signatuurSeconden } from "./zonemunt";
+import {
+  signatuurSeconden,
+  ZONE5_GRENZEN_DEFAULT,
+  zone5Grenzen,
+} from "./zonemunt";
 
 // Geen vi.setSystemTime nodig: elke datum is een parameter (blok.ts leest de klok nergens).
 
@@ -220,6 +225,154 @@ function reconRef(todayISO = "2026-07-27") {
   if (!r) throw new Error("referent onverwacht null");
   return r;
 }
+
+// ── ROADMAP punt 6 fase 2 — DE GESYNCHRONISEERDE ZONE-GRENZEN DRAGEN DOOR ────
+// De Z3/Z4-grens van 90 naar 85 verschuiven maakt de tempo-band smaller en de drempel-band
+// breder, dus de bibliotheek-signatuur verschuift minuten van tempo naar drempel. PER PLEK
+// geasserteerd: een gedeelde as kan volledig via één tak lopen en de andere verbergen.
+const STRAKKER: readonly number[] = [55, 75, 85, 105];
+
+describe("de zone-grenzen dragen door tot in de norm", () => {
+  it("(a) blokDosisNorm: een lagere Z3/Z4-grens schuift tempo naar drempel", () => {
+    const standaard = blokDosisNorm("FTP", 5);
+    const eigen = blokDosisNorm("FTP", 5, 0, STRAKKER);
+    if (!standaard || !eigen) throw new Error("norm onverwacht null");
+    // De SCHAAL blijft: prikkels en minuten per prikkel hangen niet aan de zones.
+    expect(eigen.norm).toBe(standaard.norm);
+    expect(eigen.normTempo).toBeLessThan(standaard.normTempo);
+    expect(eigen.normDrempel).toBeGreaterThan(standaard.normDrempel);
+  });
+
+  it("(b) buildBlokReferent geeft de grenzen door aan de weeknormen", () => {
+    const maak = (grenzen?: readonly number[]) =>
+      buildBlokReferent({
+        activities: RECON_ACTS,
+        doel: "FTP",
+        weekUren: 5,
+        startMonday: "2026-06-29",
+        todayISO: "2026-07-27",
+        grenzen,
+      });
+    const standaard = maak();
+    const eigen = maak(STRAKKER);
+    if (!standaard || !eigen) throw new Error("referent onverwacht null");
+    expect(eigen.normTempo).toBeLessThan(standaard.normTempo);
+    expect(eigen.normDrempel).toBeGreaterThan(standaard.normDrempel);
+    // En het komt ook echt op de WEEK terecht, niet alleen op het referent-object.
+    expect(eigen.weeks[0]?.gevraagdTempo).toBeLessThan(
+      standaard.weeks[0]?.gevraagdTempo ?? 0,
+    );
+  });
+
+  it("(b) buildBlokReview geeft de grenzen door", () => {
+    const maak = (grenzen: readonly number[]) =>
+      buildBlokReview({
+        activities: RECON_ACTS,
+        doel: "FTP",
+        weekUren: 5,
+        doelStart: DOEL_START,
+        weekMondayISO: "2026-07-27",
+        todayISO: "2026-07-27",
+        ctlDelta: -5,
+        grenzen,
+      });
+    const standaard = maak(ZONE5_GRENZEN_DEFAULT);
+    const eigen = maak(STRAKKER);
+    expect(eigen?.normTempo).toBeLessThan(standaard?.normTempo ?? 0);
+    expect(eigen?.normDrempel).toBeGreaterThan(standaard?.normDrempel ?? 0);
+  });
+
+  // dosisTredeVoorstel: het VOORSTEL-object draagt alleen de SCHAAL (`normNu`, `normStraks`,
+  // `minNu`, `minStraks`) en geen zone-splitsing, dus de grenzen zijn hier per constructie NIET
+  // in de uitvoer waarneembaar — een rood-test op de uitkomst bestaat niet. Wat wél te toetsen
+  // is: de voorstel-norm komt uit DEZELFDE `blokDosisNorm`-weg als de rest, met de meegegeven
+  // grenzen. De verplichte parameter is vooruit-bedrading: zodra het voorstel een zone-term
+  // toont, is hij al aangesloten en hoeft er niets te worden opgespoord.
+  it("(b) dosisTredeVoorstel leest de norm via dezelfde weg, met de meegegeven grenzen", () => {
+    const review = buildBlokReview({
+      activities: RECON_ACTS,
+      doel: "FTP",
+      weekUren: 5,
+      doelStart: DOEL_START,
+      weekMondayISO: "2026-07-27",
+      todayISO: "2026-07-27",
+      ctlDelta: -5,
+      grenzen: ZONE5_GRENZEN_DEFAULT,
+    });
+    const v = dosisTredeVoorstel({
+      review,
+      doelStart: DOEL_START,
+      weekMondayISO: "2026-07-27",
+      doel: "FTP",
+      weekUren: 5,
+      trede: 0,
+      beantwoordBlok: null,
+      grenzen: ZONE5_GRENZEN_DEFAULT,
+    });
+    expect(v).not.toBeNull();
+    expect(v?.normNu).toBe(
+      blokDosisNorm("FTP", 5, 0, ZONE5_GRENZEN_DEFAULT)?.norm,
+    );
+    expect(v?.normStraks).toBe(
+      blokDosisNorm("FTP", 5, 1, ZONE5_GRENZEN_DEFAULT)?.norm,
+    );
+  });
+
+  // GEMETEN GEVOLG van (b) hierboven: met een STRAKKERE Z3/Z4-grens stijgt de drempel-norm en
+  // haalt het recon-blok hem niet meer, dus de review leest niet-geleverd en het voorstel
+  // VERVALT. Dat is de zichtbare weg waarlangs de grenzen het voorstel bereiken — via de
+  // review, niet via het voorstel-object zelf.
+  it("(b) strakkere grenzen laten het blok vallen en dus het voorstel vervallen", () => {
+    const review = buildBlokReview({
+      activities: RECON_ACTS,
+      doel: "FTP",
+      weekUren: 5,
+      doelStart: DOEL_START,
+      weekMondayISO: "2026-07-27",
+      todayISO: "2026-07-27",
+      ctlDelta: -5,
+      grenzen: STRAKKER,
+    });
+    expect(review?.check?.uitkomst).toBe("niet_geleverd");
+    expect(
+      dosisTredeVoorstel({
+        review,
+        doelStart: DOEL_START,
+        weekMondayISO: "2026-07-27",
+        doel: "FTP",
+        weekUren: 5,
+        trede: 0,
+        beantwoordBlok: null,
+        grenzen: STRAKKER,
+      }),
+    ).toBeNull();
+  });
+
+  it("(c) zonder gesynchroniseerde zones is het gedrag dat van vandaag, langs de volle weg", () => {
+    const viaNull = buildBlokReferent({
+      activities: RECON_ACTS,
+      doel: "FTP",
+      weekUren: 5,
+      startMonday: "2026-06-29",
+      todayISO: "2026-07-27",
+      grenzen: zone5Grenzen(null),
+    });
+    const zonder = buildBlokReferent({
+      activities: RECON_ACTS,
+      doel: "FTP",
+      weekUren: 5,
+      startMonday: "2026-06-29",
+      todayISO: "2026-07-27",
+    });
+    if (!viaNull || !zonder) throw new Error("referent onverwacht null");
+    expect(viaNull.normTempo).toBe(zonder.normTempo);
+    expect(viaNull.normDrempel).toBe(zonder.normDrempel);
+    expect(viaNull.normAnaeroob).toBe(zonder.normAnaeroob);
+    expect(viaNull.weeks.map((w) => w.gevraagdTempo)).toEqual(
+      zonder.weeks.map((w) => w.gevraagdTempo),
+    );
+  });
+});
 
 describe("buildBlokReferent — het gemeten blok 29-06 t/m 20-07", () => {
   it("gevraagd is vlak over de opbouwweken en meso-geschaald in de deload", () => {
@@ -550,6 +703,7 @@ describe("buildBlokReview", () => {
       weekMondayISO: o.weekMondayISO ?? "2026-07-27",
       todayISO: "2026-07-27",
       ctlDelta: o.ctlDelta,
+      grenzen: ZONE5_GRENZEN_DEFAULT,
     });
   }
 
@@ -594,6 +748,7 @@ describe("buildBlokReview", () => {
       weekMondayISO: "2026-07-27",
       todayISO: "2026-07-27",
       ctlDelta: -5,
+      grenzen: ZONE5_GRENZEN_DEFAULT,
     });
     expect(r?.check).toBeNull();
     expect(r?.uitvoering.geleverd).toBe(true);

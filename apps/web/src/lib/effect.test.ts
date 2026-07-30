@@ -15,7 +15,7 @@ import {
   sprongDagen,
 } from "./effect";
 import { NO_BUILD_CTL_DELTA } from "./fatigue";
-import { signatuurSeconden } from "./zonemunt";
+import { signatuurSeconden, ZONE5_GRENZEN_DEFAULT } from "./zonemunt";
 
 // Geen vi.setSystemTime nodig: elke datum is een parameter (effect.ts leest de klok nergens).
 
@@ -436,6 +436,7 @@ describe("buildBlokReview — de twee effect-poorten", () => {
       doelStart: "2026-06-29",
       weekMondayISO: o.weekMondayISO,
       todayISO: "2026-07-27",
+      grenzen: ZONE5_GRENZEN_DEFAULT,
       ctlDelta: -5,
       events: [],
       overrides: [],

@@ -193,6 +193,13 @@ export async function putFatigueShift(
 
 /** ROADMAP stap 2 — GET /api/dosis-trede: niveau + het blok waarvoor de vraag beantwoord is +
  * het doel waarop hij is opgebouwd (of drie nullen). */
+/** GET /api/power-zones — de gesynchroniseerde intervals-zonegrenzen, of null. Null betekent nog
+ * geen bruikbare fiets-rit gezien; `zone5Grenzen` valt dan terug op ZONE5_GRENZEN_DEFAULT. */
+export async function getPowerZones(): Promise<number[] | null> {
+  const r = await apiGet<{ powerZones: number[] | null }>("/api/power-zones");
+  return r?.powerZones ?? null;
+}
+
 export async function getDosisTrede(): Promise<{
   trede: number | null;
   blok: string | null;

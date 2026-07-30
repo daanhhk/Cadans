@@ -27,7 +27,7 @@ import type {
   VerlichtVoorstel,
 } from "../lib/schema";
 import { buildTestVoorstel, type TestVoorstel } from "../lib/testvoorstel";
-import { signatuurSeconden } from "../lib/zonemunt";
+import { signatuurSeconden, ZONE5_GRENZEN_DEFAULT } from "../lib/zonemunt";
 
 // DEV-ONLY preview-loop: voedt de ECHTE SchemaView (PeriodTimeline/WeekLoad/DayStrip + de
 // dagkaart-dispatch) met FIXTURE-data in de exacte ProposalWeek/ProposalDay/DoneEntry-shape,
@@ -582,6 +582,8 @@ function previewReview(o: {
     ctlDelta: o.ctlDelta,
     events: o.events ?? [],
     overrides: [],
+    // Preview-fixture: geen gesynchroniseerde zones, dus expliciet de default.
+    grenzen: ZONE5_GRENZEN_DEFAULT,
   });
 }
 

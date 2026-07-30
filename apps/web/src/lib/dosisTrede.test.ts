@@ -2,6 +2,7 @@ import type { PlannerDay, SettingsInput } from "@cadans/shared";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { type BlokReview, blokDosisNorm, dosisTredeVoorstel } from "./blok";
 import { buildWeekProposal } from "./proposal";
+import { ZONE5_GRENZEN_DEFAULT } from "./zonemunt";
 
 // ROADMAP stap 2 fase 3 — de trede end-to-end via buildWeekProposal, plus de poorten van de
 // kaart. De LADDER kon in fase 1 niet op weekniveau verankerd worden (de seam reikte toen niet
@@ -190,6 +191,7 @@ const BASIS = {
   weekUren: 5,
   trede: 0,
   beantwoordBlok: null as string | null,
+  grenzen: ZONE5_GRENZEN_DEFAULT,
 };
 
 describe("dosis-trede: de poorten van de kaart", () => {
