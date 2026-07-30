@@ -234,13 +234,18 @@ describe("PENDEL term 4 — de counterpart op VOLGORDE", () => {
     const wo = woensdagVan(v);
     const c = wo?.doneCompare;
     expect(c).not.toBeNull();
-    // GEMETEN: gereden 40 min / 29 TSS tegen de HEENrit is op-plan. Tegen de TERUGrit zou de
-    // plan-TSS 42 zijn en de score naar 61 zakken — dat is de onware bewering die dit uitsluit.
+    // GEMETEN, beide toestanden op deze fixture. Tegen de HEENrit: TSS 29/29, chip "Op plan",
+    // score 96. Tegen de TERUGrit (term 4 eruit): TSS 38/29, chip "Licht afgeweken", score 70.
+    // Dat is de onware bewering die dit uitsluit — de rit was precies op plan.
+    //
+    // NIET op `deviate` toetsen: die is in BEIDE toestanden false (hij vraagt state ===
+    // "different", en "Licht afgeweken" is een andere state). Een assertie die de fout niet kan
+    // onderscheiden bewijst niets, en leest wél als bewijs. De CHIP is wat Daan ziet en beweegt.
     const tssRij = c?.rows.find((r) => r.k === "TSS");
     expect(tssRij?.p).toBe("29");
     expect(tssRij?.d).toBe("29");
-    expect(c?.deviate).toBe(false);
-    expect(c?.scorePct).toBeGreaterThanOrEqual(90);
+    expect(c?.chipLabel).toBe("Op plan");
+    expect(c?.scorePct).toBe(96);
   });
 });
 
