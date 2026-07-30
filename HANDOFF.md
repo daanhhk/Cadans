@@ -13,6 +13,30 @@ live tot cutover.
 
 ## Stand
 
+STAND (30 juli 2026) — PUNT 6 IS KLAAR EN STAAT LIVE. De zone-munt leest nu de ECHTE zone-grenzen in
+plaats van ze aan te nemen. Prod: Worker Version `e2069ca1`, migratie `0008_sleepy_gladiator.sql`
+remote toegepast, `sync_state.power_zones_json` gevuld met `[55,75,90,105,120,150,999]`. Suite 757
+tests over 60 bestanden; engine-selftest 1364 asserts. Bouwdoc: `docs/ZONE-SYNC-BOUWDOC.md`.
+
+GEMETEN, EN DAAROM TE GELOVEN. De remote SELECT gaf vóór de eerste app-load NULL en daarna de array:
+de afleiding heeft aantoonbaar OP PROD gevuurd en bestond daar niet al. De blok-kaart noemt na de
+deploy exact dezelfde getallen als ervoor (29 jun Tempo 58/24 · Drempel 37/47 · VO2max 15/13;
+blok-totaal 193/72 · 93/141 · 38/39), zoals hij per constructie moet: Daans eerste vier grenzen ZIJN
+`ZONE5_GRENZEN_DEFAULT`. Lokaal waren 48 van de 48 shots byte- én sha256-identiek voor en na.
+
+DE WEG. `syncActivities` leidt de grenzen af uit de NIEUWSTE fiets-rit met een bruikbare
+`icu_power_zones` — geen tweede endpoint, geen extra route, geen vierde schrijfactie per pageload.
+`GET /api/power-zones` → `loadSchemaWeek` → één `zone5Grenzen(powerZonesRow)` → `buildBlokReview` én
+`buildBlokReferent`. `blokDosisNorm` en `buildBlokReferent` houden een OPTIONELE `grenzen`;
+`buildBlokReview` heeft hem VERPLICHT. Server-zijde wordt alleen "is het een array" getoetst; de
+volledige toets zit in `zone5Grenzen`, die overal terugvalt op de default — daarom is de hele bouw
+inert voor wie niet gesynct heeft.
+
+FOCUS VOLGENDE CHAT: EERST de PENDEL-BUG, dan punt 7 uit `docs/ROADMAP.md`. Die volgorde wijkt
+bewust af van de reeks: punt 7 heeft een deadline in februari 2027, de pendel-bug raakt Daan elke
+week op de dag zelf. Recon-first, want de oorzaak ligt vermoedelijk in de koppeling gedaan↔gepland
+en dat is dezelfde knoop als de geparkeerde per-rit-koppeling.
+
 **DE WEEK-INHAAL-KAART IS WEG — HIJ KON NIET VERSCHIJNEN, EN WAAR HIJ WÉL BEET MAAKTE HIJ DE WEEK ZWAKKER (juli 2026).** Prod NU Worker Version `8cde1d3d-4798-4f36-80e5-fe6ad862d2ef`, gebouwd vanaf `330f5229` (was `14629dd4-72df-4533-87a6-f1c9c18a9e6b`). 3 assets vervangen (`/index.html`, `/sw.js`, `/assets/index-BcidXCXT.js`), 63 ongewijzigd; de bundel KRIMPT van 311,92 naar 310,86 KiB. Verdict-doc `8f567f9` (`docs/INHAAL-5C-VERDICT.md`), opruim-commit `330f522`, plus deze close-out. CI success (run <https://github.com/daanhhk/Cadans/actions/runs/30514172839>). GEEN migratie en geen enkel wrangler-d1-commando, ook geen read; `0007` blijft de laatste remote en de kolom `debt_opt_in_week` staat er nog. CLIENT + WORKER, `git diff --stat HEAD~1 -- packages/engine` leeg.
 - **VLOEREN NU: vitest-totaal 741 over 59 bestanden · engine-selftest-assert-count 1364 ONBEWOGEN** (van 766/62). De daling van 25 tests is BEWUST: drie testbestanden verwijderd (`inhaal.test.ts`, `debtOptIn.test.ts`, `routes.debt-optin.test.ts`). Geen enkele bestaande assertie verzwakt. Lees ze uit de suite; hardcode ze nooit.
 - **DE PREMISSE VAN 5c GOLD ALLEEN VOOR DE BOUW-TAK.** ROADMAP stelde dat 5c de allocator raakt en dus engine-autorisatie vraagt. Dat klopt voor REPAREREN; OPRUIMEN raakt `packages/engine` niet en vraagt geen migratie.

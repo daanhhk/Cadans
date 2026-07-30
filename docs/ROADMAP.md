@@ -94,19 +94,20 @@ punten staat onder *Gesloten — vindplaats*.
    `sync_state.debt_opt_in_week` blijft staan. Begrenzingsbewijs: 40 van 40 harness-shots
    byte-identiek. Live sinds Worker `8cde1d3d`. Verdict: `docs/INHAAL-5C-VERDICT.md`.
    DE WEEK-TEKORT-VRAAG ZELF IS NIET VERVALLEN — die is naar punt 10 verhuisd.
-6. **De dosis-munt per zone** — deels · CLIENT (fase 1, af) / DATA (fase 2, open). Fase 1a en
-   1b zijn live: `weekKwaliteitMinuten` vouwt per zone, `blokDosisNorm` haalt zijn vorm uit
-   `bibliotheekSignatuur`, en het oordeel is per zone zonder compensatie. FASE 2, DE
-   ZONE-SYNC, IS OPEN: `blok.ts:176` roept `bibliotheekSignatuur(ZONE5_GRENZEN_DEFAULT)` aan
-   terwijl `zone5Grenzen` (`zonemunt.ts:48`) de echte grenzen uit `power_zones` kan lezen en
-   geen bron heeft. GEMETEN: Daans grenzen zijn [55, 75, 90, 105] — exact
-   `ZONE5_GRENZEN_DEFAULT` — dus fase 2 is bij hém gedragsneutraal; de winst is een tweede
-   gebruiker en een latere zone-wijziging. Twee eisen gaan vooraf: de shot-harness seedt geen
-   `weekUren` en is daardoor blind voor de kaart, en drie fixtures (`weekRit` in
-   `blok.test.ts`, `act` in `effect.test.ts`, `previewAct` in `Preview.tsx`) hardcoden de
-   signatuur-waarden en horen hun eigen poort te asserteren. Ontwerp:
-   `docs/ZONE-MUNT-ONTWERP.md` §5 stap 2. Fase 3 (de week-baan) is daar VOORWAARDELIJK en
-   staat niet in deze reeks. Raakt een MIGRATIE: migratie eerst, dan deploy.
+6. **De dosis-munt per zone** — KLAAR (fase 1a én fase 2) · CLIENT + DATA. Live op Worker
+   `e2069ca1`. Fase 1a en 1b: `weekKwaliteitMinuten` vouwt per zone, `blokDosisNorm` haalt zijn
+   vorm uit `bibliotheekSignatuur`, en het oordeel is per zone zonder compensatie tussen zones.
+   FASE 2, DE ZONE-SYNC: `syncActivities` leidt de grenzen af uit de nieuwste fiets-rit met een
+   bruikbare `icu_power_zones` en schrijft ze naar `sync_state.power_zones_json` (migratie
+   `0008_sleepy_gladiator.sql`, remote toegepast); `GET /api/power-zones` → `loadSchemaWeek` →
+   één `zone5Grenzen(powerZonesRow)` → `buildBlokReview` én `buildBlokReferent`. Geen tweede
+   endpoint, geen extra sync-route, geen vierde schrijfactie per pageload. De twee vooraf-eisen
+   zijn gedaan: de fixtures leiden hun vorm nu af via `signatuurSeconden` en asserteren hun eigen
+   poort, en de shot-harness seedt `weekUren` plus een blokweek per scenario. GEMETEN dat het bij
+   Daan gedragsneutraal is — zijn eerste vier grenzen ZIJN `ZONE5_GRENZEN_DEFAULT`, lokaal 48 van
+   48 shots byte-identiek, en op prod noemt de blok-kaart na de deploy dezelfde getallen als
+   ervoor. Bouwdoc: `docs/ZONE-SYNC-BOUWDOC.md`. Fase 3 (de week-baan) is daar VOORWAARDELIJK en
+   staat niet in deze reeks.
 7. **De doel-lijst klopt niet** — open · ENGINE. (`DOELEN-SPEC` §6 stap 3.) `DOEL_OPTIONS`
    (`phase.ts:12`) draagt nog VO2max en één `Beklimmingen`. GEMETEN: `climbTypeWorkout_`
    (`planner.ts:1051`) is sinds punt 1 in de praktijk onbereikbaar — hij staat in
@@ -342,6 +343,20 @@ niet; hij verliest niet. Een punt gaat eruit zodra een STAP het opneemt — niet
 - UP-fixture in `Preview.tsx` realistischer maken.
 - Weken-terug-scrollen in de Schema-tab.
 - De weekreeks-fixture staat op drie plekken.
+- PENDEL-BUG — de tweede rit verdwijnt uit de dagdetail. GEZIEN op 30 juli op prod. De dagdetail
+  schakelt op één `done`-vlag PER DAG: zodra er één activiteit binnenkomt rendert de hele dag als
+  voltooid en wordt de resterende geplande sessie niet meer getekend. De pendeldag is de enige dag
+  met twee ritten en dus de enige plek waar het zichtbaar wordt. Het plan zelf is intact — de
+  weekkaart telt beide ritten nog. GEEN regressie van de zone-sync: `SchemaView.tsx` is voor het
+  laatst geraakt in `330f522`, ruim vóór die reeks. Te verifiëren bij de recon: stuurt "Push naar
+  Garmin" de terugrit wél mee (die leest uit het plan, niet uit deze weergave)?
+- DE ZONE-POORT IS EEN HALVE MINUUT STRENGER DAN DE NORM. GEMETEN: een week die exact de norm levert
+  in exact de bibliotheek-vorm haalt de poort op geen enkel doorgerekend dosisniveau (84, 90, 96,
+  102, 108, 66, 56, 50) — hij valt telkens op minstens één zone om, omdat de drie zone-normen elk
+  apart afronden (tot +0,5 minuut) terwijl de splitsing exact is. Op echte ritten niet waarneembaar.
+- HET LOKALE BEELD IS NIET HET PROD-BEELD. De shot-harness toont blok 29-06 t/m 26-07 als GELEVERD,
+  terwijl datzelfde blok op prod 2/3, 1/3 en 2/3 haalde. De lokale D1 draagt andere historie. Geen
+  regressie en geen herijk-aanleiding, wel iets om bij elke prod-verificatie te onthouden.
 
 ### DATA
 
@@ -351,3 +366,6 @@ niet; hij verliest niet. Een punt gaat eruit zodra een STAP het opneemt — niet
 - RESIDU UIT DE MEETOPZET: de ijk-query klonterde Z5, Z6 en Z7 al samen in de kruisproducten,
   dus één tarief 3,08 dekt een mix die in een gepland VO2-blok anders ligt (Daans reeks:
   60/27/12). Splitsen vraagt een NIEUWE read-only meting; uit deze data is het niet te halen.
+- DE HISTORISCHE GRENZEN. Elke activiteit draagt `icu_power_zones`, maar die wordt niet per rit
+  bewaard: alleen de nieuwste wint. Een zone-wijziging midden in een blok is daarmee niet te
+  herleiden. Ongewijzigd geparkeerd.
