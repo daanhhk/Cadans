@@ -152,6 +152,19 @@ const SCENARIOS = [
       6: { minuten: 120, dagtype: "weekend" },
     },
   },
+  // BLOKWEEK 4: dezelfde spec als v7, maar de deloadweek. blokReviewVenster geeft in blokweek 4
+  // fase "lopend" en in blokweek 1 fase "afgerond" — met dit scenario staan BEIDE takken van de
+  // blok-terugblik op beeld in plaats van alleen de afgeronde.
+  {
+    name: "v7-blokweek4",
+    blokWeek: 4,
+    spec: {
+      1: { minuten: 60, dagtype: "vrij" },
+      4: { minuten: 90, dagtype: "vrij" },
+      5: { minuten: 180, dagtype: "weekend" },
+      6: { minuten: 120, dagtype: "weekend" },
+    },
+  },
 ];
 
 /** Poll a URL until it answers 200, or give up after `seconds`. */
@@ -220,9 +233,15 @@ const OVERRIDES = {
   ftp: 280,
   gewicht: 75,
   doel: "FTP",
+  // Vervangen PER SCENARIO in sweep(): de blokweek bepaalt of de blok-kaart bestaat.
   doelStart: "2026-06-29",
   pendelDuurMin: 40,
   pendelAantal: 2,
+  // Zonder GEDECLAREERDE weekuren geeft blokDosisNorm null en kan de blok-terugblik in geen
+  // enkel scenario bestaan — de harness was daar dus blind voor. De ENGINE leest weekUren
+  // NERGENS (hij is meetlat-invoer, geen planner-invoer: DOELEN-SPEC 2A), dus deze seed kan
+  // geen weekplan verschuiven. Hij laat alleen kaarten verschijnen.
+  weekUren: 5,
 };
 
 const EVENT_DATE = "2027-04-17";
@@ -351,12 +370,22 @@ async function capture(page, dir, name, url, probe) {
 }
 
 /** `scenario` null = prod mode: no planner seed, just look at whatever is there. */
-async function sweep(page, scenario, monday, results) {
+async function sweep(page, scenario, monday, results, seededSettings) {
   const label = scenario ? scenario.name : "prod";
   const dir = join(OUT, label);
   mkdirSync(dir, { recursive: true });
   const url = `${WEB}/schema`;
   if (scenario) {
+    // DE BLOKWEEK PER SCENARIO. `doelStart` stond vast op 2026-06-29 terwijl de weekmaandag uit de
+    // ECHTE klok komt, dus de blokweek dreef per kalenderweek — en daarmee zowel de meso-factor als
+    // het BESTAAN van de blok-terugblik (blokReviewVenster geeft alleen in blokweek 1 en 4 een
+    // venster). Nu leidt de harness doelStart af uit de bedoelde blokweek. PUT /api/settings is
+    // FULL-REPLACE, dus de VOLLEDIGE gezaaide body gaat mee met alleen doelStart eroverheen.
+    const blokWeek = scenario.blokWeek ?? 1;
+    const doelStart = plusDays(monday, -(blokWeek - 1) * 7);
+    if (seededSettings) {
+      await apiPut("/api/settings", { ...seededSettings, doelStart });
+    }
     await apiPut(`/api/planner/${monday}`, {
       days: plannerDays(monday, scenario.spec),
     });
@@ -441,6 +470,7 @@ async function main() {
 
   const monday = mondayISO();
   let eventsState = "n/a (prod, read-only)";
+  let seededSettings = null;
   if (PROD) {
     // On a live deployment the REAL date is the point, so no clock pin.
     PINNED = "not pinned (prod, real clock)";
@@ -450,8 +480,12 @@ async function main() {
       `monday (from local clock): ${monday}`,
       // De klok wordt PER SCENARIO gepind (sweep); de gepinde dag staat in elke .txt.
       `clock pinned per scenario: ${SCENARIOS.map((x) => `${x.name}=${plusDays(monday, x.dagOffset ?? 0)}`).join(", ")}`,
+      // De BEDOELDE blokweek en de daaruit berekende doelStart. Het blokweek-raster wordt hier
+      // NIET nagebouwd om het te controleren — een toets die zijn eigen raster nabouwt meet iets
+      // anders dan de app. De kaart noemt zelf de blokdatums; die lees je terug uit de shot.
+      `blokweek per scenario: ${SCENARIOS.map((x) => `${x.name}=bw${x.blokWeek ?? 1} (doelStart ${plusDays(monday, -((x.blokWeek ?? 1) - 1) * 7)})`).join(", ")}`,
     ];
-    await seedSettings(log);
+    seededSettings = await seedSettings(log);
     eventsState = await seedEvents(log);
     writeFileSync(join(OUT, "00-seed.txt"), `${log.join("\n")}\n`, "utf8");
   }
@@ -474,11 +508,11 @@ async function main() {
     const page = await ctx.newPage();
     if (PROD) {
       // One situation only: whatever the live data happens to be.
-      await sweep(page, null, monday, results);
+      await sweep(page, null, monday, results, null);
     } else {
       // De klok-pin staat PER SCENARIO in sweep(): elk scenario mag zijn eigen dag pinnen.
       for (const scenario of SCENARIOS) {
-        await sweep(page, scenario, monday, results);
+        await sweep(page, scenario, monday, results, seededSettings);
       }
     }
   } finally {
