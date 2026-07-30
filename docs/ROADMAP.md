@@ -350,6 +350,16 @@ niet; hij verliest niet. Een punt gaat eruit zodra een STAP het opneemt — niet
 - HET LOKALE BEELD IS NIET HET PROD-BEELD. De shot-harness toont blok 29-06 t/m 26-07 als GELEVERD,
   terwijl datzelfde blok op prod 2/3, 1/3 en 2/3 haalde. De lokale D1 draagt andere historie. Geen
   regressie en geen herijk-aanleiding, wel iets om bij elke prod-verificatie te onthouden.
+- DE GEPLAND-NOEMER ZAKT OP DE DAG ZELF. Een dag die VANDAAG gereden is verliest zijn geplande
+  bijdrage aan alle drie de weekkaart-stats. `plannedForDone` wordt buiten het verleden alleen
+  gevuld als `d.voorgesteldType` gezet is, en die kolom staat in Cadans structureel op null —
+  `repo.ts:397` schrijft 'm bij elke PUT leeg. GEMETEN op de v7-pendel-vorm met gevoede blob: de
+  pendeldag gaat van 446 TSS / 530 min / 5 dagen naar 375 / 450 / 4, een gewone maandag van 60
+  minuten naar 391 / 470 / 4. Zodra de dag verstrijkt leest hij zijn bevroren entry en staat de
+  noemer weer goed. NIET pendel-specifiek: de pendel-fix van juli 2026 raakt dit niet en heeft het
+  bewust laten staan. Eerder genoteerd als "de gepland-noemer verschuift terwijl de week vordert"
+  (V24 bevriest een voorbije dag juist zodat watt-targets niet met terugwerkende kracht
+  meeschuiven). Meting in `docs/PENDEL-RECON.md` paragraaf 2.
 
 ### DATA
 

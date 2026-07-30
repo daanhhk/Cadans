@@ -120,6 +120,15 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
 - **Een dood mechanisme toets je op zijn UITKOMST, niet alleen op zijn bereikbaarheid.** "Deze tak kan niet vuren" is een diagnose, geen verdict: hij zegt wat er niet gebeurt, niet of het gebeuren MOET. Zet de tak daarom kunstmatig aan en meet wat hij dan produceert — pas dat getal beslist tussen repareren en opruimen. Zonder die stap is de gemakkelijke conclusie altijd "bereikbaar maken", want een onbereikbare tak lijkt per definitie een gemis. Aanleiding: de week-inhaal-kaart had drie onafhankelijke redenen om niet te verschijnen, en die drie samen rechtvaardigden hooguit een reparatie. Wat de zaak besliste was de wat-als-run zelf: over 72 cellen leverde die in 60 MINDER high plus anaerobe intentminuten dan het plan dat er al stond, in 12 meer, in nul gelijk. Het mechanisme bood aan een gemiste intensiteitsprikkel in te halen met een lichtere week; bereikbaar maken had dat live gezet. Zelfde familie als "getest is niet aangesloten", maar een stap verder: daar was de vraag of het pad LOOPT, hier of het pad de goede kant OP loopt.
 - **Een controle wordt getoetst tegen de payload uit HETZELFDE prompt.** Ging mis op 30 juli: een prompt vroeg te controleren dat het woord "sport-settings" nergens meer in een doc stond, terwijl de verbatim tekst in datzelfde prompt het woord twee keer bewust gebruikte — het afgewezen alternatief en de gemeten gelijkheid van de waarden. CC weigerde terecht de tekst aan te passen om de controle te laten slagen. Lees een acceptatie-eis na tegen wat je meestuurt vóór je hem verstuurt.
 - **Vooruit-bedrading is dode code met een nettere naam.** Op 30 juli kreeg `dosisTredeVoorstel` een VERPLICHTE `grenzen`-parameter om dode invoer uit te sluiten. CC mat dat zijn uitvoer alleen de schaal draagt en geen zone-splitsing, dus de parameter kon de uitkomst per constructie niet beïnvloeden — een rood-test erop bestaat niet. Hij is er weer uit. Een verplichte parameter die de uitvoer niet kán raken is geen bescherming maar een belofte die de functie niet waarmaakt: wie de aanroep leest concludeert dat de functie zone-bewust is, en dat is ze niet.
+- **Een instructie om iets te BEHOUDEN veronderstelt dat het er staat.** Controleer de vindplaats
+  vóór je zo'n instructie meestuurt; anders krijgt de uitvoerder twee eisen die elkaar uitsluiten
+  en valt het te behouden punt stilzwijgend weg. Zelfde familie als "een controle wordt getoetst
+  tegen de payload uit hetzelfde prompt", maar een stap eerder: daar werd een eis niet tegen de
+  MEEGESTUURDE tekst gelegd, hier een behoud-instructie niet tegen de BESTAANDE tekst. Aanleiding:
+  het close-out-prompt van de pendel-fix zei "haal het PENDEL-BUG-item eruit, zet er niets voor in
+  de plaats" én "laat het item over de gepland-noemer wel staan", terwijl dat item alleen bestond
+  als kruisverwijzing bínnen het te verwijderen item. CC meldde het correct als afwijking. De chat
+  had de parkeerlijst zelf al gelezen en had het dus kunnen weten.
 
 ## Vorm van een CC-prompt
 
