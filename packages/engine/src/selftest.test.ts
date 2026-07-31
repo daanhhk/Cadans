@@ -1833,7 +1833,11 @@ describe("engine selftest", () => {
 
   // ── Fase 1 deel 2b.1 — profiel-laag + goalWorkout_-selector (deterministisch) ──
   it("testGoalWorkout", () => {
-    const klim = profileForDoel_("Beklimmingen"),
+    // ROADMAP punt 7: het oude generieke klim-profiel is gesplitst. `klim` hieronder is de
+    // VOORTZETTING (klim_lang) — daarop blijft elke bestaande assertie in dit blok gelden.
+    // `kort` is het NIEUWE profiel; de twee scheiden zich op de intent-keuze, zie hieronder.
+    const klim = profileForDoel_("Lange beklimmingen"),
+      kort = profileForDoel_("Korte beklimmingen"),
       ftp = profileForDoel_("FTP");
     // determinisme: zelfde input → zelfde keuze
     const g1 = goalWorkout_(klim, "Build", 75, []);
@@ -1846,18 +1850,34 @@ describe("engine selftest", () => {
       "drempel",
       goalPickIntent_(klim, "Build", null),
     );
+    // DE SPLITSING IS HIER TE ZIEN: lang blijft op drempel in BEIDE fases, kort gaat op vo2.
+    // Zonder de nieuwe intentGewichten van klim_kort vallen de twee `kort`-regels om.
     assert_(
-      "goalWO klim Peak->vo2",
-      "vo2",
+      "goalWO klim_lang Peak->drempel",
+      "drempel",
       goalPickIntent_(klim, "Peak", null),
+    );
+    assert_(
+      "goalWO klim_kort Build->vo2",
+      "vo2",
+      goalPickIntent_(kort, "Build", null),
+    );
+    assert_(
+      "goalWO klim_kort Peak->vo2",
+      "vo2",
+      goalPickIntent_(kort, "Peak", null),
     );
     assert_(
       "goalWO ftp Build->drempel",
       "drempel",
       goalPickIntent_(ftp, "Build", null),
     );
-    // filter: bij 75 min drempel past ALLEEN threshold_overunder (threshold_long min 82)
-    assert_("goalWO filter id", "threshold_overunder", g1.archetypeId);
+    // filter: bij 75 min passen TWEE drempel-sjablonen — threshold_overunder [54,90] en
+    // threshold_2x20 [75,110]; threshold_long begint pas op 82. De oude opmerking hier zei
+    // "alleen threshold_overunder" en dat was al onwaar; het oude klim-profiel had simpelweg
+    // geen voorkeur voor een van de twee. klim_lang draagt threshold_2x20 op 0,20 (§3.4:
+    // aanhoudende blokken 8-30 min) en die voorkeur beslist nu.
+    assert_("goalWO filter id", "threshold_2x20", g1.archetypeId);
     assert_("goalWO filter type", "threshold", g1.type);
     let rec: any = null;
     ARCHETYPES.forEach((a: any) => {
@@ -1896,21 +1916,39 @@ describe("engine selftest", () => {
     // profiel-kiezer
     assert_("goalWO doel FTP", PROFILES.ftp, profileForDoel_("FTP"));
     assert_(
-      "goalWO doel Beklimmingen",
-      PROFILES.klim,
+      "goalWO doel Korte beklimmingen",
+      PROFILES.klim_kort,
+      profileForDoel_("Korte beklimmingen"),
+    );
+    assert_(
+      "goalWO doel Lange beklimmingen",
+      PROFILES.klim_lang,
+      profileForDoel_("Lange beklimmingen"),
+    );
+    // LEGACY, via normalizeDoel_: de opgeslagen waarden uit D1 landen op een canoniek profiel
+    // in plaats van stil door te vallen. "Beklimmingen" is het A-doel (DOELEN-SPEC §3.3).
+    assert_(
+      "goalWO legacy Beklimmingen->klim_kort",
+      PROFILES.klim_kort,
       profileForDoel_("Beklimmingen"),
     );
-    assert_("goalWO doel VO2max", PROFILES.vo2max, profileForDoel_("VO2max"));
+    assert_(
+      "goalWO legacy VO2max->ftp",
+      PROFILES.ftp,
+      profileForDoel_("VO2max"),
+    );
     assert_(
       "goalWO doel Conditie",
       PROFILES.conditie,
       profileForDoel_("Conditie"),
     );
+    assert_("goalWO doel onbekend->ftp", PROFILES.ftp, profileForDoel_("xyz"));
     assert_(
-      "goalWO doel onbekend->klim",
-      PROFILES.klim,
-      profileForDoel_("xyz"),
+      "goalWO doel null->ftp",
+      PROFILES.ftp,
+      profileForDoel_(null as any),
     );
+    assert_("goalWO doel leeg->ftp", PROFILES.ftp, profileForDoel_(""));
     // effectTag->engine-type zit in ALLE bekende koppel-maps (cruciaal voor de 2b.2-inplug)
     GOAL_KWALITEIT_INTENTS_.forEach((it: any) => {
       const t = COACH_INTENT_ENGINE_TYPE_[it];
@@ -1944,11 +1982,13 @@ describe("engine selftest", () => {
       gShort && gShort.type,
     );
     // C1b coverage-bias = MODULATIE, niet override (COVERAGE_BOOST_ 0.10):
-    // klim NAUWE keuze (vo2 0.35+0.10=0.45 > drempel 0.40) → anaerobic-gat tipt naar vo2.
+    // klim_kort NAUWE keuze in Build (vo2 0.45+0.10=0.55 > drempel 0.35) → het anaerobic-gat
+    // tipt naar vo2. Op klim_lang doet dezelfde boost niets (0.15+0.10 tegen 0.50) — die
+    // tegenproef staat in testCovGateBase.
     assert_(
-      "goalWO bias klim anaerobic-gat->vo2",
+      "goalWO bias klim_kort anaerobic-gat->vo2",
       "vo2",
-      goalPickIntent_(klim, "Build", null, 75, {
+      goalPickIntent_(kort, "Build", null, 75, {
         low: true,
         high: true,
         anaerobic: false,
@@ -2190,7 +2230,7 @@ describe("engine selftest", () => {
 
   // ── Pass 1 — volume-adaptieve Base-intent-weging (volumeModulatie, rauwe sort-scores) ──
   it("testVolumeModulatie", () => {
-    const klim = PROFILES.klim,
+    const klim = PROFILES.klim_lang,
       ftp = PROFILES.ftp;
     // klim Base @V<V0: drempel 0.45 > sweetspot 0.35 > vo2 0.25 (geen vo2-boost → vo2 3rd → afwezig in 2-quality).
     const k6 = goalEffWeights_(klim, "Base", 6);
@@ -2199,13 +2239,19 @@ describe("engine selftest", () => {
       true,
       k6.vo2 < k6.sweetspot && k6.sweetspot < k6.drempel,
     );
-    // klim @13u: vo2 ramt boven sweetspot (#2), blijft onder drempel (#1) → vo2 wordt #2, nooit #1.
+    // klim_lang @13u: de ramp is gecapt op 0,15 terwijl Base vo2 op 0,05 heeft gedrukt → vo2
+    // komt op 0,17 en blijft DERDE. Een klim-profiel krijgt dus niet vanzelf vo2 terug bij
+    // volume; dat hangt aan het profiel-gewicht, niet aan de uren.
     const k13 = goalEffWeights_(klim, "Base", 13);
     assert_(
-      "vol klim Base V13 vo2 enters",
+      "vol klim_lang Base V13 vo2 blijft 3rd",
       true,
-      k13.sweetspot < k13.vo2 && k13.vo2 < k13.drempel,
+      k13.vo2 < k13.sweetspot && k13.sweetspot < k13.drempel,
     );
+    // klim_kort @13u: zelfde cap, maar vo2 start op 0,35 → +0,12 tilt hem naar 0,47 en daarmee
+    // BOVEN drempel (0,40). Zonder de nieuwe intentGewichten van klim_kort valt deze regel om.
+    const kk13 = goalEffWeights_(PROFILES.klim_kort, "Base", 13);
+    assert_("vol klim_kort Base V13 vo2 leidt", true, kk13.drempel < kk13.vo2);
     // ftp Base @V<V0: drempel 0.50 > sweetspot 0.45 > vo2 0.10 (vo2 3rd).
     const f6 = goalEffWeights_(ftp, "Base", 6);
     assert_(
@@ -2244,7 +2290,10 @@ describe("engine selftest", () => {
 
   // ── Pass 1b — coverage-boost volume-gate in Base (vo2 niet geïnjecteerd ≤ U0) ──
   it("testCovGateBase", () => {
-    const klim = PROFILES.klim,
+    // De coverage-boost is alleen ZICHTBAAR op een profiel dat vo2 zwaar genoeg weegt. klim_kort
+    // is dat; klim_lang niet — die staat onderaan expliciet als tegenproef.
+    const klim = PROFILES.klim_kort,
+      lang = PROFILES.klim_lang,
       ftp = PROFILES.ftp;
     const gap = { low: true, high: true, anaerobic: false }; // alleen 'n anaerobic-gat
     function pick(p: any, fase: any, V: any) {
@@ -2263,24 +2312,43 @@ describe("engine selftest", () => {
       pick(klim, "Build", 6),
       pick(klim, "Build", 20),
     );
+    // TEGENPROEF op hetzelfde mechanisme: bij klim_lang komt vo2 met ramp én boost op 0,30 en
+    // blijft drempel (0,55) leidend. De poort is dus geen doel-schakelaar maar een gewicht-som.
+    assert_(
+      "covgate klim_lang Base V15 niet-vo2",
+      true,
+      pick(lang, "Base", 15) !== "vo2",
+    );
+    assert_(
+      "covgate klim_lang Build niet-vo2",
+      true,
+      pick(lang, "Build", 6) !== "vo2",
+    );
   });
 
-  // ── Pass 2-track — eigen PROFILES vo2max + conditie (ordering + neutraal + archetype-resolutie) ──
+  // ── Pass 2-track — het VO2-GELEIDE profiel + conditie (ordering + neutraal + archetype-resolutie) ──
+  // ROADMAP punt 7: `PROFILES.vo2max` bestaat niet meer (VO2max vervalt als DOEL). De eigenschap
+  // die dit blok toetst — een vo2-geleid profiel dat in Base wordt teruggedrukt en bij hoger volume
+  // weer opkomt — draagt nu `klim_kort`, met vo2 0,45 als zwaarste intent. Zelfde toets, levende
+  // subject.
   it("testProfielenVo2maxConditie", () => {
-    const vo2 = PROFILES.vo2max,
+    const vo2 = PROFILES.klim_kort,
       cond = PROFILES.conditie;
-    // vo2max Base: drempel 0.40 > sweetspot 0.35 > vo2 0.30 (vo2 3e); @hoog V vo2 #2 (< #1 drempel).
+    // klim_kort Base: GOAL_FASE_MOD_.Base drukt vo2 met −0,10 → drempel 0,40 > vo2 0,35 > ss 0,30.
+    // De vo2-kop uit het profiel overleeft de Base-demping dus NIET; dat is de winter-uitkomst
+    // die ook `docs/DOEL-LIJST-RECON.md` §10 noemt.
     const v6 = goalEffWeights_(vo2, "Base", 6);
     assert_(
-      "prof vo2max Base V6 vo2 3rd",
+      "prof klim_kort Base V6 vo2 2nd",
       true,
-      v6.vo2 < v6.sweetspot && v6.sweetspot < v6.drempel,
+      v6.sweetspot < v6.vo2 && v6.vo2 < v6.drempel,
     );
+    // Boven U0 = 9 uur loopt de vo2-ramp (slope 0,03, cap 0,15): bij 13 uur +0,12 → vo2 #1.
     const v13 = goalEffWeights_(vo2, "Base", 13);
     assert_(
-      "prof vo2max Base V13 vo2 enters",
+      "prof klim_kort Base V13 vo2 leidt",
       true,
-      v13.sweetspot < v13.vo2 && v13.vo2 < v13.drempel,
+      v13.drempel < v13.vo2 && v13.sweetspot < v13.drempel,
     );
     // conditie Base: sweetspot 0.55 > drempel 0.40 > vo2 0.10 (sweetspot-led); @hoog V vo2 #2 (< #1 sweetspot).
     const c6 = goalEffWeights_(cond, "Base", 6);
@@ -2301,7 +2369,7 @@ describe("engine selftest", () => {
         hi = goalEffWeights_(p, fase, 20);
       return GOAL_KWALITEIT_INTENTS_.every((k: any) => lo[k] === hi[k]);
     }
-    assert_("prof vo2max Build neutraal", true, neutral(vo2, "Build"));
+    assert_("prof klim_kort Build neutraal", true, neutral(vo2, "Build"));
     assert_("prof conditie Build neutraal", true, neutral(cond, "Build"));
     // Archetype-resolutie smoke: goalWorkout_ levert een geldig archetype per profiel op haalbare duur.
     function archOk(p: any) {
@@ -2312,7 +2380,7 @@ describe("engine selftest", () => {
         ARCHETYPES.filter((a: any) => a.id === g.archetypeId).length > 0
       );
     }
-    assert_("prof vo2max archetype-resolutie", true, archOk(vo2));
+    assert_("prof klim_kort archetype-resolutie", true, archOk(vo2));
     assert_("prof conditie archetype-resolutie", true, archOk(cond));
   });
 
@@ -2593,6 +2661,47 @@ describe("engine selftest", () => {
       t === "threshold" || t === "sweet_spot" || t === "vo2max",
     );
     assert_("kiPlug Build archetypeId-set", true, out.archetypeId != null);
+
+    // ROADMAP punt 7 — DE GRENS WAAR climbTypeWorkout_ STOND. GEMETEN over alle 15
+    // doel-fase-combinaties: goalWorkout_ levert vanaf 33 minuten een kandidaat, dus de dode
+    // fallback kon alleen nog vuren op een kwaliteits-eligible dag van 32 minuten of korter.
+    // Precies daar toetsen we: bij 30 minuten geeft goalWorkout_ null, en de dag hoort door te
+    // vallen naar de CATEGORIE-tak van het doel ("klim"). Met de fallback terug zou hier
+    // "vo2max" staan — het klimTYPE van het event dat het DOEL van de gebruiker overrulet.
+    // Deze assertie is per constructie rood zonder de verwijdering.
+    const kort30: any = {};
+    assert_(
+      "punt7: 30 min + klimType kort → categorie-tak, niet de dode fallback",
+      "klim",
+      keyIntensity("Korte beklimmingen", "Build", dek, "kort", false, {
+        beschikbareTijd: 30,
+        recency: [],
+        settings: { doel: "Korte beklimmingen" },
+        out: kort30,
+      }),
+    );
+    // TEGENPROEF op dezelfde grens: één minuut hoger levert goalWorkout_ wél een archetype, dus
+    // daar heeft de fallback sowieso nooit gevuurd. De grens ligt op 33, niet op "nooit".
+    const kort33: any = {};
+    const t33 = keyIntensity(
+      "Korte beklimmingen",
+      "Build",
+      dek,
+      "kort",
+      false,
+      {
+        beschikbareTijd: 33,
+        recency: [],
+        settings: { doel: "Korte beklimmingen" },
+        out: kort33,
+      },
+    );
+    assert_(
+      "punt7: 33 min levert wél een archetype",
+      true,
+      kort33.archetypeId != null,
+    );
+    assert_("punt7: 33 min is geen categorie-tak", true, t33 !== "klim");
     // order-invariant: Taper/Recovery nemen hun eigen tak (vóór de goalWorkout_-stap), GEEN archetype.
     const o2: any = {};
     assert_(
@@ -2836,7 +2945,7 @@ describe("engine selftest", () => {
         dW(6, "weekend", 120),
       ];
     }
-    const klim = PROFILES.klim,
+    const klim = PROFILES.klim_lang,
       ftp = PROFILES.ftp;
     const dekFresh = { low: false, high: false, anaerobic: false };
     const today = new Date(2026, 5, 8);
@@ -2913,9 +3022,12 @@ describe("engine selftest", () => {
     // de zondag van 120 verslaat dagIdx 2 eveneens. De quality-dagen verschuiven dus van {0, 2}
     // naar {1, 6}. Dat een pendeldag kwaliteit KAN dragen lag al vast — zie "alloc Base pendel
     // kan quality" verderop; nieuw is alleen dat draagkracht bepaalt wie wint.
+    // Het TYPE volgt het profiel-intent: klim_lang is drempel-geleid (0,50), dus de dag draagt
+    // threshold waar het oude generieke klim-profiel vo2max koos. Wat deze assertie bewaakt is
+    // dát de pendeldag kwaliteit draagt; het type is de gemeten uitkomst van de nieuwe weging.
     assert_(
-      "alloc klim Build pendeldag draagt quality",
-      "vo2max",
+      "alloc klim_lang Build pendeldag draagt quality",
+      "threshold",
       pa[1] && pa[1].type,
     );
     assert_(
@@ -3027,7 +3139,11 @@ describe("engine selftest", () => {
       "quality",
       pb[5] && pb[5].role,
     );
-    assert_("alloc Base langste dag type", "vo2max", pb[5] && pb[5].type);
+    // ROADMAP punt 7: het type volgt de nieuwe weging van klim_lang (drempel 0,50 /
+    // sweetspot 0,35 / vo2 0,15, in Base gemoduleerd naar 0,55 / 0,45 / 0,05). Waar het oude
+    // generieke klim-profiel hier vo2max koos, kiest lang nu sweet_spot. De rol-assertie
+    // hierboven is wat het gedrag bewaakt; dit is de gemeten uitkomst van de weging.
+    assert_("alloc Base langste dag type", "sweet_spot", pb[5] && pb[5].type);
     assert_("alloc Base 2 quality", 2, qCount(pb));
     // Pass 1: Base loopt nu via goalWorkout_ (was hardcoded sweet_spot) → quality = echte archetypes,
     // drempel-led (#1 Base-intent), geen herhaalde vorm. Bij dit fixture-volume (~9,5u) komt vo2 via de
@@ -4117,7 +4233,12 @@ describe("engine selftest", () => {
         1,
         effectiveMesoWeek_(mw, { doel: "Onderhoud" }),
       );
-      for (const d of ["FTP", "Conditie", "Beklimmingen", "VO2max"]) {
+      for (const d of [
+        "FTP",
+        "Conditie",
+        "Korte beklimmingen",
+        "Lange beklimmingen",
+      ]) {
         assert_(
           `effMeso ${d} mw${mw} ongewijzigd`,
           mw,
@@ -4125,7 +4246,9 @@ describe("engine selftest", () => {
         );
       }
     }
-    // REGRESSIE-guard: de 4 bestaande doel→profiel-mappings ongewijzigd.
+    // REGRESSIE-guard: de doel→profiel-mappings. FTP en Conditie zijn ONGEWIJZIGD; de twee
+    // klim-doelen zijn nieuw (ROADMAP punt 7) en de twee legacy-strings landen via
+    // normalizeDoel_ op een canoniek profiel in plaats van op een lege dispatch.
     assert_("regr FTP → ftp", "ftp", profileForDoel_("FTP").id);
     assert_(
       "regr Conditie → conditie",
@@ -4133,11 +4256,21 @@ describe("engine selftest", () => {
       profileForDoel_("Conditie").id,
     );
     assert_(
-      "regr Beklimmingen → klim",
-      "klim",
+      "regr Korte beklimmingen → klim_kort",
+      "klim_kort",
+      profileForDoel_("Korte beklimmingen").id,
+    );
+    assert_(
+      "regr Lange beklimmingen → klim_lang",
+      "klim_lang",
+      profileForDoel_("Lange beklimmingen").id,
+    );
+    assert_(
+      "regr legacy Beklimmingen → klim_kort",
+      "klim_kort",
       profileForDoel_("Beklimmingen").id,
     );
-    assert_("regr VO2max → vo2max", "vo2max", profileForDoel_("VO2max").id);
+    assert_("regr legacy VO2max → ftp", "ftp", profileForDoel_("VO2max").id);
   });
 
   // ── Korte quality-archetypes (Fase 2a, ~32-40 min voor Onderhoud) ───
@@ -4271,8 +4404,27 @@ describe("engine selftest", () => {
     assert_("onderhoud@40 → kort drempel/sweetspot", true, kortQuality(gO));
     const gF = goalWorkout_(profileForDoel_("FTP"), "Build", 40, []);
     assert_("ftp@40 → kort drempel/sweetspot (nu WEL)", true, kortQuality(gF));
-    const gK = goalWorkout_(profileForDoel_("Beklimmingen"), "Build", 40, []);
-    assert_("klim@40 → kort drempel/sweetspot (nu WEL)", true, kortQuality(gK));
+    const gK = goalWorkout_(
+      profileForDoel_("Lange beklimmingen"),
+      "Build",
+      40,
+      [],
+    );
+    assert_(
+      "klim_lang@40 → kort drempel/sweetspot (nu WEL)",
+      true,
+      kortQuality(gK),
+    );
+    // klim_kort is vo2-geleid en krijgt in dezelfde band een KORT VO2-sjabloon. Het gat 35-51
+    // blijft dus dicht — er komt een kwaliteitsprikkel, alleen met de intent van dít doel.
+    const gKk = goalWorkout_(
+      profileForDoel_("Korte beklimmingen"),
+      "Build",
+      40,
+      [],
+    );
+    assert_("klim_kort@40 → geen null", true, gKk != null);
+    assert_("klim_kort@40 → vo2-prikkel", "vo2max", gKk && gKk.type);
   });
 
   // ── Prikkel-in-de-rit fase 1: invarianten B/C/D (BEWIJS, geen steekproef) ──
@@ -4306,12 +4458,27 @@ describe("engine selftest", () => {
       goalWorkout_(profileForDoel_(d), "Build", 40, [])?.type ?? null;
     assert_("C: FTP@40 → drempel", "threshold", c40("FTP"));
     assert_("C: Conditie@40 → sweetspot", "sweet_spot", c40("Conditie"));
-    assert_("C: Beklimmingen@40 → drempel", "threshold", c40("Beklimmingen"));
-    assert_("C: VO2max@40 → vo2", "vo2max", c40("VO2max"));
+    assert_(
+      "C: Lange beklimmingen@40 → drempel",
+      "threshold",
+      c40("Lange beklimmingen"),
+    );
+    assert_(
+      "C: Korte beklimmingen@40 → vo2",
+      "vo2max",
+      c40("Korte beklimmingen"),
+    );
+    // LEGACY: de twee oude strings gedragen zich als hun canonieke doel, niet als een gat.
+    assert_(
+      "C: legacy Beklimmingen == Korte beklimmingen",
+      c40("Korte beklimmingen"),
+      c40("Beklimmingen"),
+    );
+    assert_("C: legacy VO2max == FTP", c40("FTP"), c40("VO2max"));
     assert_("C: Onderhoud@40 → drempel", "threshold", c40("Onderhoud"));
     // geen vo2-archetype opgedrongen aan een capaciteitsdoel in 35-51 (VO2max zelf uitgezonderd).
     let vo2Opgedrongen = false;
-    for (const d of ["FTP", "Conditie", "Beklimmingen", "Onderhoud"]) {
+    for (const d of ["FTP", "Conditie", "Lange beklimmingen", "Onderhoud"]) {
       const p = profileForDoel_(d);
       for (let bt = 35; bt <= 51; bt++) {
         const id = String(goalWorkout_(p, "Build", bt, [])?.archetypeId ?? "");
@@ -5194,8 +5361,8 @@ describe("engine selftest", () => {
         [6, 120, "weekend"],
       ],
       "Build",
-      "klim",
-      "Beklimmingen",
+      "klim_lang",
+      "Lange beklimmingen",
     );
     assert_(
       "stap7: efforts-arm claimt de langste dag",
@@ -5211,6 +5378,34 @@ describe("engine selftest", () => {
       "stap7: efforts-arm verlaagt remaining (3-1=2 quality)",
       2,
       rollen_(pKlim, "quality"),
+    );
+
+    // (1c) ROADMAP punt 7 — HET QUOTUM SCHEIDT DE TWEE KLIM-PROFIELEN IN BASE. klim_kort draagt
+    // Base 3 (DOELEN-SPEC §3.3: intervalsessie + drempelsessie + groeiende lange rit), klim_lang
+    // houdt Base 2 (§3.4: volume-hongerig, beschermd is het weekendpaar). In Base claimt de
+    // efforts-arm niets, dus het quotum is hier RECHTSTREEKS af te lezen aan het aantal
+    // quality-rollen. Zonder `kwaliteitPerWeek.Base: 3` op klim_kort valt de eerste regel om.
+    const dagenBase: any = [
+      [1, 60, "vrij"],
+      [3, 60, "vrij"],
+      [5, 150, "weekend"],
+      [6, 120, "weekend"],
+    ];
+    assert_(
+      "punt7: klim_kort Base quotum 3",
+      3,
+      rollen_(
+        plan_(dagenBase, "Base", "klim_kort", "Korte beklimmingen"),
+        "quality",
+      ),
+    );
+    assert_(
+      "punt7: klim_lang Base quotum 2",
+      2,
+      rollen_(
+        plan_(dagenBase, "Base", "klim_lang", "Lange beklimmingen"),
+        "quality",
+      ),
     );
     // In Base vuurt de efforts-arm NIET (alleen Build/Peak) → ook daar geen claim meer.
     const pKlimBase = plan_(
@@ -5466,7 +5661,13 @@ describe("engine selftest", () => {
   // ROADMAP punt 5 (sweet spot als sleutelsessie): +6 in testCoachFeedback — twee per term
   // (a en b), plus de niet-alles-is-sleutel-controle (c) en de regressie-wacht op de bestaande
   // zone-tak (d). 1358→1364.
-  it("exactly 1364 assertions", () => {
-    expect(assertCount).toBe(1364);
+  // ROADMAP punt 7 (de doel-lijst gesplitst): +15. Twee nieuwe doel→profiel-mappings en twee
+  // legacy-aliassen in de regressie-guard en in testGoalWorkout, de intent-scheiding tussen
+  // klim_kort en klim_lang (Build en Peak), de tegenproef op de coverage-poort, de vo2-ramp op
+  // beide profielen, en de 33-51-band voor beide klim-doelen plus de twee legacy-gelijkheden.
+  // Plus 2 voor het Base-quotum van de twee klim-profielen en 3 voor de grens waar
+  // climbTypeWorkout_ stond (30 min valt door naar de categorie-tak, 33 min niet). 1364→1384.
+  it("exactly 1384 assertions", () => {
+    expect(assertCount).toBe(1384);
   });
 });

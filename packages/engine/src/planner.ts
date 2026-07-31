@@ -23,6 +23,7 @@ import {
 } from "./archetypes";
 import { intentFromType_ } from "./coach";
 import { segmentsFromBlokken_ } from "./niveau";
+import { normalizeDoel_ } from "./phase";
 import {
   bpmBelow,
   bpmRange,
@@ -37,7 +38,10 @@ import {
 import { climbPools_, workoutForBeklimmingen } from "./workouts/beklimmingen";
 import { conditiePools_, workoutForConditie } from "./workouts/conditie";
 import { ftpPools_, workoutForFtp } from "./workouts/ftp";
-import { vo2Pools_, workoutForVo2max } from "./workouts/vo2max";
+// `workoutForVo2max` wordt hier niet meer gedispatcht (zie buildWorkout); de library zelf
+// blijft ongemoeid en staat via `index.ts` gewoon in de publieke API. `vo2Pools_` blijft in
+// de variant-pools: VO2max is nog steeds een MIDDEL (DOELEN-SPEC §3.6).
+import { vo2Pools_ } from "./workouts/vo2max";
 import {
   pctZoneBucket_,
   scaleBlocksToFit_,
@@ -218,7 +222,8 @@ export function allocateQualityWeek_(
 ): any {
   const plan: any = {};
   if (!profiel) return plan;
-  const doel = settings.doel;
+  // Canoniek vanaf hier — zie normalizeDoel_ in phase.ts.
+  const doel = normalizeDoel_(settings.doel);
   let quota =
     (profiel.kwaliteitPerWeek && profiel.kwaliteitPerWeek[macroFase]) || 0;
   // 3d stap 3 — deload: reduceer het quotum tot 1 (één prikkel), ongeacht de fase-dosering.
@@ -610,7 +615,10 @@ export function assignWorkouts(
   // lege gather via de null-reader). Zie docs/RECENCY-1B-RECON.md.
   recencyEntries?: any,
 ): void {
-  const doel = settings.doel;
+  // Canoniek vanaf hier. Dit dekt óók de COPY: de reden "Sleutelsessie · <doel> — fase <fase>"
+  // draagt de doel-string letterlijk, en zonder normalisatie zou een dag daar nog "Beklimmingen"
+  // tonen terwijl het plan al op "Korte beklimmingen" draait.
+  const doel = normalizeDoel_(settings.doel);
   // Taper is een per-dag-overlay (Deel 2): taperCtx = { datum, venster, isTrip }
   // of null. macroFase is hier ALTIJD de onderliggende fase (nooit 'Taper').
   const taperActief = !!(taperCtx && taperCtx.datum && taperCtx.venster > 0);
@@ -980,11 +988,14 @@ export function demoteType_(type: any): any {
   return DEMOTE_MAP[type] || type;
 }
 
+// Voedt `"pendel_" + key + "_intervals"`. Beide klim-doelen delen één pendel-sjabloon: de
+// splitsing zit in de KWALITEITSDAG, niet in de woon-werkrit. De `vo2`-tak is vervallen —
+// `normalizeDoel_` levert `VO2max` nooit meer, dus die tak kon per constructie niet vuren.
 export function doelKey(doel: any): string {
-  if (doel === "FTP") return "ftp";
-  if (doel === "VO2max") return "vo2";
-  if (doel === "Conditie") return "conditie";
-  if (doel === "Beklimmingen") return "climb";
+  const d = normalizeDoel_(doel);
+  if (d === "FTP") return "ftp";
+  if (d === "Conditie") return "conditie";
+  if (d === "Korte beklimmingen" || d === "Lange beklimmingen") return "climb";
   return "ftp";
 }
 
@@ -996,16 +1007,23 @@ export function keyIntensity(
   doel: any,
   macroFase: any,
   dekking: any,
-  klimType: any,
+  _klimType: any,
   isTripEvent: any,
   ctx?: any,
 ): any {
   if (macroFase === "Taper") return "taper_openers"; // defensief — taper handled in assignWorkouts
   if (macroFase === "Recovery") return "recovery";
 
-  // Kwaliteitsdag in Build/Peak. 2b.2: goalWorkout_ (profiel-gedreven) vervangt de
-  // climbTypeWorkout_-STAP; climbTypeWorkout_ blijft FALLBACK (geen ctx = revert-pad, of
-  // goalWorkout_ null = geen archetype past binnen de beschikbare tijd). Daarna de trip-tak.
+  // Kwaliteitsdag in Build/Peak: goalWorkout_ (profiel-gedreven) kiest. Daarna de trip-tak.
+  //
+  // `climbTypeWorkout_` STOND hier als fallback en is met ROADMAP punt 7 VERWIJDERD. GEMETEN
+  // over alle 15 doel-fase-combinaties: `goalWorkout_` levert vanaf 33 minuten een kandidaat,
+  // in elke combinatie dezelfde grens, en `eligible_` kent geen minimum-minuten-poort. De
+  // fallback kon dus alleen nog vuren op een kwaliteits-eligible dag van 32 minuten of korter
+  // — en gaf daar het klimTYPE van het event voorrang op het DOEL van de gebruiker, precies
+  // de verwarring die de splitsing in kort en lang opheft. Zo'n dag valt nu door naar de
+  // categorie-tak hieronder. `klimType` blijft in de signatuur staan omdat elke aanroeper hem
+  // meegeeft; de trip-tak eronder is ongewijzigd.
   if (macroFase === "Build" || macroFase === "Peak") {
     const gw =
       ctx && ctx.settings
@@ -1021,43 +1039,21 @@ export function keyIntensity(
       if (ctx && ctx.out) ctx.out.archetypeId = gw.archetypeId;
       return gw.type;
     }
-    const ct = climbTypeWorkout_(klimType, macroFase, dekking);
-    if (ct) return ct;
     // Trip/tocht-event zonder klim-routing → duur-key i.p.v. doel-FTP-intervallen.
     if (isTripEvent) return "long_z2";
   }
 
   // Categorie-types → variant-pools (selectVariant_ roteert de vorm).
-  if (doel === "FTP") {
+  const d = normalizeDoel_(doel);
+  if (d === "FTP") {
     if (macroFase === "Base") return "sweet_spot";
     if (macroFase === "Build") return dekking.high ? "threshold" : "sweet_spot";
     if (macroFase === "Peak") return "threshold";
     return "sweet_spot";
   }
-  if (doel === "VO2max") return "vo2max";
-  if (doel === "Conditie") return "conditie";
-  if (doel === "Beklimmingen") return "klim";
+  if (d === "Conditie") return "conditie";
+  if (d === "Korte beklimmingen" || d === "Lange beklimmingen") return "klim";
   return "sweet_spot";
-}
-
-/**
- * Klim-type-gestuurde keuze van de kwaliteitsdag-categorie (event-driven).
- * Mapt naar variant-pool categorieën i.p.v. losse types:
- *   kort    → vo2max  (pool bevat 8x2 / 30-30 / 40-20 explosief)
- *   lang    → threshold / sweet_spot (sustained)
- *   gemengd → afwisselen op basis van dekking
- *   vlak    → null (val terug op doel-standaard)
- */
-export function climbTypeWorkout_(
-  klimType: any,
-  _macroFase: any,
-  dekking: any,
-): any {
-  if (!klimType || klimType === "vlak") return null;
-  if (klimType === "kort") return "vo2max";
-  if (klimType === "lang") return dekking.high ? "threshold" : "sweet_spot";
-  if (klimType === "gemengd") return dekking.anaerobic ? "threshold" : "vo2max";
-  return null;
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -1721,7 +1717,11 @@ export function buildWorkout(
       }
     }
   }
-  const doel = settings.doel;
+  // Canoniek vanaf hier, en dat is hier DRAGEND: twee sjabloonnamen bouwen de doel-string in
+  // hun eigen naam ("Pendel + <doel> intervallen", "Lange rit + <doel> efforts"). Zonder deze
+  // normalisatie levert een legacy-waarde een week die op één naam na identiek is — precies het
+  // soort verschil dat een byte-vergelijking wel ziet en een mens niet.
+  const doel = normalizeDoel_(settings.doel);
 
   // Taper-workouts (event-driven laatste week)
   if (type === "taper_openers") return genericTaperOpeners(settings);
@@ -1774,15 +1774,18 @@ export function buildWorkout(
     return genericCombo(type, mins, settings, mesoWeek, doel);
   }
 
-  // Doel-specifieke library
+  // Doel-specifieke library. Normaliseert op dezelfde string als `profileForDoel_`: kiest de
+  // dispatch op de RAUWE waarde en het profiel op de genormaliseerde, dan valt een legacy-doel
+  // hier stil door naar `genericRecovery` terwijl het profiel wél klopt. Zie `normalizeDoel_`.
+  // `workoutForVo2max` blijft bestaan — VO2max is geen DOEL meer maar wel een MIDDEL
+  // (DOELEN-SPEC §3.6) en de library wordt rechtstreeks aangeroepen; alleen deze dispatch-tak
+  // is weg, want `normalizeDoel_` levert `VO2max` nooit meer.
   let wo;
   if (doel === "FTP")
     wo = workoutForFtp(type, mins, settings, mesoWeek, macroFase);
-  else if (doel === "VO2max")
-    wo = workoutForVo2max(type, mins, settings, mesoWeek, macroFase);
   else if (doel === "Conditie")
     wo = workoutForConditie(type, mins, settings, mesoWeek, macroFase);
-  else if (doel === "Beklimmingen")
+  else if (doel === "Korte beklimmingen" || doel === "Lange beklimmingen")
     wo = workoutForBeklimmingen(type, mins, settings, mesoWeek, macroFase);
 
   if (wo) return wo;

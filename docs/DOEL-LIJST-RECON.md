@@ -93,11 +93,30 @@ VO2max vervalt als DOEL en blijft volledig als MIDDEL (`DOELEN-SPEC` §3.6): poo
 archetypes en de trainingskiezer ongemoeid. Dit besluit is niet nieuw — het staat sinds
 `DOELEN-SPEC` §3.6 als VASTGESTELD en als open bouwpunt in §6 stap 3; alleen de BOUW is nieuw.
 
-LEGACY-WAARDEN. `profileForDoel_` houdt twee alias-takken zodat een opgeslagen waarde niet
-stil van karakter verandert: `"Beklimmingen"` → `klim_kort` (dat is het A-doel van
-`DOELEN-SPEC` §3.3), `"VO2max"` → `ftp`. De fallback voor een ONBEKEND doel gaat van
-`PROFILES.klim` naar `PROFILES.ftp` — gedwongen door de splitsing, want een generiek
-klim-profiel bestaat niet meer, en `ftp` is volgens §3.1 de referentie.
+LEGACY-WAARDEN. Niet twee alias-takken in `profileForDoel_`, maar ÉÉN pure normalisatie:
+`normalizeDoel_(doel)` in `phase.ts`, direct onder `DOEL_OPTIONS`. Een waarde uit
+`DOEL_OPTIONS` geeft zichzelf terug; `"Beklimmingen"` → `"Korte beklimmingen"` (het A-doel van
+`DOELEN-SPEC` §3.3); `"VO2max"` → `"FTP"`; al het overige, inclusief `null` en de lege string,
+→ `"FTP"` — de referentie volgens §3.1. Daarmee vervalt ook de oude klim-fallback voor een
+onbekend doel, gedwongen door de splitsing: een generiek klim-profiel bestaat niet meer.
+
+WAAROM ÉÉN NORMALISATIE EN NIET PER TAK. `settings.doel` is VRIJE TEKST in D1 — de worker
+valideert hem niet tegen een lijst, dus elke ooit opgeslagen waarde komt gewoon binnen, en de
+UI biedt de oude strings nog aan tot fase B2. De twee consumenten lezen die string bovendien op
+verschillende hoogte: `buildWorkout` kiest zijn bibliotheek op de RAUWE string, terwijl
+`profileForDoel_` op het PROFIEL werkt. Zonder één gedeelde normalisatie lopen die twee uiteen:
+het profiel klopt wel, maar de bibliotheek-dispatch raakt geen tak meer en de dag valt stil door
+naar `genericRecovery`. Geen fout, geen rood — een herstelrit waar een sleutelsessie hoort.
+
+WAAR HIJ WORDT AANGEROEPEN. `profileForDoel_`; `doelKey` en `keyIntensity` (allebei worden ook
+rechtstreeks met rauwe strings aangeroepen); de twee doel-takken in `zones.ts`; en de drie
+`const doel = settings.doel`-bindingen in `planner.ts` (`allocateQualityWeek_`,
+`assignWorkouts`, `buildWorkout`). Die laatste drie zijn dragend voor de COPY: de reden
+"Sleutelsessie · <doel> — fase <fase>" en de sjabloonnamen "Pendel + <doel> intervallen" en
+"Lange rit + <doel> efforts" bouwen de doel-string letterlijk in hun eigen tekst. GEMETEN bij de
+bouw: zonder normalisatie op `buildWorkout` is de legacy-week op precies één sjabloonnaam na
+identiek aan de canonieke — het soort verschil dat een byte-vergelijking wel ziet en een mens
+niet. Eis 7c dekt alle plekken in één meting.
 
 ## 7. BESLUIT — de twee profielen
 

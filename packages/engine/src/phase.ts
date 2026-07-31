@@ -12,10 +12,32 @@ import { stripTime_, weekStartDate } from "./utils";
 export const DOEL_OPTIONS = [
   "FTP",
   "Conditie",
-  "Beklimmingen",
-  "VO2max",
+  "Korte beklimmingen",
+  "Lange beklimmingen",
   "Onderhoud",
 ];
+
+/**
+ * De ENIGE plek waar een doel-string canoniek wordt gemaakt (ROADMAP punt 7,
+ * `docs/DOEL-LIJST-RECON.md` §6).
+ *
+ * WAAROM DIT MOET BESTAAN. `settings.doel` is VRIJE TEKST in D1: de worker valideert hem niet
+ * tegen een lijst, dus elke waarde die ooit is opgeslagen komt de engine gewoon binnen —
+ * `Beklimmingen` en `VO2max` staan vandaag in Daans database en de UI biedt ze nog aan tot
+ * fase B2. De twee consumenten lezen die string bovendien op VERSCHILLENDE hoogte:
+ * `buildWorkout` kiest zijn bibliotheek op de RAUWE string, terwijl `profileForDoel_` op het
+ * PROFIEL werkt. Zonder één gedeelde normalisatie lopen die twee uiteen — het profiel zou dan
+ * wél kloppen terwijl de bibliotheek-dispatch geen tak meer raakt en de dag stil doorvalt naar
+ * `genericRecovery`. Geen fout, geen rood, gewoon een herstelrit waar een sleutelsessie hoort.
+ *
+ * PUUR: geen side-effects, geen klok, geen I/O.
+ */
+export function normalizeDoel_(doel: any): string {
+  if (typeof doel === "string" && DOEL_OPTIONS.indexOf(doel) >= 0) return doel;
+  if (doel === "Beklimmingen") return "Korte beklimmingen"; // A-doel, DOELEN-SPEC §3.3
+  if (doel === "VO2max") return "FTP"; // vervalt als DOEL, blijft MIDDEL (§3.6)
+  return "FTP"; // onbekend, null, "" → de referentie (§3.1)
+}
 
 // Taper-venster (dagen tot het event, gemeten VANAF VANDAAG — zie eventFase_):
 //   A-event/trip ≤ 7 d → volle taper-week (macro = Taper).

@@ -5,6 +5,7 @@
  * bindings → the planner↔archetypes↔coach cycle resolves at call time).
  */
 import { COACH_INTENT_ENGINE_TYPE_, intentFromType_ } from "./coach";
+import { normalizeDoel_ } from "./phase";
 import {
   bpmBelow,
   bpmRange,
@@ -1570,6 +1571,9 @@ export const ARCHETYPES: any[] = [
   },
 ];
 
+// GAS-PARITY-SPIEGEL (`Archetypes.gs:492`). Sinds ROADMAP punt 7 het klim-doel in kort en lang
+// splitste heeft deze constante geen consument meer: beide nieuwe profielen dragen hun eigen
+// gewichten uit `docs/DOEL-LIJST-RECON.md` §7. Blijft staan omdat de bevroren bron hem draagt.
 export const GOAL_INTENT_WEIGHTS_KLIM_: any = {
   drempel: 0.4,
   vo2: 0.35,
@@ -1595,13 +1599,47 @@ export const COVERAGE_BOOST_ = 0.1;
 export const BASE_POLAR_VOL_U0 = 9;
 
 export const PROFILES: any = {
-  klim: {
-    id: "klim",
+  // ROADMAP punt 7 / `docs/DOEL-LIJST-RECON.md` §7. `klim` en `vo2max` zijn VERVANGEN door
+  // `klim_kort` en `klim_lang`. Elk getal hieronder is PLAN, afgeleid uit DOELEN-SPEC §3.3 en
+  // §3.4 — GEEN enkel getal komt uit Daans eigen reeks: die is een verslag van rijden op gevoel
+  // en zou hier de gewoonte reproduceren die de coach nu juist vervangt.
+  klim_kort: {
+    id: "klim_kort",
     soort: "event",
-    intentGewichten: GOAL_INTENT_WEIGHTS_KLIM_,
+    // §3.3: herhaalbaarheid boven de drempel — 30/15, 40/20, klimherhalingen 2-5 min.
+    intentGewichten: { vo2: 0.45, drempel: 0.35, sweetspot: 0.2 },
     faseModulatie: GOAL_FASE_MOD_,
-    archetypeVoorkeuren: { vo2_hill_repeats: 0.2, threshold_long: 0.1 },
-    projectieKey: "girona",
+    // §3.3 noemt deze vormen bij naam.
+    archetypeVoorkeuren: {
+      vo2_30_15_sets: 0.25,
+      vo2_hill_repeats: 0.2,
+      vo2_40_20: 0.15,
+    },
+    projectieKey: "klim_kort",
+    // §3.3: een korte-intervalsessie, een drempelsessie, een groeiende lange rit. In Build en
+    // Peak consumeert de efforts-arm er een, dus 3 levert daar alle drie.
+    kwaliteitPerWeek: { Base: 3, Build: 3, Peak: 2 },
+    // §3.3 (iii): de inspanningen horen LAAT in een lange rit.
+    spreiding: { midweekMinGap: 1, weekendBlok: true, effortsInLangeRit: true },
+    langeRitPerWeek: 1, // §3.3 BESCHERMD: de intervalsessie ÉN de lange rit.
+    // GEERFD van het oude `klim`-profiel: de splitsing gaat over intent en quotum, niet over
+    // de volume-respons.
+    volumeResponse: { vo2Slope: 0.03, vo2Cap: 0.15 },
+  },
+  klim_lang: {
+    id: "klim_lang",
+    soort: "event",
+    // §3.4: aanhoudende blokken van 8-30 minuten rond de drempel, plus tempo-volume.
+    intentGewichten: { drempel: 0.5, sweetspot: 0.35, vo2: 0.15 },
+    faseModulatie: GOAL_FASE_MOD_,
+    archetypeVoorkeuren: {
+      threshold_long: 0.25,
+      threshold_2x20: 0.2,
+      sweetspot_long_climb: 0.2,
+    },
+    projectieKey: "klim_lang",
+    // ONVERANDERD van het oude `klim`-profiel. §3.4: volume-hongerig, beschermd is het
+    // weekendpaar, residu is de midweekse kwaliteit.
     kwaliteitPerWeek: { Base: 2, Build: 3, Peak: 2 },
     spreiding: { midweekMinGap: 1, weekendBlok: true, effortsInLangeRit: true },
     langeRitPerWeek: 1,
@@ -1620,20 +1658,6 @@ export const PROFILES: any = {
     },
     langeRitPerWeek: 1,
     volumeResponse: { vo2Slope: 0.04, vo2Cap: 0.38 },
-  },
-  vo2max: {
-    id: "vo2max",
-    soort: "capaciteit",
-    intentGewichten: { drempel: 0.35, sweetspot: 0.25, vo2: 0.4 },
-    faseModulatie: GOAL_FASE_MOD_,
-    kwaliteitPerWeek: { Base: 2, Build: 3, Peak: 2 },
-    spreiding: {
-      midweekMinGap: 1,
-      weekendBlok: false,
-      effortsInLangeRit: false,
-    },
-    langeRitPerWeek: 1,
-    volumeResponse: { vo2Slope: 0.02, vo2Cap: 0.08 },
   },
   conditie: {
     id: "conditie",
@@ -1672,13 +1696,17 @@ export const PROFILES: any = {
   },
 };
 
+// Normaliseert EERST (`normalizeDoel_` vangt legacy en onbekend af) en mapt daarna de vijf
+// canonieke strings. De oude klim-fallback voor een onbekend doel is vervallen: een generiek
+// klim-profiel bestaat niet meer, en `normalizeDoel_` levert dan `FTP` — de referentie (§3.1).
 export function profileForDoel_(doel: string): any {
-  if (doel === "FTP") return PROFILES.ftp;
-  if (doel === "Beklimmingen") return PROFILES.klim;
-  if (doel === "VO2max") return PROFILES.vo2max;
-  if (doel === "Conditie") return PROFILES.conditie;
-  if (doel === "Onderhoud") return PROFILES.onderhoud;
-  return PROFILES.klim; // onbekend → klim-fallback
+  const d = normalizeDoel_(doel);
+  if (d === "FTP") return PROFILES.ftp;
+  if (d === "Korte beklimmingen") return PROFILES.klim_kort;
+  if (d === "Lange beklimmingen") return PROFILES.klim_lang;
+  if (d === "Conditie") return PROFILES.conditie;
+  if (d === "Onderhoud") return PROFILES.onderhoud;
+  return PROFILES.ftp;
 }
 
 export function goalEffWeights_(profiel: any, fase: string, V?: any): any {

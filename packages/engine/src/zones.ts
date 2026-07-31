@@ -2,6 +2,8 @@
  * zones.ts — zone classification, TSS, workout-zone lookup, block scaling,
  * and the DSL/ZWO row parsers. Combed from training/src/Algorithm.gs (pure).
  */
+
+import { normalizeDoel_ } from "./phase";
 import { ACT_ZONE_TIMES_IDX } from "./sync";
 import { formatDate, stripTime_ } from "./utils";
 
@@ -330,7 +332,8 @@ export function workoutZones(type: string, doel: string): string[] {
     return ["anaerobic"];
   if (type === "pendel_trip_intervals") return ["low", "high"];
   if (type.indexOf("pendel_") === 0) {
-    if (doel === "VO2max") return ["low", "anaerobic"];
+    // De VO2max-tak is vervallen met ROADMAP punt 7: `normalizeDoel_` levert dat doel nooit
+    // meer, dus de anaerobe pendel-uitzondering kon per constructie niet meer vuren.
     return ["low", "high"];
   }
   if (type === "combo_long_with_efforts") return ["low", "high"];
@@ -339,8 +342,9 @@ export function workoutZones(type: string, doel: string): string[] {
   if (type === "combo_ss_sprints") return ["high", "anaerobic"];
   if (type === "combo_all_three") return ["low", "high", "anaerobic"];
   if (type === "test") {
-    if (doel === "FTP" || doel === "Beklimmingen") return ["high"];
-    if (doel === "VO2max") return ["anaerobic"];
+    const d = normalizeDoel_(doel);
+    if (d === "FTP" || d === "Korte beklimmingen" || d === "Lange beklimmingen")
+      return ["high"];
     return ["low", "high"];
   }
   return [];
