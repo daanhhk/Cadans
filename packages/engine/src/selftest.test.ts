@@ -714,7 +714,98 @@ describe("engine selftest", () => {
     const m12 = computeMacroPhase(t0, new Date(2026, 2, 23)); // +77d
     assert_("macro w12 test", "Test", m12.fase);
     assert_("macro w12 isTest", true, m12.isTestWeek);
-    assert_("macro w12 week-clamp", 12, m12.week);
+    assert_("macro w12 week", 12, m12.week);
+    assert_("macro w12 blokNr 1", 1, m12.blokNr);
+
+    // ROADMAP punt 9 — HET BLOK HERHAALT. Tot 31 juli 2026 bleef de teller voorbij week 12
+    // VOORGOED op "Test" staan, met quotum 0 als gevolg (kwaliteitPerWeek kent geen Test-sleutel).
+    // Week 13 is nu de EERSTE week van het TWEEDE blok, niet een dertiende testweek.
+    //
+    // EIGEN ANKER `t1` IN DE ZOMERTIJD, en dat is dragend: `diffDays` telt millisecondes, dus een
+    // venster dat de DST-grens (2026-03-29) kruist is 23 uur korter en levert één blokweek te
+    // weinig. Met t0 hierboven viel +84d net over die grens. Zelfde reden als de opmerking bij t0.
+    const t1 = new Date(2026, 4, 4); // ma 4 mei 2026, ruim binnen CEST
+    const m13 = computeMacroPhase(t1, new Date(2026, 6, 27)); // +84d → absolute week 13
+    assert_("macro w13 → blok 2 week 1", 1, m13.week);
+    assert_("macro w13 fase Base", "Base", m13.fase);
+    assert_("macro w13 isTest false", false, m13.isTestWeek);
+    assert_("macro w13 blokNr 2", 2, m13.blokNr);
+    // En het blijft doorlopen: week 25 is de eerste week van het DERDE blok.
+    const m25 = computeMacroPhase(t1, new Date(2026, 9, 19)); // +168d → absolute week 25
+    assert_("macro w25 → blok 3 week 1", 1, m25.week);
+    assert_("macro w25 fase Base", "Base", m25.fase);
+    assert_("macro w25 blokNr 3", 3, m25.blokNr);
+  });
+
+  // ── ROADMAP punt 9 — DE VOLLEDIGE KETEN op een gepinde klok ──────────
+  // eventFase_ (event-kant) + computeMacroPhase (doel-kant) + effectiveMacroFase_ (wie leidt).
+  // De klok is een fixture-variabele: elke datum staat hier expliciet, nergens new Date().
+  it("testDoelStuurtFase", () => {
+    const AGR = [
+      {
+        datum: new Date(2027, 3, 17),
+        naam: "AGR",
+        type: "race",
+        prioriteit: "A",
+      },
+    ];
+    const doelStart = new Date(2026, 5, 29); // ma 2026-06-29
+    function keten(doel: string, today: Date) {
+      const macro = eventFase_(AGR, today);
+      return effectiveMacroFase_(
+        macro ? macro.macroFase : null,
+        computeMacroPhase(doelStart, today).fase,
+        { doel: doel },
+        macro ? macro.wekenTot : null,
+      );
+    }
+    // (b) BUITEN DE GRENS leidt het doel. 2026-12-07 ligt ~19 weken vóór AGR; de doel-cyclus
+    //     staat daar op blokweek 24 → cyclisch 12 → Test. Vóór punt 9 gaf de event-teller hier
+    //     "Base" en had het doel niets te zeggen.
+    assert_(
+      "keten 2026-12-07 FTP → doel-cyclus, niet de event-teller",
+      computeMacroPhase(doelStart, new Date(2026, 11, 7)).fase,
+      keten("FTP", new Date(2026, 11, 7)),
+    );
+    assert_(
+      "keten 2026-12-07 FTP is NIET Base-van-de-event-as",
+      true,
+      keten("FTP", new Date(2026, 11, 7)) !== "Base",
+    );
+    // (c) OP DE GRENS wint het event, voor ELK doel. 2027-02-22 ligt 8 weken vóór AGR.
+    DOEL_OPTIONS.forEach((d: any) => {
+      assert_(
+        "keten 2027-02-22 " + d + " → Build van het event",
+        "Build",
+        keten(d, new Date(2027, 1, 22)),
+      );
+    });
+    // (d) Onderhoud blijft gepind, ook diep in een later blok: blokweek 20 → cyclisch 8 →
+    //     doel-fase Build, maar Onderhoud kent geen periodisering en levert Base.
+    const laat = new Date(2026, 10, 9); // doelStart + 133d = absolute week 20
+    assert_(
+      "blokweek-check: absolute week 20 → cyclisch 8",
+      8,
+      computeMacroPhase(doelStart, laat).week,
+    );
+    assert_(
+      "Onderhoud zonder event blijft Base",
+      "Base",
+      effectiveMacroFase_(
+        null,
+        computeMacroPhase(doelStart, laat).fase,
+        { doel: "Onderhoud" },
+        null,
+      ),
+    );
+    // (e) LEGACY-DOEL levert dezelfde keten-uitkomst als zijn canonieke doel. Zie de opmerking
+    //     bij de effectiveMacroFase_-asserties: ook deze regel wordt NIET rood zonder
+    //     `normalizeDoel_`, want beide strings vallen hoe dan ook in de doelFase-tak.
+    assert_(
+      "legacy Beklimmingen == Korte beklimmingen in de keten",
+      keten("Korte beklimmingen", new Date(2026, 11, 7)),
+      keten("Beklimmingen", new Date(2026, 11, 7)),
+    );
   });
 
   // ── eventFase_ (puur) — referentie-datum vanaf vandaag + A-taper ≤7d ──
@@ -4586,48 +4677,63 @@ describe("engine selftest", () => {
 
   // ── Fase 2: Onderhoud gedrag-kern (event-bewuste fase-pin + quota 2 + debt-off; 45-cap verwijderd) ──
   it("testOnderhoudWeekSim", () => {
-    // (a) fase-pin: Onderhoud → Base (overrult stale→Test); 4 doelen passthrough.
+    // (a) ROADMAP punt 9 — HET DOEL LEIDT BUITEN DE ACHT-WEKENGRENS. Signatuur:
+    //     (eventMacroFase, doelFase, settings, wekenTot).
     assert_(
-      "effFase Onderhoud stale→Base",
+      "effFase Onderhoud zonder event → Base",
       "Base",
-      effectiveMacroFase_("Test", { doel: "Onderhoud" }),
+      effectiveMacroFase_(null, "Peak", { doel: "Onderhoud" }, null),
     );
     assert_(
-      "effFase FTP Peak passthrough",
+      "effFase FTP zonder event → doel-fase",
       "Peak",
-      effectiveMacroFase_("Peak", { doel: "FTP" }),
+      effectiveMacroFase_(null, "Peak", { doel: "FTP" }, null),
     );
+    // (a2) DE GRENS. Binnen acht weken wint het event, voor ELK doel; daarbuiten leidt het doel
+    //      en telt de event-fase niet mee — ook niet voor Onderhoud.
     assert_(
-      "effFase FTP Test passthrough",
-      "Test",
-      effectiveMacroFase_("Test", { doel: "FTP" }),
-    );
-    // (a2) event-bewust (3e arg): een event-gedreven fase overleeft de pin, behalve "Test" (vangnet);
-    //      zonder event (2-arg / falsy) blijft de pin op "Base".
-    assert_(
-      "effFase Onderhoud+event Build passthrough",
+      "effFase event op 8 wkn wint (FTP)",
       "Build",
-      effectiveMacroFase_("Build", { doel: "Onderhoud" }, true),
+      effectiveMacroFase_("Build", "Base", { doel: "FTP" }, 8),
     );
     assert_(
-      "effFase Onderhoud+event Peak passthrough",
+      "effFase event op 8 wkn wint (Onderhoud)",
+      "Build",
+      effectiveMacroFase_("Build", "Base", { doel: "Onderhoud" }, 8),
+    );
+    assert_(
+      "effFase event op 9 wkn → doel leidt (FTP)",
       "Peak",
-      effectiveMacroFase_("Peak", { doel: "Onderhoud" }, true),
+      effectiveMacroFase_("Base", "Peak", { doel: "FTP" }, 9),
     );
     assert_(
-      "effFase Onderhoud+event Recovery passthrough",
+      "effFase event op 9 wkn → doel leidt (Onderhoud blijft Base)",
+      "Base",
+      effectiveMacroFase_("Build", "Peak", { doel: "Onderhoud" }, 9),
+    );
+    // De taper- en herstel-overlay hangt aan een event dat er echt is: wekenTot 0 of 1 valt
+    // ruim binnen de grens, dus die fases overleven onveranderd.
+    assert_(
+      "effFase Recovery bij wekenTot 0",
       "Recovery",
-      effectiveMacroFase_("Recovery", { doel: "Onderhoud" }, true),
+      effectiveMacroFase_("Recovery", "Base", { doel: "Onderhoud" }, 0),
+    );
+    // LEGACY-DOEL via normalizeDoel_. LET OP — DEZE TWEE REGELS ZIJN GEEN BEWIJS VOOR DE
+    // NORMALISATIE, en dat is met opzet zo opgeschreven. GEMETEN: haal `normalizeDoel_` uit
+    // `effectiveMacroFase_` weg en de hele suite blijft groen. Dat kan ook niet anders: de enige
+    // tak die op de doel-string beslist is `=== "Onderhoud"`, en GEEN legacy-string mapt daarop.
+    // De normalisatie staat er voor consistentie met elke andere doel-lezer en voor het geval er
+    // ooit wél een alias naar Onderhoud komt — niet omdat ze vandaag iets afvangt. Wat deze twee
+    // regels wél pinnen is dat een legacy-doel niet in de Onderhoud-tak belandt.
+    assert_(
+      "effFase legacy Beklimmingen → doel-fase",
+      "Peak",
+      effectiveMacroFase_(null, "Peak", { doel: "Beklimmingen" }, null),
     );
     assert_(
-      "effFase Onderhoud+event Test → Base (vangnet)",
-      "Base",
-      effectiveMacroFase_("Test", { doel: "Onderhoud" }, true),
-    );
-    assert_(
-      "effFase Onderhoud zonder event Peak → Base",
-      "Base",
-      effectiveMacroFase_("Peak", { doel: "Onderhoud" }),
+      "effFase onbekend doel → doel-fase",
+      "Build",
+      effectiveMacroFase_(null, "Build", { doel: "xyz" }, null),
     );
 
     // (b) week-sim via de allocator op de gepinde Base-fase; bt = dagminuten (geen cap meer).
@@ -5736,7 +5842,10 @@ describe("engine selftest", () => {
   // ROADMAP punt 8 (elk doel zijn eigen meetlat): +24. De vijf latten bij naam, de doel→lat-tak
   // inclusief de twee legacy-strings, en de zeven-waarden-lus die profiel-sleutel en lat-sleutel
   // mechanisch gelijk houdt — die lus vervangt het verwijderde projectieKey-veld. 1384→1408.
-  it("exactly 1408 assertions", () => {
-    expect(assertCount).toBe(1408);
+  // ROADMAP punt 9 (het doel stuurt de fase): +19. De herhalende blok-cyclus met blokNr, de
+  // herschreven effectiveMacroFase_-tak met de acht-wekengrens voor elk doel, en de volledige
+  // keten eventFase_ + computeMacroPhase + effectiveMacroFase_ op een gepinde klok. 1408→1427.
+  it("exactly 1427 assertions", () => {
+    expect(assertCount).toBe(1427);
   });
 });

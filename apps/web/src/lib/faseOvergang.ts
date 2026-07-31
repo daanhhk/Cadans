@@ -29,24 +29,31 @@ export interface FaseBundel {
 }
 
 /** De EXACTE fase-keten uit buildWeekProposal, herbruikbaar op een willekeurige `today`:
- * eventFase_ → macroFase (computeMacroPhase-fallback) → effectiveMacroFase_(eventDriven = macro!=null)
- * → toonbare fase (macro?.fase ?? macroFase). settingsE.doelStart is een Date (of null), eventsD
- * dragen Date-datums — beide al geconverteerd door de caller. */
+ * eventFase_ levert de EVENT-kant (macroFase + wekenTot), computeMacroPhase de DOEL-kant, en
+ * `effectiveMacroFase_` beslist wie leidt op de acht-wekengrens uit DOELEN-SPEC §2B.
+ *
+ * DE TAPER- EN RECOVERY-OVERLAY BLIJFT ERBOVEN STAAN. Die is PER DAG en hangt aan een echt nabij
+ * event (A of trip binnen 7 dagen, B binnen 3, of een A-race eerder in deze week), niet aan de
+ * macro-periodisering — daarom wint `macro.fase` alleen als hij "Taper" of "Recovery" is. Vóór
+ * punt 9 won `macro.fase` ALTIJD, en dat is precies waarom een event in april de fase in
+ * december al bepaalde. settingsE.doelStart is een Date (of null), eventsD dragen Date-datums —
+ * beide al geconverteerd door de caller. */
 function faseVoor_(
   settingsE: { doelStart: Date | null; doel: string | null },
   eventsD: Array<{ datum: Date }>,
   today: Date,
 ): FaseBundel {
   const macro = eventFase_(eventsD, today);
-  const macroFaseBase =
-    macro?.macroFase ?? computeMacroPhase(settingsE.doelStart, today).fase;
+  const doelFase = computeMacroPhase(settingsE.doelStart, today).fase;
   const macroFase = effectiveMacroFase_(
-    macroFaseBase,
+    (macro?.macroFase as string | undefined) ?? null,
+    doelFase,
     settingsE,
-    macro != null,
+    typeof macro?.wekenTot === "number" ? macro.wekenTot : null,
   );
+  const overlay = macro?.fase as string | undefined;
   return {
-    fase: (macro?.fase as string | undefined) ?? macroFase,
+    fase: overlay === "Taper" || overlay === "Recovery" ? overlay : macroFase,
     eventDriven: macro != null,
     eventNaam: (macro?.hoofdEvent?.naam as string | undefined) ?? null,
     wekenTotEvent: typeof macro?.wekenTot === "number" ? macro.wekenTot : null,

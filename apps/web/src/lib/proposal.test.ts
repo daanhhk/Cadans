@@ -440,8 +440,13 @@ describe("buildWeekProposal", () => {
     expect(rFtp.macroFase).toBe("Peak");
   });
 
-  it("Onderhoud zonder event → Test-vangnet houdt de pin op Base", () => {
-    // doelStart ver in het verleden → computeMacroPhase = "Test" (na blokweek 12); geen events.
+  it("Onderhoud zonder event → Base; FTP volgt de HERHALENDE blok-cyclus", () => {
+    // HERIJKT bij ROADMAP punt 9. Was: "doelStart ver in het verleden → computeMacroPhase = Test
+    // (na blokweek 12)", en het contrast bewees dat het Test-vangnet alleen voor Onderhoud vuurde.
+    // Dat vangnet BESTAAT NIET MEER, want de teller loopt niet meer dood: doelStart 2025-12-01 is
+    // op TODAY 2026-03-11 absolute week 15, en die valt cyclisch op blokweek 3 → Base. Onderhoud
+    // levert nog steeds Base, maar nu omdat het doel de fase stuurt en Onderhoud niet
+    // periodiseert — niet meer als reparatie van een vastgelopen teller.
     const rOnderhoud = buildWeekProposal({
       settings: settings({ doel: "Onderhoud", doelStart: "2025-12-01" }),
       plannerDays: WEEK,
@@ -449,9 +454,10 @@ describe("buildWeekProposal", () => {
       wellness: WELL_OK,
       ...base,
     });
-    // de pin vuurt zonder event; het "Test"-vangnet → "Base" (Onderhoud test nooit).
+    // Onderhoud kent geen periodisering (DOELEN-SPEC §3.2) → Base.
     expect(rOnderhoud.macroFase).toBe("Base");
-    // contrast: doel FTP laat de stale "Test"-fase staan.
+    // CONTRAST, en dit is de rood-kant van de cyclus: doel FTP volgt de doel-fase, en die is op
+    // deze datum blokweek 3 van het tweede blok. Zonder de cyclus stond hier "Test".
     const rFtp = buildWeekProposal({
       settings: settings({ doel: "FTP", doelStart: "2025-12-01" }),
       plannerDays: WEEK,
@@ -459,7 +465,7 @@ describe("buildWeekProposal", () => {
       wellness: WELL_OK,
       ...base,
     });
-    expect(rFtp.macroFase).toBe("Test");
+    expect(rFtp.macroFase).toBe("Base");
   });
 
   // ── LAAG 1b — cross-week recency (ONgegate: benign, kiest tussen even geldige

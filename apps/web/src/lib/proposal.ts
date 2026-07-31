@@ -289,17 +289,16 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
     datum: parseLocalDate(e.datum),
   }));
   const macro = eventFase_(eventsD, today);
-  // computeMacroPhase returnt een OBJECT { week, fase, isTestWeek }; we willen de
-  // fase-STRING (net als macro?.macroFase). Rauw het object gebruiken bakte
-  // "[object Object]" in de workout-naam + context-regel bij lege events.
-  const macroFaseBase =
-    macro?.macroFase ?? computeMacroPhase(settingsE.doelStart, today).fase;
-  // event-driven = macro-truthiness (macro===null ⟺ geen event); zelfde idioom als planModusLabel
-  // hieronder. Een event-gedreven fase (Build/Peak/Recovery) overleeft zo de Onderhoud-pin.
+  // ROADMAP punt 9: computeMacroPhase levert voortaan ALTIJD de doel-fase, ook mét event —
+  // `effectiveMacroFase_` beslist wie wint, op de acht-wekengrens uit DOELEN-SPEC §2B. Het is
+  // een OBJECT { week, fase, isTestWeek, blokNr }; we willen de fase-STRING. Rauw het object
+  // gebruiken bakte "[object Object]" in de workout-naam + context-regel bij lege events.
+  const doelFase = computeMacroPhase(settingsE.doelStart, today).fase;
   const macroFase = effectiveMacroFase_(
-    macroFaseBase,
+    (macro?.macroFase as string | undefined) ?? null,
+    doelFase,
     settingsE,
-    macro != null,
+    typeof macro?.wekenTot === "number" ? macro.wekenTot : null,
   );
   const klimType: string | null = macro?.hoofdEvent?.klimType ?? null;
   const isTripEvent = macro?.hoofdEvent?.type === "trip";

@@ -47,8 +47,21 @@ export const A_TAPER_DAGEN = 7;
 export const B_TAPER_DAGEN = 3;
 
 /**
- * Macrocyclus schema: weken 1-4 Base, 5-8 Build, 9-11 Peak, 12 Test.
- * Voorbij week 12 → blijft op Test.
+ * Macrocyclus schema: blokweek 1-4 Base, 5-8 Build, 9-11 Peak, 12 Test.
+ *
+ * HET BLOK HERHALT — ROADMAP punt 9, norm in `DOELEN-SPEC` §2B. Tot 31 juli 2026 liep de teller
+ * DOOD: voorbij week 12 bleef hij voorgoed op "Test" staan. Dat is geen periodisering maar een
+ * aflopende teller, en de gevolgschade zat in de planner: `kwaliteitPerWeek` draagt geen
+ * `Test`-sleutel, dus quotum 0 en elke week een testweek. Alleen doel Onderhoud ontsnapte, via
+ * een apart vangnet in `effectiveMacroFase_`.
+ *
+ * De blokweek is nu cyclisch 1..12; `blokNr` telt het hoeveelste blok sinds `doelStart`. Loopt
+ * een blok af zonder dat er een nieuw doel is gekozen, dan begint gewoon een volgend blok met
+ * hetzelfde doel. Een aflopend blok geeft het jaar dus NIET aan het event — de enige
+ * overnamegrens is de acht weken uit §2B, en die zit in `effectiveMacroFase_`, niet hier.
+ *
+ * `week` en `isTestWeek` behouden hun betekenis: de week BINNEN het blok, en of dat de testweek
+ * is. Alleen het gedrag voorbij week 12 verandert.
  */
 export function computeMacroPhase(startDate: any, today: any): any {
   if (!startDate) startDate = new Date();
@@ -62,8 +75,12 @@ export function computeMacroPhase(startDate: any, today: any): any {
   var diffDays = Math.floor(
     (now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
   );
-  var week = Math.floor(diffDays / 7) + 1;
-  if (week < 1) week = 1;
+  var absWeek = Math.floor(diffDays / 7) + 1;
+  if (absWeek < 1) absWeek = 1;
+  // Cyclisch 1..12. De oude cap `if (week > 12) week = 12` is hiermee overbodig: de blokweek
+  // kan per constructie niet meer boven 12 komen.
+  var week = ((absWeek - 1) % 12) + 1;
+  var blokNr = Math.floor((absWeek - 1) / 12) + 1;
 
   var fase,
     isTestWeek = false;
@@ -74,8 +91,7 @@ export function computeMacroPhase(startDate: any, today: any): any {
     fase = "Test";
     isTestWeek = true;
   }
-  if (week > 12) week = 12;
-  return { week: week, fase: fase, isTestWeek: isTestWeek };
+  return { week: week, fase: fase, isTestWeek: isTestWeek, blokNr: blokNr };
 }
 
 /**

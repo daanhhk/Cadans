@@ -84,24 +84,46 @@ export function snapshotDayAction_(
 }
 
 /**
- * Fase 2 — Onderhoud-fase-pin, nu EVENT-BEWUST. Pint de ENGINE-macrofase op 'Base' als
- * doel === 'Onderhoud' (→ allocActive TRUE + een eerste-klas fase, geen missing-key), MAAR:
- * is de fase EVENT-gedreven (`eventDriven`, er is een A-event/trip), dan overleeft die fase
- * de pin (Build/Peak-opbouw + event-herstelweek blijven staan). Het `fase !== "Test"`-vangnet
- * borgt "Onderhoud test nooit" langs elk pad: computeMacroPhase blijft na blokweek 12 voorgoed
- * op 'Test', wat anders elke week een FTP-test zou plannen. Zonder event / eventDriven falsy →
- * byte-identiek aan de oude pin. PUUR. Alléén de engine-allocatiebron (generateProposal →
- * assignWorkouts → allocateQualityWeek_) wordt gewrapt; de payload/display-fase-sites tonen de
- * echte computeMacroPhase-uitkomst (label = Fase 3).
+ * HET DOEL STUURT DE FASE, tot de event-overname begint. ROADMAP punt 9, norm in
+ * `DOELEN-SPEC` §2B.
+ *
+ * WAT HIER VÓÓR STOND. Een pin die alleen voor doel Onderhoud gold, en alleen als er GEEN
+ * event in de agenda stond. Met een A-event erin stuurde het doel de fase dus NOOIT — de
+ * event-teller nam het hele jaar over, ook als het event nog acht maanden weg was.
+ *
+ * DE OVERNAMEGRENS IS BELEID, GEEN GEIJKTE DREMPEL. `DOELEN-SPEC` §2B legt vast: vanaf acht
+ * weken vóór het hoofdevent neemt de event-as over, daarvoor leidt het doel. Dat getal is niet
+ * op een reeks te bemonsteren — er bestaat geen meting die "acht" oplevert. Het valt wél samen
+ * met een grens die `eventFase_` al draagt: bij negen weken of meer levert die per constructie
+ * "Base", dus vóór acht weken zegt de event-as niets onderscheidends.
+ *
+ * HET `fase !== "Test"`-VANGNET IS VERVALLEN. Dat bestond uitsluitend omdat `computeMacroPhase`
+ * na blokweek 12 voorgoed op "Test" bleef staan, wat elke week een FTP-test met quotum 0 zou
+ * plannen. Het blok herhaalt nu (zie `computeMacroPhase`), dus die toestand bestaat niet meer.
+ *
+ * PUUR. Elke doel-vergelijking loopt via `normalizeDoel_`; geen rauwe string-vergelijking.
  */
+/** HERKOMST: BELEID (`DOELEN-SPEC` §2B), geen geijkte drempel. Zie de uitleg hierboven. */
+export const EVENT_OVERNAME_WEKEN = 8;
+
 export function effectiveMacroFase_(
-  fase: any,
+  eventMacroFase: any,
+  doelFase: any,
   settings: any,
-  eventDriven?: any,
+  wekenTot?: any,
 ): any {
-  if (!settings || settings.doel !== "Onderhoud") return fase;
-  if (eventDriven && fase !== "Test") return fase;
-  return "Base";
+  const doel = normalizeDoel_(settings && settings.doel);
+  // 1. Binnen de overnamegrens wint het event — voor ELK doel, ook Onderhoud.
+  if (
+    eventMacroFase != null &&
+    typeof wekenTot === "number" &&
+    wekenTot <= EVENT_OVERNAME_WEKEN
+  )
+    return eventMacroFase;
+  // 2. Daarbuiten leidt het doel. Onderhoud kent geen periodisering: `DOELEN-SPEC` §3.2 maakt
+  //    de FREQUENTIE het beschermde deel, en een testweek zou het quotum op 0 zetten.
+  if (doel === "Onderhoud") return "Base";
+  return doelFase;
 }
 
 /**
