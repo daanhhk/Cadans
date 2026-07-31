@@ -150,6 +150,28 @@ WAT DIT DOCUMENT NIET DOET. Het legt GEEN drempelwaarden vast. Elke drempel word
 geijkt en moet op een plateau liggen — zie `docs/WERKWIJZE.md`, paragraaf *Recon en bewijslast*. Een
 norm die hier een getal noemt, bemonstert ruis.
 
+## 2B. De event-overname — VASTGESTELD (Daan-besluit, 31 juli 2026)
+
+HET DOEL LEIDT. Het ingestelde doel stuurt de periodisering. Een event dat verder weg staat dan
+acht weken verandert de fase niet en verandert het doel niet. Dit besluit is meermaals in chats
+gegeven en nooit vastgelegd; vanaf nu is het een `git diff`, geen herhaling.
+
+DE OVERNAME BEGINT OP ACHT WEKEN. Vanaf acht weken vóór het hoofdevent neemt de event-as de
+periodisering over. HERKOMST: BELEID. Het getal valt samen met de grens die `eventFase_` al
+draagt — bij negen weken of meer levert die per constructie "Base", dus vóór acht weken zegt de
+event-as niets onderscheidends. Voor AGR op 2027-04-17 is dat de week van 2027-02-22, exact de
+Base-naar-Build-grens die al gemeten was.
+
+DE OVERNAME IS EEN VOORSTEL, GEEN AFTELLING. Op die grens vraagt de app of het doel meegaat naar
+het event-doel. Het ingestelde doel blijft staan tot Daan bevestigt; afwijzen is een tik. Vorm
+volgt doel-passendheid uit paragraaf 2A: hoogstens een keer per blok, op een blokgrens.
+
+HET DOEL-BLOK IS TWAALF WEKEN EN HERHAALT. Loopt een blok af zonder dat er een nieuw doel is
+gekozen, dan blijft het staande doel gelden en begint een volgend blok. Het event wordt NIET
+leidend omdat een blok afloopt: de enige overnamegrens is de acht weken hierboven. Anders geeft
+een blok dat in september afloopt het hele najaar alsnog aan een event in april — precies wat
+dit besluit uitsluit.
+
 ## 3. De doelen
 
 ### 3.1 FTP verhogen — VASTGESTELD

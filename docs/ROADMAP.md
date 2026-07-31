@@ -153,6 +153,27 @@ punten staat onder *Gesloten — vindplaats*.
    kwaliteitsdagen en de extra uren gaan naar Z2. De DALING van 20 naar 14 boven 10 uur is dat
    niet — meer volume levert dan MINDER scherpte, en dat bij het doel dat op AGR mikt. Nog niet
    herleid tot een mechanisme; eerst meten, niet repareren.
+   GEMETEN 31-07-2026 op `8ffbd27`, gebundelde engine, TZ=Europe/Amsterdam, de keten
+   `eventFase_` naar `computeMacroPhase` naar `effectiveMacroFase_` over 38 maandagen van
+   2026-08-03 tot en met 2027-04-19, voor alle vijf doelen, met en zonder event.
+   MET EVENT leveren alle vijf doelen op elke maandag DEZELFDE fase: Base tot en met 2027-02-14,
+   Build vanaf 2027-02-21, Peak vanaf 2027-03-21, Taper vanaf 2027-04-11. Dat breidt de eerdere
+   meting van drie naar vijf doelen uit.
+   ZONDER EVENT IS DE TERUGVAL GEEN CYCLUS MAAR EEN AFLOPENDE TELLER. `computeMacroPhase` staat
+   vanaf blokweek 12 — bij `doelStart` 2026-06-29 dus vanaf 2026-09-13 — VOORGOED op "Test", en dat
+   geldt voor vier van de vijf doelen. Alleen Onderhoud ontsnapt, doordat `effectiveMacroFase_` dat
+   doel naar Base terugzet; dat is vandaag de ENIGE doel-naar-fase-hendel die bestaat.
+   DE GEVOLGSCHADE VAN "Test" IS IN DE PLANNER GELEZEN, NIET AANGENOMEN. `kwaliteitPerWeek` draagt
+   geen `Test`-sleutel, dus `planner.ts:227` levert quotum 0, en `planner.ts:639` zet de week op
+   testweek. Het commentaar op `planner.ts:90` noemt dat zelf als reden voor het `fase !== "Test"`
+   -vangnet, en `faseOvergang.ts:96` onderdrukt de aankondiging van die fase als tellerartefact.
+   GEVOLG VOOR DE BOUW: het criterium is NIET te leveren door de poort in `effectiveMacroFase_` te
+   verbreden. Zolang de terugval na twaalf weken doodloopt, levert verbreden een permanente
+   testweek met quotum 0. Het blok moet HERHALEN. De norm staat nu in `DOELEN-SPEC` paragraaf 2B.
+   BOUW IN TWEE FASES met een stop ertussen. Fase A, ENGINE: het doel-blok laten herhalen en de
+   poort verbreden van "alleen Onderhoud, alleen zonder event" naar "elk doel, tot de
+   acht-wekengrens", via `normalizeDoel_`. Fase B, CLIENT plus DATA: de overname-kaart als voorstel
+   met een afwijs-tik, persistentie naar het model van `fatigue_shift` en de dosis-trede.
 10. **Twee kaarten spreken los over hetzelfde blok** — open · CLIENT. (`DOELEN-SPEC` §6 stap
     7.) De doortrain-kaart en de terugblik lezen hetzelfde ΔCTL-signaal en doen er elk een
     eigen uitspraak over. CRITERIUM: een blok krijgt ÉÉN uitspraak, niet twee. DIT PUNT DRAAGT
