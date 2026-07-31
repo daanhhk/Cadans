@@ -650,7 +650,10 @@ export function assignWorkouts(
   // normale (belaste) opbouwweek en is de taper zélf de deload; taper-dagen overrulen sowieso per dag.
   let nearTaper = false;
   if (taperCtx?.datum && days?.length && days[0]?.datum) {
-    const daysToTaper = Math.floor(
+    // ROUND, niet floor: beide operanden zijn lokale middernacht (stripTime_), dus over de
+    // voorjaarssprong telt floor een dag te weinig en gaat de grens `<= 7 + venster` ten
+    // onrechte aan. Zelfde correctie als in computeMacroPhase en weekIndexFromStart_.
+    const daysToTaper = Math.round(
       (stripTime_(taperCtx.datum).getTime() -
         stripTime_(days[0].datum).getTime()) /
         86400000,
@@ -1081,14 +1084,24 @@ export function keyIntensity(
 // VARIANT-ENGINE (DEEL 3) — pools + selectie + renderer
 // ════════════════════════════════════════════════════════════════
 
-/** Weken sinds doel-startdatum (deterministisch, reproduceerbaar). */
+/**
+ * Weken sinds doel-startdatum (deterministisch, reproduceerbaar).
+ *
+ * ROND EERST DE DAGEN AF, DEEL PAS DAARNA. Beide operanden zijn lokale middernacht, dus hun
+ * verschil is n dagen plus of min een uur — precies een uur korter zodra het venster de
+ * voorjaarssprong kruist. Delen door een vaste 7×24u-constante en dan `Math.floor` gooide daar
+ * een hele week weg; `Math.round` op het DAGverschil levert n, en de weekdeling erna klopt weer.
+ *
+ * NIET `Math.round` over het WEEKquotiënt. Dat zou de DST-scheefte ook wegpoetsen, maar bij een
+ * doel-start MIDDEN in de week springt het blok dan een halve week te vroeg om: een quotiënt van
+ * 3,5 wordt 4 terwijl er nog geen vier volle weken om zijn. Daar staat een assertie op.
+ */
 export function weekIndexFromStart_(settings: any): number {
   const start = settings.doelStart || new Date();
   const s0 = new Date(start.getFullYear(), start.getMonth(), start.getDate());
   const ws = weekStartDate(new Date());
-  const diff = Math.floor(
-    (ws.getTime() - s0.getTime()) / (7 * 24 * 60 * 60 * 1000),
-  );
+  const dagen = Math.round((ws.getTime() - s0.getTime()) / 86400000);
+  const diff = Math.floor(dagen / 7);
   return diff < 0 ? 0 : diff;
 }
 

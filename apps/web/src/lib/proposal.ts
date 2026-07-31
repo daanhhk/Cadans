@@ -338,13 +338,19 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
           settingsE,
         );
 
-  // 3d stap 4 — nearTaper client-side, EXACT de engine-logica (planner.ts:510-523): een deload
-  // (isMesoRecovery = mesoWeek===4) die 0..7+venster dagen vóór de taper valt wordt onderdrukt.
-  // Lokale datum-rekenkunde (parseLocalDate + stripTime_ = midnight-local, GEEN UTC-round-trip),
-  // identiek aan de engine; voedt uitsluitend de fatigue-trigger.
+  // 3d stap 4 — nearTaper client-side, EXACT de engine-logica (`nearTaper` in
+  // packages/engine/src/planner.ts, rond regel 650): een deload (isMesoRecovery = mesoWeek===4)
+  // die 0..7+venster dagen vóór de taper valt wordt onderdrukt. Lokale datum-rekenkunde
+  // (parseLocalDate + stripTime_ = midnight-local, GEEN UTC-round-trip), identiek aan de engine;
+  // voedt uitsluitend de fatigue-trigger.
+  //
+  // ROUND, niet floor — en dat moet hier gelijk lopen met de engine, anders beweren de twee takken
+  // hetzelfde te doen terwijl ze over de voorjaarssprong uiteenlopen. Twee lokale middernachten
+  // verschillen n dagen plus of min een uur; floor telde er over die grens één te weinig, waardoor
+  // de grens `<= 7 + venster` ten onrechte aanging.
   let nearTaper = false;
   if (taperCtx?.datum) {
-    const daysToTaper = Math.floor(
+    const daysToTaper = Math.round(
       (stripTime_(parseLocalDate(taperCtx.datum)).getTime() -
         stripTime_(weekMondayDate).getTime()) /
         86400000,

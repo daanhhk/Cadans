@@ -94,6 +94,28 @@ describe("blokWeekVanWeek — kalender-blokweek uit de weekmaandag", () => {
   it("weekmaandag vóór doelStart → index 0 → blokweek 1", () => {
     expect(blokWeekVanWeek(DOEL_START, "2026-06-15")).toBe(1);
   });
+
+  // ROADMAP punt 9 nazorg 2 — DE ZOMERTIJDSPRONG. Twee lokale middernachten liggen over de
+  // voorjaarssprong een uur korter uit elkaar; delen door een vaste 7x24u-constante en dan
+  // floor gooide daar een hele week weg. GEMETEN met doelStart 2026-03-02: de maandag ná de
+  // sprong (2026-03-30) gaf quotiënt 3,9940 en dus blokweek 3 in plaats van 4.
+  // De blokweek loopt 1..BLOK_WEKEN = 1..4 en slaat daarna om: index 3 is blokweek 4, index 4 is
+  // blokweek 1 van het VOLGENDE blok. 2026-03-30 ligt 28 dagen na doelStart, dus index 4 → blokweek
+  // 1. Met de oude floor werd dat index 3 → blokweek 4: het blok bleef een week te lang hangen.
+  it("(a) over de voorjaarssprong slaat het blok op tijd om", () => {
+    expect(blokWeekVanWeek("2026-03-02", "2026-03-30")).toBe(1);
+  });
+  it("(b) tegenhanger zonder grens — was ook vóór de fix al goed", () => {
+    expect(blokWeekVanWeek("2026-03-02", "2026-03-23")).toBe(4);
+  });
+  // (c) DE VAL BIJ EEN 'NETTERE' FIX. Wie dit ooit repareert met Math.round over het WEEKquotiënt
+  // haalt de DST-scheefte ook weg, maar laat het blok bij een doel-start MIDDEN in de week een
+  // halve week te vroeg omslaan. doelStart woensdag 2026-03-04 → maandag 2026-03-30 is 26 dagen,
+  // dus floor(26/7) = 3 volle weken → blokweek 4. Round op het weekquotiënt maakt van 3,71 een 4
+  // en levert blokweek 1 van het volgende blok.
+  it("(c) doel-start midden in de week slaat niet te vroeg om", () => {
+    expect(blokWeekVanWeek("2026-03-04", "2026-03-30")).toBe(4);
+  });
 });
 
 describe("blokStartVoorWeek / vorigBlokStart", () => {

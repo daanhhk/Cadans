@@ -781,6 +781,20 @@ describe("buildWeekProposal", () => {
     const tapered = taper.days[4].sessions[0]?.tss ?? 0;
     const normal = control.days[4].sessions[0]?.tss ?? 0;
     expect(tapered).toBeLessThan(normal);
+
+    // ROADMAP punt 9 nazorg 2 — de client-spiegel van `daysToTaper`. Deze pint de BEDRADING:
+    // `nearTaper` staat aan zodra er een taper-venster is en uit zodra dat er niet is, precies
+    // zoals de engine-tak.
+    //
+    // EERLIJK OVER WAT DIT NIET DEKT. De DST-gevoelige grens `<= 7 + venster` = 14 is via
+    // `buildWeekProposal` ONBEREIKBAAR: `taperEvent` bestaat alleen als het event binnen
+    // A_TAPER_DAGEN = 7 dagen van VANDAAG ligt, en de weekmaandag ligt hoogstens 6 dagen vóór
+    // vandaag, dus `daysToTaper` komt niet boven 13. De round-fix op deze plek is daarmee een
+    // CONSISTENTIE-reparatie — hij houdt de claim "EXACT de engine-logica" waar — en geen
+    // gedragswijziging die client-zijde rood te krijgen is. In de engine, waar assignWorkouts een
+    // willekeurige taperCtx accepteert, is die grens wél bereikbaar en staat er wel een rood-test.
+    expect(taper.nearTaper).toBe(true);
+    expect(control.nearTaper).toBe(false);
   });
 
   it("pendel-dag → pendelAantal sessies (steady pendel_z2 + intent-dragende laatste)", () => {

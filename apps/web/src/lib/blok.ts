@@ -82,21 +82,23 @@ export function shiftIso_(iso: string, days: number): string {
  * (packages/engine/src/planner.ts) met de AMBIENT KLOK vervangen door de meegegeven weekmaandag,
  * gevolgd door dezelfde cyclus als `mesoCycleWeek_`.
  *
+ * DIT IS DE 3:1-MESOTELLER, NIET HET DOEL-BLOK. `BLOK_WEKEN` is 4; `computeMacroPhase` draait een
+ * cyclus van 12. Beide tellen weken sinds `doelStart` en delen dus dezelfde INDEX — alleen de
+ * cyclus waarop ze die index afbeelden verschilt. Vergelijk de twee dus nooit op blokweek maar op
+ * die absolute weekindex; daar staat een assertie op in de selftest.
+ *
  * BEWUST de KALENDER-variant, niet `effectiveMesoWeek_`: die pint een doel zonder mesocyclus
  * (Onderhoud) op 1, en dan zou het blok nooit omslaan en bestond er geen blokgrens meer.
  *
- * DST — GECORRIGEERD, de sprong schuift de quotiënt WÉL over een weekgrens. De deling gaat over een
- * vaste 7×24u-constante, dus een 23-uursdag maakt de teller net te klein. GEMETEN onder
- * Europe/Amsterdam met doelStart 2026-03-02: de maandagen 09-03, 16-03 en 23-03 geven quotiënt
- * 1,0000 / 2,0000 / 3,0000, maar de maandag ná de voorjaarssprong (30-03-2026) geeft 3,9940 →
- * `Math.floor` levert 3 in plaats van 4. Die achterstand van één week blijft staan tot de
- * najaarsswitch het uur teruggeeft (26-10-2026 meet weer een ronde 34,0000).
- *
- * Dat gedrag wordt hier BEWUST GEËRFD van `weekIndexFromStart_`: blok-teller en mesoteller moeten in
- * de pas blijven, en de teller zelf woont in de engine (read-only, geen autorisatie). Repareren we
- * het alleen hier, dan wijst het blok naar een andere week dan de dosis-ramp — erger dan de scheefte.
- * De eerstvolgende voorjaarssprong is 28-03-2027, drie weken vóór het A-event; wie de teller dan
- * gelijk wil hebben, repareert `weekIndexFromStart_` in de engine en deze spiegel tegelijk.
+ * DST — GEMETEN EN RECHTGEZET. Onder Europe/Amsterdam met doelStart 2026-03-02 geven de maandagen
+ * 09-03, 16-03 en 23-03 quotiënt 1,0000 / 2,0000 / 3,0000, maar de maandag ná de voorjaarssprong
+ * (30-03-2026) gaf 3,9940 → `Math.floor` leverde 3 in plaats van 4. OORZAAK: de deling ging over
+ * een vaste 7×24u-constante terwijl twee lokale middernachten over die sprong een uur korter uit
+ * elkaar liggen. RECHTGEZET door eerst het DAGverschil af te ronden en pas daarna door zeven te
+ * delen — en TEGELIJK in `weekIndexFromStart_`, want blok-teller en dosis-ramp moeten in de pas
+ * blijven: alleen deze spiegel repareren zou het blok naar een andere week laten wijzen dan de
+ * ramp. Round op het WEEKquotiënt is géén alternatief; dat springt bij een doel-start midden in
+ * de week een halve week te vroeg om.
  */
 export function blokWeekVanWeek(
   doelStartISO: string | null,
@@ -106,7 +108,8 @@ export function blokWeekVanWeek(
   const s0 = parseLocalDate(doelStartISO);
   const ws = parseLocalDate(weekMondayISO);
   if (Number.isNaN(s0.getTime()) || Number.isNaN(ws.getTime())) return 1;
-  const diff = Math.floor((ws.getTime() - s0.getTime()) / (7 * MS_PER_DAY));
+  const dagen = Math.round((ws.getTime() - s0.getTime()) / MS_PER_DAY);
+  const diff = Math.floor(dagen / 7);
   const index = diff < 0 ? 0 : diff;
   return (((index % BLOK_WEKEN) + BLOK_WEKEN) % BLOK_WEKEN) + 1;
 }

@@ -183,6 +183,31 @@ punten staat onder *Gesloten — vindplaats*.
    te laat kantelt. Dat raakt precies het scenario van paragraaf 5: een blok dat in de winter start
    en na eind maart doorloopt. Rechtgezet naar `Math.round`, gelijk aan phase.ts:149, phase.ts:170,
    planner.ts:307 en niveau.ts:844.
+   DE DAGTELLER-BUG STOND NIET OP ZICHZELF; EEN RECON VOND VIER PLEKKEN. Naast `computeMacroPhase`
+   droegen `weekIndexFromStart_` (planner.ts), zijn client-spiegel `blokWeekVanWeek` (blok.ts) en
+   `daysToTaper` aan beide kanten (planner.ts en proposal.ts) hetzelfde patroon: floor over een
+   vaste dag- of weekconstante, dus een dag te weinig na de voorjaarssprong.
+   DE INVARIANT IS DE WEEKINDEX, NIET DE BLOKWEEK. Alle tellers tellen weken sinds `doelStart`, maar
+   mappen die index op verschillende cycli: `computeMacroPhase` op 12, `blokWeekVanWeek` op
+   `BLOK_WEKEN` = 4 (de 3:1-mesocyclus). Door alleen `computeMacroPhase` recht te zetten schoof de
+   macrofase na de sprong een week op terwijl mesocyclus en variant-rotatie achterbleven — de deload
+   landde dan in de verkeerde week ten opzichte van de fase. Daar staat nu een assertie op die de
+   ABSOLUTE week uit beide tellers vergelijkt.
+   `daysToTaper` IS EEN ANDERE FOUTMODE. Een dag te weinig schuift de grens `<= 7 + venster` op,
+   waardoor de kalender-deload wordt onderdrukt in een week waar dat niet hoort. GEMETEN: AGR raakt
+   dit NIET — de taperbeslissing gebruikt weekmaandagen vanaf 2027-03-29 en de sprong is 2027-03-28,
+   dus er wordt niets gekruist. Bereikbaar is een event begin april met een weekmaandag nominaal 15
+   dagen vóór de taperdatum, met de sprong ertussen.
+   AANVULLING UIT DE BOUW, GEMETEN: die grens is via `buildWeekProposal` ONBEREIKBAAR. `taperEvent`
+   bestaat alleen als het hoofdevent binnen `A_TAPER_DAGEN` = 7 dagen van VANDAAG ligt, en de
+   weekmaandag ligt hoogstens 6 dagen vóór vandaag, dus `daysToTaper` komt niet boven 13 terwijl de
+   grens op 14 ligt. De client-fix is daarmee een CONSISTENTIE-reparatie — hij houdt de claim
+   "EXACT de engine-logica" waar — en is client-zijde niet rood te krijgen. In de engine, waar
+   `assignWorkouts` een willekeurige taperCtx accepteert, is de grens wél bereikbaar en staat er wel
+   een rood-test op.
+   ALLE VIER STAAN NU OP HETZELFDE PATROON: `Math.round` op het DAGverschil, daarna pas delen. Round
+   op het WEEKquotiënt is expliciet fout bij een doel-start midden in de week; daar staat een
+   assertie op.
    OPEN NA FASE A, hoort bij fase B: de maandag na het hoofdevent levert de doel-cyclus weer Build,
    zonder herstelweek. De vraag om een nieuw doel na het event en het herstel daarna zijn hetzelfde
    gat en worden samen opgelost. Tweede punt voor fase B: de tak `=== "Onderhoud"` in

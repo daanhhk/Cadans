@@ -4,7 +4,7 @@
  * value, input, and assertion is copied VERBATIM from SelfTest.gs. Do not
  * "fix", round, or relax anything here — this file is the correctness oracle.
  */
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import {
   ACT_HEADERS,
   ACT_ID_IDX,
@@ -118,6 +118,7 @@ import {
   tssPerHourRecent_,
   volumeModulatie,
   watts,
+  weekIndexFromStart_,
   weeklyHoursRecent_,
   weekPlanSummary_,
   wellnessSignal_,
@@ -754,6 +755,81 @@ describe("engine selftest", () => {
     assert_("macro w25 → blok 3 week 1", 1, m25.week);
     assert_("macro w25 fase Base", "Base", m25.fase);
     assert_("macro w25 blokNr 3", 3, m25.blokNr);
+  });
+
+  // ── ROADMAP punt 9 nazorg 2 — DE VIER TELLERS OP HETZELFDE PATROON ───
+  // Round op het DAGverschil, daarna pas delen. De invariant tussen de tellers is de ABSOLUTE
+  // weekindex sinds doelStart, NIET de blokweek: computeMacroPhase beeldt die index af op een
+  // cyclus van 12, blokWeekVanWeek (client) op BLOK_WEKEN = 4.
+  it("testTellersInDePas", () => {
+    // (d) SAMENHANG over de voorjaarssprong van 2027-03-28. weekIndexFromStart_ leest de AMBIENT
+    //     klok via new Date(), dus die is hier een fixture-variabele.
+    const doelStart = new Date(2027, 0, 4); // ma 4 jan 2027
+    function absoluteWeken(peil: Date) {
+      vi.useFakeTimers();
+      vi.setSystemTime(peil);
+      try {
+        const m = computeMacroPhase(doelStart, peil);
+        return {
+          viaMacro: (m.blokNr - 1) * 12 + m.week,
+          viaPlanner: weekIndexFromStart_({ doelStart: doelStart }) + 1,
+        };
+      } finally {
+        vi.useRealTimers();
+      }
+    }
+    // NA de sprong: hier liep het uiteen zolang alleen computeMacroPhase was rechtgezet.
+    const na = absoluteWeken(new Date(2027, 3, 5)); // ma 5 apr 2027
+    assert_("tellers gelijk NA de sprong", na.viaMacro, na.viaPlanner);
+    // VÓÓR de sprong, zodat de vorige assertie de KRUISING isoleert en niet de rekenkunde.
+    const voor = absoluteWeken(new Date(2027, 2, 22)); // ma 22 mrt 2027
+    assert_("tellers gelijk VÓÓR de sprong", voor.viaMacro, voor.viaPlanner);
+
+    // (e) daysToTaper in de ENGINE. Weekmaandag 2027-03-22, taperdatum 2027-04-06, venster 7:
+    //     nominaal 15 dagen, dus buiten 7 + venster = 14. Met floor telde de teller 14 over de
+    //     sprong heen en ging `nearTaper` ten onrechte aan, waardoor een deload werd onderdrukt.
+    //     nearTaper is intern; het EFFECT is `isRecovery = isMesoRecovery && !nearTaper`, en dat
+    //     is zichtbaar in het plan: een deloadweek levert een lichtere week dan een gewone.
+    function hardeDagen(mesoWeek: number, taper: any) {
+      const dagen = [0, 1, 2, 3, 4, 5, 6].map((i) => ({
+        datum: new Date(2027, 2, 22 + i),
+        dagIdx: i,
+        train: i !== 2 && i !== 4,
+        minuten: i === 5 ? 120 : 75,
+        type: i === 5 ? "weekend" : "vrij",
+        voorgesteldType: null,
+        reden: null,
+        redenCode: null,
+        archetypeId: null,
+      }));
+      assignWorkouts(
+        dagen,
+        { doel: "FTP", ftp: 280, lthr: 170, gewicht: 75, pendelDuurMin: 80 },
+        mesoWeek,
+        "Build",
+        { low: false, high: false, anaerobic: false },
+        { signal: "normal" },
+        null,
+        null,
+        null,
+        false,
+        taper,
+        dagen,
+      );
+      // assignWorkouts schrijft `voorgesteldType` op de dag; het aantal HARDE dagen is de
+      // zichtbare uitwerking van `isRecovery` — een deload levert er minder.
+      return dagen.filter(
+        (d: any) => d.voorgesteldType && isHardType_(d.voorgesteldType, "FTP"),
+      ).length;
+    }
+    const TAPER = { datum: new Date(2027, 3, 6), venster: 7, isTrip: false };
+    // Deloadweek (mesoWeek 4) mét die taperdatum: de taper ligt 15 dagen weg, dus de deload
+    // hoort gewoon te vuren en de week hoort LICHTER te zijn dan een normale week 3.
+    assert_(
+      "nearTaper vuurt NIET op 15 dagen → deload blijft staan",
+      true,
+      hardeDagen(4, TAPER) < hardeDagen(3, TAPER),
+    );
   });
 
   // ── ROADMAP punt 9 — DE VOLLEDIGE KETEN op een gepinde klok ──────────
@@ -5865,8 +5941,10 @@ describe("engine selftest", () => {
   // herschreven effectiveMacroFase_-tak met de acht-wekengrens voor elk doel, en de volledige
   // keten eventFase_ + computeMacroPhase + effectiveMacroFase_ op een gepinde klok. 1408→1427.
   // Nazorg fase A: +5 voor de dagteller op de zomertijdgrens plus de tegenhanger zonder grens.
-  // 1427→1432.
-  it("exactly 1432 assertions", () => {
-    expect(assertCount).toBe(1432);
+  // 1427→1432. Nazorg 2: +3 voor de vier tellers op hetzelfde patroon — de absolute weekindex uit
+  // computeMacroPhase en weekIndexFromStart_ vóór en ná de sprong, plus de deload-uitwerking van
+  // daysToTaper. 1432→1435.
+  it("exactly 1435 assertions", () => {
+    expect(assertCount).toBe(1435);
   });
 });
