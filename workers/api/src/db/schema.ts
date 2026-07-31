@@ -254,6 +254,22 @@ export const syncState = sqliteTable("sync_state", {
   /** Het DOEL waarop de trede is opgebouwd. De minuten per prikkel zijn doel-eigen (FTP 28,
    * Onderhoud 22), dus bij een doel-wissel vervalt de trede in plaats van mee te reizen. */
   dosisTredeDoel: text("dosis_trede_doel"),
+  /** ROADMAP punt 9 fase B — het antwoord op de EVENT-OVERNAME: gaat het plan vanaf de
+   * acht-wekengrens op het hoofdevent mikken, of maakt het staande doel-blok zich eerst af?
+   * De DATUM van het event waarvoor geantwoord is (yyyy-MM-dd).
+   *
+   * DE EVENT-DATUM IS DE IDENTITEIT, en dat is geen gemakzucht: `EventItem` (het wire-DTO) draagt
+   * geen id en `PUT /api/events` is FULL-REPLACE, dus de rij-id's zijn niet stabiel. Verzet Daan
+   * het event, dan is dat een NIEUW besluit en hoort de vraag terug te komen — precies wat een
+   * datum-sleutel oplevert. Zie docs/EVENT-OVERNAME-BOUWDOC.md §5. */
+  eventOvernameEvent: text("event_overname_event"),
+  /** De blokstart-MAANDAG (yyyy-MM-dd) waarop het antwoord viel. Draagt de asymmetrie tussen de
+   * twee antwoorden: 'ja' geldt tot het event voorbij is en de vraag komt niet terug, 'nee' geldt
+   * alleen voor DIT blok en op de volgende blokgrens wordt hij opnieuw gesteld zolang het event
+   * binnen acht weken ligt. Spiegelt `dosisTredeBlok`. */
+  eventOvernameBlok: text("event_overname_blok"),
+  /** 'ja' | 'nee' | null. Exact die twee waarden; de route valideert strikt en normaliseert niet. */
+  eventOvernameAntwoord: text("event_overname_antwoord"),
   /** ROADMAP punt 6 fase 2 — de RAUWE `icu_power_zones`-array als JSON-string, afgeleid uit de
    * NIEUWSTE fiets-rit die de activiteiten-sync ophaalt (de bovengrenzen in %FTP, bijvoorbeeld
    * `[55,75,90,105,120,150,999]`). Null = nog nooit een bruikbare rit gezien; de client valt dan

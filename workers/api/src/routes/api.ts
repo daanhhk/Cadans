@@ -28,6 +28,7 @@ import {
   readCheckin,
   readDispositions,
   readDosisTrede,
+  readEventOvername,
   readEvents,
   readFatigueShift,
   readOverrides,
@@ -42,6 +43,7 @@ import {
   writeCheckin,
   writeDisposition,
   writeDosisTrede,
+  writeEventOvername,
   writeEvents,
   writeFatigueShift,
   writeOverride,
@@ -609,6 +611,52 @@ api.put("/dosis-trede", async (c) => {
     trede as number | null,
     blok as string | null,
     doel as string | null,
+  );
+  return c.json({ ok: true });
+});
+
+// ROADMAP punt 9 fase B — EVENT-OVERNAME (spiegelt /dosis-trede). GET geeft de eventdatum, de
+// blokstart en het antwoord (of drie nullen); PUT zet de drie samen. Zie
+// docs/EVENT-OVERNAME-BOUWDOC.md §6.
+api.get("/event-overname", async (c) => {
+  const db = makeDb(c.env.DB);
+  const { event, blok, antwoord } = await readEventOvername(
+    db,
+    CURRENT_USER_ID,
+  );
+  return c.json({ event, blok, antwoord });
+});
+
+api.put("/event-overname", async (c) => {
+  const db = makeDb(c.env.DB);
+  const body = await readJsonObject(c);
+  const event = body.event;
+  const blok = body.blok;
+  const antwoord = body.antwoord;
+  // NIET normaliseren, NIET clampen, GEEN lege string accepteren: een afwijkende waarde is een
+  // client-fout, en stil repareren verbergt hem. Elke afwijzing gebeurt VÓÓR de schrijfactie,
+  // zodat een 400 ook echt betekent dat er niets is weggeschreven.
+  if (event !== null && (typeof event !== "string" || !isIsoDate(event))) {
+    throw new HTTPException(400, {
+      message: "invalid event, expected yyyy-MM-dd or null",
+    });
+  }
+  if (blok !== null && (typeof blok !== "string" || !isIsoDate(blok))) {
+    throw new HTTPException(400, {
+      message: "invalid blok, expected yyyy-MM-dd or null",
+    });
+  }
+  if (antwoord !== null && antwoord !== "ja" && antwoord !== "nee") {
+    throw new HTTPException(400, {
+      message: "invalid antwoord, expected 'ja', 'nee' or null",
+    });
+  }
+  await writeEventOvername(
+    db,
+    CURRENT_USER_ID,
+    event as string | null,
+    blok as string | null,
+    antwoord as string | null,
   );
   return c.json({ ok: true });
 });

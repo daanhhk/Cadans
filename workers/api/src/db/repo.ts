@@ -650,6 +650,63 @@ export async function writeDosisTrede(
     });
 }
 
+// ── event-overname (sync_state.event_overname_*) — ROADMAP punt 9 fase B ──
+// Het antwoord op de vraag of het plan vanaf de acht-wekengrens op het hoofdevent gaat mikken.
+// De EVENT-DATUM is de identiteit: EventItem draagt geen id en PUT /api/events is full-replace,
+// dus een verzet event hoort de vraag opnieuw te stellen. Zie docs/EVENT-OVERNAME-BOUWDOC.md §5.
+
+export async function readEventOvername(
+  db: Db,
+  userId: number,
+): Promise<{
+  event: string | null;
+  blok: string | null;
+  antwoord: string | null;
+}> {
+  const rows = await db
+    .select({
+      event: syncState.eventOvernameEvent,
+      blok: syncState.eventOvernameBlok,
+      antwoord: syncState.eventOvernameAntwoord,
+    })
+    .from(syncState)
+    .where(eq(syncState.userId, userId))
+    .limit(1);
+  return {
+    event: rows[0]?.event ?? null,
+    blok: rows[0]?.blok ?? null,
+    antwoord: rows[0]?.antwoord ?? null,
+  };
+}
+
+/** Zet de drie event-overname-waarden samen. Upsert: raakt ALLEEN deze drie kolommen → de
+ * sync-velden, debt-opt-in, fatigue-shift, dosis-trede en power-zones blijven intact. Zelfde
+ * vorm als `writeDosisTrede`. */
+export async function writeEventOvername(
+  db: Db,
+  userId: number,
+  event: string | null,
+  blok: string | null,
+  antwoord: string | null,
+): Promise<void> {
+  await db
+    .insert(syncState)
+    .values({
+      userId,
+      eventOvernameEvent: event,
+      eventOvernameBlok: blok,
+      eventOvernameAntwoord: antwoord,
+    })
+    .onConflictDoUpdate({
+      target: syncState.userId,
+      set: {
+        eventOvernameEvent: event,
+        eventOvernameBlok: blok,
+        eventOvernameAntwoord: antwoord,
+      },
+    });
+}
+
 // ── power-zones (sync_state.power_zones_json) — ROADMAP punt 6 fase 2 ──────
 // De RAUWE icu_power_zones-array, afgeleid uit de nieuwste fiets-rit door `syncActivities`.
 // Zie docs/ZONE-SYNC-BOUWDOC.md §3 t/m §5.
