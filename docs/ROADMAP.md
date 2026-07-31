@@ -156,8 +156,8 @@ punten staat onder *Gesloten — vindplaats*.
    GEMETEN 31-07-2026 op `8ffbd27`, gebundelde engine, TZ=Europe/Amsterdam, de keten
    `eventFase_` naar `computeMacroPhase` naar `effectiveMacroFase_` over 38 maandagen van
    2026-08-03 tot en met 2027-04-19, voor alle vijf doelen, met en zonder event.
-   MET EVENT leveren alle vijf doelen op elke maandag DEZELFDE fase: Base tot en met 2027-02-14,
-   Build vanaf 2027-02-21, Peak vanaf 2027-03-21, Taper vanaf 2027-04-11. Dat breidt de eerdere
+   MET EVENT leveren alle vijf doelen op elke maandag DEZELFDE fase: Base tot en met 2027-02-15,
+   Build vanaf 2027-02-22, Peak vanaf 2027-03-22, Taper vanaf 2027-04-12. Dat breidt de eerdere
    meting van drie naar vijf doelen uit.
    ZONDER EVENT IS DE TERUGVAL GEEN CYCLUS MAAR EEN AFLOPENDE TELLER. `computeMacroPhase` staat
    vanaf blokweek 12 — bij `doelStart` 2026-06-29 dus vanaf 2026-09-13 — VOORGOED op "Test", en dat
@@ -174,6 +174,20 @@ punten staat onder *Gesloten — vindplaats*.
    poort verbreden van "alleen Onderhoud, alleen zonder event" naar "elk doel, tot de
    acht-wekengrens", via `normalizeDoel_`. Fase B, CLIENT plus DATA: de overname-kaart als voorstel
    met een afwijs-tik, persistentie naar het model van `fatigue_shift` en de dosis-trede.
+   CORRECTIE 31-07-2026: de vier fase-grensdatums hierboven stonden een dag te vroeg — het waren
+   zondagen. Oorzaak lag in het meetscript van de chat, dat lokale middernacht als UTC printte, niet
+   in de engine. De maandagen hierboven zijn de gemeten waarden uit de bouwronde.
+   GEVONDEN TIJDENS FASE A, en het zat er al: `computeMacroPhase` telde dagen met `Math.floor` over
+   het millisecondenverschil van twee lokale middernachten. Kruist dat verschil de zomertijdgrens
+   van eind maart, dan is het een uur te kort en verdwijnt een hele dag, waardoor het blok een week
+   te laat kantelt. Dat raakt precies het scenario van paragraaf 5: een blok dat in de winter start
+   en na eind maart doorloopt. Rechtgezet naar `Math.round`, gelijk aan phase.ts:149, phase.ts:170,
+   planner.ts:307 en niveau.ts:844.
+   OPEN NA FASE A, hoort bij fase B: de maandag na het hoofdevent levert de doel-cyclus weer Build,
+   zonder herstelweek. De vraag om een nieuw doel na het event en het herstel daarna zijn hetzelfde
+   gat en worden samen opgelost. Tweede punt voor fase B: de tak `=== "Onderhoud"` in
+   `effectiveMacroFase_` vergelijkt op een UI-string; die hoort op de profiel-id te vergelijken,
+   zodat `normalizeDoel_` daar draagt in plaats van meeloopt.
 10. **Twee kaarten spreken los over hetzelfde blok** — open · CLIENT. (`DOELEN-SPEC` §6 stap
     7.) De doortrain-kaart en de terugblik lezen hetzelfde ΔCTL-signaal en doen er elk een
     eigen uitspraak over. CRITERIUM: een blok krijgt ÉÉN uitspraak, niet twee. DIT PUNT DRAAGT

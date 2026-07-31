@@ -730,6 +730,25 @@ describe("engine selftest", () => {
     assert_("macro w13 fase Base", "Base", m13.fase);
     assert_("macro w13 isTest false", false, m13.isTestWeek);
     assert_("macro w13 blokNr 2", 2, m13.blokNr);
+    // DE ZOMERTIJDGRENS ZELF, en dit is de assertie die de dagteller pint. doelStart
+    // 2027-01-04, vandaag 2027-03-29: exact 84 dagen later, en dat venster kruist de
+    // zomertijdgrens van 2027-03-28. Twee lokale middernachten verschillen dan 84 dagen MIN een
+    // uur; met `Math.floor` werd dat 83 en kantelde het blok een week te laat — blokweek 12 in
+    // plaats van 1, dus fase "Test" in plaats van "Base". Met `Math.round` klopt hij.
+    const dstStart = new Date(2027, 0, 4); // ma 4 jan 2027, wintertijd
+    const dst = computeMacroPhase(dstStart, new Date(2027, 2, 29)); // ma 29 mrt, ZOMERTIJD
+    assert_("macro DST-kruising → blok 2 week 1", 1, dst.week);
+    assert_("macro DST-kruising fase Base", "Base", dst.fase);
+    assert_("macro DST-kruising blokNr 2", 2, dst.blokNr);
+    // TEGENHANGER binnen één tijdzone-regime: zelfde afstand van 84 dagen, geen grens ertussen.
+    // Deze was ook vóór de fix al goed — samen toetsen de twee de GRENS en niet de rekenkunde.
+    const vlak = computeMacroPhase(
+      new Date(2026, 5, 29),
+      new Date(2026, 8, 21),
+    ); // +84d, CEST
+    assert_("macro zonder grens → blok 2 week 1", 1, vlak.week);
+    assert_("macro zonder grens fase Base", "Base", vlak.fase);
+
     // En het blijft doorlopen: week 25 is de eerste week van het DERDE blok.
     const m25 = computeMacroPhase(t1, new Date(2026, 9, 19)); // +168d → absolute week 25
     assert_("macro w25 → blok 3 week 1", 1, m25.week);
@@ -5845,7 +5864,9 @@ describe("engine selftest", () => {
   // ROADMAP punt 9 (het doel stuurt de fase): +19. De herhalende blok-cyclus met blokNr, de
   // herschreven effectiveMacroFase_-tak met de acht-wekengrens voor elk doel, en de volledige
   // keten eventFase_ + computeMacroPhase + effectiveMacroFase_ op een gepinde klok. 1408→1427.
-  it("exactly 1427 assertions", () => {
-    expect(assertCount).toBe(1427);
+  // Nazorg fase A: +5 voor de dagteller op de zomertijdgrens plus de tegenhanger zonder grens.
+  // 1427→1432.
+  it("exactly 1432 assertions", () => {
+    expect(assertCount).toBe(1432);
   });
 });

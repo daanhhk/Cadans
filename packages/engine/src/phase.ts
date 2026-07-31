@@ -72,7 +72,14 @@ export function computeMacroPhase(startDate: any, today: any): any {
     startDate.getDate(),
   );
   var now = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  var diffDays = Math.floor(
+  // ROUND, NIET FLOOR — en dat is geen afrondsmaak maar een DST-correctie. Beide datums zijn
+  // LOKALE middernacht, dus hun verschil is altijd n dagen plus of min een uur: precies een uur
+  // korter wanneer het venster de zomertijdgrens van eind maart kruist, een uur langer bij de
+  // wintertijdgrens van eind oktober. `Math.round` levert dan n; `Math.floor` gooide bij die
+  // eerste een hele dag weg, waarna het blok een week te laat kantelde. Dat raakt precies het
+  // scenario uit `DOELEN-SPEC` §5: een blok dat in de winter start en na eind maart doorloopt.
+  // Dezelfde telling als `phase.ts:149`, `phase.ts:170`, `planner.ts:307` en `niveau.ts:844`.
+  var diffDays = Math.round(
     (now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
   );
   var absWeek = Math.floor(diffDays / 7) + 1;
