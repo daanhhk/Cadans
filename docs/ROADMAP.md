@@ -108,17 +108,17 @@ punten staat onder *Gesloten — vindplaats*.
    48 shots byte-identiek, en op prod noemt de blok-kaart na de deploy dezelfde getallen als
    ervoor. Bouwdoc: `docs/ZONE-SYNC-BOUWDOC.md`. Fase 3 (de week-baan) is daar VOORWAARDELIJK en
    staat niet in deze reeks.
-7. **De doel-lijst klopt niet** — open · ENGINE. (`DOELEN-SPEC` §6 stap 3.) SPEC:
-   `docs/DOEL-LIJST-RECON.md`. `DOEL_OPTIONS` (`phase.ts:12`) draagt nog VO2max en één
-   `Beklimmingen`. De eerdere post noemde `climbTypeWorkout_` (`planner.ts:1051`) "in de
-   praktijk onbereikbaar"; dat is nu exact begrensd. GEMETEN over alle 15 combinaties (5
-   doelen x 3 fases): `goalWorkout_` levert vanaf 33 minuten een kandidaat, in elke
-   combinatie dezelfde grens, en `eligible_` (`planner.ts:237`) kent geen
-   minimum-minuten-poort. De tak kan dus uitsluitend vuren op een kwaliteits-eligible dag van
-   32 minuten of korter, in fase Build of Peak, met een `klimType` op het hoofdevent. Smal,
-   niet nul — opruimen is een gedragswijziging op die grens en daarmee toetsbaar. CRITERIUM:
-   VO2max eruit, Beklimmingen gesplitst in kort en lang, twee profielen, dode tak opgeruimd.
-   HARDE DATUM: half februari 2027.
+7. **De doel-lijst klopt niet** — af · ENGINE + CLIENT. (`DOELEN-SPEC` §6 stap 3.) SPEC:
+   `docs/DOEL-LIJST-RECON.md`. `DOEL_OPTIONS` (`phase.ts`) draagt nu FTP, Conditie, Korte
+   beklimmingen, Lange beklimmingen en Onderhoud; `PROFILES.klim` en `PROFILES.vo2max` zijn
+   vervangen door `klim_kort` (vo2-geleid, Base-quotum 3) en `klim_lang` (de voortzetting,
+   drempel-geleid). VO2max is geen doel meer maar blijft MIDDEL: `vo2Pools_` en de archetypes
+   staan er nog, de doel-bibliotheek `workoutForVo2max` is weg. `normalizeDoel_` is de ENIGE
+   plek waar een doel-string canoniek wordt — nodig omdat `settings.doel` vrije tekst in D1 is
+   en de worker hem niet valideert. `climbTypeWorkout_` is verwijderd: GEMETEN over alle 15
+   combinaties levert `goalWorkout_` vanaf 33 minuten een kandidaat, dus de tak kon alleen nog
+   vuren bij 32 minuten of korter, en gaf daar het klimTYPE van het event voorrang op het DOEL
+   van de gebruiker. Bouw in `b04d73c` en `626bdd5`. HARDE DATUM half februari 2027 gehaald.
 8. **De meetlat kent maar twee doelen** — open · ENGINE plus CLIENT. SPEC:
    `docs/DOEL-LIJST-RECON.md` §8. `activeGoalProfile_` (`niveau.ts:629`) geeft FTP het
    ftp-profiel en élk ander doel het girona-EVENT-profiel; dat label staat letterlijk in de
