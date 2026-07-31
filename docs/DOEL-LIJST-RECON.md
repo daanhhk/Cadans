@@ -189,6 +189,72 @@ Daaruit volgt de scope:
 - De echte meters voor korte beklimmingen en conditie (durability, 20-minutenvermogen na
   15 kJ/kg) horen bij punt 11 en worden hier NIET gebouwd.
 
+### CORRECTIE 31-07-2026 — §8 op vijf punten bijgesteld, gemeten vóór de bouw
+
+1. DE METER MOET AAN BEIDE KANTEN DEZELFDE ZIJN. §8 wijst `ftpWkg` aan voor de
+onderhoud-vloer. Die grootheid is in `Niveau.tsx` `computeNiveau_(settings.ftp,
+settings.gewicht).wkg` — de HANDMATIG INGESTELDE FTP. De vloer komt uit `instapNiveau()`
+en dat is `rolling_ftp` uit de ritten. Twee verschillende grootheden tegen elkaar.
+GEMETEN: `ftp_auto_update` staat in het schema (`workers/api/src/db/schema.ts:65`) en
+heeft NUL lezers, dus `settings.ftp` beweegt alleen als de gebruiker hem overtypt — de
+vloer zou de hele periode groen staan op een met de hand ingevuld getal, ongeacht wat er
+getraind is. Zelfde familie als "een pad kan dood zijn aan zijn INVOER" (`WERKWIJZE.md`):
+het mechanisme (`goalGap_` met dir "up") werkt, de invoer niet. BESLUIT: een VIERDE
+meetgrootheid `rollingFtpW`, aan beide kanten `rolling_ftp`, in WATT. Watt en niet W/kg
+omdat `DOELEN-SPEC` §3.2 KETEN spreekt van "circa 95 procent van de FTP waarmee de
+periode begon", en omdat gewicht anders een tweede bewegend deel wordt in een
+behoud-vraag: een paar kilo eraf maskeert dan een FTP-daling. De drie bestaande
+grootheden blijven ongemoeid.
+
+2. DE 5 PROCENT, BOVENGRENS-GECHECKT OP DE ECHTE REEKS. Doorgerekend op de 38 gecommitte
+weken uit `docs/EFFECT-REFERENT-RECON.md` §4. Winter-analoog 2025-12-01 t/m 2026-02-23:
+instap 273 W, vloer 259,35 W, laagste week 267 W (2026-01-05) = 97,8 procent — NUL weken
+onder de vloer. Over ELK aaneengesloten venster van twaalf weken in de reeks is de
+diepste dip 95,7 procent (start 2026-02-09, instap 276, laagste 264). De 5-procent-vloer
+vuurt in de hele reeks GEEN ENKELE keer; 4 procent zou daar wél gevuurd hebben, 2 procent
+op één week, 1 procent op twee. Dit is GEEN ijking — de vloer is BELEID plus
+instrument-resolutie, zoals §8 zelf vaststelt, en de reeks is gedrag dat de coach
+vervangt — maar wel de bovengrens-check die `WERKWIJZE.md` voorschrijft. Behoud hoort de
+normale uitkomst te zijn; de kaart meldt dus in de regel "op koers".
+
+3. ER MOET EEN DERDE PROJECTIEMODUS BIJ. `DoelProjectie.tsx` kent `gap` en `test`. De
+onderste helft van de kaart (het uren-schuifje plus de projectie) hangt aan `proj`, en
+die is null zodra `targetCtl` null is — en `targetCtl` komt uit de ctl-dim, die Onderhoud
+per `DOELEN-SPEC` §3.2 juist NIET krijgt ("NIET CTL — die hoort te dalen"). Zonder
+ingreep valt die helft terug op de lege-staat-copy over onvoldoende recente ritten, en
+dat is ONWAAR: de ritten zijn er en het doel is bekend. Het uren-schuifje blijft
+bovendien staan terwijl een behoud-doel niet opbouwt. BESLUIT: `projectieMode: "behoud"`
+verbergt het hele blok vanaf de uren-sectie.
+
+4. `projectieKey` WORDT NIET AANGESLOTEN MAAR VERWIJDERD. Het veld staat op twee
+planner-profielen (`archetypes.ts:1610` en `:1632`) en heeft NUL lezers. Aansluiten
+vraagt dat `niveau.ts` uit `archetypes.ts` leest, en dat sluit een import-ring:
+`archetypes.ts` importeert `coach.ts` (regel 7), dat `niveau.ts` importeert (regel 14).
+Beide betrokken objecten worden bij module-evaluatie opgebouwd, dus die cyclus is niet
+theoretisch. IN PLAATS DAARVAN worden de SLEUTELVERZAMELINGEN gelijkgetrokken:
+`GOAL_PROFILES_` krijgt exact de vijf sleutels van `PROFILES` (`ftp`, `klim_kort`,
+`klim_lang`, `conditie`, `onderhoud`), en `activeGoalProfile_` mapt via `normalizeDoel_`
+met dezelfde vijfweg-tak als `profileForDoel_`. Daarmee doet het veld niets meer wat de
+sleutel zelf niet doet — vooruit-bedrading die nooit een lezer kreeg. Tegen drift tussen
+de twee mappings komt één mechanische invariant in de selftest.
+
+5. `activeGoalProfile_` GAAT DOOR `normalizeDoel_`. Het is vandaag de ENIGE doel-lezer
+die dat niet doet. Vandaag onschadelijk omdat elk niet-FTP-doel toch op girona landt,
+maar zodra elk doel zijn eigen lat krijgt landt een opgeslagen legacy-waarde op de
+verkeerde.
+
+DE VIJF LATTEN. `ftp` ongewijzigd. `girona` wordt `klim_lang`, dims BYTE-IDENTIEK, alleen
+sleutel, label en sub bewegen. `klim_kort` erft die dims met longRideH 4,0 naar 5,0
+(HERKOMST: PLAN, `DOELEN-SPEC` §3.3 KETEN (iii): de lange rit groeit naar vier à vijf
+uur). `conditie` erft ze ZONDER de klim-dim (HERKOMST: PLAN, §3.5: "BESTEMMING: X watt na
+N uur — een durability-getal, geen FTP"). `onderhoud` draagt geen constante target maar
+één afgeleide vloer. De echte meters voor korte klimmen en conditie blijven bij punt 11.
+
+DE ANKERDATUM VAN DE VLOER IS `settings.doelStart` — het enige bestaande veld dat een
+periodestart draagt (UI-label "Blok-start"). GEVOLG voor de gebruiker, expliciet: wisselt
+het doel naar Onderhoud, dan hoort `doelStart` op die datum gezet te worden, anders meet
+de vloer tegen de instapwaarde van een vorige periode. Geen nieuw veld, geen migratie.
+
 ## 9. ACCEPTATIE-EISEN voor de bouw van punt 7
 
 Geformuleerd NA vaststelling van het mechanisme, en alleen over wat de ingreep kan raken.
