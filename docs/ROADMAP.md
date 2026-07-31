@@ -119,16 +119,18 @@ punten staat onder *Gesloten — vindplaats*.
    combinaties levert `goalWorkout_` vanaf 33 minuten een kandidaat, dus de tak kon alleen nog
    vuren bij 32 minuten of korter, en gaf daar het klimTYPE van het event voorrang op het DOEL
    van de gebruiker. Bouw in `b04d73c` en `626bdd5`. HARDE DATUM half februari 2027 gehaald.
-8. **De meetlat kent maar twee doelen** — open · ENGINE plus CLIENT. SPEC:
-   `docs/DOEL-LIJST-RECON.md` §8. `activeGoalProfile_` (`niveau.ts:629`) geeft FTP het
-   ftp-profiel en élk ander doel het girona-EVENT-profiel; dat label staat letterlijk in de
-   Niveau-tab. Bijt bij de winterwissel naar Onderhoud en opnieuw bij korte beklimmingen.
-   GEMETEN GRENS: `Niveau.tsx:124-128` kent precies DRIE meetgrootheden — `ftpWkg`, `ctl` en
-   `longRideH`; elke andere maat vraagt clientwerk. Doel Onderhoud krijgt daarom geen
-   groei-target maar een BEHOUD-vloer van 5 procent onder de instapwaarde uit `instapNiveau()`
-   (`effect.ts`): `DOELEN-SPEC` §3.2 sluit een CTL-target expliciet uit en schrijft die vloer
-   al voor. Die target is AFGELEID in plaats van constant, wat `Niveau.tsx` raakt — vandaar
-   een eigen fase met een eigen commit. Reist met punt 7.
+8. **De meetlat kent maar twee doelen** — af · ENGINE plus CLIENT. SPEC:
+   `docs/DOEL-LIJST-RECON.md` §8 plus het correctieblok van 31-07-2026 daaronder, waar de
+   onderbouwing van de 5 procent en de invoer-vondst staan. `GOAL_PROFILES_` draagt nu vijf
+   latten in plaats van twee: `girona` is `klim_lang` geworden met ongewijzigde dims,
+   `klim_kort` erft die met longRideH 5,0, `conditie` zonder de klim-dim, `ftp` ongemoeid, en
+   `onderhoud` draagt één AFGELEIDE behoud-vloer van 95 procent van de rollende FTP vlak vóór
+   `settings.doelStart`. Daarvoor kwam een VIERDE meetgrootheid `rollingFtpW`: de vloer komt
+   uit de ritten, terwijl `ftpWkg` op de handmatig ingestelde `settings.ftp` staat — dezelfde
+   grootheid aan beide kanten, anders staat de kaart de hele periode groen op een ingetypt
+   getal. `activeGoalProfile_` gaat door `normalizeDoel_`, `projectieKey` is verwijderd en één
+   selftest-invariant houdt de sleutels van `PROFILES` en `GOAL_PROFILES_` gelijk. Bouw in
+   `3651fc1`.
 9. **Het doel stuurt de periodisering niet** — open · ENGINE. GEMETEN met AGR op 17-04-2027,
    identiek voor doel FTP, Onderhoud en Beklimmingen: Base t/m 2027-02-15, Build vanaf
    2027-02-22, Peak vanaf 2027-03-22, Taper vanaf 2027-04-12. De fase komt volledig uit de
@@ -184,12 +186,13 @@ De seizoenskalender uit `DOELEN-SPEC.md` §5, naast de reeks gelegd.
   `mesoCyclus: false`, en `effectiveMesoWeek_` pint de mesoweek op 1. Dat is exact wat
   `DOELEN-SPEC` §3.2 voorschrijft. Een eerder STAND-blok noemde december de eerste harde datum
   omdat het ingestelde doel de fase niet stuurt; dat laatste klopt (punt 9), maar het levert in
-  december geen defect op — de event-fase staat daar toch al op Base. Wat in de winter wél
-  bijt is punt 8: doel Onderhoud meet zich tegen het girona-profiel.
+  december geen defect op — de event-fase staat daar toch al op Base. Wat in de winter nog
+  openstaat is punt 9 zelf; punt 8 (Onderhoud mat zich tegen het girona-profiel) is per
+  31-07-2026 af.
 - **Half februari 2027 — DE EERSTE HARDE DATUM.** Op 2027-02-22 zet de event-as de fase op
-  Build, en §5 laat het doel dan wisselen naar korte beklimmingen. Dat doel bestaat niet (punt
-  7) en de bijbehorende meetlat evenmin (punt 8). Die twee moeten vóór die datum af, samen met
-  punt 9 dat bepaalt hoe de overname gebeurt.
+  Build, en §5 laat het doel dan wisselen naar korte beklimmingen. Dat doel EN de bijbehorende
+  meetlat zijn er per 31-07-2026 (punt 7 en punt 8, allebei af). Wat vóór die datum nog moet is
+  punt 9, dat bepaalt hoe de overname gebeurt.
 - **17 april 2027 — AGR Toerversie.** Punt 11 levert de effect-meter voor dat doel; zonder die
   meter traint de app wel, maar kan ze niet zien of het werkt.
 - **Zomer 2027 — Stelvio.** Lange klimmen komt mee met de splitsing in punt 7. Een voorlopige
