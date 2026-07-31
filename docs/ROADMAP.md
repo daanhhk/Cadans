@@ -136,6 +136,21 @@ punten staat onder *Gesloten — vindplaats*.
    3, Beklimmingen 2). Inclusief EVENT als doel-optie, zodat de overname een keuze is in
    plaats van een aftelling. CRITERIUM: het doel stuurt de fase, en de event-overname is een
    VOORSTEL. Raakt `DOELEN-SPEC`.
+   BEVINDING UIT PUNT 7, GEMETEN OP `626bdd5` — HET VO2-GEWICHT VAN `klim_lang` VUURT NOOIT.
+   Sweep in fase Build over zeven weekvormen van 3,0 tot 14,0 uur: de anaerobe intentminuten
+   zijn zeven keer NUL, terwijl high oploopt van 64 naar 122. De oorzaak zit in het
+   FASE-mechanisme, niet in het profiel: buiten Base bestaat er geen volume-ramp
+   (`volumeModulatie` geeft dan nul), en 0,15 plus de coverage-boost 0,10 haalt drempel 0,50
+   per constructie nooit. De UITKOMST is `DOELEN-SPEC` §3.4-conform — dat doel wil aanhoudende
+   blokken, geen intervallen. Wat ontbreekt is een pad waarlangs die term ooit bewijs kan
+   dragen; zolang dat er niet is, is `intentGewichten.vo2` op `klim_lang` in de praktijk alleen
+   een som-normalisator. NIET repareren in het profiel — het hoort hier, bij het fase-besluit.
+   BEVINDING UIT PUNT 7, ZELFDE REEKS — DE ANAEROBE DALING VAN `klim_kort` BOVEN 10 UUR IS
+   ONVERKLAARD. Gemeten anaeroob 8 · 8 · 14 · 20 · 20 · 14 · 14 en high 46 · 46 · 51 · 51 · 51
+   · 51 · 51. Het high-PLATEAU vanaf 6,0 uur is verwacht: het quotum kapt op drie
+   kwaliteitsdagen en de extra uren gaan naar Z2. De DALING van 20 naar 14 boven 10 uur is dat
+   niet — meer volume levert dan MINDER scherpte, en dat bij het doel dat op AGR mikt. Nog niet
+   herleid tot een mechanisme; eerst meten, niet repareren.
 10. **Twee kaarten spreken los over hetzelfde blok** — open · CLIENT. (`DOELEN-SPEC` §6 stap
     7.) De doortrain-kaart en de terugblik lezen hetzelfde ΔCTL-signaal en doen er elk een
     eigen uitspraak over. CRITERIUM: een blok krijgt ÉÉN uitspraak, niet twee. DIT PUNT DRAAGT
