@@ -2,6 +2,8 @@ import {
   actualZoneMinutes_,
   COACH_INTENT_LABEL_,
   coachFeedback_,
+  computeMacroPhase,
+  eventFase_,
   formatDate,
   intentFromType_,
   readinessAdjust_,
@@ -23,6 +25,7 @@ import {
   getCheckin,
   getDispositions,
   getDosisTrede,
+  getEventOvername,
   getEvents,
   getFatigueShift,
   getOverrides,
@@ -56,6 +59,10 @@ import {
   verlichtRustResultaatRegel,
 } from "./coachNarrative";
 import { parseLocalDate, todayIso, weekMondayIso } from "./dates";
+import {
+  type EventOvernameVoorstel,
+  eventOvernameVoorstel,
+} from "./eventOvername";
 import {
   computeBlockCtlDelta,
   computeTsbTrend,
@@ -1290,6 +1297,8 @@ export async function loadSchemaWeek(): Promise<{
   testVoorstel: TestVoorstel | null;
   /** ROADMAP stap 2 — dosis-trede-voorstel (null = geen kaart). Laag-2 rendert 'm. */
   dosisTredeVoorstel: DosisTredeVoorstel | null;
+  /** ROADMAP punt 9 fase B — de overname-vraag, of null als er niets te vragen valt. */
+  eventOvernameVoorstel: EventOvernameVoorstel | null;
   /** De maandag van de getoonde week (de sleutel van de goedkeuring). */
   weekMonday: string;
 }> {
@@ -1309,6 +1318,7 @@ export async function loadSchemaWeek(): Promise<{
     fatigueShift,
     dosisTredeRow,
     powerZonesRow,
+    eventOvernameRow,
   ] = await Promise.all([
     getSettings(),
     getPlanner(monday),
@@ -1323,6 +1333,7 @@ export async function loadSchemaWeek(): Promise<{
     getFatigueShift(),
     getDosisTrede(),
     getPowerZones(),
+    getEventOvername(),
   ]);
 
   const activities = parseActivityRows(activitiesRes);
@@ -1368,6 +1379,22 @@ export async function loadSchemaWeek(): Promise<{
   // `PLAN_ADAPTATION_ENABLED` (false) — precies de waarde waarmee het plan vandaag al draait,
   // want de goedkeuring kon alleen via die kaart waar worden. `mesoWeekOverride` undefined →
   // de kalender-mesoWeek; is de fatigue-deload goedgekeurd, dan IS dat het plan voor deze week.
+  // ROADMAP punt 9 fase B — IS DE OVERNAME BEVESTIGD? Alleen 'ja' telt, en alleen als de
+  // opgeslagen rij over HET HUIDIGE hoofdevent gaat. Staat er nog een antwoord van een ander
+  // (of verzet) event, dan leest dat als NIET bevestigd — en we ruimen niets op bij een read:
+  // een leesactie hoort geen state te muteren, en de volgende PUT overschrijft de rij toch.
+  const hoofdEventDatum = eventFase_(
+    (events || []).map((e) => ({ ...e, datum: parseLocalDate(e.datum) })),
+    parseLocalDate(todayISO),
+  )?.hoofdEvent?.datum as Date | undefined;
+  const hoofdEventISO = hoofdEventDatum
+    ? (formatDate(hoofdEventDatum, "yyyy-MM-dd") as string)
+    : null;
+  const overnameBevestigd =
+    eventOvernameRow.antwoord === "ja" &&
+    eventOvernameRow.event != null &&
+    eventOvernameRow.event === hoofdEventISO;
+
   const proposalInput = {
     settings: settings ?? EMPTY_SETTINGS,
     plannerDays,
@@ -1381,6 +1408,7 @@ export async function loadSchemaWeek(): Promise<{
     todayISO,
     mesoWeekOverride: fatigueOverride,
     dosisTrede,
+    overnameBevestigd,
   };
   const proposalWeek = buildWeekProposal(proposalInput);
 
@@ -1460,6 +1488,34 @@ export async function loadSchemaWeek(): Promise<{
 
   // ROADMAP stap 2 — het DOSIS-TREDE-voorstel. Alle poorten zitten in de bouwer; hier alleen de
   // invoer. `beantwoordBlok` is de blokstart waarvoor al bevestigd OF afgewezen is.
+  // ROADMAP punt 9 fase B — het OVERNAME-VOORSTEL. Alle poorten zitten in `eventOvernameVoorstel`;
+  // hier alleen de invoer. De twee fases komen daar uit `effectiveMacroFase_` zelf.
+  const overnameMacro = eventFase_(
+    (events || []).map((e) => ({ ...e, datum: parseLocalDate(e.datum) })),
+    parseLocalDate(todayISO),
+  );
+  const eventOvernameKaart = eventOvernameVoorstel({
+    eventNaam: (overnameMacro?.hoofdEvent?.naam as string | undefined) ?? null,
+    eventDatum: hoofdEventISO,
+    wekenTot:
+      typeof overnameMacro?.wekenTot === "number"
+        ? overnameMacro.wekenTot
+        : null,
+    taperActief: overnameMacro?.taperEvent != null,
+    doel: settings?.doel ?? null,
+    doelFase: computeMacroPhase(
+      settings?.doelStart ? parseLocalDate(settings.doelStart) : null,
+      parseLocalDate(todayISO),
+    ).fase,
+    eventMacroFase: (overnameMacro?.macroFase as string | undefined) ?? null,
+    settings: settings ?? EMPTY_SETTINGS,
+    doelStart: settings?.doelStart ?? null,
+    weekMondayISO: monday,
+    beantwoordEvent: eventOvernameRow.event,
+    beantwoordBlok: eventOvernameRow.blok,
+    antwoord: eventOvernameRow.antwoord,
+  });
+
   const dosisTredeKaart = bouwDosisTredeVoorstel({
     review: blokReview,
     doelStart: settings?.doelStart ?? null,
@@ -1554,6 +1610,7 @@ export async function loadSchemaWeek(): Promise<{
     blokReview,
     testVoorstel,
     dosisTredeVoorstel: dosisTredeKaart,
+    eventOvernameVoorstel: eventOvernameKaart,
     weekMonday: monday,
   };
 }

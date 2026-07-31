@@ -235,6 +235,43 @@ export async function putDosisTrede(
   }
 }
 
+// ROADMAP punt 9 fase B — het antwoord op de event-overname. Zelfde vorm als /dosis-trede.
+export async function getEventOvername(): Promise<{
+  event: string | null;
+  blok: string | null;
+  antwoord: string | null;
+}> {
+  const r = await apiGet<{
+    event: string | null;
+    blok: string | null;
+    antwoord: string | null;
+  }>("/api/event-overname");
+  return {
+    event: r?.event ?? null,
+    blok: r?.blok ?? null,
+    antwoord: r?.antwoord ?? null,
+  };
+}
+
+/** PUT /api/event-overname: zet de drie samen. BEIDE knoppen schrijven — 'nee' is geen
+ * sessie-lokale afwijzing maar een bewaard antwoord voor dit blok, anders komt de vraag elke
+ * pageload terug. De route valideert strikt en normaliseert niet. */
+export async function putEventOvername(
+  event: string | null,
+  blok: string | null,
+  antwoord: "ja" | "nee" | null,
+): Promise<void> {
+  const resp = await fetch("/api/event-overname", {
+    method: "PUT",
+    headers: { "content-type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ event, blok, antwoord }),
+  });
+  if (!resp.ok) {
+    const parsed = await parseBody(resp);
+    throw new Error(errMessage(parsed, resp.status));
+  }
+}
+
 /** Eén te-pushen dag: datum + type + de ACTIEVE sessies (SchemaSession-shape; los getypeerd
  * om een schema↔api-importcyclus te vermijden). */
 export interface PushDayInput {

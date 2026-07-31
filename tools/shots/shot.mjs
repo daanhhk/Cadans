@@ -165,6 +165,19 @@ const SCENARIOS = [
       6: { minuten: 120, dagtype: "weekend" },
     },
   },
+  // OVERNAME: de acht-wekengrens vóór het A-event van 2027-04-17. Eigen absolute weekmaandag,
+  // want de overname-kaart bestaat alleen binnen EVENT_OVERNAME_WEKEN van het hoofdevent en dat
+  // ligt ver buiten de echte week. ROADMAP punt 9 fase B.
+  {
+    name: "overname",
+    monday: "2027-02-22",
+    spec: {
+      1: { minuten: 60, dagtype: "vrij" },
+      4: { minuten: 90, dagtype: "vrij" },
+      5: { minuten: 180, dagtype: "weekend" },
+      6: { minuten: 120, dagtype: "weekend" },
+    },
+  },
 ];
 
 /** Poll a URL until it answers 200, or give up after `seconds`. */
@@ -381,13 +394,18 @@ async function sweep(page, scenario, monday, results, seededSettings) {
     // het BESTAAN van de blok-terugblik (blokReviewVenster geeft alleen in blokweek 1 en 4 een
     // venster). Nu leidt de harness doelStart af uit de bedoelde blokweek. PUT /api/settings is
     // FULL-REPLACE, dus de VOLLEDIGE gezaaide body gaat mee met alleen doelStart eroverheen.
+    // DE WEEKMAANDAG PER SCENARIO. Normaal is dat de maandag van de ECHTE week; een scenario dat
+    // een moment ver vooruit moet fotograferen (bijvoorbeeld de acht-wekengrens vóór een A-event
+    // in 2027) zet zijn eigen absolute maandag. Alles hieronder — settings, planner en de
+    // browserklok — hangt dan aan diezelfde datum, anders seed je een andere week dan je schiet.
+    const wkMonday = scenario.monday ?? monday;
     const blokWeek = scenario.blokWeek ?? 1;
-    const doelStart = plusDays(monday, -(blokWeek - 1) * 7);
+    const doelStart = plusDays(wkMonday, -(blokWeek - 1) * 7);
     if (seededSettings) {
       await apiPut("/api/settings", { ...seededSettings, doelStart });
     }
-    await apiPut(`/api/planner/${monday}`, {
-      days: plannerDays(monday, scenario.spec),
+    await apiPut(`/api/planner/${wkMonday}`, {
+      days: plannerDays(wkMonday, scenario.spec),
     });
 
     // DE KLOK PER SCENARIO. Stond dit één keer in main() vóór de lus, dan lag ELK scenario
@@ -399,14 +417,14 @@ async function sweep(page, scenario, monday, results, seededSettings) {
       // WARM-UP, niet geschoten. De app schrijft de week pas als plan-van-record weg zolang de
       // dagen nog VOORUIT liggen; zonder deze load bestaat de bevroren entry niet en meet je een
       // ander defect dan je denkt. Dus eerst laden met de klok op de maandag, dán verzetten.
-      await page.clock.setFixedTime(new Date(`${monday}T08:00:00`));
+      await page.clock.setFixedTime(new Date(`${wkMonday}T08:00:00`));
       await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
       await settle(page);
     }
     await page.clock.setFixedTime(
-      new Date(`${plusDays(monday, offset)}T08:00:00`),
+      new Date(`${plusDays(wkMonday, offset)}T08:00:00`),
     );
-    PINNED = `${plusDays(monday, offset)} 08:00 (Europe/Amsterdam)`;
+    PINNED = `${plusDays(wkMonday, offset)} 08:00 (Europe/Amsterdam)`;
   }
 
   const probe = attach(page);

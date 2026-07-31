@@ -425,9 +425,10 @@ describe("buildWeekProposal", () => {
       plannerDays: WEEK,
       events: evPeak,
       wellness: WELL_OK,
+      overnameBevestigd: true,
       ...base,
     });
-    // vóór de fix pinde Onderhoud dit op "Base"; nu overleeft de event-fase.
+    // vóór de fix pinde Onderhoud dit op "Base"; nu overleeft de event-fase — MITS bevestigd.
     expect(rOnderhoud.macroFase).toBe("Peak");
     // contrast: zelfde week met doel FTP geeft óók "Peak" (event-fase, geen pin).
     const rFtp = buildWeekProposal({
@@ -435,9 +436,40 @@ describe("buildWeekProposal", () => {
       plannerDays: WEEK,
       events: evPeak,
       wellness: WELL_OK,
+      overnameBevestigd: true,
       ...base,
     });
     expect(rFtp.macroFase).toBe("Peak");
+
+    // ROADMAP punt 9 fase B — HET TEGENDEEL, en dit is wat de bouw toevoegt. Dezelfde week
+    // ZONDER bevestiging laat het doel leiden: de event-fase Peak wint dan niet. Weggelaten
+    // vlag gedraagt zich identiek aan false — de veilige kant.
+    const rNiet = buildWeekProposal({
+      settings: settings({ doel: "FTP" }),
+      plannerDays: WEEK,
+      events: evPeak,
+      wellness: WELL_OK,
+      overnameBevestigd: false,
+      ...base,
+    });
+    const rWeggelaten = buildWeekProposal({
+      settings: settings({ doel: "FTP" }),
+      plannerDays: WEEK,
+      events: evPeak,
+      wellness: WELL_OK,
+      ...base,
+    });
+    expect(rNiet.macroFase).not.toBe("Peak");
+    expect(rWeggelaten.macroFase).toBe(rNiet.macroFase);
+    // EN DE AANKONDIGING ZIET DEZELFDE VLAG. Zonder de fix in faseOvergang.ts zou het plan op de
+    // doel-fase staan terwijl de kaart een omslag naar de event-fase meldt.
+    expect(rNiet.faseOvergang?.naar ?? null).not.toBe("Peak");
+    // EN DE BALK ZIET HET OOK. `fase` is de TOONBARE fase die de periodiserings-balk voedt; die
+    // liet vóór deze bouw de event-overlay altijd winnen, waardoor de balk "Peak" toonde boven een
+    // kaart die "deze week Base" zei. Buiten een taper- of herstelweek hoort de toonbare fase
+    // gelijk te zijn aan de macroFase van het plan.
+    expect(rNiet.fase).toBe(rNiet.macroFase);
+    expect(rFtp.fase).toBe(rFtp.macroFase);
   });
 
   it("Onderhoud zonder event → Base; FTP volgt de HERHALENDE blok-cyclus", () => {

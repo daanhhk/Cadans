@@ -128,6 +128,12 @@ export interface BuildProposalInput {
    * Bestaat zodat dat engine-pad testbaar blijft zolang de vlag uit staat. NIET vanuit
    * de app meegeven. */
   planAdaptation?: boolean;
+  /** ROADMAP punt 9 fase B — is de EVENT-OVERNAME bevestigd? WEGGELATEN betekent NIET bevestigd,
+   * en dat is de veilige kant: zonder bevestiging blijft het doel de fase sturen. Alleen `true`
+   * telt; null, undefined en false zijn allemaal "nee". De vlag gaat door naar ZOWEL
+   * `effectiveMacroFase_` (het plan) ALS `detectFaseOvergang` (de aankondiging) — die twee moeten
+   * op één beslissing staan, anders kondigt de app een omslag aan die het plan niet doet. */
+  overnameBevestigd?: boolean;
   /** 3d stap 4 — OPTIONELE mesoWeek-substitutie (client-only, fatigue-aware). Vervangt de
    * kalender-mesoWeek zodat een wat-als-run een frisse deloadweek als normale week (→1) of een
    * opbouwweek als reduced-load-deload (→4) doorrekent. Weggelaten → de gewone kalender-mesoWeek.
@@ -294,11 +300,16 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
   // een OBJECT { week, fase, isTestWeek, blokNr }; we willen de fase-STRING. Rauw het object
   // gebruiken bakte "[object Object]" in de workout-naam + context-regel bij lege events.
   const doelFase = computeMacroPhase(settingsE.doelStart, today).fase;
+  // Fase B: de event-tak vuurt pas na bevestiging. WEGGELATEN betekent NIET bevestigd — dezelfde
+  // veilige kant als in de engine, zodat een aanroeper die de vlag vergeet niet stil de
+  // automatische overname terugzet.
+  const overnameBevestigd = input.overnameBevestigd === true;
   const macroFase = effectiveMacroFase_(
     (macro?.macroFase as string | undefined) ?? null,
     doelFase,
     settingsE,
     typeof macro?.wekenTot === "number" ? macro.wekenTot : null,
+    overnameBevestigd,
   );
   const klimType: string | null = macro?.hoofdEvent?.klimType ?? null;
   const isTripEvent = macro?.hoofdEvent?.type === "trip";
@@ -319,7 +330,13 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
     typeof macro?.wekenTot === "number" ? macro.wekenTot : null;
   const planModus: string | null = planModusLabel(settings, macro != null);
   // M51/M10 — kondig een fase-overgang aan op de week dat hij gebeurt (vergelijk met today−7).
-  const faseOvergang = detectFaseOvergang(settings, events, todayLocalISO);
+  // DEZELFDE vlag als hierboven: plan en aankondiging moeten op één beslissing staan.
+  const faseOvergang = detectFaseOvergang(
+    settings,
+    events,
+    todayLocalISO,
+    overnameBevestigd,
+  );
 
   // 3. mesoWeek uit settings.doelStart (vaste keuze; geen DocProp). weekIndexFromStart_
   // is 0-gebaseerd + monotoon; mesoCycleWeek_ mapt naar de cyclische 1..4-mesoweek die
@@ -691,9 +708,19 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
     eventNaam,
     wekenTotEvent,
     planModus,
-    // FASE 2 Brok 1: exact de engine-'fase' (overlay incl. "Taper"); geen event/macro → val terug op
-    // de (effectieve) macroFase. Voedt de balk-actieve-fase; macroFase blijft voor kop/label.
-    fase: (macro?.fase as string | undefined) ?? macroFase,
+    // De TOONBARE fase: de per-dag overlay wint, maar ALLEEN als hij Taper of Recovery is —
+    // anders de effectieve macroFase. Voedt de balk-actieve-fase; macroFase blijft voor kop/label.
+    //
+    // GEVONDEN OP HET BEELD BIJ PUNT 9 FASE B. Hier stond `macro?.fase ?? macroFase`, dus de
+    // EVENT-fase won altijd zodra er een hoofdevent was. Met de overname als voorstel liep dat
+    // zichtbaar uit elkaar: de balk toonde "Build" van de event-as terwijl het plan op de
+    // doel-fase "Base" stond en de overname-kaart eronder letterlijk "deze week Base" zei. Twee
+    // uitspraken over dezelfde week op één scherm. `faseOvergang.ts` kreeg deze guard al in fase
+    // A; deze plek was toen over het hoofd gezien.
+    fase:
+      macro?.fase === "Taper" || macro?.fase === "Recovery"
+        ? (macro.fase as string)
+        : macroFase,
     nearTaper,
     faseOvergang,
     profielPreset: settings.profielPreset ?? null,

@@ -91,17 +91,28 @@ export function snapshotDayAction_(
  * event in de agenda stond. Met een A-event erin stuurde het doel de fase dus NOOIT — de
  * event-teller nam het hele jaar over, ook als het event nog acht maanden weg was.
  *
- * DE OVERNAMEGRENS IS BELEID, GEEN GEIJKTE DREMPEL. `DOELEN-SPEC` §2B legt vast: vanaf acht
- * weken vóór het hoofdevent neemt de event-as over, daarvoor leidt het doel. Dat getal is niet
- * op een reeks te bemonsteren — er bestaat geen meting die "acht" oplevert. Het valt wél samen
- * met een grens die `eventFase_` al draagt: bij negen weken of meer levert die per constructie
- * "Base", dus vóór acht weken zegt de event-as niets onderscheidends.
+ * DE ACHT-WEKENGRENS IS EEN VOORWAARDE, NIET MEER DE HELE BESLISSING (fase B). Tot fase B kantelde
+ * de as op die grens AUTOMATISCH; nu is de overname een VOORSTEL en vuurt de event-tak pas als
+ * Daan hem bevestigd heeft. Er zijn dus TWEE voorwaarden, en allebei moeten ze gelden: het event
+ * ligt binnen `EVENT_OVERNAME_WEKEN` weken ÉN `overnameBevestigd === true`.
+ *
+ * DE GRENS ZELF IS BELEID, GEEN GEIJKTE DREMPEL. `DOELEN-SPEC` §2B legt vast: vanaf acht weken
+ * vóór het hoofdevent mág de event-as overnemen, daarvoor leidt het doel sowieso. Dat getal is
+ * niet op een reeks te bemonsteren — er bestaat geen meting die "acht" oplevert. Het valt wél
+ * samen met een grens die `eventFase_` al draagt: bij negen weken of meer levert die per
+ * constructie "Base", dus vóór acht weken zegt de event-as niets onderscheidends.
+ *
+ * WAAROM DE BEVESTIGING HIER STAAT EN NIET IN DE AANROEPER. Anders staat "acht weken" in de
+ * engine en "alleen na bevestiging" client-zijde, en groeien die twee uit elkaar. Bovendien zou
+ * de aanroeper de bevestiging moeten verstoppen in een leeggemaakt `eventMacroFase`-argument, en
+ * een aanroeper die daar een vaste null instopt is precies het patroon uit `WERKWIJZE.md` dat
+ * een tak stil dood maakt.
  *
  * HET `fase !== "Test"`-VANGNET IS VERVALLEN. Dat bestond uitsluitend omdat `computeMacroPhase`
  * na blokweek 12 voorgoed op "Test" bleef staan, wat elke week een FTP-test met quotum 0 zou
  * plannen. Het blok herhaalt nu (zie `computeMacroPhase`), dus die toestand bestaat niet meer.
  *
- * PUUR. Elke doel-vergelijking loopt via `normalizeDoel_`; geen rauwe string-vergelijking.
+ * PUUR. De doel-vergelijking loopt via het PROFIEL, niet via de UI-string.
  */
 /** HERKOMST: BELEID (`DOELEN-SPEC` §2B), geen geijkte drempel. Zie de uitleg hierboven. */
 export const EVENT_OVERNAME_WEKEN = 8;
@@ -111,18 +122,28 @@ export function effectiveMacroFase_(
   doelFase: any,
   settings: any,
   wekenTot?: any,
+  // Fase B: het BEVESTIGDE antwoord op de overname-vraag. STRIKT op `=== true` getoetst, zodat
+  // weggelaten, null, undefined of false allemaal "niet bevestigd" betekenen — een vergeten
+  // argument valt dan naar de veilige kant, namelijk doel-gestuurd.
+  overnameBevestigd?: any,
 ): any {
-  const doel = normalizeDoel_(settings && settings.doel);
-  // 1. Binnen de overnamegrens wint het event — voor ELK doel, ook Onderhoud.
+  // 1. Het event wint alleen als het binnen de grens ligt ÉN de overname bevestigd is.
   if (
+    overnameBevestigd === true &&
     eventMacroFase != null &&
     typeof wekenTot === "number" &&
     wekenTot <= EVENT_OVERNAME_WEKEN
   )
     return eventMacroFase;
-  // 2. Daarbuiten leidt het doel. Onderhoud kent geen periodisering: `DOELEN-SPEC` §3.2 maakt
-  //    de FREQUENTIE het beschermde deel, en een testweek zou het quotum op 0 zetten.
-  if (doel === "Onderhoud") return "Base";
+  // 2. Anders leidt het doel. Onderhoud kent geen periodisering: `DOELEN-SPEC` §3.2 maakt de
+  //    FREQUENTIE het beschermde deel, en een testweek zou het quotum op 0 zetten.
+  //
+  //    OP DE PROFIEL-ID, niet op de UI-string: `profileForDoel_` normaliseert intern, dus deze
+  //    tak hangt niet meer aan een tekst die in het Instellingen-scherm staat. GEEN
+  //    gedragswijziging — in fase A is gemeten dat geen enkele legacy-string op onderhoud mapt,
+  //    dus hier bestaat per constructie geen rood-test voor.
+  if (profileForDoel_(settings && settings.doel).id === "onderhoud")
+    return "Base";
   return doelFase;
 }
 

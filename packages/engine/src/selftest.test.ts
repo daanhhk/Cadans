@@ -845,13 +845,17 @@ describe("engine selftest", () => {
       },
     ];
     const doelStart = new Date(2026, 5, 29); // ma 2026-06-29
-    function keten(doel: string, today: Date) {
+    // Fase B: de keten draagt nu ook de BEVESTIGING. Default true, zodat de bestaande
+    // grens-asserties hieronder onveranderd blijven meten wat ze meaten; de niet-bevestigde
+    // kant staat eronder als eigen assertie.
+    function keten(doel: string, today: Date, bevestigd = true) {
       const macro = eventFase_(AGR, today);
       return effectiveMacroFase_(
         macro ? macro.macroFase : null,
         computeMacroPhase(doelStart, today).fase,
         { doel: doel },
         macro ? macro.wekenTot : null,
+        bevestigd,
       );
     }
     // (b) BUITEN DE GRENS leidt het doel. 2026-12-07 ligt ~19 weken vóór AGR; de doel-cyclus
@@ -892,6 +896,32 @@ describe("engine selftest", () => {
         { doel: "Onderhoud" },
         null,
       ),
+    );
+    // (f) FASE B — OP DE GRENS, MAAR NIET BEVESTIGD: het doel blijft leiden. Zonder de vlag in
+    //     `effectiveMacroFase_` levert dit "Build" van de event-as.
+    //     Getoetst tegen de uitkomst ZONDER event: dat is per definitie de doel-gestuurde fase,
+    //     dus dit vergelijkt niet met een uitgetypt getal maar met de andere tak van dezelfde
+    //     functie.
+    DOEL_OPTIONS.forEach((d: any) => {
+      const zonderEvent = effectiveMacroFase_(
+        null,
+        computeMacroPhase(doelStart, new Date(2027, 1, 22)).fase,
+        { doel: d },
+        null,
+        false,
+      );
+      assert_(
+        "keten 2027-02-22 " + d + " NIET bevestigd → doel-gestuurd",
+        zonderEvent,
+        keten(d, new Date(2027, 1, 22), false),
+      );
+    });
+    // En scherp op één doel: FTP staat op 2027-02-22 in de doel-cyclus op Peak, terwijl de
+    // event-as daar Build zegt. Zonder bevestiging hoort Peak te winnen.
+    assert_(
+      "keten 2027-02-22 FTP niet bevestigd → Peak, niet Build",
+      "Peak",
+      keten("FTP", new Date(2027, 1, 22), false),
     );
     // (e) LEGACY-DOEL levert dezelfde keten-uitkomst als zijn canonieke doel. Zie de opmerking
     //     bij de effectiveMacroFase_-asserties: ook deze regel wordt NIET rood zonder
@@ -4786,15 +4816,48 @@ describe("engine selftest", () => {
     );
     // (a2) DE GRENS. Binnen acht weken wint het event, voor ELK doel; daarbuiten leidt het doel
     //      en telt de event-fase niet mee — ook niet voor Onderhoud.
+    // Fase B: de grens is een VOORWAARDE geworden, dus de bevestiging staat er expliciet bij.
+    // Niet verzwakt — de vlag toegevoegd, de verwachting ongewijzigd.
     assert_(
-      "effFase event op 8 wkn wint (FTP)",
+      "effFase event op 8 wkn wint (FTP, bevestigd)",
       "Build",
+      effectiveMacroFase_("Build", "Base", { doel: "FTP" }, 8, true),
+    );
+    assert_(
+      "effFase event op 8 wkn wint (Onderhoud, bevestigd)",
+      "Build",
+      effectiveMacroFase_("Build", "Base", { doel: "Onderhoud" }, 8, true),
+    );
+    // (a) ZONDER bevestiging leidt het doel, ook binnen de grens.
+    assert_(
+      "effFase 8 wkn maar NIET bevestigd → doel-fase",
+      "Base",
+      effectiveMacroFase_("Build", "Base", { doel: "FTP" }, 8, false),
+    );
+    // (b) VIJFDE ARGUMENT WEGGELATEN → de veilige kant, dus ook doel-gestuurd. Dit is de tak die
+    //     een vergeten aanroeper opvangt.
+    assert_(
+      "effFase 8 wkn zonder vijfde argument → doel-fase",
+      "Base",
       effectiveMacroFase_("Build", "Base", { doel: "FTP" }, 8),
     );
     assert_(
-      "effFase event op 8 wkn wint (Onderhoud)",
-      "Build",
-      effectiveMacroFase_("Build", "Base", { doel: "Onderhoud" }, 8),
+      "effFase 8 wkn met null → doel-fase",
+      "Base",
+      effectiveMacroFase_("Build", "Base", { doel: "FTP" }, 8, null),
+    );
+    // (c) DE ONDERHOUD-TAK op de profiel-id. Deze is per constructie NIET rood te krijgen: geen
+    //     legacy-string mapt op onderhoud, dus de UI-string en de profiel-id vallen samen. Wat
+    //     hier staat is dus een GELIJKHEID, geen rood-bewijs — zie bouwdoc §7.2.
+    assert_(
+      "effFase Onderhoud → Base, ongewijzigd",
+      "Base",
+      effectiveMacroFase_(null, "Peak", { doel: "Onderhoud" }, null, false),
+    );
+    assert_(
+      "effFase een doel dat NIET op onderhoud mapt → doel-fase",
+      "Peak",
+      effectiveMacroFase_(null, "Peak", { doel: "Beklimmingen" }, null, false),
     );
     assert_(
       "effFase event op 9 wkn → doel leidt (FTP)",
@@ -4807,11 +4870,23 @@ describe("engine selftest", () => {
       effectiveMacroFase_("Build", "Peak", { doel: "Onderhoud" }, 9),
     );
     // De taper- en herstel-overlay hangt aan een event dat er echt is: wekenTot 0 of 1 valt
-    // ruim binnen de grens, dus die fases overleven onveranderd.
+    // ruim binnen de grens, dus die fases overleven — MITS bevestigd.
     assert_(
-      "effFase Recovery bij wekenTot 0",
+      "effFase Recovery bij wekenTot 0 (bevestigd)",
       "Recovery",
-      effectiveMacroFase_("Recovery", "Base", { doel: "Onderhoud" }, 0),
+      effectiveMacroFase_("Recovery", "Base", { doel: "Onderhoud" }, 0, true),
+    );
+    // GEVONDEN TIJDENS DE BOUW, EN BEWUST ZO GELATEN. Zonder bevestiging levert dezelfde invoer
+    // de DOEL-fase, dus de herstelweek ná een gereden A-race komt er niet als Daan de overname
+    // heeft afgewezen. Dat is een GAT, geen ontwerp: herstel na een race die je écht gereden hebt
+    // is geen periodiseringskeuze. Het valt samen met het al geparkeerde punt "na het event volgt
+    // geen herstelweek" (bouwdoc §10, fase B2) en wordt daar opgelost — niet hier, want dat zou
+    // de bevestigings-voorwaarde uit §7.1 weer half maken. Deze regel legt de huidige toestand
+    // vast zodat B2 hem ziet, en beweert NIET dat hij goed is.
+    assert_(
+      "effFase Recovery zonder bevestiging → doel-fase (GAT, fase B2)",
+      "Base",
+      effectiveMacroFase_("Recovery", "Base", { doel: "Onderhoud" }, 0, false),
     );
     // LEGACY-DOEL via normalizeDoel_. LET OP — DEZE TWEE REGELS ZIJN GEEN BEWIJS VOOR DE
     // NORMALISATIE, en dat is met opzet zo opgeschreven. GEMETEN: haal `normalizeDoel_` uit
@@ -5944,7 +6019,11 @@ describe("engine selftest", () => {
   // 1427→1432. Nazorg 2: +3 voor de vier tellers op hetzelfde patroon — de absolute weekindex uit
   // computeMacroPhase en weekIndexFromStart_ vóór en ná de sprong, plus de deload-uitwerking van
   // daysToTaper. 1432→1435.
-  it("exactly 1435 assertions", () => {
-    expect(assertCount).toBe(1435);
+  // ROADMAP punt 9 FASE B (de overname is een voorstel): +12. De bevestigings-vlag expliciet op
+  // de grens-asserties, de niet-bevestigde tak (false, weggelaten, null), het vastgelegde
+  // herstel-gat voor B2, en de vijfweg-lus die de keten zonder bevestiging doel-gestuurd houdt.
+  // 1435→1447.
+  it("exactly 1447 assertions", () => {
+    expect(assertCount).toBe(1447);
   });
 });

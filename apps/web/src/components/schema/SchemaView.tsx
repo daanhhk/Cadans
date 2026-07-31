@@ -7,6 +7,7 @@ import {
   normalizeCoachPersona,
 } from "../../lib/coachNarrative";
 import { weekdagNaam } from "../../lib/dates";
+import type { EventOvernameVoorstel } from "../../lib/eventOvername";
 import { isDayPlannable } from "../../lib/library";
 import type { ProposalWeek } from "../../lib/proposal";
 import type { ReadinessResult } from "../../lib/readiness";
@@ -35,6 +36,7 @@ import { DispositionAffordance } from "./DispositionAffordance";
 import { DoneCompareCard } from "./DoneCompareCard";
 import { DoneDetail } from "./DoneDetail";
 import { DosisTredeCard } from "./DosisTredeCard";
+import { EventOvernameCard } from "./EventOvernameCard";
 import { FaseOvergangCard } from "./FaseOvergangCard";
 import { FatigueCard, isFatigueAfgewezen } from "./FatigueCard";
 import { GarminPushButton } from "./GarminPushButton";
@@ -121,6 +123,7 @@ export function SchemaView({
   fatigue = null,
   blokReview = null,
   dosisTredeVoorstel = null,
+  eventOvernameVoorstel = null,
   testVoorstel = null,
   weekMonday,
 }: {
@@ -136,6 +139,7 @@ export function SchemaView({
   /** 5a-ii — blok-terugblik (alleen in blokweek 4 en 1), of null. */
   blokReview?: BlokReview | null;
   dosisTredeVoorstel?: DosisTredeVoorstel | null;
+  eventOvernameVoorstel?: EventOvernameVoorstel | null;
   /** 5b-ii — testvoorstel voor de rustweek, of null. */
   testVoorstel?: TestVoorstel | null;
   /** Maandag van de getoonde week (sleutel van de goedkeuring); default = view.weekMonday. */
@@ -277,6 +281,17 @@ export function SchemaView({
         />
       )}
 
+      {/* ROADMAP punt 9 fase B — DE EVENT-OVERNAME als voorstel, direct ONDER de
+          fase-overgangskaart: allebei gaan ze over de periodisering. Zelfbegrenzend (alle poorten
+          in eventOvernameVoorstel), dus geen render-guard hier. Beide knoppen schrijven; er is
+          geen sessie-lokale afwijzing. */}
+      {eventOvernameVoorstel && (
+        <EventOvernameCard
+          voorstel={eventOvernameVoorstel}
+          coachNaam={view.coachNaam}
+        />
+      )}
+
       <WeekLoad tss={view.tss} minuten={view.minuten} dagen={view.dagen} />
 
       <DayStrip
@@ -286,8 +301,10 @@ export function SchemaView({
       />
 
       {/* 3d stap 4 — FATIGUE-voorstel op WEEKNIVEAU (offer/applied). Eerste week-kaart in de
-          rij; de guards hieronder houden het bij één week-kaart tegelijk. */}
-      {fatigueVoorstel && (
+          rij; de guards hieronder houden het bij één week-kaart tegelijk. ONDERDRUKT zolang de
+          overname-vraag openstaat: die gaat over de hele periodisering en hoort eerst
+          beantwoord te worden (bouwdoc §8.5). */}
+      {fatigueVoorstel && !eventOvernameVoorstel && (
         <FatigueCard
           fatigue={fatigueVoorstel}
           baseline={proposalWeek}
@@ -303,6 +320,7 @@ export function SchemaView({
           is de vraag al beantwoord en mag hij wel. */}
       {testVoorstel &&
         !isTestVoorstelAfgewezen(testVoorstel.blokStart) &&
+        !eventOvernameVoorstel &&
         fatigueVoorstel?.state !== "offer" && (
           <TestVoorstelCard
             voorstel={testVoorstel}
@@ -322,7 +340,7 @@ export function SchemaView({
       {/* ROADMAP stap 2 — de DOSIS-TREDE, DIRECT ONDER de terugblik: die vertelt wat er gebeurd
           is, deze vraagt wat er verandert. Zelfbegrenzend (alle poorten in dosisTredeVoorstel),
           dus geen render-guard hier. Afwijzen is persistent, niet sessie-lokaal. */}
-      {dosisTredeVoorstel && (
+      {dosisTredeVoorstel && !eventOvernameVoorstel && (
         <DosisTredeCard
           voorstel={dosisTredeVoorstel}
           coachNaam={view.coachNaam}

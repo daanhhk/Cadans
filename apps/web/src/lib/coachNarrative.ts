@@ -646,8 +646,17 @@ function wekenLabel_(n: number): string {
   return n === 1 ? "1 week" : `${n} weken`;
 }
 
-/** De aankondigingsregel voor een fase-overgang (naar/eventNaam/wekenTotEvent). Eén vorm: het
- * plan kantelt van fase naar fase (event_overname bestaat niet — zie detectFaseOvergang). */
+/** De aankondigingsregel voor een fase-overgang (naar/eventNaam/wekenTotEvent).
+ *
+ * ÉÉN VORM, gedreven door het fase-VERSCHIL: `detectFaseOvergang` vergelijkt deze week met de
+ * vorige en meldt de kanteling. Deze regel kondigt dus aan wat er GEBEURT.
+ *
+ * BIJGEWERKT BIJ ROADMAP PUNT 9 FASE B. Hier stond "event_overname bestaat niet", en dat klopt
+ * niet meer: de overname bestaat sindsdien als expliciet MOMENT, met een eigen kaart en een
+ * bewaard antwoord. Die kaart stelt de VRAAG; deze regel doet de aankondiging pas als het
+ * antwoord de fase daadwerkelijk heeft laten kantelen. De overname is dus een bevestigde keuze
+ * geworden en geen tijdsverloop meer — maar het blijft één vorm, want de aankondiging leest
+ * alleen het verschil en niet de reden. */
 export function faseOvergangRegel(o: {
   naar: string;
   eventNaam: string | null;

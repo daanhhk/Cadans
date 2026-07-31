@@ -42,18 +42,34 @@ describe("detectFaseOvergang", () => {
     expect(detectFaseOvergang(S(), race(RACE), "2026-03-25")).toBeNull();
   });
 
-  it("basis → opbouw bij een naderend A-event", () => {
-    const o = detectFaseOvergang(S(), race(RACE), "2026-04-06");
+  // ROADMAP punt 9 fase B: de vierde parameter is de BEVESTIGDE overname. Deze test legde de
+  // AUTOMATISCHE omslag vast en meet nu hetzelfde met de bevestiging er expliciet bij — de
+  // verwachtingen zijn onveranderd, alleen de invoer is compleet gemaakt.
+  it("basis → opbouw bij een naderend A-event (overname BEVESTIGD)", () => {
+    const o = detectFaseOvergang(S(), race(RACE), "2026-04-06", true);
     expect(o?.van).toBe("Base");
     expect(o?.naar).toBe("Build");
     expect(o?.eventNaam).toBe("Doelrace");
     expect(o?.wekenTotEvent).toBe(8);
   });
 
+  // HET TEGENDEEL, en dit is de kern van fase B: zonder bevestiging kondigt de app die omslag
+  // NIET aan. Zou deze keten ongegate blijven, dan meldt de kaart een fase die het plan niet
+  // uitvoert — de halve-fix-valkuil uit bouwdoc §8.2.
+  it("zelfde week ZONDER bevestiging → geen event-omslag aangekondigd", () => {
+    const o = detectFaseOvergang(S(), race(RACE), "2026-04-06", false);
+    expect(o?.naar).not.toBe("Build");
+  });
+  it("weggelaten vierde argument gedraagt zich als NIET bevestigd", () => {
+    expect(detectFaseOvergang(S(), race(RACE), "2026-04-06")).toEqual(
+      detectFaseOvergang(S(), race(RACE), "2026-04-06", false),
+    );
+  });
+
   it("wissel naar taper — alleen zichtbaar op de TOONBARE fase (borgt de ontwerpkeuze)", () => {
     // Peak-week → Taper-week: de taper-overlay leeft ALLEEN op de toonbare fase. Op macroFase zijn
     // beide weken "Peak" → op macroFase vergelijken zou deze (belangrijkste) overgang MISSEN.
-    const o = detectFaseOvergang(S(), race(RACE), "2026-05-25");
+    const o = detectFaseOvergang(S(), race(RACE), "2026-05-25", true);
     expect(o?.van).toBe("Peak");
     expect(o?.naar).toBe("Taper");
   });
@@ -69,11 +85,13 @@ describe("detectFaseOvergang", () => {
       S({ doel: "FTP" }),
       race(RACE),
       "2026-04-06",
+      true,
     );
     const ond = detectFaseOvergang(
       S({ doel: "Onderhoud" }),
       race(RACE),
       "2026-04-06",
+      true,
     );
     expect(ond?.naar).toBe(ftp?.naar);
     expect(ond?.naar).toBe("Build");

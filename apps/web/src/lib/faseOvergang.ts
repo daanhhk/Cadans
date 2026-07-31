@@ -42,6 +42,7 @@ function faseVoor_(
   settingsE: { doelStart: Date | null; doel: string | null },
   eventsD: Array<{ datum: Date }>,
   today: Date,
+  overnameBevestigd: boolean,
 ): FaseBundel {
   const macro = eventFase_(eventsD, today);
   const doelFase = computeMacroPhase(settingsE.doelStart, today).fase;
@@ -50,6 +51,7 @@ function faseVoor_(
     doelFase,
     settingsE,
     typeof macro?.wekenTot === "number" ? macro.wekenTot : null,
+    overnameBevestigd,
   );
   const overlay = macro?.fase as string | undefined;
   return {
@@ -65,6 +67,10 @@ export function faseBundelVoor_(
   settings: SettingsInput,
   events: EventItem[],
   todayISO: string,
+  // Fase B: dezelfde vlag als het PLAN gebruikt. Weggelaten = niet bevestigd. Blijft deze keten
+  // ongegate, dan kondigt de app een fase-omslag aan die het plan niet uitvoert — de
+  // halve-fix-valkuil uit bouwdoc §8.2.
+  overnameBevestigd = false,
 ): FaseBundel {
   const settingsE = {
     ...settings,
@@ -74,7 +80,12 @@ export function faseBundelVoor_(
     ...e,
     datum: parseLocalDate(e.datum),
   }));
-  return faseVoor_(settingsE, eventsD, stripTime_(parseLocalDate(todayISO)));
+  return faseVoor_(
+    settingsE,
+    eventsD,
+    stripTime_(parseLocalDate(todayISO)),
+    overnameBevestigd,
+  );
 }
 
 /**
@@ -90,14 +101,15 @@ export function detectFaseOvergang(
   settings: SettingsInput,
   events: EventItem[],
   todayISO: string,
+  overnameBevestigd = false,
 ): FaseOvergang | null {
   const today = stripTime_(parseLocalDate(todayISO));
   const vorigeDatum = new Date(today);
   vorigeDatum.setDate(today.getDate() - 7);
   const vorigeISO = formatVorigeISO_(vorigeDatum);
 
-  const nu = faseBundelVoor_(settings, events, todayISO);
-  const prev = faseBundelVoor_(settings, events, vorigeISO);
+  const nu = faseBundelVoor_(settings, events, todayISO, overnameBevestigd);
+  const prev = faseBundelVoor_(settings, events, vorigeISO, overnameBevestigd);
 
   if (nu.fase === prev.fase) return null;
   if (nu.fase === "Test") return null;
