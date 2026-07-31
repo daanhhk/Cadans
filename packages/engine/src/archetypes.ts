@@ -1571,14 +1571,6 @@ export const ARCHETYPES: any[] = [
   },
 ];
 
-// GAS-PARITY-SPIEGEL (`Archetypes.gs:492`). Sinds ROADMAP punt 7 het klim-doel in kort en lang
-// splitste heeft deze constante geen consument meer: beide nieuwe profielen dragen hun eigen
-// gewichten uit `docs/DOEL-LIJST-RECON.md` §7. Blijft staan omdat de bevroren bron hem draagt.
-export const GOAL_INTENT_WEIGHTS_KLIM_: any = {
-  drempel: 0.4,
-  vo2: 0.35,
-  sweetspot: 0.25,
-};
 export const GOAL_INTENT_WEIGHTS_FTP_: any = {
   drempel: 0.45,
   sweetspot: 0.35,

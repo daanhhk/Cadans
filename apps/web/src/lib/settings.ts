@@ -98,13 +98,18 @@ export function settingsFormToBody(f: SettingsForm): Partial<SettingsInput> {
 }
 
 // ── Vaste keuze-sets (bron: engine + design) ──────────────────────────────
-// doel: exact de engine-literals uit DOEL_OPTIONS (phase.ts) — profileForDoel_
-// (archetypes.ts) matcht precies deze strings. NL-labels als display.
+// doel: exact de engine-literals uit DOEL_OPTIONS (phase.ts). De engine matcht niet meer op
+// deze strings RECHTSTREEKS — `profileForDoel_` (archetypes.ts) normaliseert eerst via
+// `normalizeDoel_` (phase.ts), zodat een oude opgeslagen waarde ("Beklimmingen", "VO2max") en
+// een onbekende string op een canoniek doel landen in plaats van stil door te vallen. Dat is een
+// VANGNET, geen vrijbrief: wat hier staat hoort woordelijk gelijk te zijn aan phase.ts, anders
+// slaat elke keuze uit dit scherm eerst door de normalisatie heen.
+// NL-labels als display; kort gehouden want dit is een Segmented met VIJF segmenten.
 export const DOEL_OPTIONS: { value: string; label: string }[] = [
   { value: "FTP", label: "FTP / drempel" },
   { value: "Conditie", label: "Duurvermogen" },
-  { value: "Beklimmingen", label: "Klimmen" },
-  { value: "VO2max", label: "VO2max" },
+  { value: "Korte beklimmingen", label: "Klim kort" },
+  { value: "Lange beklimmingen", label: "Klim lang" },
   { value: "Onderhoud", label: "Onderhoud" },
 ];
 

@@ -38,9 +38,8 @@ import {
 import { climbPools_, workoutForBeklimmingen } from "./workouts/beklimmingen";
 import { conditiePools_, workoutForConditie } from "./workouts/conditie";
 import { ftpPools_, workoutForFtp } from "./workouts/ftp";
-// `workoutForVo2max` wordt hier niet meer gedispatcht (zie buildWorkout); de library zelf
-// blijft ongemoeid en staat via `index.ts` gewoon in de publieke API. `vo2Pools_` blijft in
-// de variant-pools: VO2max is nog steeds een MIDDEL (DOELEN-SPEC §3.6).
+// `vo2Pools_` blijft: die voedt het TYPE "vo2max" in de variant-pools. VO2max is geen doel
+// meer maar wel een middel (DOELEN-SPEC §3.6) — de pools zijn dat middel.
 import { vo2Pools_ } from "./workouts/vo2max";
 import {
   pctZoneBucket_,
@@ -1777,9 +1776,6 @@ export function buildWorkout(
   // Doel-specifieke library. Normaliseert op dezelfde string als `profileForDoel_`: kiest de
   // dispatch op de RAUWE waarde en het profiel op de genormaliseerde, dan valt een legacy-doel
   // hier stil door naar `genericRecovery` terwijl het profiel wél klopt. Zie `normalizeDoel_`.
-  // `workoutForVo2max` blijft bestaan — VO2max is geen DOEL meer maar wel een MIDDEL
-  // (DOELEN-SPEC §3.6) en de library wordt rechtstreeks aangeroepen; alleen deze dispatch-tak
-  // is weg, want `normalizeDoel_` levert `VO2max` nooit meer.
   let wo;
   if (doel === "FTP")
     wo = workoutForFtp(type, mins, settings, mesoWeek, macroFase);
