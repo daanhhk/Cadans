@@ -1,7 +1,12 @@
+import { activeGoalProfile_ } from "@cadans/engine";
+import type { SettingsInput } from "@cadans/shared";
 import { describe, expect, it } from "vitest";
 import type { ActValuesRow } from "./activities";
 import {
+  buildGoalDims,
+  buildGoalInputs,
   maandLabel,
+  onderhoudVloerW,
   projectionDirection,
   tierProgress,
   weekTss,
@@ -114,5 +119,95 @@ describe("projectionDirection", () => {
     expect(projectionDirection(null, 55)).toBeNull();
     expect(projectionDirection(50, null)).toBeNull();
     expect(projectionDirection(null, null)).toBeNull();
+  });
+});
+
+// ── ROADMAP punt 8 — de behoud-vloer en de INVOER waarop hij rust ─────────────
+// Rij-fixturevorm gelijk aan effect.test.ts: idx0 Date, idx1 type, idx3 duur, idx14 rolling_ftp.
+
+function rit(datumISO: string, rollingFtp: number | null): ActValuesRow {
+  const [y, m, d] = datumISO.split("-").map(Number);
+  const row: ActValuesRow = new Array(17).fill(null);
+  row[0] = new Date(y ?? 2026, (m ?? 1) - 1, d ?? 1);
+  row[1] = "Ride";
+  row[3] = 60;
+  row[14] = rollingFtp;
+  return row;
+}
+
+const DOELSTART = "2026-06-29";
+/** Instapwaarde: de laatste geldige rolling_ftp VÓÓR doelStart. */
+const INSTAP = 273;
+
+describe("onderhoudVloerW — 95 procent van de instapwaarde", () => {
+  const voorStart = [rit("2026-06-15", 270), rit("2026-06-22", INSTAP)];
+
+  it("instap 273 geeft 259,35 — ONAFGEROND, want afronden is presentatie", () => {
+    const v = onderhoudVloerW(voorStart, DOELSTART);
+    expect(v).not.toBeNull();
+    expect(v as number).toBeCloseTo(259.35, 2);
+  });
+
+  it("geen doelStart geeft null — er is dan geen periode om tegen te meten", () => {
+    expect(onderhoudVloerW(voorStart, null)).toBeNull();
+    expect(onderhoudVloerW(voorStart, "")).toBeNull();
+    expect(onderhoudVloerW(voorStart, "   ")).toBeNull();
+  });
+
+  it("geen rit vóór doelStart geeft null — niets om van af te leiden", () => {
+    expect(onderhoudVloerW([rit("2026-07-06", 265)], DOELSTART)).toBeNull();
+    expect(onderhoudVloerW([], DOELSTART)).toBeNull();
+  });
+});
+
+describe("DE INVOER-TOETS — de behoud-lat leest de RITTEN, niet de ingestelde FTP", () => {
+  // DIT IS DE DRAGENDE TEST van punt 8. §8 wees eerst ftpWkg aan, en die staat op
+  // settings.ftp — een HANDMATIG veld dat alleen beweegt als de gebruiker het overtypt
+  // (`ftp_auto_update` heeft nul lezers). De vloer komt uit rolling_ftp uit de ritten. Twee
+  // verschillende grootheden tegen elkaar: het mechanisme werkt, de invoer niet, en de kaart
+  // staat de hele periode groen op een ingevuld getal. Deze drie runs pinnen dat de current
+  // ALLEEN op de ritten reageert.
+  const prof = { dims: activeGoalProfile_({ doel: "Onderhoud" }).dims };
+
+  function run(ftpInstelling: number, nieuwsteRollingFtp: number) {
+    const rows = [
+      rit("2026-06-22", INSTAP), // vóór doelStart → de instapwaarde
+      rit("2026-07-13", nieuwsteRollingFtp), // ná doelStart → de huidige waarde
+    ];
+    const settings = {
+      ftp: ftpInstelling,
+      gewicht: 75,
+      doel: "Onderhoud",
+      doelStart: DOELSTART,
+    } as unknown as SettingsInput;
+    const dims = buildGoalDims(
+      prof,
+      buildGoalInputs(settings, rows),
+      onderhoudVloerW(rows, DOELSTART),
+    );
+    return dims.find((d) => d.metric === "rollingFtpW");
+  }
+
+  const A = run(280, 250);
+  const B = run(200, 250);
+  const C = run(280, 265);
+
+  it("A en B verschillen alleen in settings.ftp → de current is GELIJK", () => {
+    expect(A?.current).toBe(250);
+    expect(B?.current).toBe(A?.current);
+  });
+
+  it("A en C verschillen in de RITTEN → de current is VERANDERD", () => {
+    expect(C?.current).toBe(265);
+    expect(C?.current).not.toBe(A?.current);
+  });
+
+  it("de effectieve target is de afgeleide vloer, niet de null uit de lat", () => {
+    expect(A?.target).toBeCloseTo(259.35, 2);
+  });
+
+  it("250 zakt onder de vloer, 265 niet", () => {
+    expect(A?.onTrack).toBe(false);
+    expect(C?.onTrack).toBe(true);
   });
 });

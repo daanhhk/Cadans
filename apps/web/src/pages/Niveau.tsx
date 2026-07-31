@@ -5,8 +5,6 @@ import {
   dashNiveauReeks_,
   doelTestWeken_,
   eftpFromActivities_,
-  goalGap_,
-  maxRecentRideH_,
   niveauProgressie_,
   setGewichtProvider,
   tssPerHourRecent_,
@@ -32,6 +30,7 @@ import { VermogenSnapshot } from "../components/niveau/VermogenSnapshot";
 import { parseActivityRows } from "../lib/activities";
 import { getActivities, getPowerCurve, getSettings } from "../lib/api";
 import { todayIso } from "../lib/dates";
+import { buildGoalDims, buildGoalInputs, onderhoudVloerW } from "../lib/niveau";
 
 // Niveau-tab v1 — VermogenSnapshot + ProgressieCard (live), Rijdersprofiel +
 // DoelProjectie (Fase-2-stubs). De niveau-derivaties draaien CLIENT-SIDE via de
@@ -107,34 +106,23 @@ export function Niveau() {
       wkg: number | null;
     };
 
-    // DoelProjectie-inputs (UI-only samenstelling met engine-primitieven; `buildGoalProfile_`
-    // is een GAS-assembler die NIET in de engine zit → hier gecomponeerd uit
-    // activeGoalProfile_ + goalGap_). currentCtl = laatste maand-CTL. Vensters uit GAS:
-    // longRideH 90d, tssPerHour 42d.
-    const ctlMap = (ctlByMonth ?? {}) as Record<string, number>;
-    const months = Object.keys(ctlMap).sort();
-    const lastMonth = months.at(-1);
-    const currentCtl = lastMonth ? (ctlMap[lastMonth] ?? null) : null;
+    // DoelProjectie-inputs. De samenstelling zelf staat in `lib/niveau.ts` — één plek voor de
+    // vier meetgrootheden en één voor de dims, zodat de Niveau-tab en elke andere lezer niet
+    // uiteen kunnen lopen. `buildGoalProfile_` is een GAS-assembler die NIET in de engine zit;
+    // hier gecomponeerd uit activeGoalProfile_ + goalGap_. Vensters uit GAS: longRideH 90d,
+    // tssPerHour 42d.
     const prof = activeGoalProfile_(settings) as {
       label: string;
       sub: string | null;
       projectieMode: string;
       dims: Omit<GapDim, "current" | "gap" | "onTrack" | "pct">[];
     };
-    const goalInputs: Record<string, number | null> = {
-      ftpWkg: snap.wkg,
-      ctl: currentCtl,
-      longRideH: maxRecentRideH_(rows, 90) as number | null,
-    };
-    const dims: GapDim[] = prof.dims.map((d) => {
-      const cur = goalInputs[d.metric] ?? null;
-      const g = goalGap_(cur, d.target, d.dir) as {
-        gap: number | null;
-        onTrack: boolean;
-        pct: number | null;
-      };
-      return { ...d, current: cur, gap: g.gap, onTrack: g.onTrack, pct: g.pct };
-    });
+    const goalInputs = buildGoalInputs(settings, rows);
+    // De behoud-vloer is de ENIGE afgeleide target; hij ankert op settings.doelStart.
+    const vloerW = onderhoudVloerW(rows, settings?.doelStart);
+    const dims: GapDim[] = buildGoalDims(prof, goalInputs, vloerW);
+    // Uit DEZELFDE inputs als de gap-rijen, zodat de kaart en de rij niet uiteen kunnen lopen.
+    const currentCtl = goalInputs.ctl ?? null;
     const projectie: DoelProjectieProps = {
       label: prof.label,
       sub: prof.sub,

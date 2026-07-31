@@ -1607,7 +1607,6 @@ export const PROFILES: any = {
       vo2_hill_repeats: 0.2,
       vo2_40_20: 0.15,
     },
-    projectieKey: "klim_kort",
     // §3.3: een korte-intervalsessie, een drempelsessie, een groeiende lange rit. In Build en
     // Peak consumeert de efforts-arm er een, dus 3 levert daar alle drie.
     kwaliteitPerWeek: { Base: 3, Build: 3, Peak: 2 },
@@ -1629,7 +1628,6 @@ export const PROFILES: any = {
       threshold_2x20: 0.2,
       sweetspot_long_climb: 0.2,
     },
-    projectieKey: "klim_lang",
     // ONVERANDERD van het oude `klim`-profiel. §3.4: volume-hongerig, beschermd is het
     // weekendpaar, residu is de midweekse kwaliteit.
     kwaliteitPerWeek: { Base: 2, Build: 3, Peak: 2 },

@@ -12,6 +12,7 @@
  * per-month fallback, so the default returns 0 (behaviour-identical for the
  * suite). See the flag in the port report.
  */
+import { normalizeDoel_ } from "./phase";
 import { formatDate, stripTime_ } from "./utils";
 
 // ── Injectable seam for the untported getGewicht() (Settings.gs:315). ─────────
@@ -566,13 +567,23 @@ export function eftpFromActivities_(actValues: any): any {
 // NIVEAU FASE-2 §d — doel-gereedheid + projectie (PUUR; getest).
 // Eerlijkheid = ontwerp-eis: SOLIDE volume→CTL-ramp vs SPECULATIEVE FTP-band.
 // ════════════════════════════════════════════════════════════════
-// Swap-able doel-seam: generaliseert voorbij Girona. Per dim {metric, target, unit, dir}.
+// Doel-seam, ROADMAP punt 8. Per dim {metric, target, unit, dir}. DE SLEUTELS ZIJN EXACT DIE VAN
+// `PROFILES` in archetypes.ts — ftp, klim_kort, klim_lang, conditie, onderhoud — zodat er geen
+// tweede, eigen doel-afbeelding naast de planner-afbeelding kan gaan drijven. De selftest bewaakt
+// die gelijkheid mechanisch; zie "punt8: profiel-sleutel == lat-sleutel".
+//
+// WAAROM GEEN `projectieKey`-veld. De planner-profielen droegen zo'n veld met NUL lezers.
+// Aansluiten zou vragen dat dit bestand uit archetypes.ts leest, en dat sluit een import-ring:
+// archetypes.ts → coach.ts → niveau.ts, alle drie met objecten die bij module-evaluatie worden
+// opgebouwd. Gelijke sleutels doen hetzelfde werk zonder die ring.
 export var GOAL_PROFILES_: any = {
-  girona: {
-    key: "girona",
-    label: "Girona",
-    sub: "~90 km · 1200 hm/dag · lange klimmen",
+  klim_lang: {
+    key: "klim_lang",
+    label: "Lange beklimmingen",
+    sub: "aanhoudende klimmen · 8-30 min",
     projectieMode: "gap",
+    // BYTE-IDENTIEK aan de oude `girona`-dims: dat profiel WAS de lange-klimmen-lat, het droeg
+    // alleen een reis als naam.
     dims: [
       {
         key: "klim",
@@ -596,6 +607,89 @@ export var GOAL_PROFILES_: any = {
         metric: "longRideH",
         target: 4.0,
         unit: "u",
+        dir: "up",
+      },
+    ],
+  },
+  klim_kort: {
+    key: "klim_kort",
+    label: "Korte beklimmingen",
+    sub: "AGR Toerversie · 240 km · korte steile klimmen",
+    projectieMode: "gap",
+    dims: [
+      {
+        key: "klim",
+        label: "Klimvermogen",
+        metric: "ftpWkg",
+        target: 4.0,
+        unit: "W/kg",
+        dir: "up",
+      },
+      {
+        key: "duur",
+        label: "Duurvermogen",
+        metric: "ctl",
+        target: 65,
+        unit: "CTL",
+        dir: "up",
+      },
+      {
+        key: "lang",
+        label: "Lange-rit",
+        metric: "longRideH",
+        // 5,0 en niet 4,0 — HERKOMST: PLAN, DOELEN-SPEC §3.3 KETEN (iii): de lange rit groeit
+        // naar vier à vijf uur. Dit is het ENIGE verschil met de klim_lang-dims.
+        target: 5.0,
+        unit: "u",
+        dir: "up",
+      },
+    ],
+  },
+  conditie: {
+    key: "conditie",
+    label: "Conditie",
+    sub: "duurvermogen · langer doorrijden",
+    projectieMode: "gap",
+    // GEEN klim-dim. HERKOMST: PLAN, DOELEN-SPEC §3.5 — de bestemming van dit doel is een
+    // DURABILITY-getal (X watt na N uur), geen FTP. Een ftpWkg-lat zou hier een andere vraag
+    // beantwoorden dan het doel stelt; de echte meter komt bij punt 11.
+    dims: [
+      {
+        key: "duur",
+        label: "Duurvermogen",
+        metric: "ctl",
+        target: 65,
+        unit: "CTL",
+        dir: "up",
+      },
+      {
+        key: "lang",
+        label: "Lange-rit",
+        metric: "longRideH",
+        target: 4.0,
+        unit: "u",
+        dir: "up",
+      },
+    ],
+  },
+  onderhoud: {
+    key: "onderhoud",
+    label: "Onderhoud",
+    sub: "vasthouden bij minder uren",
+    // Derde modus naast 'gap' en 'test'. Een behoud-doel bouwt niet op, dus het uren-schuifje en
+    // de projectie eronder slaan nergens op; DoelProjectie verbergt dat blok in deze modus.
+    projectieMode: "behoud",
+    dims: [
+      {
+        key: "behoud",
+        label: "Behoud-vloer",
+        metric: "rollingFtpW",
+        // TARGET NULL IS OPZET. Dit is de enige lat die niet CONSTANT is: de vloer wordt
+        // client-zijde afgeleid uit de instapwaarde van de periode (`onderhoudVloerW`), en
+        // `targetBron` vertelt de client welke. Een constante zou hier een verzonnen getal zijn.
+        target: null,
+        targetBron: "instapVloer",
+        unit: "W",
         dir: "up",
       },
     ],
@@ -624,12 +718,18 @@ export var FTP_GAIN_PER_CTL_ = 0.004,
   FTP_GAIN_CAP_ = 0.08; // speculatieve FTP-winst (tunebaar)
 export var PROJ_TAU_DAYS_ = 42; // PMC-tijdconstante (CTL-ramp)
 
-// Actief doelprofiel — doel-gedreven (PUUR, geen side-effects). FTP → ftp; Beklimmingen +
-// VO2max/Conditie/onbekend/missing → girona (fallback).
+// Actief doelprofiel — doel-gedreven (PUUR, geen side-effects). Normaliseert EERST, met exact
+// dezelfde vijfweg-tak als `profileForDoel_` in archetypes.ts: dit was tot ROADMAP punt 8 de enige
+// doel-lezer die dat niet deed. Onschadelijk zolang élk niet-FTP-doel toch op één lat landde, maar
+// nu elk doel zijn eigen lat heeft zou een opgeslagen legacy-waarde op de VERKEERDE landen.
 export function activeGoalProfile_(settings: any): any {
-  var doel = settings && settings.doel;
+  var doel = normalizeDoel_(settings && settings.doel);
   if (doel === "FTP") return GOAL_PROFILES_.ftp;
-  return GOAL_PROFILES_.girona;
+  if (doel === "Korte beklimmingen") return GOAL_PROFILES_.klim_kort;
+  if (doel === "Lange beklimmingen") return GOAL_PROFILES_.klim_lang;
+  if (doel === "Conditie") return GOAL_PROFILES_.conditie;
+  if (doel === "Onderhoud") return GOAL_PROFILES_.onderhoud;
+  return GOAL_PROFILES_.ftp;
 }
 
 // gap t.o.v. target; dir 'up' = hoger is beter. onTrack = doel gehaald; pct = voortgang 0..1.

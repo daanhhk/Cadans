@@ -17,7 +17,10 @@ export type GapDim = {
   key: string;
   label: string;
   metric: string;
-  target: number;
+  /** null = geen CONSTANTE target; de waarde wordt afgeleid (zie `targetBron`). */
+  target: number | null;
+  /** "instapVloer" → de behoud-vloer, client-zijde berekend uit de instapwaarde. */
+  targetBron?: string;
   unit: string;
   dir: string;
   current: number | null;
@@ -29,7 +32,7 @@ export type GapDim = {
 export interface DoelProjectieProps {
   label: string;
   sub: string | null;
-  projectieMode: string; // 'gap' | 'test'
+  projectieMode: string; // 'gap' | 'test' | 'behoud'
   dims: GapDim[];
   currentCtl: number | null;
   targetCtl: number | null;
@@ -54,11 +57,13 @@ const DIM_SUB: Record<string, string> = {
   ftpWkg: "W/kg · 20 min",
   ctl: "fitheid · CTL",
   longRideH: "langste recente rit",
+  rollingFtpW: "watt · rollende FTP",
 };
 function fmtMetric(metric: string, v: number | null): string {
   if (v == null) return "—";
   if (metric === "ftpWkg") return nlDec1(v);
   if (metric === "ctl") return nlInt(v);
+  if (metric === "rollingFtpW") return nlInt(v);
   if (metric === "longRideH") {
     const h = Math.floor(v);
     const m = Math.round((v - h) * 60);
@@ -150,14 +155,23 @@ function GapRow({ dim }: { dim: GapDim }) {
           color: col,
         }}
       >
-        {dim.onTrack ? "✓ op koers" : "nog te gaan"}
+        {/* Zonder target is er geen uitspraak te doen. Dan GEEN status-tag: "nog te gaan"
+            zou een tekort beweren, en onbekend is geen tekort. */}
+        {dim.target == null ? "" : dim.onTrack ? "✓ op koers" : "nog te gaan"}
       </span>
     </div>
   );
 }
 
 // Coach-callout uit de gap-samenvatting: eerste op-koers-dim + eerste gap-dim.
-function callout(dims: GapDim[], label: string): string {
+// Behoud-modus stelt een andere vraag — niet "hoe ver nog" maar "sta ik nog overeind" — dus die
+// krijgt zijn eigen tak. Verder geen copy-werk hier; de toon komt met de rest van de coach-copy.
+function callout(dims: GapDim[], label: string, isBehoud = false): string {
+  if (isBehoud) {
+    return dims.every((d) => d.target == null || d.onTrack)
+      ? "Je houdt je niveau vast — dat is het doel."
+      : "Je zakt onder de behoud-vloer.";
+  }
   const onTrack = dims.filter((d) => d.onTrack);
   const gaps = dims.filter((d) => !d.onTrack);
   if (gaps.length === 0) return `Alles op koers voor ${label} — vasthouden.`;
@@ -408,6 +422,12 @@ export function DoelProjectie({
   // Test-modus: doel = een FTP-test (projectieMode 'test') mét een bekende testdatum (testWeken).
   // GAS Script.html:1562 + :1617.
   const isTest = projectieMode === "test" && testWeken != null;
+  // Een behoud-doel bouwt niet op: het uren-schuifje en de projectie eronder beloven groei die
+  // hier niet aan de orde is, en `proj` zou toch null zijn omdat een behoud-lat geen ctl-dim
+  // draagt (DOELEN-SPEC §3.2: "NIET CTL — die hoort te dalen"). Zonder deze tak valt dat blok
+  // terug op de lege-staat-copy over onvoldoende recente ritten, en dat is ONWAAR: de ritten
+  // zijn er en het doel is bekend.
+  const isBehoud = projectieMode === "behoud";
 
   const proj = useMemo(() => {
     if (currentCtl == null || targetCtl == null || !tssPerHour) return null;
@@ -532,257 +552,92 @@ export function DoelProjectie({
               lineHeight: "var(--lh-label)",
             }}
           >
-            {callout(dims, label)}
+            {callout(dims, label, isBehoud)}
           </span>
         </div>
       )}
 
-      {/* what-if: uren → potentieel */}
-      <div
-        style={{
-          marginTop: "var(--s-5)",
-          paddingTop: "var(--s-4)",
-          borderTop: "1px solid var(--border-subtle)",
-        }}
-      >
+      {/* what-if: uren → potentieel. In behoud-modus VERBORGEN, van de uren-sectie tot en met
+          de projectie en de lege-staat-copy; de gap-rijen en de callout blijven wel staan. */}
+      {!isBehoud && (
         <div
           style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "baseline",
+            marginTop: "var(--s-5)",
+            paddingTop: "var(--s-4)",
+            borderTop: "1px solid var(--border-subtle)",
           }}
         >
-          <Overline color="var(--text-secondary)">Uren → potentieel</Overline>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-            <Num size="var(--fs-num-sm)" color="var(--accent)">
-              {hours}
-            </Num>
-            <span
-              style={{
-                fontFamily: "var(--font-sans)",
-                fontSize: "var(--fs-caption)",
-                color: "var(--text-muted)",
-              }}
-            >
-              u/week
-            </span>
-          </div>
-        </div>
-        <div style={{ marginTop: "var(--s-2)" }}>
-          <input
-            type="range"
-            min={4}
-            max={14}
-            step={1}
-            value={hours}
-            onChange={(e) => setHours(Number(e.target.value))}
-            aria-label="Trainingsuren per week"
-            style={{
-              width: "100%",
-              accentColor: "var(--slider-fill)",
-              cursor: "pointer",
-            }}
-          />
           <div
             style={{
               display: "flex",
               justifyContent: "space-between",
-              fontFamily: "var(--font-num)",
-              fontSize: "var(--fs-caption)",
-              color: "var(--text-muted)",
+              alignItems: "baseline",
             }}
           >
-            <span>4u</span>
-            <span>14u</span>
-          </div>
-        </div>
-
-        {proj ? (
-          <>
-            <div style={{ marginTop: "var(--s-3)" }}>
-              <div
+            <Overline color="var(--text-secondary)">Uren → potentieel</Overline>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
+              <Num size="var(--fs-num-sm)" color="var(--accent)">
+                {hours}
+              </Num>
+              <span
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "var(--s-2)",
-                  marginBottom: "var(--s-2)",
+                  fontFamily: "var(--font-sans)",
+                  fontSize: "var(--fs-caption)",
+                  color: "var(--text-muted)",
                 }}
               >
-                <span
-                  style={{
-                    width: 14,
-                    height: 3,
-                    borderRadius: 2,
-                    background: "var(--proj-solid)",
-                  }}
-                />
-                <span
-                  style={{
-                    fontFamily: "var(--font-sans)",
-                    fontSize: "var(--fs-caption)",
-                    fontWeight: 600,
-                    color: "var(--text-secondary)",
-                  }}
-                >
-                  Fitheid-projectie
-                </span>
-                <span
-                  style={{
-                    fontFamily: "var(--font-sans)",
-                    fontSize: "var(--fs-caption)",
-                    color: "var(--text-muted)",
-                  }}
-                >
-                  · berekend uit volume
-                </span>
-              </div>
-              {currentCtl != null && targetCtl != null && (
-                <ProjectionChart
-                  currentCtl={currentCtl}
-                  plateau={proj.plateau}
-                  targetCtl={targetCtl}
-                  weeks={proj.weeks}
-                  isTest={isTest}
-                  testWeken={testWeken}
-                />
-              )}
+                u/week
+              </span>
             </div>
-
-            {/* readout — in test-modus mensentaal (BEWUSTE CLIENT-ONLY DIVERGENTIE t.o.v. GAS, dat
-                "Verwachte fitheid op de testdag: ~X CTL" + een warn toont): CTL is jargon en de
-                RICHTING (opbouwen/vasthouden/afbouwen) is de kernvraag. Geen CTL-getal in de copy.
-                "down" → warn-styling; "up"/"flat" → neutrale styling. */}
+          </div>
+          <div style={{ marginTop: "var(--s-2)" }}>
+            <input
+              type="range"
+              min={4}
+              max={14}
+              step={1}
+              value={hours}
+              onChange={(e) => setHours(Number(e.target.value))}
+              aria-label="Trainingsuren per week"
+              style={{
+                width: "100%",
+                accentColor: "var(--slider-fill)",
+                cursor: "pointer",
+              }}
+            />
             <div
               style={{
-                marginTop: "var(--s-3)",
-                background: (isTest ? direction === "down" : proj.weeks == null)
-                  ? "var(--warn-soft)"
-                  : "var(--bg-sunken)",
-                border: `1px solid ${
-                  (isTest ? direction === "down" : proj.weeks == null)
-                    ? "color-mix(in srgb, var(--warn) 35%, transparent)"
-                    : "var(--border-subtle)"
-                }`,
-                borderRadius: "var(--r-md)",
-                padding: "11px 13px",
+                display: "flex",
+                justifyContent: "space-between",
+                fontFamily: "var(--font-num)",
+                fontSize: "var(--fs-caption)",
+                color: "var(--text-muted)",
               }}
             >
-              {isTest ? (
-                <>
-                  <div
-                    style={{
-                      fontFamily: "var(--font-sans)",
-                      fontSize: "var(--fs-label)",
-                      fontWeight: 600,
-                      color: "var(--text-primary)",
-                    }}
-                  >
-                    FTP-test over ~{testWeken}{" "}
-                    {testWeken === 1 ? "week" : "weken"}
-                  </div>
-                  {direction && (
-                    <div
-                      style={{
-                        fontFamily: "var(--font-sans)",
-                        fontSize: "var(--fs-label)",
-                        color: "var(--text-secondary)",
-                        lineHeight: "var(--lh-body)",
-                        marginTop: "var(--s-2)",
-                      }}
-                    >
-                      {direction === "up"
-                        ? `Bij ${hours}u/week bouw je fitheid op richting de test.`
-                        : direction === "flat"
-                          ? `Bij ${hours}u/week houd je je fitheid vast — je gaat de test in op je huidige niveau.`
-                          : `Bij ${hours}u/week zakt je fitheid richting de test — je gaat de test in onder je huidige niveau.`}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <>
-                  {proj.weeks != null ? (
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "baseline",
-                        gap: "var(--s-2)",
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontFamily: "var(--font-sans)",
-                          fontSize: "var(--fs-label)",
-                          color: "var(--text-secondary)",
-                        }}
-                      >
-                        Duurdoel bereikt over
-                      </span>
-                      <Num size="var(--fs-num-sm)" color="var(--good)">
-                        ~{Math.round(proj.weeks)}
-                      </Num>
-                      <span
-                        style={{
-                          fontFamily: "var(--font-sans)",
-                          fontSize: "var(--fs-label)",
-                          color: "var(--text-secondary)",
-                        }}
-                      >
-                        weken
-                      </span>
-                    </div>
-                  ) : (
-                    <span
-                      style={{
-                        fontFamily: "var(--font-sans)",
-                        fontSize: "var(--fs-label)",
-                        color: "var(--text-secondary)",
-                        lineHeight: "var(--lh-body)",
-                      }}
-                    >
-                      Bij {hours}u/week blijft je fitheid-plafond onder je
-                      duurdoel — zo niet haalbaar. Verhoog het volume.
-                    </span>
-                  )}
-                  {proj.weeks != null &&
-                    proj.sooner != null &&
-                    proj.sooner > 0 && (
-                      <div
-                        style={{
-                          fontFamily: "var(--font-sans)",
-                          fontSize: "var(--fs-caption)",
-                          color: "var(--text-muted)",
-                          marginTop: "var(--s-2)",
-                        }}
-                      >
-                        +2u/week ≈{" "}
-                        <strong style={{ color: "var(--accent)" }}>
-                          {proj.sooner} {proj.sooner === 1 ? "week" : "weken"}
-                        </strong>{" "}
-                        eerder klaar.
-                      </div>
-                    )}
-                </>
-              )}
+              <span>4u</span>
+              <span>14u</span>
             </div>
+          </div>
 
-            {/* SPECULATIEVE FTP-band */}
-            {proj.band && (
-              <div
-                style={{
-                  marginTop: "var(--s-3)",
-                  border: "1px solid var(--proj-band-border)",
-                  borderRadius: "var(--r-md)",
-                  overflow: "hidden",
-                }}
-              >
+          {proj ? (
+            <>
+              <div style={{ marginTop: "var(--s-3)" }}>
                 <div
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "9px 12px 7px",
+                    gap: "var(--s-2)",
+                    marginBottom: "var(--s-2)",
                   }}
                 >
+                  <span
+                    style={{
+                      width: 14,
+                      height: 3,
+                      borderRadius: 2,
+                      background: "var(--proj-solid)",
+                    }}
+                  />
                   <span
                     style={{
                       fontFamily: "var(--font-sans)",
@@ -791,184 +646,356 @@ export function DoelProjectie({
                       color: "var(--text-secondary)",
                     }}
                   >
-                    {isTest
-                      ? "Verwachte FTP op de testdag"
-                      : "Geschat FTP-effect"}
+                    Fitheid-projectie
                   </span>
                   <span
                     style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 4,
                       fontFamily: "var(--font-sans)",
                       fontSize: "var(--fs-caption)",
-                      fontWeight: 600,
-                      letterSpacing: "0.06em",
-                      textTransform: "uppercase",
-                      color: "var(--proj-estimate-text)",
+                      color: "var(--text-muted)",
                     }}
                   >
-                    schatting
+                    · berekend uit volume
                   </span>
                 </div>
+                {currentCtl != null && targetCtl != null && (
+                  <ProjectionChart
+                    currentCtl={currentCtl}
+                    plateau={proj.plateau}
+                    targetCtl={targetCtl}
+                    weeks={proj.weeks}
+                    isTest={isTest}
+                    testWeken={testWeken}
+                  />
+                )}
+              </div>
+
+              {/* readout — in test-modus mensentaal (BEWUSTE CLIENT-ONLY DIVERGENTIE t.o.v. GAS, dat
+                  "Verwachte fitheid op de testdag: ~X CTL" + een warn toont): CTL is jargon en de
+                  RICHTING (opbouwen/vasthouden/afbouwen) is de kernvraag. Geen CTL-getal in de copy.
+                  "down" → warn-styling; "up"/"flat" → neutrale styling. */}
+              <div
+                style={{
+                  marginTop: "var(--s-3)",
+                  background: (
+                    isTest
+                      ? direction === "down"
+                      : proj.weeks == null
+                  )
+                    ? "var(--warn-soft)"
+                    : "var(--bg-sunken)",
+                  border: `1px solid ${
+                    (isTest ? direction === "down" : proj.weeks == null)
+                      ? "color-mix(in srgb, var(--warn) 35%, transparent)"
+                      : "var(--border-subtle)"
+                  }`,
+                  borderRadius: "var(--r-md)",
+                  padding: "11px 13px",
+                }}
+              >
+                {isTest ? (
+                  <>
+                    <div
+                      style={{
+                        fontFamily: "var(--font-sans)",
+                        fontSize: "var(--fs-label)",
+                        fontWeight: 600,
+                        color: "var(--text-primary)",
+                      }}
+                    >
+                      FTP-test over ~{testWeken}{" "}
+                      {testWeken === 1 ? "week" : "weken"}
+                    </div>
+                    {direction && (
+                      <div
+                        style={{
+                          fontFamily: "var(--font-sans)",
+                          fontSize: "var(--fs-label)",
+                          color: "var(--text-secondary)",
+                          lineHeight: "var(--lh-body)",
+                          marginTop: "var(--s-2)",
+                        }}
+                      >
+                        {direction === "up"
+                          ? `Bij ${hours}u/week bouw je fitheid op richting de test.`
+                          : direction === "flat"
+                            ? `Bij ${hours}u/week houd je je fitheid vast — je gaat de test in op je huidige niveau.`
+                            : `Bij ${hours}u/week zakt je fitheid richting de test — je gaat de test in onder je huidige niveau.`}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {proj.weeks != null ? (
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "baseline",
+                          gap: "var(--s-2)",
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontFamily: "var(--font-sans)",
+                            fontSize: "var(--fs-label)",
+                            color: "var(--text-secondary)",
+                          }}
+                        >
+                          Duurdoel bereikt over
+                        </span>
+                        <Num size="var(--fs-num-sm)" color="var(--good)">
+                          ~{Math.round(proj.weeks)}
+                        </Num>
+                        <span
+                          style={{
+                            fontFamily: "var(--font-sans)",
+                            fontSize: "var(--fs-label)",
+                            color: "var(--text-secondary)",
+                          }}
+                        >
+                          weken
+                        </span>
+                      </div>
+                    ) : (
+                      <span
+                        style={{
+                          fontFamily: "var(--font-sans)",
+                          fontSize: "var(--fs-label)",
+                          color: "var(--text-secondary)",
+                          lineHeight: "var(--lh-body)",
+                        }}
+                      >
+                        Bij {hours}u/week blijft je fitheid-plafond onder je
+                        duurdoel — zo niet haalbaar. Verhoog het volume.
+                      </span>
+                    )}
+                    {proj.weeks != null &&
+                      proj.sooner != null &&
+                      proj.sooner > 0 && (
+                        <div
+                          style={{
+                            fontFamily: "var(--font-sans)",
+                            fontSize: "var(--fs-caption)",
+                            color: "var(--text-muted)",
+                            marginTop: "var(--s-2)",
+                          }}
+                        >
+                          +2u/week ≈{" "}
+                          <strong style={{ color: "var(--accent)" }}>
+                            {proj.sooner} {proj.sooner === 1 ? "week" : "weken"}
+                          </strong>{" "}
+                          eerder klaar.
+                        </div>
+                      )}
+                  </>
+                )}
+              </div>
+
+              {/* SPECULATIEVE FTP-band */}
+              {proj.band && (
                 <div
                   style={{
-                    position: "relative",
-                    height: 34,
-                    margin: "0 12px",
-                    background: "var(--proj-band-fill)",
-                    borderRadius: "var(--r-sm)",
+                    marginTop: "var(--s-3)",
+                    border: "1px solid var(--proj-band-border)",
+                    borderRadius: "var(--r-md)",
                     overflow: "hidden",
-                    backgroundImage:
-                      "repeating-linear-gradient(45deg, transparent, transparent 5px, var(--proj-band-hatch) 5px, var(--proj-band-hatch) 6px)",
                   }}
                 >
                   <div
                     style={{
-                      position: "absolute",
-                      inset: 0,
                       display: "flex",
                       alignItems: "center",
-                      justifyContent: "center",
-                      gap: 5,
+                      justifyContent: "space-between",
+                      padding: "9px 12px 7px",
                     }}
                   >
-                    <Num size="var(--fs-num-sm)" color="var(--info)">
-                      {proj.band.lowW}
-                    </Num>
-                    {/* collapse "N–N W" → "N W" bij een puntschatting (low === high). */}
-                    {proj.band.lowW !== proj.band.highW && (
-                      <>
-                        <span
-                          style={{
-                            fontFamily: "var(--font-sans)",
-                            fontSize: "var(--fs-caption)",
-                            color: "var(--info)",
-                          }}
-                        >
-                          –
-                        </span>
-                        <Num size="var(--fs-num-sm)" color="var(--info)">
-                          {proj.band.highW}
-                        </Num>
-                      </>
-                    )}
                     <span
                       style={{
                         fontFamily: "var(--font-sans)",
                         fontSize: "var(--fs-caption)",
-                        color: "var(--info)",
-                        marginLeft: 2,
+                        fontWeight: 600,
+                        color: "var(--text-secondary)",
                       }}
                     >
-                      W over {horizonLabel}
+                      {isTest
+                        ? "Verwachte FTP op de testdag"
+                        : "Geschat FTP-effect"}
+                    </span>
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 4,
+                        fontFamily: "var(--font-sans)",
+                        fontSize: "var(--fs-caption)",
+                        fontWeight: 600,
+                        letterSpacing: "0.06em",
+                        textTransform: "uppercase",
+                        color: "var(--proj-estimate-text)",
+                      }}
+                    >
+                      schatting
                     </span>
                   </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setAssumOpen((v) => !v)}
-                  aria-expanded={assumOpen}
-                  aria-controls={assumId}
-                  style={{
-                    width: "100%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 5,
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    padding: "8px 0 9px",
-                    fontFamily: "var(--font-sans)",
-                    fontSize: "var(--fs-caption)",
-                    fontWeight: 600,
-                    color: "var(--text-muted)",
-                  }}
-                >
-                  Aannames {assumOpen ? "verbergen" : "tonen"}
-                  <svg
-                    width="10"
-                    height="10"
-                    viewBox="0 0 14 14"
-                    fill="none"
-                    aria-hidden="true"
+                  <div
                     style={{
-                      transform: assumOpen ? "rotate(180deg)" : "none",
-                      transition: "transform .2s",
+                      position: "relative",
+                      height: 34,
+                      margin: "0 12px",
+                      background: "var(--proj-band-fill)",
+                      borderRadius: "var(--r-sm)",
+                      overflow: "hidden",
+                      backgroundImage:
+                        "repeating-linear-gradient(45deg, transparent, transparent 5px, var(--proj-band-hatch) 5px, var(--proj-band-hatch) 6px)",
                     }}
                   >
-                    <path
-                      d="M3 5l4 4 4-4"
-                      stroke="var(--text-muted)"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </button>
-                <div
-                  id={assumId}
-                  hidden={!assumOpen}
-                  style={{
-                    padding: "0 12px 11px",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "var(--s-1)",
-                  }}
-                >
-                  {proj.band.aannames.map((a) => (
                     <div
-                      key={a}
                       style={{
+                        position: "absolute",
+                        inset: 0,
                         display: "flex",
-                        gap: 7,
-                        alignItems: "flex-start",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 5,
                       }}
                     >
-                      <span
-                        style={{
-                          width: 4,
-                          height: 4,
-                          borderRadius: "var(--r-pill)",
-                          background: "var(--text-muted)",
-                          marginTop: 6,
-                          flexShrink: 0,
-                        }}
-                      />
+                      <Num size="var(--fs-num-sm)" color="var(--info)">
+                        {proj.band.lowW}
+                      </Num>
+                      {/* collapse "N–N W" → "N W" bij een puntschatting (low === high). */}
+                      {proj.band.lowW !== proj.band.highW && (
+                        <>
+                          <span
+                            style={{
+                              fontFamily: "var(--font-sans)",
+                              fontSize: "var(--fs-caption)",
+                              color: "var(--info)",
+                            }}
+                          >
+                            –
+                          </span>
+                          <Num size="var(--fs-num-sm)" color="var(--info)">
+                            {proj.band.highW}
+                          </Num>
+                        </>
+                      )}
                       <span
                         style={{
                           fontFamily: "var(--font-sans)",
                           fontSize: "var(--fs-caption)",
-                          color: "var(--text-muted)",
-                          lineHeight: "var(--lh-label)",
+                          color: "var(--info)",
+                          marginLeft: 2,
                         }}
                       >
-                        {a}
+                        W over {horizonLabel}
                       </span>
                     </div>
-                  ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAssumOpen((v) => !v)}
+                    aria-expanded={assumOpen}
+                    aria-controls={assumId}
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 5,
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: "8px 0 9px",
+                      fontFamily: "var(--font-sans)",
+                      fontSize: "var(--fs-caption)",
+                      fontWeight: 600,
+                      color: "var(--text-muted)",
+                    }}
+                  >
+                    Aannames {assumOpen ? "verbergen" : "tonen"}
+                    <svg
+                      width="10"
+                      height="10"
+                      viewBox="0 0 14 14"
+                      fill="none"
+                      aria-hidden="true"
+                      style={{
+                        transform: assumOpen ? "rotate(180deg)" : "none",
+                        transition: "transform .2s",
+                      }}
+                    >
+                      <path
+                        d="M3 5l4 4 4-4"
+                        stroke="var(--text-muted)"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </button>
+                  <div
+                    id={assumId}
+                    hidden={!assumOpen}
+                    style={{
+                      padding: "0 12px 11px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "var(--s-1)",
+                    }}
+                  >
+                    {proj.band.aannames.map((a) => (
+                      <div
+                        key={a}
+                        style={{
+                          display: "flex",
+                          gap: 7,
+                          alignItems: "flex-start",
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: 4,
+                            height: 4,
+                            borderRadius: "var(--r-pill)",
+                            background: "var(--text-muted)",
+                            marginTop: 6,
+                            flexShrink: 0,
+                          }}
+                        />
+                        <span
+                          style={{
+                            fontFamily: "var(--font-sans)",
+                            fontSize: "var(--fs-caption)",
+                            color: "var(--text-muted)",
+                            lineHeight: "var(--lh-label)",
+                          }}
+                        >
+                          {a}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-          </>
-        ) : (
-          <div
-            style={{
-              marginTop: "var(--s-3)",
-              fontFamily: "var(--font-sans)",
-              fontSize: "var(--fs-label)",
-              color: "var(--text-muted)",
-              textAlign: "center",
-              padding: "var(--s-5) var(--s-2)",
-              lineHeight: "var(--lh-body)",
-            }}
-          >
-            De projectie verschijnt zodra er voldoende recente ritten + je doel
-            bekend zijn.
-          </div>
-        )}
-      </div>
+              )}
+            </>
+          ) : (
+            <div
+              style={{
+                marginTop: "var(--s-3)",
+                fontFamily: "var(--font-sans)",
+                fontSize: "var(--fs-label)",
+                color: "var(--text-muted)",
+                textAlign: "center",
+                padding: "var(--s-5) var(--s-2)",
+                lineHeight: "var(--lh-body)",
+              }}
+            >
+              De projectie verschijnt zodra er voldoende recente ritten + je
+              doel bekend zijn.
+            </div>
+          )}
+        </div>
+      )}
     </Card>
   );
 }

@@ -1152,6 +1152,11 @@ describe("engine selftest", () => {
   });
 
   // ── FTP goal-profile — doel-gedreven activeGoalProfile_ + ftp-profiel-vorm ──
+  /** Eerste dim met deze metric, of null. */
+  function dimVan_(prof: any, metric: string): any {
+    return prof.dims.filter((d: any) => d.metric === metric)[0] ?? null;
+  }
+
   it("testActiveGoalProfile", () => {
     // doel → profiel-mapping (object-identiteit; geen side-effects).
     assert_(
@@ -1159,36 +1164,69 @@ describe("engine selftest", () => {
       GOAL_PROFILES_.ftp,
       activeGoalProfile_({ doel: "FTP" }),
     );
+    // ROADMAP punt 8: elk doel heeft nu zijn EIGEN lat. `girona` bestaat niet meer — dat profiel
+    // WAS de lange-klimmen-lat en heet nu `klim_lang`.
     assert_(
-      "activeProfile Beklimmingen->girona",
-      GOAL_PROFILES_.girona,
-      activeGoalProfile_({ doel: "Beklimmingen" }),
+      "activeProfile Korte beklimmingen->klim_kort",
+      GOAL_PROFILES_.klim_kort,
+      activeGoalProfile_({ doel: "Korte beklimmingen" }),
     );
     assert_(
-      "activeProfile VO2max->girona",
-      GOAL_PROFILES_.girona,
-      activeGoalProfile_({ doel: "VO2max" }),
+      "activeProfile Lange beklimmingen->klim_lang",
+      GOAL_PROFILES_.klim_lang,
+      activeGoalProfile_({ doel: "Lange beklimmingen" }),
     );
     assert_(
-      "activeProfile Conditie->girona",
-      GOAL_PROFILES_.girona,
+      "activeProfile Conditie->conditie",
+      GOAL_PROFILES_.conditie,
       activeGoalProfile_({ doel: "Conditie" }),
     );
     assert_(
-      "activeProfile onbekend->girona",
-      GOAL_PROFILES_.girona,
+      "activeProfile Onderhoud->onderhoud",
+      GOAL_PROFILES_.onderhoud,
+      activeGoalProfile_({ doel: "Onderhoud" }),
+    );
+    // LEGACY via normalizeDoel_ — dit is precies waar het misging zolang activeGoalProfile_ de
+    // enige doel-lezer was die niet normaliseerde: een opgeslagen waarde landde op de lat van een
+    // ANDER doel zodra de latten uiteen gingen lopen.
+    assert_(
+      "activeProfile legacy Beklimmingen->klim_kort",
+      GOAL_PROFILES_.klim_kort,
+      activeGoalProfile_({ doel: "Beklimmingen" }),
+    );
+    assert_(
+      "activeProfile legacy VO2max->ftp",
+      GOAL_PROFILES_.ftp,
+      activeGoalProfile_({ doel: "VO2max" }),
+    );
+    assert_(
+      "activeProfile onbekend->ftp",
+      GOAL_PROFILES_.ftp,
       activeGoalProfile_({ doel: "xyz" }),
     );
     assert_(
-      "activeProfile missing->girona",
-      GOAL_PROFILES_.girona,
+      "activeProfile missing->ftp",
+      GOAL_PROFILES_.ftp,
       activeGoalProfile_({}),
     );
     assert_(
-      "activeProfile null-settings->girona",
-      GOAL_PROFILES_.girona,
+      "activeProfile null-settings->ftp",
+      GOAL_PROFILES_.ftp,
       activeGoalProfile_(null),
     );
+
+    // DE INVARIANT — planner-profiel en doel-lat delen ÉÉN sleutelverzameling. Dit vervangt het
+    // `projectieKey`-veld, dat twee schrijvers had en nul lezers: aansluiten zou niveau.ts uit
+    // archetypes.ts laten lezen en daarmee de ring archetypes → coach → niveau sluiten. Gelijke
+    // sleutels doen hetzelfde werk zonder die ring — mits ze gelijk BLIJVEN, en dat bewaakt deze
+    // lus mechanisch, inclusief de twee legacy-strings die nog in D1 kunnen staan.
+    DOEL_OPTIONS.concat(["Beklimmingen", "VO2max"]).forEach((d: any) => {
+      assert_(
+        "punt8: profiel-sleutel == lat-sleutel voor " + d,
+        profileForDoel_(d).id,
+        activeGoalProfile_({ doel: d }).key,
+      );
+    });
     // ftp-profiel: key 'ftp' + PRECIES 1 dim (ctl / 65 / up).
     const ftp = GOAL_PROFILES_.ftp;
     assert_("ftp profiel key", "ftp", ftp.key);
@@ -1204,11 +1242,39 @@ describe("engine selftest", () => {
     );
     // projectiemodus per profiel.
     assert_(
-      "girona projectieMode gap",
+      "klim_lang projectieMode gap",
       "gap",
-      GOAL_PROFILES_.girona.projectieMode,
+      GOAL_PROFILES_.klim_lang.projectieMode,
     );
     assert_("ftp projectieMode test", "test", GOAL_PROFILES_.ftp.projectieMode);
+
+    // DE VIJF LATTEN BIJ NAAM.
+    const kl = GOAL_PROFILES_.klim_lang,
+      kk = GOAL_PROFILES_.klim_kort,
+      co = GOAL_PROFILES_.conditie,
+      oh = GOAL_PROFILES_.onderhoud;
+    // klim_lang draagt de drie oude girona-targets ONGEWIJZIGD — die lat is alleen hernoemd.
+    assert_("klim_lang 3 dims", 3, kl.dims.length);
+    assert_("klim_lang klim-target", 4.0, dimVan_(kl, "ftpWkg").target);
+    assert_("klim_lang ctl-target", 65, dimVan_(kl, "ctl").target);
+    assert_("klim_lang langerit-target", 4.0, dimVan_(kl, "longRideH").target);
+    // klim_kort erft die dims met ÉÉN verschil: de lange rit groeit naar vijf uur (§3.3 (iii)).
+    assert_(
+      "klim_kort langerit-target 5.0",
+      5.0,
+      dimVan_(kk, "longRideH").target,
+    );
+    assert_("klim_kort klim-target gelijk", 4.0, dimVan_(kk, "ftpWkg").target);
+    // conditie draagt GEEN klim-dim: de bestemming is een durability-getal, geen FTP (§3.5).
+    assert_("conditie geen ftpWkg-dim", null, dimVan_(co, "ftpWkg"));
+    assert_("conditie 2 dims", 2, co.dims.length);
+    // onderhoud is de behoud-lat: één dim, op dezelfde grootheid als de vloer, target afgeleid.
+    assert_("onderhoud projectieMode behoud", "behoud", oh.projectieMode);
+    assert_("onderhoud 1 dim", 1, oh.dims.length);
+    assert_("onderhoud dim metric", "rollingFtpW", oh.dims[0].metric);
+    assert_("onderhoud dim target null", null, oh.dims[0].target);
+    assert_("onderhoud dim targetBron", "instapVloer", oh.dims[0].targetBron);
+    assert_("onderhoud dim dir up", "up", oh.dims[0].dir);
   });
 
   // ── FTP-test-projectie — ctlAtWeek_ (PMC-approach) + doelTestWeken_ (weken tot testdag) ──
@@ -5667,7 +5733,10 @@ describe("engine selftest", () => {
   // beide profielen, en de 33-51-band voor beide klim-doelen plus de twee legacy-gelijkheden.
   // Plus 2 voor het Base-quotum van de twee klim-profielen en 3 voor de grens waar
   // climbTypeWorkout_ stond (30 min valt door naar de categorie-tak, 33 min niet). 1364→1384.
-  it("exactly 1384 assertions", () => {
-    expect(assertCount).toBe(1384);
+  // ROADMAP punt 8 (elk doel zijn eigen meetlat): +24. De vijf latten bij naam, de doel→lat-tak
+  // inclusief de twee legacy-strings, en de zeven-waarden-lus die profiel-sleutel en lat-sleutel
+  // mechanisch gelijk houdt — die lus vervangt het verwijderde projectieKey-veld. 1384→1408.
+  it("exactly 1408 assertions", () => {
+    expect(assertCount).toBe(1408);
   });
 });
