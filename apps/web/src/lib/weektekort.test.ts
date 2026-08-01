@@ -19,11 +19,21 @@ const iso = (n: number) => {
   ).padStart(2, "0")}`;
 };
 
-/** Eén blok in de RAUWE engine-vorm: minuten plus het %FTP-venster. */
+/** Eén blok in de RAUWE engine-vorm: minuten, het %FTP-venster en het NOMINALE zone-label dat
+ * de engine er zelf op zet (`pctZoneBucket_` op het midden van de band). */
+const zoneVan = (pctLo: number, pctHi: number) => {
+  const mid = Math.round((pctLo + pctHi) / 2);
+  if (mid < 56) return "rust";
+  if (mid <= 75) return "z2";
+  if (mid <= 90) return "tempo";
+  if (mid <= 105) return "drempel";
+  return "anaeroob";
+};
 const blok = (minuten: number, pctLo: number, pctHi = pctLo) => ({
   minuten,
   pctLo,
   pctHi,
+  zone: zoneVan(pctLo, pctHi),
 });
 
 /** Een dag in het view-model. `sleutel` maakt hem een GEMISTE sleutelsessie. */
@@ -214,6 +224,40 @@ describe("OPRUIM-ROOD: zonder de weekstem toont dit geval NERGENS een boodschap"
     const dagen = openSleutelDagen([dag(0, { sleutel: true }), dag(1)], iso(1));
     expect(dagen).toEqual([]);
     expect(SleutelInhaalBlok({ dagen })).toBeNull();
+  });
+});
+
+describe("de ZONE-LABEL-POORT — bandoverloop telt niet als tekort", () => {
+  it("een drempelblok dat onder de Z3/Z4-grens uitsteekt levert GEEN tempo-tekort", () => {
+    // Band 88-102, midden 95 → nominaal DREMPEL. planZone5_ splitst proportioneel en laat een
+    // paar minuten in tempo vallen (alles onder 90). Die minuten zijn bandoverloop, geen
+    // voorgeschreven tempo-prikkel — precies het "1 Tempo-minuut" uit het v7-weekstem-scenario.
+    const r = bouwWeekTekort(
+      basis({
+        proposalWeek: {
+          days: [pDag(0, { bevroren: [blok(60, 88, 102)] }), pDag(1)],
+        },
+      }),
+    );
+    expect(r).not.toBeNull();
+    // De MINUTEN zijn ongewijzigd proportioneel — de poort raakt alleen de tekort-LIJST.
+    expect(r?.termen.find((t) => t.zone === "tempo")?.gevraagd).toBeGreaterThan(
+      0,
+    );
+    expect(r?.tekortZones).toEqual(["drempel"]);
+  });
+
+  it("een zone die het plan WEL voorschreef telt mee, hoe klein het tekort ook is", () => {
+    const r = bouwWeekTekort(
+      basis({
+        proposalWeek: {
+          days: [pDag(0, { bevroren: [blok(30, 85), blok(30, 95)] }), pDag(1)],
+        },
+        // 29 van de 30 tempo-minuten gereden: één minuut tekort, en tempo staat wél op het plan.
+        doneByDate: { [iso(0)]: doneVan({ tempo: 29, drempel: 30 }) },
+      }),
+    );
+    expect(r?.tekortZones).toEqual(["tempo"]);
   });
 });
 

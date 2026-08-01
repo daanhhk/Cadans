@@ -120,10 +120,21 @@ export function bouwWeekTekort(input: WeekTekortInput): WeekTekort | null {
     geleverd[z] = 0;
   }
 
+  // DE NOMINALE ZONE-LABELS die het plan deze week op de verstreken dagen VOORSCHREEF. Elk
+  // engine-blok draagt `zone`, gezet door `pctZoneBucket_` op het MIDDEN van zijn band
+  // (archetypes.ts:154, planner.ts:1316) — dat is wat het plan bedoelde, los van hoe de minuten
+  // over de zone-grenzen vallen.
+  const voorgeschreven = new Set<string>();
+
   for (const d of verstreken) {
     const pd = pDagen.get(d.datum);
     if (pd) {
-      const plan = planZone5_(rauweBlokkenVan_(pd), grenzen);
+      const blokken = rauweBlokkenVan_(pd);
+      for (const b of blokken) {
+        const z = (b as { zone?: unknown })?.zone;
+        if (typeof z === "string") voorgeschreven.add(z);
+      }
+      const plan = planZone5_(blokken, grenzen);
       for (const z of WERKZONES) gevraagd[z] = (gevraagd[z] ?? 0) + plan[z];
     }
     const zm = done[d.datum]?.zoneMin5;
@@ -135,8 +146,18 @@ export function bouwWeekTekort(input: WeekTekortInput): WeekTekort | null {
     gevraagd: gevraagd[z] ?? 0,
     geleverd: geleverd[z] ?? 0,
   }));
+  // DE ZONE-LABEL-POORT. `planZone5_` splitst een blok PROPORTIONEEL over de zone-grenzen, dus
+  // een drempelblok waarvan de band onder de Z3/Z4-grens uitsteekt laat daar een paar minuten
+  // vallen. Die minuten zijn geen voorgeschreven TEMPO-prikkel maar bandoverloop, en de stem hoort
+  // er niet over te spreken.
+  //
+  // DIT WEERT BANDOVERLOOP, GEEN KLEIN TEKORT. Een zone die het plan wél voorschreef blijft
+  // meetellen hoe klein het tekort ook is — er staat hier geen minuten-drempel, en die hoort er
+  // ook niet te komen: dat zou een geijkt getal vragen dat niet bestaat. De poort is een
+  // LABEL-toets, en de minuten blijven aan beide kanten van de munt op dezelfde proportionele
+  // indeling liggen.
   const tekortZones = termen
-    .filter((t) => t.geleverd < t.gevraagd)
+    .filter((t) => t.geleverd < t.gevraagd && voorgeschreven.has(t.zone))
     .map((t) => t.zone);
 
   // Geen tekort in welke werkzone dan ook → niets te melden. Dit is geen drempel maar de
