@@ -197,6 +197,19 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   Zelfde familie als "een halve fix is een vindpatroon" — daar mist een reparatie een plek, hier
   mist een TOETS de combinatie. Vraag bij elke tweede lezer van een signaal: wanneer staan ze samen
   op het scherm, en wat lezen ze dan naast elkaar?
+- **Een rood-patch die niets RAAKT, leest als een niet-gedekte term.** Bij punt 14 fase 1b bleef de
+  suite groen toen de terugval-term rood gezet werd, en dat zou "term 2 is nergens gedekt — stoppen
+  en melden" hebben betekend. De patch had alleen niets veranderd: de formatter had de regel na de
+  bouw op één lijn gevouwen, dus het anker matchte niet en de vervanging was stil een no-op. Grep na
+  elke rood-patch op de eigen markering vóór je de uitslag leest. Met het echte anker viel de test
+  meteen: `['tempo','drempel']` tegen `['drempel']`. Zelfde familie als de inerte assertie — daar is
+  de TOETS leeg, hier de INGREEP.
+- **Meet nooit voor/na op een bak waar de app zelf in schrijft, zonder eerst te toetsen of hij
+  aangroeit.** De shot-harness reset `weekplans` niet, en `persistWeekplan` schrijft de bekeken week
+  fire-and-forget weg — dus de VOOR-run zet rijen klaar waar de NA-run van profiteert, en het
+  verschil is deels je eigen meting. Draai de voor-staat twee keer op een verzadigde bak en toets op
+  gelijkheid: hier gaf dat 64 van 64 byte-identiek, waarmee het verschil van 0 van 64 aan de code
+  toeviel en niet aan de aanwas. Zelfde familie als de warmloop-regel: eerst het INSTRUMENT ijken.
 
 ## Vorm van een CC-prompt
 

@@ -121,3 +121,39 @@ dat elk engine-blok al draagt (`zone`, gezet door `pctZoneBucket_` op het midden
 - BEGRENZINGSBEWIJS uit de shot-harness: warmloop weggooien, dan voor en na op bytecount en
   sha256, zonder werk ertussen dat de lokale D1 raakt.
 - CLIENT-ONLY: `git diff --stat HEAD~1 -- packages/engine` leeg. Geen migratie, geen deploy.
+
+## 6. Fase 1b — de poort is een BLOK-eigenschap
+
+AANLEIDING. Fase 1 hing de poort per week aan het BEWAARDE weekplan van díé week. Die rijen zijn er
+meestal niet: 2 van de laatste 12 maandagen op prod, 1 van de 4 opbouwweken lokaal. Gevolg: `telt`
+werd overal false en de blok-terugblik zweeg volledig — in alle 64 shots. De acceptatie van fase 1
+vroeg het begrenzingsbewijs pas ná de bouw, en de suite kon het niet zien omdat elke test zijn eigen
+weekplan meelevert.
+
+DE BEWAARDE RIJEN GROEIEN AAN, MAAR VULLEN HET VERLEDEN NOOIT. `weekplans` draagt geen tijdstempel
+(`PRAGMA table_info`: `user_id`, `week_monday`, `entries_json`), dus de rijen zijn niet te dateren
+uit de tabel. De schrijfroute is `persistWeekplan` in `schema.ts`, die uitsluitend de BEKEKEN week
+wegschrijft; er is geen backfill. `git log -S` zet de introductie op `fbbc292`, 2026-07-19 — en er
+staan precies twee rijen, 2026-07-20 en 2026-07-27, de twee maandagen sindsdien. Eén rij per week
+dat de app opengaat, en weken van vóór 2026-07-19 blijven voor altijd leeg.
+
+DE BLOKPOORT is de VERENIGING van de nominale werkzone-labels over alle weken van het blokvenster
+die een bewaard plan dragen, DELOADWEEK INBEGREPEN. Binnen één blok liggen doel en fase vast, dus
+dat is bewijs uit dezelfde bron en geen versoepeling. Een week met een EIGEN bewaard plan houdt zijn
+eigen poortset — specifieker wint. `poortHerkomst` (`"week"` | `"blok"` | `"geen"`) legt vast waarop
+een oordeel rustte. `telt` toetst de EFFECTIEVE poort: alleen een blok dat NERGENS een bewaard plan
+draagt zwijgt nog.
+
+GEMETEN NA DE BOUW. Van de 64 shots dragen er 56 de kaart weer; de 8 `overname`-shots zwijgen omdat
+hun blokvenster (klok op 2027-02-22) nergens een bewaard plan heeft — `poortHerkomst` "geen", exact
+het gespecificeerde datagat. Het oordeel kantelt: v7 ging van "0 van de 3 opbouwweken" naar "2 van
+de 3", en het blok-totaal toont een streepje op Tempo (193/—) en Drempel (93/—) omdat geen
+meegetelde week die zones voorschreef.
+
+OPEN PUNT, NIET GEBOUWD: DE BEWAARDE RIJ IS GEEN WEEK. `entryFromDay` levert null voor een dag
+zonder sessie, dus een rij draagt alleen TRAININGSDAGEN — en lokaal draagt elke bewaarde week er
+precies ÉÉN (2026-07-13 → alleen 2026-07-19, een VO2-sessie; 2026-07-20 → alleen 2026-07-22). De
+poort is daarmee smaller dan "wat de week voorschreef": in v7 komt hij op `anaeroob` alleen uit, en
+het oordeel "2 van de 3 weken op norm" rust op die ene zone. Dat is geen defect in wat hier gebouwd
+is — fase 1 las dezelfde deelrijen, en de vereniging verbreedt ze juist — maar het beperkt wat de
+poort kan BETEKENEN. Wie hier verder gaat, meet eerst hoeveel dagen een bewaarde rij op PROD draagt.
