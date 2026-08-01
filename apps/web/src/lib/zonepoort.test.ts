@@ -235,14 +235,77 @@ describe("punt 14 — de zone-poort, met de producent in de lus", () => {
     expect(u.tekortZones).not.toContain("anaeroob");
   });
 
-  it("(D) een afgeronde opbouwweek ZONDER bewaard weekplan levert telt false", () => {
+  it("(D/G) een blok ZONDER ENIG bewaard weekplan zwijgt — telt false, niet 'niet geleverd'", () => {
     const { activities } = blokMetPlan();
     const r = referent({ weekplans: [], activities });
     expect(r).not.toBeNull();
     for (const w of r?.weeks ?? []) {
+      expect(w.poortHerkomst).toBe("geen");
       expect(w.telt).toBe(false);
       // En NIET geleverdOk false: een datagat is geen misser.
       expect(w.geleverdOk).toBeNull();
     }
+  });
+});
+
+// ── FASE 1b — DE POORT IS EEN BLOK-EIGENSCHAP ────────────────────────────────
+// De bewaarde weekplannen zijn er meestal NIET: op prod 2 van de laatste 12 maandagen, lokaal 1
+// van de 4 opbouwweken. Met een poort per week zwijgt de terugblik dan volledig — precies wat de
+// shots van fase 1 lieten zien. De blokpoort is de vereniging over het blok; binnen één blok
+// liggen doel en fase vast, dus dat is bewijs uit dezelfde bron.
+describe("punt 14 fase 1b — de blokpoort", () => {
+  it("(F) ÉÉN bewaarde week draagt het hele blok, en de op-plan-week leest als geleverd", () => {
+    const basis = blokMetPlan();
+    // Alleen de entries van de TWEEDE opbouwweek bewaren.
+    const tweede = verschuif_(START, 7);
+    const zondag = verschuif_(tweede, 6);
+    const alleenTweede = basis.weekplans.filter((e) => {
+      const d = (e as { datum?: unknown }).datum;
+      return typeof d === "string" && d >= tweede && d <= zondag;
+    });
+    expect(alleenTweede.length).toBeGreaterThan(0);
+
+    const r = referent({
+      weekplans: alleenTweede,
+      activities: basis.activities,
+    });
+    if (!r) throw new Error("referent onverwacht null");
+    const opbouw = r.weeks.filter((w) => w.blokWeek <= 3);
+    for (const w of opbouw) expect(w.telt).toBe(true);
+    expect(opbouw[0]?.poortHerkomst).toBe("blok");
+    expect(opbouw[1]?.poortHerkomst).toBe("week");
+    expect(opbouw[2]?.poortHerkomst).toBe("blok");
+    // En het oordeel staat: exact volgens plan gereden is geleverd.
+    for (const w of opbouw) expect(w.geleverdOk).toBe(true);
+  });
+
+  it("(H) de EIGEN weekpoort wint van de blokpoort", () => {
+    const basis = blokMetPlan();
+    // Week 1 krijgt een eigen plan dat ALLEEN drempel voorschrijft; de rest van het blok draagt
+    // de echte entries, waarvan de blokpoort ook tempo bevat.
+    const eerste = verschuif_(START, 0);
+    const zondagEerste = verschuif_(eerste, 6);
+    const rest = basis.weekplans.filter((e) => {
+      const d = (e as { datum?: unknown }).datum;
+      return typeof d === "string" && (d < eerste || d > zondagEerste);
+    });
+    const eigen = {
+      datum: verschuif_(eerste, 1),
+      blokken: [{ minuten: 45, zone: "drempel", pctLo: 92, pctHi: 100 }],
+    };
+    const r = referent({
+      weekplans: [eigen, ...rest],
+      activities: basis.activities,
+    });
+    if (!r) throw new Error("referent onverwacht null");
+    const w1 = r.weeks[0];
+    expect(w1?.poortHerkomst).toBe("week");
+    expect(w1?.zonesVoorgeschreven).toEqual(["drempel"]);
+    // De blokpoort draagt WEL tempo — die week wordt er dus niet op beoordeeld.
+    const blokPoortBreder = r.weeks.some((w) =>
+      w.zonesVoorgeschreven.includes("tempo"),
+    );
+    expect(blokPoortBreder).toBe(true);
+    expect(w1?.zonesVoorgeschreven).not.toContain("tempo");
   });
 });

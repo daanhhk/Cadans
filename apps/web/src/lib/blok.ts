@@ -279,11 +279,14 @@ export interface BlokWeek {
   geleverdZ2: number;
   /** Hoeveel van de drie werkzones hun eigen norm halen (0..3). */
   zonesOpNorm: number;
-  /** ROADMAP punt 14 fase 1 — de WERKZONES waarvan het bewaarde weekplan van DEZE week het
-   * nominale label voorschreef. Alleen deze doen aan het oordeel mee. GEMETEN dat het plan
+  /** ROADMAP punt 14 — de WERKZONES waarop deze week beoordeeld wordt. GEMETEN dat het plan
    * nergens alle drie de werkzones programmeert (0 van de 35 cellen), dus een oordeel over alle
    * drie beoordeelt zones die die week nooit gevraagd zijn. Zie docs/PUNT14-BOUWDOC.md §1. */
   zonesVoorgeschreven: Zone5Key[];
+  /** FASE 1b — WAAROP die poort rust. "week" = deze week draagt een eigen bewaard plan; "blok" =
+   * hij valt terug op de vereniging over het blok; "geen" = nergens in het blok staat een plan.
+   * Machineleesbaar en geen copy: een volgende ronde moet kunnen zien waarop een oordeel rustte. */
+  poortHerkomst: "week" | "blok" | "geen";
   ritMinuten: number;
   zoneDekking: number | null;
   status: BlokWeekStatus;
@@ -355,6 +358,21 @@ export function buildBlokReferent(input: {
   // Doel zonder mesocyclus → geen kalender-deload, dus ook blokweek 4 draagt de volle norm.
   const heeftDeload = profileForDoel_(input.doel ?? "")?.mesoCyclus !== false;
 
+  // FASE 1b — DE BLOKPOORT: de VERENIGING van de labels over alle weken van dit blok die een
+  // bewaard plan dragen, DELOADWEEK INBEGREPEN. Dat is geen versoepeling maar bewijs uit dezelfde
+  // bron: binnen één blok liggen doel en fase vast, en de poortset is gemeten stabiel over de
+  // zeven weekvormen. Nodig omdat de bewaarde weekplannen er meestal NIET zijn — op prod 2 van de
+  // laatste 12 maandagen, lokaal 1 van de 4 opbouwweken. Zonder deze terugval zwijgt de terugblik
+  // volledig, en dat is precies wat de shots van fase 1 lieten zien.
+  const blokPoort = (() => {
+    const gezien = new Set<Zone5Key>();
+    for (let i = 0; i < BLOK_WEKEN; i++) {
+      const m = shiftIso_(input.startMonday, i * 7);
+      for (const z of poortsetVoorWeek_(input.weekplans, m)) gezien.add(z);
+    }
+    return WERKZONES.filter((z) => gezien.has(z));
+  })();
+
   const weeks: BlokWeek[] = [];
   for (let i = 0; i < BLOK_WEKEN; i++) {
     const weekMonday = shiftIso_(input.startMonday, i * 7);
@@ -375,7 +393,13 @@ export function buildBlokReferent(input: {
 
     // DE POORTSET van deze week: de nominale werkzone-labels uit de BEWAARDE entries van die
     // zeven dagen. Bewaard en niet herberekend — de entry draagt wat er destijds is gerenderd.
-    const zonesVoorgeschreven = poortsetVoorWeek_(input.weekplans, weekMonday);
+    //
+    // FASE 1b — een EIGEN bewaard plan wint altijd: dat is specifieker dan de blokpoort. Pas als
+    // die er niet is valt de week terug op het blok.
+    const eigenPoort = poortsetVoorWeek_(input.weekplans, weekMonday);
+    const zonesVoorgeschreven = eigenPoort.length > 0 ? eigenPoort : blokPoort;
+    const poortHerkomst: "week" | "blok" | "geen" =
+      eigenPoort.length > 0 ? "week" : blokPoort.length > 0 ? "blok" : "geen";
 
     const k = weekKwaliteitMinuten(input.activities, weekMonday);
     const zondag = shiftIso_(weekMonday, 6);
@@ -392,9 +416,10 @@ export function buildBlokReferent(input: {
     const telt =
       status === "compleet" &&
       blokWeek <= BLOK_OPBOUWWEKEN &&
-      // ROADMAP punt 14: zonder bewaard weekplan is er geen poortset en dus geen oordeel. Dat is
-      // dezelfde lijn als de zonedekking-regel hierboven — een DATAGAT — en uitdrukkelijk NIET
-      // dezelfde als "ritMinuten 0 telt WEL mee": niet gereden is een echte misser.
+      // ROADMAP punt 14: zonder EFFECTIEVE poort is er geen oordeel. Sinds fase 1b betekent dat
+      // "nergens in dit blok staat een bewaard plan" — draagt het blok er ergens een, dan telt de
+      // week gewoon mee en blijft "niet gereden is een echte misser" onaangetast. Dezelfde lijn
+      // als de zonedekking-regel hierboven: een DATAGAT, geen misser.
       zonesVoorgeschreven.length > 0 &&
       (k.ritMinuten === 0 ||
         (zoneDekking != null && zoneDekking >= ZONEDATA_DEKKING_MIN));
@@ -437,6 +462,7 @@ export function buildBlokReferent(input: {
       geleverdZ2: k.z2,
       zonesOpNorm,
       zonesVoorgeschreven,
+      poortHerkomst,
       ritMinuten: k.ritMinuten,
       zoneDekking,
       status,
