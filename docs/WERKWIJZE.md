@@ -155,6 +155,30 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   scherm "Recovery" toonde. Herstel en taper zijn constateringen over een rit die al gereden is,
   dezelfde categorie; die horen niet aan een bevestiging te hangen. De poort ging over de
   periodiserings-AS, en Recovery zit daar niet in.
+- **De DEV-SERVER is ook een fixture-variabele bij een byte-vergelijking.** Zelfde familie als "het
+  lokale beeld is niet het prod-beeld", maar een andere bron: daar draagt de D1 andere historie,
+  hier is de APP zelf nog niet klaar. Een harness-run tegen een koude vite fotografeert een
+  half-getransformeerde app, en dat lijkt op een verschil dat de bouw zou hebben veroorzaakt. Draai
+  eerst een warmloop en GOOI DIE WEG; meet pas daarna. Aanleiding: de eerste nulmeting van punt 10
+  fase A gaf 40 van de 40 shots "gewijzigd", met byte-sprongen van 142k naar 244k — volledig
+  artefact. Overgedaan met een warmloop en de VOOR-staat via `git checkout <hash> --` op de
+  gewijzigde componenten; toen bleven 48 van de 56 byte-identiek en bewogen alleen de acht shots
+  van het scenario waar de kaart daadwerkelijk vuurt.
+- **Een assertie die twee zinnen vergelijkt, veronderstelt dat ze dezelfde VORM hebben.** Toets die
+  aanname vóór je de vergelijkingsoperator kiest. Aanleiding: de ΔCTL-clausule staat in
+  `fatigueUpAanbodRegel` VOORAAN en in `fatigueDownAanbodRegel` MIDDEN in de zin, dus de gevraagde
+  `endsWith`-vergelijking zou voor UP kloppen en voor DOWN een ONWARE gelijkheid beweren. Herschreven
+  naar een vergelijking van het deel ná de clausule. Zelfde familie als "een controle wordt getoetst
+  tegen de payload uit hetzelfde prompt", nu op code die de chat zelf al had gelezen. En er hoort een
+  tweede helft bij: een vergelijking die twee kanten gelijk noemt, draagt óók een assertie dat ze
+  daarbuiten VERSCHILLEN — anders slaagt hij ook als beide kanten leeg of identiek zijn.
+- **Twee kaarten die hetzelfde signaal lezen, toets je op wat ze SAMEN op één scherm zeggen.** Beide
+  waren apart correct en apart getest; het defect bestond alleen in het PAAR. Het werd pas beslisbaar
+  toen de twee zinnen naast elkaar stonden: de terugblik zei "je trainde dit blok genoeg, maar niet
+  waar het telt" en de doortrain-kaart "het blok heeft je niet belast", uit hetzelfde getal.
+  Zelfde familie als "een halve fix is een vindpatroon" — daar mist een reparatie een plek, hier
+  mist een TOETS de combinatie. Vraag bij elke tweede lezer van een signaal: wanneer staan ze samen
+  op het scherm, en wat lezen ze dan naast elkaar?
 
 ## Vorm van een CC-prompt
 
@@ -288,3 +312,6 @@ Volg de FOCUS uit het bovenste STAND-blok.
 - 2026-07-30 — in *Rolverdeling* vastgelegd dat Daan geen bouwdocs leest: een recon- of bouwdoc blijft de spec waartegen CC bouwt, maar is geen review-poort meer. Wat Daan moet beslissen komt als gewone vraag in de chat.
 - 2026-07-30 — les toegevoegd in *Recon en bewijslast*: een controle wordt getoetst tegen de payload uit hetzelfde prompt. Aanleiding: een acceptatie-eis vroeg dat een woord nergens meer voorkwam, terwijl de verbatim tekst in datzelfde prompt het twee keer bewust gebruikte.
 - 2026-07-30 — les toegevoegd in *Recon en bewijslast*: vooruit-bedrading is dode code met een nettere naam. Aanleiding: de verplichte `grenzen`-parameter op `dosisTredeVoorstel` kon zijn uitkomst per constructie niet raken en is er weer uit.
+- 2026-08-01 — les toegevoegd in *Recon en bewijslast*: de dev-server is ook een fixture-variabele bij een byte-vergelijking; warm eerst op en gooi die run weg.
+- 2026-08-01 — les toegevoegd in *Recon en bewijslast*: een assertie die twee zinnen vergelijkt veronderstelt dat ze dezelfde vorm hebben, en hoort een assertie te dragen dat de twee kanten daarbuiten verschillen.
+- 2026-08-01 — les toegevoegd in *Recon en bewijslast*: twee kaarten die hetzelfde signaal lezen, toets je op wat ze samen op één scherm zeggen.

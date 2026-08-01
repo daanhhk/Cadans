@@ -225,7 +225,8 @@ punten staat onder *Gesloten — vindplaats*.
    `profileForDoel_(...).id === "onderhoud"`. Het TWEEDE — na het event volgt geen herstel — is
    VERPLAATST naar het nieuwe punt 13 en staat hier dus niet meer open. De gemeten bevindingen
    hierboven blijven staan als vindplaats.
-10. **Twee kaarten spreken los over hetzelfde blok** — open · CLIENT. (`DOELEN-SPEC` §6 stap
+10. **Twee kaarten spreken los over hetzelfde blok** — open (FASE A af) · CLIENT, plus mogelijk
+    ENGINE voor fase B. (`DOELEN-SPEC` §6 stap
     7.) De doortrain-kaart en de terugblik lezen hetzelfde ΔCTL-signaal en doen er elk een
     eigen uitspraak over. CRITERIUM: een blok krijgt ÉÉN uitspraak, niet twee. DIT PUNT DRAAGT
     SINDS 5c OOK DE WEEK-TEKORT-VRAAG: wat de coach zegt als een week zijn dosis niet levert.
@@ -234,6 +235,21 @@ punten staat onder *Gesloten — vindplaats*.
     tekort wordt PER ZONE geteld, in de munt van punt 6, niet in de 3-bucket-vouwing die
     tempo van drempel niet kan onderscheiden. `DOELEN-SPEC` §2A rekent de inhaal-kaart al tot
     de uitingen van de weeklus, dus dit is geen uitbreiding maar het inlossen daarvan.
+    FASE A IS AF PER 01-08-2026, gebouwd in `58e12aa`, spec `docs/PUNT10-FASE-A-BOUWDOC.md`. De
+    doortrain-kaart doet geen eigen uitspraak meer over het blok: de TERUGBLIK is de enige stem en
+    het aanbod hangt eronder als weekvraag. Het aanbod zelf — mesoweek 4 naar 1 — is ongewijzigd.
+    DE METINGEN DIE DAT DROEGEN. In blokweek 4 is het anker van beide kaarten IDENTIEK, dus ze
+    lazen daar letterlijk hetzelfde getal. Over de reeks uit `docs/DOORTRAIN-KAART-RECON.md` §4:
+    17 blokweek-4-maandagen, waarvan 7 door de ΔCTL-poort van het UP-aanbod komen terwijl de
+    terugblik rendert. En de tegenspraak is GEMETEN, niet aangenomen: op 2026-07-20 (blokweek 4,
+    ΔCTL −4,9) stond "Je trainde dit blok genoeg, maar niet waar het telt: Drempel bleef onder
+    norm" naast "het blok heeft je niet belast".
+    WAT FASE B NOG DRAAGT: de WEEK-TEKORT-STEM per zone, plus het aanbod "verschuif deze week de
+    minuten naar Drempel". Dat tweede raakt de ALLOCATOR en wordt daarmee ENGINE in plaats van
+    client, met eigen autorisatie. Nog open, ook uit fase A: in blokweek 1 lopen de twee
+    ΔCTL-VENSTERS uiteen — anker weekmaandag tegenover maandag min zeven, op een golvende reeks
+    tot 11,2 uit elkaar en van teken verschillend. De DOWN-tak vuurde op de gemeten reeks nul
+    keer, dus het is genoteerd en niet gebouwd.
 11. **De duurvermogen-meetlat** — deels · DATA + CLIENT. (`DOELEN-SPEC` §6 stap 4.) De helft
     die prikkel-in-de-rit heet is met punt 1 gedicht: een dag boven de bibliotheekband krijgt
     een sjabloon, en `combo_long_with_efforts` vuurt in Build en Peak voor het klimprofiel. De
