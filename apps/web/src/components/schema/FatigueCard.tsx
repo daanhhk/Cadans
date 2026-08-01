@@ -4,9 +4,8 @@ import {
   fatigueActieLabel,
   fatigueAlternatiefLabel,
   fatigueAppliedRegel,
-  fatigueDownAanbodRegel,
-  fatigueUpAanbodRegel,
 } from "../../lib/coachNarrative";
+import { fatigueAanbodRegel } from "../../lib/fatigueStem";
 import { bumpPlannerVersion } from "../../lib/plannerSignal";
 import type { ProposalWeek } from "../../lib/proposal";
 import { type FatigueVoorstel, weekPlannedMinuten } from "../../lib/schema";
@@ -40,6 +39,7 @@ export function FatigueCard({
   coachNaam,
   weekMonday,
   onDismiss,
+  terugblikOpScherm = false,
 }: {
   fatigue: FatigueVoorstel;
   /** Het ACTIEVE plan (= de kalenderweek in de offer-state) — de baseline voor de minuten-delta. */
@@ -48,6 +48,9 @@ export function FatigueCard({
   /** De week-maandag = de sleutel van de goedkeuring. */
   weekMonday: string;
   onDismiss: () => void;
+  /** Rendert de blok-terugblik op ditzelfde scherm? Dan laat de aanbod-regel zijn blok-uitspraak
+   * weg (ROADMAP punt 10 fase A). Default false = het gedrag van vóór die bouw. */
+  terugblikOpScherm?: boolean;
 }) {
   const [saving, setSaving] = useState(false);
 
@@ -127,10 +130,10 @@ export function FatigueCard({
           soft: "var(--good-soft)",
         }
       : tsbZone(fatigue.tsbTrend ?? 0);
-  const regel =
-    fatigue.dir === "up"
-      ? fatigueUpAanbodRegel(fatigue.blok, deltaMin)
-      : fatigueDownAanbodRegel(fatigue.tsbTrend, fatigue.blok, deltaMin);
+  // ROADMAP punt 10 fase A: staat de blok-terugblik op hetzelfde scherm, dan valt de
+  // blok-uitspraak uit deze regel weg — de terugblik is dan de enige stem over het blok. Het
+  // AANBOD zelf verandert niet. Zie lib/fatigueStem.ts.
+  const regel = fatigueAanbodRegel(fatigue, deltaMin, terugblikOpScherm);
 
   return (
     <Card>

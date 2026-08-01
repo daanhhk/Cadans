@@ -304,7 +304,12 @@ export function SchemaView({
           rij; de guards hieronder houden het bij één week-kaart tegelijk. ONDERDRUKT zolang de
           overname-vraag openstaat: die gaat over de hele periodisering en hoort eerst
           beantwoord te worden (bouwdoc §8.5). */}
-      {fatigueVoorstel && !eventOvernameVoorstel && (
+      {/* ROADMAP punt 10 fase A — ÉÉN UITSPRAAK PER BLOK. Is er een terugblik, dan staat die
+          kaart hieronder en is ZIJ de stem over het blok; de vermoeidheidskaart verhuist er dan
+          ONDER en laat haar eigen blok-uitspraak weg. Zonder terugblik blijft hij hier staan,
+          exact zoals voorheen. Twee call-sites en niet één ternary rond de plaatsing: de
+          volgorde is het punt. */}
+      {fatigueVoorstel && !eventOvernameVoorstel && !blokReview && (
         <FatigueCard
           fatigue={fatigueVoorstel}
           baseline={proposalWeek}
@@ -335,6 +340,20 @@ export function SchemaView({
           vraagt niets, dus hij concurreert niet met de week-voorstellen. */}
       {blokReview && (
         <BlokReviewCard review={blokReview} coachNaam={view.coachNaam} />
+      )}
+
+      {/* De vermoeidheidskaart ONDER de terugblik: die vertelt wat het blok deed, deze vraagt wat
+          er deze week gebeurt. `terugblikOpScherm` laat de blok-uitspraak uit de aanbod-regel
+          vallen — zie lib/fatigueStem.ts. Dezelfde guard als hierboven. */}
+      {fatigueVoorstel && !eventOvernameVoorstel && blokReview && (
+        <FatigueCard
+          fatigue={fatigueVoorstel}
+          baseline={proposalWeek}
+          coachNaam={view.coachNaam}
+          weekMonday={fatigueMonday}
+          onDismiss={() => setFatigueDismissed((n) => n + 1)}
+          terugblikOpScherm
+        />
       )}
 
       {/* ROADMAP stap 2 — de DOSIS-TREDE, DIRECT ONDER de terugblik: die vertelt wat er gebeurd
