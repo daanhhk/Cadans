@@ -281,7 +281,7 @@ punten staat onder *Gesloten — vindplaats*.
     gebruiker daarna zonder richting achter, en dat is hetzelfde gat — het herstel en de nieuwe
     doelvraag horen in één kaart en worden samen opgelost. Kwam binnen tijdens punt 9 fase B,
     waar de bevestigingspoort aanvankelijk óók over `Recovery` lag. Raakt `DOELEN-SPEC`.
-14. **De anaeroob-term van de per-zone-norm** — open · CLIENT plus mogelijk ENGINE. De norm vraagt
+14. **De anaeroob-term van de per-zone-norm** — deels (FASE 1 af) · CLIENT plus ENGINE voor fase 2. De norm vraagt
     anaerobe minuten die het plan nauwelijks of niet programmeert, dus de blok-terugblik kan
     "niet geleverd" zeggen over een blok dat EXACT volgens plan is gereden. GEMETEN over 21 cellen
     (7 weekvormen x 3 doelen), drie opbouwweken met recency-rotatie: het plan haalt nooit minder
@@ -295,6 +295,22 @@ punten staat onder *Gesloten — vindplaats*.
     als M3 bij punt 10 fase B (`docs/PUNT10-FASE-B-BOUWDOC.md` §1 en §6) en is daar bewust buiten
     scope gehouden. GAAT VÓÓR de rest van de reeks: een doelwissel naar Onderhoud kan er binnen
     weken zijn. Raakt `DOELEN-SPEC`.
+    FASE 1 IS AF, spec `docs/PUNT14-BOUWDOC.md`. De blok-terugblik oordeelt voortaan alleen op de
+    zones waarvan het plan van díé week het nominale label voorschreef; de NORM houdt zijn schaal
+    en zijn vorm, `blokDosisNorm` is niet geraakt. GEMETEN dat herwegen niet helpt: vier
+    norm-vormen — bibliotheek-breed, doel-gewogen, doel-plus-fase-gewogen, en exact de twee
+    geroteerde intents — leveren alle vier 1 van de 35 cellen op norm. Mét de poort leest een
+    exact volgens plan gereden week als geleverd in 22 van de 35. FASE 2 BLIJFT OPEN en is ENGINE:
+    de vo2-slotverdeling. `goalWorkout_` ontwijkt alleen de VORIGE intent, dus de rotatie loopt
+    over de bovenste twee en de derde kwaliteitssoort komt per constructie nooit aan de beurt —
+    uitputtend getoetst over 10800 combinaties, 0 keer drie soorten. Het Onderhoud-profiel
+    declareert vo2 0,20 en de rotatie gooit dat weg. Eerst een wat-als-meting, dan pas bouwen.
+15. **De dosis van de twee klim-doelen** — open · ENGINE. Ook mét de zone-poort van punt 14 zakken
+    ze: Korte beklimmingen levert 39 werkminuten en Lange beklimmingen 46, tegen een norm van 84.
+    Dat is een DOSIS-vraag en geen verdelings-vraag — de zones kloppen, er is te weinig van. Kwam
+    binnen bij de meting van punt 14 (`docs/PUNT14-BOUWDOC.md` §3) en is daar bewust buiten scope
+    gehouden. HARDE DATUM: korte beklimmingen wordt half februari 2027 het actieve doel, dus dit
+    moet daarvóór af. Raakt `DOELEN-SPEC`.
 
 ## De tijdslijn
 
