@@ -401,8 +401,29 @@ export function blokReviewRegel(r: BlokReview): string {
   const b = r.uitvoering.beoordeeldeWeken;
   const { beoordeeld, beoordeeldNP, volgend } = blokLabels_(r.fase);
   // ZONE-MUNT fase 1b — het getal dat de coach noemt moet het getal zijn waarop het oordeel viel.
-  // Dat is niet langer één totaal maar drie zone-normen, dus die staan hier in de zin.
-  const zoneNorm = `${r.normTempo} Tempo, ${r.normDrempel} Drempel en ${r.normAnaeroob} VO2max`;
+  // Dat is niet langer één totaal maar de zone-normen, dus die staan hier in de zin.
+  //
+  // ROADMAP punt 14 fase 1 — ALLEEN DE VOORGESCHREVEN ZONES. Het oordeel telt ze ook alleen, dus
+  // een zin die alle drie noemt zou een norm noemen waarop niet beoordeeld is. Welke zones dat
+  // zijn verschilt per week; de zin noemt de zones die in minstens één MEEGETELDE week zijn
+  // voorgeschreven.
+  const zonesInOordeel = (
+    ["tempo", "drempel", "anaeroob"] as Zone5Key[]
+  ).filter((z) =>
+    r.weeks.some((w) => w.telt && w.zonesVoorgeschreven.includes(z)),
+  );
+  const normVan_: Record<string, number> = {
+    tempo: r.normTempo,
+    drempel: r.normDrempel,
+    anaeroob: r.normAnaeroob,
+  };
+  const zoneDelen = zonesInOordeel.map(
+    (z) => `${normVan_[z]} ${ZONE_NAAM_[z]}`,
+  );
+  const zoneNorm =
+    zoneDelen.length <= 1
+      ? (zoneDelen[0] ?? "")
+      : `${zoneDelen.slice(0, -1).join(", ")} en ${zoneDelen[zoneDelen.length - 1]}`;
   const tekort = zoneLijst_(r.uitvoering.tekortZones);
   // Congruentie: "1 van de 3 opbouwweken HAALDE", "2 van de 3 opbouwweken HAALDEN".
   const haalde = g === 1 ? "haalde" : "haalden";

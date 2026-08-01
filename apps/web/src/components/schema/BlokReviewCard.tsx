@@ -1,6 +1,7 @@
 import type { BlokReview, BlokWeek } from "../../lib/blok";
 import { blokReviewNarrative } from "../../lib/coachNarrative";
 import { parseLocalDate } from "../../lib/dates";
+import type { Zone5Key } from "../../lib/zonemunt";
 import { Card, Overline } from "../ui";
 import { CoachCallout } from "./CoachCallout";
 
@@ -64,10 +65,15 @@ function weekZones_(week: BlokWeek) {
 function Regel({ week }: { week: BlokWeek }) {
   const nietGereden = week.ritMinuten === 0;
   const gedempt = !week.telt;
-  // ZONE-MUNT fase 1b — de rechterkolom toont waar het oordeel op valt: hoeveel van de drie
-  // werkzones hun EIGEN norm halen. Alleen bestaande tokens: alle drie --good, eronder --warn,
-  // deload/niet-beoordeeld gedempt.
-  const opNorm = week.zonesOpNorm === 3;
+  // ZONE-MUNT fase 1b — de rechterkolom toont waar het oordeel op valt: hoeveel werkzones hun
+  // EIGEN norm halen. Alleen bestaande tokens: alle --good, eronder --warn, deload/niet-beoordeeld
+  // gedempt.
+  //
+  // ROADMAP punt 14 fase 1 — DE NOEMER IS HET AANTAL VOORGESCHREVEN ZONES, niet vast 3. Het plan
+  // programmeert nergens alle drie de werkzones (0 van de 35 gemeten cellen), dus "1/3" beloofde
+  // een derde zone die die week nooit gevraagd is.
+  const noemer = week.zonesVoorgeschreven.length;
+  const opNorm = noemer > 0 && week.zonesOpNorm === noemer;
   const kleur = gedempt
     ? "var(--text-muted)"
     : opNorm
@@ -125,7 +131,7 @@ function Regel({ week }: { week: BlokWeek }) {
             <>
               {week.zonesOpNorm}
               <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>
-                /3
+                /{noemer}
               </span>
             </>
           )}
@@ -169,23 +175,30 @@ function BlokTotaal({ weeks }: { weeks: BlokWeek[] }) {
   if (geteld.length === 0) return null;
   const som = (f: (w: BlokWeek) => number) =>
     geteld.reduce((a, w) => a + f(w), 0);
+  // ROADMAP punt 14 fase 1 — een zone die door GEEN enkele meegetelde week is voorgeschreven
+  // krijgt norm null en toont dus een streepje, precies zoals Herstel en Duur dat al doen. Een
+  // norm tonen waar het plan niets vroeg is een belofte die het plan niet doet.
+  const voorgeschreven = (z: Zone5Key) =>
+    geteld.some((w) => w.zonesVoorgeschreven.includes(z));
+  const normVan = (z: Zone5Key, f: (w: BlokWeek) => number) =>
+    voorgeschreven(z) ? som(f) : null;
   const rijen: { naam: string; geleverd: number; norm: number | null }[] = [
     { naam: "Herstel", geleverd: som((w) => w.geleverdRust), norm: null },
     { naam: "Duur", geleverd: som((w) => w.geleverdZ2), norm: null },
     {
       naam: "Tempo",
       geleverd: som((w) => w.geleverdTempo),
-      norm: som((w) => w.gevraagdTempo),
+      norm: normVan("tempo", (w) => w.gevraagdTempo),
     },
     {
       naam: "Drempel",
       geleverd: som((w) => w.geleverdDrempel),
-      norm: som((w) => w.gevraagdDrempel),
+      norm: normVan("drempel", (w) => w.gevraagdDrempel),
     },
     {
       naam: "VO2max",
       geleverd: som((w) => w.geleverdAnaeroob),
-      norm: som((w) => w.gevraagdAnaeroob),
+      norm: normVan("anaeroob", (w) => w.gevraagdAnaeroob),
     },
   ];
   return (

@@ -434,6 +434,18 @@ describe("buildBlokReview — de twee effect-poorten", () => {
       doel: "FTP",
       weekUren: 5,
       doelStart: "2026-06-29",
+      // ROADMAP punt 14 fase 1 — poortset op alle drie de werkzones; deze test gaat over de
+      // EFFECT-referent, niet over de zone-poort.
+      weekplans: ["2026-06-29", "2026-07-06", "2026-07-13", "2026-07-20"].map(
+        (datum) => ({
+          datum,
+          blokken: [
+            { minuten: 20, zone: "tempo" },
+            { minuten: 40, zone: "drempel" },
+            { minuten: 10, zone: "anaeroob" },
+          ],
+        }),
+      ),
       weekMondayISO: o.weekMondayISO,
       todayISO: "2026-07-27",
       grenzen: ZONE5_GRENZEN_DEFAULT,

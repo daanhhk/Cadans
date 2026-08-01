@@ -585,6 +585,9 @@ function previewReview(o: {
     overrides: [],
     // Preview-fixture: geen gesynchroniseerde zones, dus expliciet de default.
     grenzen: ZONE5_GRENZEN_DEFAULT,
+    // ROADMAP punt 14 fase 1 — de fixture draagt geen bewaarde weekplannen; de poortset is dan
+    // leeg en elke week valt uit het oordeel (datagat, geen misser).
+    weekplans: [],
   });
 }
 

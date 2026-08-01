@@ -1485,6 +1485,9 @@ export async function loadSchemaWeek(): Promise<{
         overrides,
         dosisTrede,
         grenzen,
+        // ROADMAP punt 14 fase 1 — de poortset per week. Dezelfde blob die hierboven al is
+        // opgehaald; geen extra fetch.
+        weekplans,
       })
     : null;
 

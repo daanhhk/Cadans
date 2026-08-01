@@ -132,7 +132,15 @@ describe("blokReviewRegel — de vijf takken", () => {
       normDrempel: 47,
       normAnaeroob: 13,
       weekUren: 5,
-      weeks: [],
+      // ROADMAP punt 14 fase 1 — de zone-norm-zin noemt alleen zones die in een MEEGETELDE week
+      // zijn voorgeschreven. Deze fixture opent alle drie, want deze tests gaan over de
+      // COPY-TAKKEN en niet over de zone-poort; de poort zelf heeft zijn eigen tests in blok.test.
+      weeks: [
+        {
+          telt: true,
+          zonesVoorgeschreven: ["tempo", "drempel", "anaeroob"],
+        } as unknown as BlokReview["weeks"][number],
+      ],
       uitvoering: {
         geleverd: true,
         geleverdeWeken: 3,

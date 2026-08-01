@@ -30,6 +30,7 @@ import {
   type MetingBron,
 } from "./effect";
 import { NO_BUILD_CTL_DELTA } from "./fatigue";
+import { werkzoneLabelsVan_ } from "./zonelabels";
 import {
   actualZone5_,
   bibliotheekSignatuur,
@@ -278,6 +279,11 @@ export interface BlokWeek {
   geleverdZ2: number;
   /** Hoeveel van de drie werkzones hun eigen norm halen (0..3). */
   zonesOpNorm: number;
+  /** ROADMAP punt 14 fase 1 — de WERKZONES waarvan het bewaarde weekplan van DEZE week het
+   * nominale label voorschreef. Alleen deze doen aan het oordeel mee. GEMETEN dat het plan
+   * nergens alle drie de werkzones programmeert (0 van de 35 cellen), dus een oordeel over alle
+   * drie beoordeelt zones die die week nooit gevraagd zijn. Zie docs/PUNT14-BOUWDOC.md §1. */
+  zonesVoorgeschreven: Zone5Key[];
   ritMinuten: number;
   zoneDekking: number | null;
   status: BlokWeekStatus;
@@ -301,6 +307,26 @@ export interface BlokReferent {
 }
 
 /**
+ * De POORTSET van één week: de werkzone-labels die de bewaarde entries van maandag t/m zondag
+ * voorschreven. Leeg = geen bewaard plan, en dus geen oordeel (zie `telt`).
+ */
+function poortsetVoorWeek_(
+  weekplans: unknown[] | null | undefined,
+  weekMonday: string,
+): Zone5Key[] {
+  if (!Array.isArray(weekplans)) return [];
+  const zondag = shiftIso_(weekMonday, 6);
+  const gezien = new Set<Zone5Key>();
+  for (const e of weekplans) {
+    const o = e as { datum?: unknown; blokken?: unknown };
+    if (typeof o?.datum !== "string") continue;
+    if (o.datum < weekMonday || o.datum > zondag) continue;
+    for (const z of werkzoneLabelsVan_(o.blokken)) gezien.add(z);
+  }
+  return WERKZONES.filter((z) => gezien.has(z));
+}
+
+/**
  * De UITVOERINGS-REFERENT over één blok: per week GEVRAAGD en GELEVERD APART (recon §3 punt 3).
  * Norm ontbreekt → null (geen oordeel).
  */
@@ -314,6 +340,10 @@ export function buildBlokReferent(input: {
   dosisTrede?: number | null;
   /** ROADMAP punt 6 fase 2 — de zone-grenzen; weggelaten → ZONE5_GRENZEN_DEFAULT. */
   grenzen?: readonly number[];
+  /** ROADMAP punt 14 fase 1 — de BEWAARDE weekplan-entries. Hieruit komt per week de poortset:
+   * welke werkzone-labels het plan van die week voorschreef. Weggelaten → lege poortset → `telt`
+   * false, want een week zonder bewaard plan is een DATAGAT en geen misser. */
+  weekplans?: unknown[] | null;
 }): BlokReferent | null {
   const dosis = blokDosisNorm(
     input.doel,
@@ -343,6 +373,10 @@ export function buildBlokReferent(input: {
     const gevraagdDrempel = schaal(dosis.normDrempel);
     const gevraagdAnaeroob = schaal(dosis.normAnaeroob);
 
+    // DE POORTSET van deze week: de nominale werkzone-labels uit de BEWAARDE entries van die
+    // zeven dagen. Bewaard en niet herberekend — de entry draagt wat er destijds is gerenderd.
+    const zonesVoorgeschreven = poortsetVoorWeek_(input.weekplans, weekMonday);
+
     const k = weekKwaliteitMinuten(input.activities, weekMonday);
     const zondag = shiftIso_(weekMonday, 6);
     // Datums zijn yyyy-MM-dd → lexicografische vergelijking is chronologisch.
@@ -358,6 +392,10 @@ export function buildBlokReferent(input: {
     const telt =
       status === "compleet" &&
       blokWeek <= BLOK_OPBOUWWEKEN &&
+      // ROADMAP punt 14: zonder bewaard weekplan is er geen poortset en dus geen oordeel. Dat is
+      // dezelfde lijn als de zonedekking-regel hierboven — een DATAGAT — en uitdrukkelijk NIET
+      // dezelfde als "ritMinuten 0 telt WEL mee": niet gereden is een echte misser.
+      zonesVoorgeschreven.length > 0 &&
       (k.ritMinuten === 0 ||
         (zoneDekking != null && zoneDekking >= ZONEDATA_DEKKING_MIN));
     // GEEN tolerantiemarge: de ijk-reeks ligt bij vijf uur op 71 tot 121 kwaliteitsminuten met
@@ -368,11 +406,21 @@ export function buildBlokReferent(input: {
     // de week valt. Een overschot in tempo dicht nooit een tekort in drempel: dat is precies de
     // grijs-rijden-signatuur die de oude munt (één pot vanaf 76% FTP) als "geleverd" boekte
     // (ZONE-MUNT-ONTWERP §4).
-    const zonesOpNorm =
-      (k.tempo >= gevraagdTempo ? 1 : 0) +
-      (k.drempel >= gevraagdDrempel ? 1 : 0) +
-      (k.anaeroob >= gevraagdAnaeroob ? 1 : 0);
-    const geleverdOk = telt ? zonesOpNorm === WERKZONES.length : null;
+    //
+    // ROADMAP punt 14 fase 1 — ALLEEN VOORGESCHREVEN ZONES DOEN MEE. De norm houdt zijn schaal en
+    // zijn vorm; wat verandert is wie eraan meedoet. GEMETEN dat herwegen niet helpt: vier
+    // norm-vormen leveren alle vier 1 van de 35 cellen op norm, terwijl de poort er 22 van de 35
+    // maakt. De poort weert BANDOVERLOOP, geen klein tekort — een voorgeschreven zone telt mee hoe
+    // klein het tekort ook is.
+    const opNormPerZone = {
+      tempo: k.tempo >= gevraagdTempo,
+      drempel: k.drempel >= gevraagdDrempel,
+      anaeroob: k.anaeroob >= gevraagdAnaeroob,
+    };
+    const zonesOpNorm = zonesVoorgeschreven.filter(
+      (z) => opNormPerZone[z as "tempo" | "drempel" | "anaeroob"],
+    ).length;
+    const geleverdOk = telt ? zonesOpNorm === zonesVoorgeschreven.length : null;
 
     weeks.push({
       weekMonday,
@@ -388,6 +436,7 @@ export function buildBlokReferent(input: {
       geleverdRust: k.rust,
       geleverdZ2: k.z2,
       zonesOpNorm,
+      zonesVoorgeschreven,
       ritMinuten: k.ritMinuten,
       zoneDekking,
       status,
@@ -463,8 +512,14 @@ export function blokUitvoering(ref: BlokReferent): BlokUitvoering {
       : geleverdeWeken >= BLOK_GELEVERD_MIN_WEKEN;
 
   const gemist = beoordeeld.filter((w) => w.geleverdOk === false);
+  // ROADMAP punt 14 fase 1 — per week tellen alleen de zones die DIE week voorgeschreven waren.
+  // Zonder die beperking zou de diagnose "anaeroob kwam het vaakst tekort" melden in weken waarin
+  // het plan geen anaerobe prikkel vroeg.
   const tekortPerZone = WERKZONES.map(
-    (z) => gemist.filter((w) => !zoneOpNorm_(w, z)).length,
+    (z) =>
+      gemist.filter(
+        (w) => w.zonesVoorgeschreven.includes(z) && !zoneOpNorm_(w, z),
+      ).length,
   );
   const maxTekort = Math.max(0, ...tekortPerZone);
   const tekortZones =
@@ -472,11 +527,15 @@ export function blokUitvoering(ref: BlokReferent): BlokUitvoering {
       ? WERKZONES.filter((_, i) => tekortPerZone[i] === maxTekort)
       : [];
 
-  const metVerschuiving = gemist.filter(
-    (w) =>
-      WERKZONES.some((z) => zoneGeleverd_(w, z) > zoneGevraagd_(w, z)) &&
-      WERKZONES.some((z) => zoneGeleverd_(w, z) < zoneGevraagd_(w, z)),
-  ).length;
+  // ROADMAP punt 14 fase 1 — ook hier alleen de zones die die week voorgeschreven waren. Een
+  // "overschot" in een zone die het plan niet vroeg is geen verschuiving maar bandoverloop.
+  const metVerschuiving = gemist.filter((w) => {
+    const zones = w.zonesVoorgeschreven;
+    return (
+      zones.some((z) => zoneGeleverd_(w, z) > zoneGevraagd_(w, z)) &&
+      zones.some((z) => zoneGeleverd_(w, z) < zoneGevraagd_(w, z))
+    );
+  }).length;
   const verschuiving =
     gemist.length > 0 &&
     metVerschuiving >= gemist.length * VERSCHUIVING_MIN_FRACTIE;
@@ -720,6 +779,11 @@ export function buildBlokReview(input: {
   overrides?: OverrideEntry[];
   /** ROADMAP stap 2 — de dosis-trede tilt de NORM op waartegen dit blok beoordeeld wordt. */
   dosisTrede?: number | null;
+  /** ROADMAP punt 14 fase 1 — de BEWAARDE weekplan-entries, VERPLICHT en niet optioneel, om
+   * dezelfde reden als `grenzen` hieronder: een optioneel veld valt bij een aanroeper stil weg en
+   * dan is het pad dood aan zijn INVOER — de poortset blijft leeg en elke week valt uit het
+   * oordeel. */
+  weekplans: unknown[] | null;
   /** ROADMAP punt 6 fase 2 — de ZONE-GRENZEN, VERPLICHT en niet optioneel. Een optioneel veld
    * kan bij een aanroeper wegvallen en valt dan STIL terug op de default: precies het
    * dode-invoer-patroon uit docs/WERKWIJZE.md, waarbij de grep naar de aanroep slaagt, de tests
@@ -738,6 +802,7 @@ export function buildBlokReview(input: {
     todayISO: input.todayISO,
     dosisTrede: input.dosisTrede,
     grenzen: input.grenzen,
+    weekplans: input.weekplans,
   });
   if (!ref) return null;
 

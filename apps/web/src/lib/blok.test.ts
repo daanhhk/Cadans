@@ -228,6 +228,32 @@ describe("weekKwaliteitMinuten — geleverde zoneminuten per kalenderweek", () =
   });
 });
 
+// ROADMAP punt 14 fase 1 — DE POORTSET. Het oordeel telt alleen zones waarvan het bewaarde
+// weekplan van die week het nominale label voorschreef. De bestaande tests hieronder toetsen de
+// COMPENSATIE TUSSEN ZONES, dus die hebben een poortset nodig die alle drie de werkzones opent;
+// anders meten ze het datagat in plaats van het oordeel. Eén blok van vier weken, elke maandag een
+// entry met een blok per werkzone.
+function wpAlle(startMonday: string, weken = 4): unknown[] {
+  const uit: unknown[] = [];
+  for (let i = 0; i < weken; i++) {
+    const d = new Date(
+      Number(startMonday.slice(0, 4)),
+      Number(startMonday.slice(5, 7)) - 1,
+      Number(startMonday.slice(8, 10)) + i * 7,
+    );
+    uit.push({
+      datum: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
+      blokken: [
+        { minuten: 20, zone: "tempo", pctLo: 80, pctHi: 88 },
+        { minuten: 40, zone: "drempel", pctLo: 92, pctHi: 100 },
+        { minuten: 10, zone: "anaeroob", pctLo: 110, pctHi: 120 },
+      ],
+    });
+  }
+  return uit;
+}
+const WP_RECON = wpAlle("2026-06-29");
+
 // ── het blok uit de recon (docs/UITVOERINGS-REFERENT-RECON.md §2.6) ──────────
 const RECON_ACTS: ActValuesRow[] = [
   weekRit("2026-06-30", 110),
@@ -242,6 +268,7 @@ function reconRef(todayISO = "2026-07-27") {
     doel: "FTP",
     weekUren: 5,
     startMonday: "2026-06-29",
+    weekplans: WP_RECON,
     todayISO,
   });
   if (!r) throw new Error("referent onverwacht null");
@@ -272,6 +299,7 @@ describe("de zone-grenzen dragen door tot in de norm", () => {
         doel: "FTP",
         weekUren: 5,
         startMonday: "2026-06-29",
+        weekplans: WP_RECON,
         todayISO: "2026-07-27",
         grenzen,
       });
@@ -293,6 +321,7 @@ describe("de zone-grenzen dragen door tot in de norm", () => {
         doel: "FTP",
         weekUren: 5,
         doelStart: DOEL_START,
+        weekplans: WP_RECON,
         weekMondayISO: "2026-07-27",
         todayISO: "2026-07-27",
         ctlDelta: -5,
@@ -313,6 +342,7 @@ describe("de zone-grenzen dragen door tot in de norm", () => {
       doel: "FTP",
       weekUren: 5,
       doelStart: DOEL_START,
+      weekplans: WP_RECON,
       weekMondayISO: "2026-07-27",
       todayISO: "2026-07-27",
       ctlDelta: -5,
@@ -342,6 +372,7 @@ describe("de zone-grenzen dragen door tot in de norm", () => {
       doel: "FTP",
       weekUren: 5,
       doelStart: DOEL_START,
+      weekplans: WP_RECON,
       weekMondayISO: "2026-07-27",
       todayISO: "2026-07-27",
       ctlDelta: -5,
@@ -367,6 +398,7 @@ describe("de zone-grenzen dragen door tot in de norm", () => {
       doel: "FTP",
       weekUren: 5,
       startMonday: "2026-06-29",
+      weekplans: WP_RECON,
       todayISO: "2026-07-27",
       grenzen: zone5Grenzen(null),
     });
@@ -375,6 +407,7 @@ describe("de zone-grenzen dragen door tot in de norm", () => {
       doel: "FTP",
       weekUren: 5,
       startMonday: "2026-06-29",
+      weekplans: WP_RECON,
       todayISO: "2026-07-27",
     });
     if (!viaNull || !zonder) throw new Error("referent onverwacht null");
@@ -436,6 +469,7 @@ function zoneRef(weken: ActValuesRow[]) {
     doel: "FTP",
     weekUren: 5,
     startMonday: "2026-06-29",
+    weekplans: WP_RECON,
     todayISO: "2026-07-27",
   });
   if (!r) throw new Error("referent onverwacht null");
@@ -564,6 +598,7 @@ describe("blokCheck — drie uitkomsten", () => {
       doel: "FTP",
       weekUren: 5,
       startMonday: "2026-06-29",
+      weekplans: WP_RECON,
       todayISO: "2026-07-27",
     });
     if (!ref) throw new Error("referent onverwacht null");
@@ -598,6 +633,7 @@ describe("dekkings-poort — te weinig zonedata is niet te beoordelen", () => {
       doel: "FTP",
       weekUren: 5,
       startMonday: "2026-06-29",
+      weekplans: WP_RECON,
       todayISO: "2026-07-27",
     });
     if (!ref) throw new Error("referent onverwacht null");
@@ -614,6 +650,7 @@ describe("dekkings-poort — te weinig zonedata is niet te beoordelen", () => {
       doel: "FTP",
       weekUren: 5,
       startMonday: "2026-06-29",
+      weekplans: WP_RECON,
       todayISO: "2026-07-27",
     });
     if (!ref) throw new Error("referent onverwacht null");
@@ -642,6 +679,7 @@ describe("Onderhoud — uitvoering wél, effect niet (CTL hoort te dalen)", () =
       doel: "Onderhoud",
       weekUren: 3,
       startMonday: "2026-06-29",
+      weekplans: WP_RECON,
       todayISO: "2026-07-27",
     });
     if (!r) throw new Error("referent onverwacht null");
@@ -713,6 +751,7 @@ describe("buildBlokReview", () => {
       doel: o.doel ?? "FTP",
       weekUren: o.weekUren === undefined ? 5 : o.weekUren,
       doelStart: DOEL_START,
+      weekplans: WP_RECON,
       weekMondayISO: o.weekMondayISO ?? "2026-07-27",
       todayISO: "2026-07-27",
       ctlDelta: o.ctlDelta,
@@ -758,6 +797,7 @@ describe("buildBlokReview", () => {
       doel: "Onderhoud",
       weekUren: 3,
       doelStart: DOEL_START,
+      weekplans: WP_RECON,
       weekMondayISO: "2026-07-27",
       todayISO: "2026-07-27",
       ctlDelta: -5,

@@ -1,6 +1,9 @@
 import type { ProposalDay, ProposalWeek } from "./proposal";
 import type { DoneEntry, SchemaDay } from "./schema";
 import { openSleutelDagen, sleutelPrikkelOpen } from "./sleutelinhaal";
+// De label-extractie en de rauwe-blokken-leesroute staan in `zonelabels.ts`: punt 14 poort op
+// dezelfde labels, en twee kopieën van die regel zouden uit elkaar lopen.
+import { rauweBlokkenVan_, werkzoneLabelsVan_ } from "./zonelabels";
 import { planZone5_, type Zone5Key } from "./zonemunt";
 
 // ROADMAP punt 10 fase B — DE WEEK-TEKORT-STEM. Pure laag, DOM-loos.
@@ -49,30 +52,6 @@ export interface WeekTekortInput {
   /** VERPLICHT, niet optioneel. Precedent `buildBlokReview`: een optioneel veld valt bij een
    * aanroeper stil terug op de default, en dan ziet de app de gesynchroniseerde zones nooit. */
   grenzen: readonly number[];
-}
-
-/**
- * DE RAUWE BLOKKEN VAN ÉÉN DAG — tweede vindplaats van de `planSessions`-regel uit
- * `schema.ts:1096`: de sessies als die er zijn, anders de bevroren `plannedForDone` mits
- * `totaalMin > 0`.
- *
- * WAAROM DIE REGEL HIER OPNIEUW STAAT EN NIET UIT `SchemaDay` KOMT. `SchemaDay.planSessions`
- * draagt `SchemaSession`, en `SchemaSession.blokken` is de RENDER-vorm (`minuten`, `hoogtePct`,
- * `color`) — daar zijn `pctLo` en `pctHi` al weggevouwen. `planZone5_` heeft juist die percentages
- * nodig. De rauwe blokken bestaan alleen op `ProposalWeek`. Vandaar dezelfde regel op een andere
- * bron; loopt die ooit uiteen, dan gaan week- en dagbeeld uit elkaar lopen.
- */
-function rauweBlokkenVan_(d: ProposalDay): unknown[] {
-  const uitSessies = (d.sessions ?? [])
-    .map((s) => (s as { blokken?: unknown }).blokken)
-    .filter((b): b is unknown[] => Array.isArray(b));
-  if (uitSessies.length > 0) return uitSessies.flat();
-  const bevroren = d.plannedForDone;
-  if (bevroren && (bevroren.totaalMin ?? 0) > 0) {
-    const b = (bevroren as { blokken?: unknown }).blokken;
-    if (Array.isArray(b)) return b;
-  }
-  return [];
 }
 
 /**
@@ -130,10 +109,7 @@ export function bouwWeekTekort(input: WeekTekortInput): WeekTekort | null {
     const pd = pDagen.get(d.datum);
     if (pd) {
       const blokken = rauweBlokkenVan_(pd);
-      for (const b of blokken) {
-        const z = (b as { zone?: unknown })?.zone;
-        if (typeof z === "string") voorgeschreven.add(z);
-      }
+      for (const z of werkzoneLabelsVan_(blokken)) voorgeschreven.add(z);
       const plan = planZone5_(blokken, grenzen);
       for (const z of WERKZONES) gevraagd[z] = (gevraagd[z] ?? 0) + plan[z];
     }
