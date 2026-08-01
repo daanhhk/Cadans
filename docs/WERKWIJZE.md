@@ -129,6 +129,32 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   de plaats" én "laat het item over de gepland-noemer wel staan", terwijl dat item alleen bestond
   als kruisverwijzing bínnen het te verwijderen item. CC meldde het correct als afwijking. De chat
   had de parkeerlijst zelf al gelezen en had het dus kunnen weten.
+- **Een 400-test muteer je ZONDER de status te raken.** Zet je de validatie uit om te bewijzen dat
+  de test hem dekt, dan SCHADUWT de status-assertie de terugleescheck: de test faalt op
+  200-tegen-400 en bereikt de terugleesregel nooit. Je hebt dan de statuscode getoetst en niet de
+  schrijfkant — precies het gat dat de terugleescheck moest dichten. Mutateer in plaats daarvan de
+  VOLGORDE: schrijf vóór de validatie, zodat de 400 netjes blijft en er tóch weggeschreven wordt.
+  Dan vallen de terugleesasserties om en niets anders. Aanleiding: bij de event-overname-route
+  vielen zo alle zes de terugleesasserties, de eerste op `event` = '17-04-2027' waar '2027-04-17'
+  hoort. De eerste meting (validatie uit) leek genoeg en bewees niets. Kwam binnen als
+  CC-afwijking en is strikt beter dan wat het prompt vroeg. Verwant aan "toets een afwijzing op
+  zijn effect".
+- **Een guard die op ÉÉN plek wordt toegevoegd, ontbreekt op de andere.** Zelfde familie als "een
+  halve fix is een vindpatroon", nu op een GUARD in plaats van op een accumulatie: wie een
+  voorwaarde toevoegt aan een afgeleide waarde, grept naar elke plek die diezelfde waarde afleidt.
+  Aanleiding: in punt 9 fase A kreeg `faseOvergang.ts` de overlay-guard wel en `proposal.ts` niet,
+  waardoor de periodiseringsbalk "Build" toonde bóven een kaart die "deze week Base" zei — twee
+  uitspraken over dezelfde week op één scherm. 818 tests vonden het niet en de PNG wel. Het beeld
+  blijft het controlemiddel op de tekst: een suite toetst wat je hebt bedacht te toetsen, een
+  screenshot toont wat er staat.
+- **Een nieuwe poort mag alleen liggen over wat hij BEDOELT te poorten.** Zet je een voorwaarde
+  vóór een tak, ga dan langs élke waarde die door die tak loopt en vraag of het een KEUZE is. Wat
+  geen keuze is maar een constatering, hoort er buiten. Aanleiding: de bevestigingspoort van de
+  event-overname lag ook over `Recovery`, waardoor een afgewezen voorstel het herstel binnen de
+  raceweek afnam — gemeten: het plan werd op "Build" gebouwd twee dagen na de A-race, terwijl het
+  scherm "Recovery" toonde. Herstel en taper zijn constateringen over een rit die al gereden is,
+  dezelfde categorie; die horen niet aan een bevestiging te hangen. De poort ging over de
+  periodiserings-AS, en Recovery zit daar niet in.
 
 ## Vorm van een CC-prompt
 

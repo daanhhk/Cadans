@@ -13,6 +13,69 @@ live tot cutover.
 
 ## Stand
 
+**PUNT 9 IS AF — DE EVENT-OVERNAME IS EEN VOORSTEL, EN HET STAAT LIVE (1 augustus 2026).** Tot deze
+ronde kantelde de fase op de acht-wekengrens automatisch naar het event. Nu VRAAGT de app het, en
+het ingestelde doel blijft sturen tot Daan bevestigt. Prod NU Worker Version
+`be15bb67-fca6-4272-aeec-cd2b187c752c`, gebouwd vanaf `0c9f32a` (was
+`1e29e9de-8533-4931-99e1-2d55613ac691`, drie punten oud). 3 assets vervangen (`/index.html`,
+`/sw.js`, `/assets/index-CQQJuUKO.js`), 63 ongewijzigd, 315,91 KiB. Migratie `0009_amusing_mordo.sql`
+REMOTE toegepast, strikt vóór de deploy; `0009` is nu de laatste remote. Bouwdoc `2a389b6`, bouw
+`852a3ba` (data plus worker) en `fc8fdc4` (engine plus client), nalevering `0c9f32a`, plus deze
+close-out.
+- **VLOEREN NU: vitest-totaal 821 over 64 bestanden · engine-selftest-assert-count 1449** (van
+  793/62 en 1435), beide afgelezen uit de suite. Lees ze uit de suite; hardcode ze nooit.
+- **WAT DAAN MERKT.** Op de acht-wekengrens — voor AGR is dat zaterdag 2027-02-20 — verschijnt een
+  kaart met twee knoppen. Ja: het plan mikt op het event. Nee: zijn blok loopt door en de vraag komt
+  nog één keer terug op de volgende blokgrens (2027-03-08), daarna niet meer. GEMETEN wat "nee"
+  betekent: een FTP-testweek op 2027-03-01, vijf weken vóór AGR. De TAPERWEEK van 2027-04-12 komt er
+  bij BEIDE antwoorden — die overlay hangt per dag aan een nabij event, niet aan de macro-as.
+- **DE OVERNAME VERANDERT ALLEEN DE FASE-AS, NIET HET DOEL.** Geen zesde optie in `DOEL_OPTIONS`,
+  geen zesde profiel. Het doel bepaalt wát er gereden wordt, het event de opbouw ernaartoe.
+- **GELEVERD.** `effectiveMacroFase_` kreeg een vijfde, optionele `overnameBevestigd` — strikt op
+  `=== true`, dus een vergeten argument valt naar de veilige kant. De Onderhoud-tak vergelijkt nu op
+  `profileForDoel_(...).id === "onderhoud"` in plaats van op de UI-string (het derde open punt van
+  fase A, hiermee gesloten). Drie kolommen op `sync_state`, met de EVENT-DATUM als identiteit omdat
+  `EventItem` geen id draagt en `PUT /api/events` full-replace is. Nieuwe poort
+  `apps/web/src/lib/eventOvername.ts`, kaart `EventOvernameCard.tsx`, en de vlag door BEIDE ketens:
+  `proposal.ts` (het plan) én `faseOvergang.ts` (de aankondiging).
+- **HET VIERDE OPEN PUNT VAN FASE A IS GESLOTEN, GEMETEN EN NIET AANGENOMEN.** De 15-dagen-grens in
+  `daysToTaper` is via de echte aanroepketen ONBEREIKBAAR, aan beide kanten. 8556 runs van
+  `buildWeekProposal` met een geïnstrumenteerde bundel: engine-tak bereik −1..7 over 1840 treffers,
+  client-tak 1..13 over 1932, grens 14, NUL treffers ≥ 14. De engine-rood-test bewijst het CONTRACT
+  van `assignWorkouts` bij handgezette invoer, niet de bereikbaarheid via de app. Geen bouw nodig;
+  de `Math.round`-correctie blijft staan als consistentie-reparatie.
+- **HET BEELD VOND WAT 818 TESTS NIET VONDEN.** `proposal.ts` liet de event-overlay ONVOORWAARDELIJK
+  winnen voor de toonbare fase, dus de balk toonde "Build" boven een kaart die "deze week Base" zei —
+  twee uitspraken over dezelfde week op één scherm. `faseOvergang.ts` droeg die guard al sinds fase A;
+  deze plek was toen gemist. Een halve fix, gevonden door de PNG en niet door de suite. Gerepareerd
+  met een assertie dat balk en plan gelijk lopen.
+- **EEN AFGEWEZEN OVERNAME NAM HERSTEL AF — GEREPAREERD IN `0c9f32a`.** De bevestigingspoort lag ook
+  over `Recovery`. GEMETEN met een A-race op 2027-04-15 en peildag 2027-04-16, overname afgewezen:
+  `proposal.ts` gaf `Build` aan `assignWorkouts` terwijl de overlay-guard `Recovery` toonde — een
+  opbouwweek onder een herstel-kop, twee dagen na de race. `Recovery` staat nu vóór de event-tak en
+  hangt niet aan de bevestiging: de poort gaat over de periodiserings-AS, en herstel is een
+  constatering over een gereden rit, dezelfde categorie als de taper. De taperdekking bleek al te
+  bestaan (die test draait zonder de vlag en is dus per definitie het afgewezen geval); daar is alleen
+  een commentaarregel bij gezet.
+- **NIEUW IN DE REEKS: PUNT 13, HET HERSTEL NA HET EVENT.** De maandag ná de raceweek levert de
+  doel-cyclus weer Build; de `Recovery`-tak van `eventFase_` kijkt alleen binnen de huidige week. Dat
+  staat nu in een assertie die expliciet zegt dat hij de huidige toestand PINT en niet beweert dat hij
+  goed is. Hoort samen met de vraag om een nieuw doel na het event.
+- **WAARNEMING, NOG GEEN CONCLUSIE.** Alle acht prod-shots gaven `errors=0`: de `404 /api/checkin/<datum>`
+  die er de vorige rondes stond, is er nu niet. Blijft OPENSTAAND — één schone run onderscheidt
+  "opgelost" niet van "die dag stond er een check-in". Toets het op een dag zonder check-in vóór je
+  hem afvoert.
+- **NIET VISUEEL BEVESTIGD: PUNT 8 OP PROD.** De shot-harness laadt uitsluitend `/schema`, dus de
+  Niveau-tab valt buiten het beeld. Daan opent de kaart "Doel-gereedheid": bij doel FTP hoort daar
+  "FTP" te staan met "opbouw naar FTP-test", NIET de girona-lat.
+- **OPENSTAAND, ONGEWIJZIGD.** `indoor_ftp` 260 tegen `ftp` 280 · de gepland-noemer verschuift terwijl
+  de week vordert · de copy van het sleutel-inhaalblok en van de overname-kaart wachten op de
+  gezamenlijke coach-copy-ronde.
+
+FOCUS VOLGENDE CHAT: punt 10 uit `docs/ROADMAP.md` — twee kaarten spreken los over hetzelfde blok, en
+dat punt draagt sinds 5c ook de week-tekort-vraag. Voorwaarde die er al ligt: het tekort wordt PER
+ZONE geteld in de munt van punt 6, niet in de 3-bucket-vouwing. CLIENT. Verse chat.
+
 **PUNT 9 FASE A IS AF — HET DOEL STUURT DE FASE; PUNT 9 ZELF BLIJFT OPEN (31 juli 2026).** Tot deze ronde nam de event-teller het hele jaar over: met een A-race in de agenda stuurde het ingestelde doel de fase NOOIT. Nu leidt het doel tot acht weken vóór het hoofdevent. Wat er nog NIET is, en waarom het punt open blijft: de overname is een automatische omslag op die grens, geen VOORSTEL met een afwijs-tik. Dat voorstel is fase B en is het eigenlijke criterium. Bouw `c28ee22` (fase A), `b4eca14` en `9a2c63c` (nazorg), spec `10cf3d8`, plus deze close-out. NIET gedeployed: prod draait nog Worker Version `1e29e9de-8533-4931-99e1-2d55613ac691`, `0008` blijft de laatste remote migratie.
 - **VLOEREN NU: vitest-totaal 793 over 62 bestanden · engine-selftest-assert-count 1435** (van 788/62 en 1408), beide afgelezen uit de suite; de selftest draagt zijn telling in de testnaam. Lees ze uit de suite; hardcode ze nooit.
 - **VASTGELEGD DEZE RONDE: `DOELEN-SPEC` §2B.** Het doel leidt; een event verder weg dan acht weken verandert fase noch doel. De overname begint op acht weken en is een VOORSTEL, geen aftelling. Het doel-blok is twaalf weken en HERHAALT — loopt het af zonder nieuw doel, dan begint een volgend blok met hetzelfde doel; een aflopend blok geeft het jaar dus niet aan het event. Dit besluit was meermaals in chats gegeven en nooit vastgelegd; nu is het een `git diff`.

@@ -131,7 +131,7 @@ punten staat onder *Gesloten — vindplaats*.
    getal. `activeGoalProfile_` gaat door `normalizeDoel_`, `projectieKey` is verwijderd en één
    selftest-invariant houdt de sleutels van `PROFILES` en `GOAL_PROFILES_` gelijk. Bouw in
    `3651fc1`.
-9. **Het doel stuurt de periodisering niet** — open · ENGINE. GEMETEN met AGR op 17-04-2027,
+9. **Het doel stuurt de periodisering niet** — af · ENGINE plus CLIENT plus DATA. GEMETEN met AGR op 17-04-2027,
    identiek voor doel FTP, Onderhoud en Beklimmingen: Base t/m 2027-02-15, Build vanaf
    2027-02-22, Peak vanaf 2027-03-22, Taper vanaf 2027-04-12. De fase komt volledig uit de
    event-teller. Wat het doel wél stuurt is het quotum binnen die fase (Base: FTP 3, Onderhoud
@@ -213,6 +213,18 @@ punten staat onder *Gesloten — vindplaats*.
    gat en worden samen opgelost. Tweede punt voor fase B: de tak `=== "Onderhoud"` in
    `effectiveMacroFase_` vergelijkt op een UI-string; die hoort op de profiel-id te vergelijken,
    zodat `normalizeDoel_` daar draagt in plaats van meeloopt.
+   AF PER 01-08-2026, FASE B GEBOUWD IN `0c9f32a` EN LIVE op Worker `be15bb67`. De overname is
+   een VOORSTEL geworden: `effectiveMacroFase_` draagt een vijfde `overnameBevestigd` en het
+   ingestelde doel blijft sturen tot Daan bevestigt. Spec: `docs/EVENT-OVERNAME-BOUWDOC.md`.
+   De vier open punten van fase A zijn hiermee afgehandeld. Het VIERDE — is de 15-dagen-grens in
+   `daysToTaper` via de echte aanroepketen bereikbaar? — is GEMETEN en gesloten: over 8556 runs
+   van `buildWeekProposal` haalt de engine-tak bereik −1..7 en de client-tak 1..13, tegen een
+   grens van 14, dus NUL treffers aan beide kanten. ONBEREIKBAAR; geen bouw nodig, de
+   `Math.round`-correctie blijft als consistentie-reparatie staan. Het DERDE — de Onderhoud-tak
+   die op een UI-string vergeleek — is gesloten: die takt nu op
+   `profileForDoel_(...).id === "onderhoud"`. Het TWEEDE — na het event volgt geen herstel — is
+   VERPLAATST naar het nieuwe punt 13 en staat hier dus niet meer open. De gemeten bevindingen
+   hierboven blijven staan als vindplaats.
 10. **Twee kaarten spreken los over hetzelfde blok** — open · CLIENT. (`DOELEN-SPEC` §6 stap
     7.) De doortrain-kaart en de terugblik lezen hetzelfde ΔCTL-signaal en doen er elk een
     eigen uitspraak over. CRITERIUM: een blok krijgt ÉÉN uitspraak, niet twee. DIT PUNT DRAAGT
@@ -236,6 +248,16 @@ punten staat onder *Gesloten — vindplaats*.
     punt 4 (af) en aan punt 7 — zonder herziene doel-lijst wijst een voorstel naar de
     verkeerde doelen.
 
+13. **Na het event volgt geen herstel** — open · ENGINE plus CLIENT. De maandag ná de raceweek
+    levert de doel-cyclus weer een opbouwfase: de `Recovery`-tak van `eventFase_` kijkt alleen
+    binnen de HUIDIGE week, dus zodra de race in de vorige week ligt is er geen herstel meer.
+    GEMETEN met AGR op 2027-04-17: op maandag 2027-04-19 geeft de keten "Build". Er staat een
+    assertie op die de huidige toestand PINT en expliciet NIET beweert dat hij goed is.
+    DRAAGT ÓÓK DE VRAAG OM EEN NIEUW DOEL na het event: een blok dat op een event eindigt laat de
+    gebruiker daarna zonder richting achter, en dat is hetzelfde gat — het herstel en de nieuwe
+    doelvraag horen in één kaart en worden samen opgelost. Kwam binnen tijdens punt 9 fase B,
+    waar de bevestigingspoort aanvankelijk óók over `Recovery` lag. Raakt `DOELEN-SPEC`.
+
 ## De tijdslijn
 
 De seizoenskalender uit `DOELEN-SPEC.md` §5, naast de reeks gelegd.
@@ -249,10 +271,13 @@ De seizoenskalender uit `DOELEN-SPEC.md` §5, naast de reeks gelegd.
   december geen defect op — de event-fase staat daar toch al op Base. Wat in de winter nog
   openstaat is punt 9 zelf; punt 8 (Onderhoud mat zich tegen het girona-profiel) is per
   31-07-2026 af.
-- **Half februari 2027 — DE EERSTE HARDE DATUM.** Op 2027-02-22 zet de event-as de fase op
-  Build, en §5 laat het doel dan wisselen naar korte beklimmingen. Dat doel EN de bijbehorende
-  meetlat zijn er per 31-07-2026 (punt 7 en punt 8, allebei af). Wat vóór die datum nog moet is
-  punt 9, dat bepaalt hoe de overname gebeurt.
+- **Half februari 2027 — DE EERSTE HARDE DATUM, EN SINDS PUNT 9 EEN VRAAG IN PLAATS VAN EEN
+  OMSLAG.** Op 2027-02-22 zet de event-as de fase op Build, en §5 laat het doel dan wisselen naar
+  korte beklimmingen. Dat doel EN de bijbehorende meetlat zijn er per 31-07-2026 (punt 7 en punt 8,
+  allebei af). Punt 9 is per 01-08-2026 af, en daarmee kantelt het plan hier NIET vanzelf: de
+  overname-kaart verschijnt op zaterdag 2027-02-20 — de eerste dag met `wekenTot` = 8 — en het
+  ingestelde doel blijft sturen tot Daan bevestigt. Zegt hij nee, dan loopt zijn blok door en komt
+  de vraag nog één keer terug op de blokgrens van 2027-03-08.
 - **17 april 2027 — AGR Toerversie.** Punt 11 levert de effect-meter voor dat doel; zonder die
   meter traint de app wel, maar kan ze niet zien of het werkt.
 - **Zomer 2027 — Stelvio.** Lange klimmen komt mee met de splitsing in punt 7. Een voorlopige
