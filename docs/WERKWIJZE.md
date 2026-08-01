@@ -172,6 +172,24 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   tegen de payload uit hetzelfde prompt", nu op code die de chat zelf al had gelezen. En er hoort een
   tweede helft bij: een vergelijking die twee kanten gelijk noemt, draagt óók een assertie dat ze
   daarbuiten VERSCHILLEN — anders slaagt hij ook als beide kanten leeg of identiek zijn.
+- **Een grep die het EIGEN bestand uitfiltert, kan de aanroeper BINNEN dat bestand niet zien.** Wie
+  vraagt "is dit aangesloten", sluit de eigen module niet uit. Aanleiding: een bouwdoc stelde als
+  premisse dat `planZone5_` NUL aanroepers had buiten zijn eigen test, terwijl `bibliotheekSignatuur`
+  hem in DEZELFDE module aanroept (`zonemunt.ts:199`) en via `blokDosisNorm` (`blok.ts:184`) gewoon
+  live draait. CC ving het als premissecontrole vóór de bouw en stopte; de eis in het doc was
+  daarna te herformuleren naar wat wél ontbrak — een aanroeper die de plan-kant PER DAG uitrekent.
+  Zelfde familie als "getest is niet aangesloten", nu op de MEETMETHODE in plaats van op de code.
+- **Een proportionele splitsing produceert zones die het plan nooit VOORSCHREEF.** Een blok waarvan
+  de band over een zonegrens loopt laat aan de andere kant minuten vallen; die zien eruit als een
+  tekort en zijn BANDOVERLOOP. Poort op het NOMINALE label dat het blok al draagt — niet op een
+  minuten-drempel, want dan zet je een willekeurige constante op een artefact en weer je meteen ook
+  echte kleine tekorten. Aanleiding: de weekstem meldde "1 Tempo-minuut" in een week waarin geen
+  enkel blok tempo als label droeg; met de label-poort verdween die regel en bleef "21
+  Drempel-minuten" staan.
+- **Meet de VOOR-staat alleen vanaf een SCHONE werkboom.** `git checkout <hash> -- <bestanden>`
+  gooit ongecommit werk in die bestanden weg. Aanleiding: bij punt 10 fase B verdween zo de nog
+  niet gecommitte bouw en moesten zes bestanden opnieuw bewerkt worden. Aanvulling op de
+  warmloop-regel: eerst COMMITTEN of stashen, dan pas de voor/na-meting draaien.
 - **Twee kaarten die hetzelfde signaal lezen, toets je op wat ze SAMEN op één scherm zeggen.** Beide
   waren apart correct en apart getest; het defect bestond alleen in het PAAR. Het werd pas beslisbaar
   toen de twee zinnen naast elkaar stonden: de terugblik zei "je trainde dit blok genoeg, maar niet
@@ -315,3 +333,6 @@ Volg de FOCUS uit het bovenste STAND-blok.
 - 2026-08-01 — les toegevoegd in *Recon en bewijslast*: de dev-server is ook een fixture-variabele bij een byte-vergelijking; warm eerst op en gooi die run weg.
 - 2026-08-01 — les toegevoegd in *Recon en bewijslast*: een assertie die twee zinnen vergelijkt veronderstelt dat ze dezelfde vorm hebben, en hoort een assertie te dragen dat de twee kanten daarbuiten verschillen.
 - 2026-08-01 — les toegevoegd in *Recon en bewijslast*: twee kaarten die hetzelfde signaal lezen, toets je op wat ze samen op één scherm zeggen.
+- 2026-08-01 — les toegevoegd in *Recon en bewijslast*: een grep die het eigen bestand uitfiltert kan de aanroeper binnen dat bestand niet zien.
+- 2026-08-01 — les toegevoegd in *Recon en bewijslast*: een proportionele splitsing produceert zones die het plan nooit voorschreef; poort op het nominale label, niet op een minuten-drempel.
+- 2026-08-01 — les toegevoegd in *Recon en bewijslast*: meet de voor-staat alleen vanaf een schone werkboom — eerst committen of stashen, dan meten.

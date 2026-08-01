@@ -225,7 +225,7 @@ punten staat onder *Gesloten — vindplaats*.
    `profileForDoel_(...).id === "onderhoud"`. Het TWEEDE — na het event volgt geen herstel — is
    VERPLAATST naar het nieuwe punt 13 en staat hier dus niet meer open. De gemeten bevindingen
    hierboven blijven staan als vindplaats.
-10. **Twee kaarten spreken los over hetzelfde blok** — open (FASE A af) · CLIENT, plus mogelijk
+10. **Twee kaarten spreken los over hetzelfde blok** — open (FASE A en FASE B DEEL 1 af) · CLIENT, plus mogelijk
     ENGINE voor fase B. (`DOELEN-SPEC` §6 stap
     7.) De doortrain-kaart en de terugblik lezen hetzelfde ΔCTL-signaal en doen er elk een
     eigen uitspraak over. CRITERIUM: een blok krijgt ÉÉN uitspraak, niet twee. DIT PUNT DRAAGT
@@ -235,6 +235,14 @@ punten staat onder *Gesloten — vindplaats*.
     tekort wordt PER ZONE geteld, in de munt van punt 6, niet in de 3-bucket-vouwing die
     tempo van drempel niet kan onderscheiden. `DOELEN-SPEC` §2A rekent de inhaal-kaart al tot
     de uitingen van de weeklus, dus dit is geen uitbreiding maar het inlossen daarvan.
+    FASE B DEEL 1 IS AF PER 01-08-2026, gebouwd in `130ab6c` met nalevering `cd194d9`, spec
+    `docs/PUNT10-FASE-B-BOUWDOC.md`. De WEEK heeft nu een stem, en alleen als er iets weg is: een
+    verstreken sleutelprikkel én geen trainingsdag meer om hem op te pakken. Hij meet tegen het
+    BEVROREN plan van de verstreken dagen, niet tegen de blok-norm — GEMETEN dat het plan die norm
+    zelf in 2 van de 105 cellen haalt en op de echte reeks in 3 van de 46 weken, want norm en
+    weekplan gaan door dezelfde vouwing maar over een andere populatie. HET PUNT BLIJFT OPEN VOOR
+    DEEL 2: het aanbod "verschuif de minuten naar Drempel" raakt de allocator en is dus ENGINE,
+    met eigen autorisatie en eerst een wat-als-meting (de 5c-les).
     FASE A IS AF PER 01-08-2026, gebouwd in `58e12aa`, spec `docs/PUNT10-FASE-A-BOUWDOC.md`. De
     doortrain-kaart doet geen eigen uitspraak meer over het blok: de TERUGBLIK is de enige stem en
     het aanbod hangt eronder als weekvraag. Het aanbod zelf — mesoweek 4 naar 1 — is ongewijzigd.
@@ -273,6 +281,20 @@ punten staat onder *Gesloten — vindplaats*.
     gebruiker daarna zonder richting achter, en dat is hetzelfde gat — het herstel en de nieuwe
     doelvraag horen in één kaart en worden samen opgelost. Kwam binnen tijdens punt 9 fase B,
     waar de bevestigingspoort aanvankelijk óók over `Recovery` lag. Raakt `DOELEN-SPEC`.
+14. **De anaeroob-term van de per-zone-norm** — open · CLIENT plus mogelijk ENGINE. De norm vraagt
+    anaerobe minuten die het plan nauwelijks of niet programmeert, dus de blok-terugblik kan
+    "niet geleverd" zeggen over een blok dat EXACT volgens plan is gereden. GEMETEN over 21 cellen
+    (7 weekvormen x 3 doelen), drie opbouwweken met recency-rotatie: het plan haalt nooit minder
+    dan 2 van de 3 zones op norm en 3 van 3 in precies 1 cel; de zakker is ANAEROOB in 15 en tempo
+    in 6, en drempel zakt NUL keer. Bij doel Onderhoud programmeert het plan 0 anaerobe minuten
+    tegen een blok-norm van 30, in 6 van de 6 cellen. PREDICAAT: gemeten op de leeg-gevoede
+    weekvorm-as, niet op de levende D1. DE VRAAG DIE DIT PUNT MOET BESLECHTEN: is de norm-VORM
+    fout — hij is afgeleid over de HELE bibliotheek terwijl `GOAL_FASE_MOD_` in Base en het
+    onderhoud-profiel vo2 juist onderdrukken — of hoort Onderhoud anaeroob werk te programmeren.
+    Eerst meten, dan bouwen; een van beide antwoorden verplaatst werk naar de engine. Kwam binnen
+    als M3 bij punt 10 fase B (`docs/PUNT10-FASE-B-BOUWDOC.md` §1 en §6) en is daar bewust buiten
+    scope gehouden. GAAT VÓÓR de rest van de reeks: een doelwissel naar Onderhoud kan er binnen
+    weken zijn. Raakt `DOELEN-SPEC`.
 
 ## De tijdslijn
 
