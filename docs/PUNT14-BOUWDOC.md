@@ -185,3 +185,38 @@ GEMETEN NA DE BOUW, over alle 64 shots: 224 van de 224 weekregels hebben een noe
 aan het aantal zones met een getal, en elke regel draagt minstens één streepje. 8 van de 64 shots
 zijn byte- en sha256-identiek aan de voor-staat — precies de 8 `overname`-shots, waar de kaart
 zwijgt; die vormen de interne controle dat het verschil in de andere 56 van de code komt.
+
+## 8. Fase 1d — de deloadweek is geen bewijs, en dun bewijs is zwijgen
+
+HET PROD-GEVAL. Het beoordeelde blok 2026-06-29 t/m 2026-07-20 draagt één bewaard plan: dat van de
+DELOADWEEK 2026-07-20, met poortset `tempo`. De blokpoort werd daarmee {tempo}. Daans tempo staat
+op 58, 68 en 67 tegen norm 24, dus alle drie de opbouwweken lazen als geleverd en het blok als
+geleverd — terwijl drempel op 37, 21 en 35 stond tegen 47. De poort poortte precies de zone met het
+OVERSCHOT en dempte die met het TEKORT, en de app stelde op dat oordeel een DOSISVERHOGING voor.
+
+GEMETEN ROOD-KANT van test K, in de 1c-staat: `spreekt: geleverd=true, poort=["tempo"], weken op
+norm=true,true,true`. Dat is het defect, niet beredeneerd maar afgelezen.
+
+BESLUIT 1 — DE DELOADWEEK LEVERT GEEN BEWIJS. Zijn sessies zijn korter en heten nominaal vaker
+tempo, dus als enige bron vertekent hij de poort. De blokpoort komt voortaan uitsluitend uit de
+OPBOUWWEKEN. De deloadweek houdt wel zijn EIGEN poortset voor zijn eigen regel — hij telt toch niet
+mee in het oordeel.
+
+BESLUIT 2 — TE DUN BEWIJS IS ZWIJGEN. Dragen minder dan `BLOK_MIN_BEOORDEELBARE_WEKEN` opbouwweken
+een bewaard plan, dan blijft de blokpoort leeg, `poortHerkomst` is "geen" en `telt` false — niet
+`geleverdOk` false. Dat is dezelfde minimum-bewijslast die het oordeel al droeg, nu ook op de poort,
+zodat poort en oordeel dezelfde span hebben. Geen nieuwe constante. Een week met een EIGEN bewaard
+plan houdt zijn eigen poortset, ook als het blok onder de drempel blijft.
+
+DE HARNESS ZAAIDE ZIJN EIGEN ARTEFACT. `tools/shots/shot.mjs` liet de app één week wegschrijven, en
+dan nog een week BUITEN het beoordeelde blok. Elke uitspraak over de poortset op die shots was
+daarmee artefact. De harness draait nu een voorloop over de opbouwweken van het beoordeelde blok en
+laat de APP ZELF de rij wegschrijven langs zijn eigen route; een met de hand geschreven rij zou een
+vorm kunnen dragen die de producent nooit levert.
+
+GEMETEN NA DE BOUW. Van de 224 weekregels over 64 shots dragen er 128 een poort met MEER dan één
+zone en 160 een poort met drempel erin; de noemer klopt in 224 van de 224. Op v7 gaat de terugblik
+van 1/1, 0/1 en 1/1 met poort {VO2max} naar 1/2, 0/1 en 2/2 met drempel in de poort, en de
+coach-zin kantelt van "2 van de 3 opbouwweken haalden vorig blok elke zone" naar "Drempel bleef
+onder norm terwijl je in een andere zone juist overhield. 1 van de 3 opbouwweken kwamen zo rond. De
+dosis gaat niet omhoog." De dosisverhoging-kaart is verdwenen.

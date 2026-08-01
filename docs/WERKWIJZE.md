@@ -224,6 +224,16 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   64 identiek, en pas daarmee was het verschil toe te schrijven aan de code. Een tweede controle die
   gratis meekomt: shots waarin niets hoort te veranderen MOETEN byte-identiek blijven; bewegen ze
   mee, dan meet je drift.
+- **Een POORT die bepaalt WAAROP geoordeeld wordt kan het oordeel OMKEREN, niet alleen afzwakken.**
+  Poort je per ongeluk alleen de zone met het OVERSCHOT, dan leest een tekort als geleverd. Toets een
+  nieuwe poort daarom altijd op het geval waarin hij te SMAL uitvalt, niet alleen op het geval
+  waarin hij te breed was — dat laatste was de aanleiding, en juist daardoor kijk je de andere kant
+  niet op. En: bewijs voor een poort mag niet uit de minst REPRESENTATIEVE periode komen; een
+  deloadweek draagt kortere sessies met andere nominale labels. Aanleiding: punt 14 fase 1b/1c liet
+  de deloadweek als enige bron de blokpoort bepalen, waardoor Daans grijs-gereden blok als geleverd
+  las (tempo 58, 68 en 67 tegen norm 24, drempel 37, 21 en 35 tegen 47) en de app een
+  dosisverhoging voorstelde. Volgt hieruit: leg naast elke poort de minimum-bewijslast die het
+  OORDEEL al draagt, zodat poort en oordeel dezelfde span hebben.
 
 ## Vorm van een CC-prompt
 
