@@ -210,6 +210,20 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   verschil is deels je eigen meting. Draai de voor-staat twee keer op een verzadigde bak en toets op
   gelijkheid: hier gaf dat 64 van 64 byte-identiek, waarmee het verschil van 0 van 64 aan de code
   toeviel en niet aan de aanwas. Zelfde familie als de warmloop-regel: eerst het INSTRUMENT ijken.
+- **Een bewaarde rij is niet hetzelfde als de PERIODE die hij heet te dekken.** Meet niet alleen OF
+  de data er staat, maar ook WELK DEEL van de periode ze beslaat, en toets dat de afgeleide dezelfde
+  SPAN heeft als de grootheid waartegen hij wordt gelegd. Aanleiding: punt 14 fase 1b leidde de
+  zone-poort af uit weekplan-rijen die lokaal maar één trainingsdag droegen, waardoor het
+  blok-oordeel op één zone kwam te rusten. Op prod bleek de rij wél de hele week te dekken (4
+  entries tegenover 4 trainbare planner-dagen, tot en met zaterdag) — de lokale rijen waren een
+  harness-artefact. Twee gevolgen: de span-toets hoort bij de recon, en zulke vragen meet je op de
+  bak waar de data echt ontstaat.
+- **Een harness die zelf schrijft, verzadigt zijn eigen invoer.** De voor-run zet rijen klaar waar
+  de na-run van profiteert, dus meet beide kanten op een verzadigde bak en ijk het instrument eerst
+  op twee gelijke runs. Aanleiding: dezelfde ronde, CC-vondst — twee runs van a2e1a93 gaven 64 van
+  64 identiek, en pas daarmee was het verschil toe te schrijven aan de code. Een tweede controle die
+  gratis meekomt: shots waarin niets hoort te veranderen MOETEN byte-identiek blijven; bewegen ze
+  mee, dan meet je drift.
 
 ## Vorm van een CC-prompt
 

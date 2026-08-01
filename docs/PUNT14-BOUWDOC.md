@@ -150,10 +150,38 @@ het gespecificeerde datagat. Het oordeel kantelt: v7 ging van "0 van de 3 opbouw
 de 3", en het blok-totaal toont een streepje op Tempo (193/—) en Drempel (93/—) omdat geen
 meegetelde week die zones voorschreef.
 
-OPEN PUNT, NIET GEBOUWD: DE BEWAARDE RIJ IS GEEN WEEK. `entryFromDay` levert null voor een dag
-zonder sessie, dus een rij draagt alleen TRAININGSDAGEN — en lokaal draagt elke bewaarde week er
-precies ÉÉN (2026-07-13 → alleen 2026-07-19, een VO2-sessie; 2026-07-20 → alleen 2026-07-22). De
-poort is daarmee smaller dan "wat de week voorschreef": in v7 komt hij op `anaeroob` alleen uit, en
-het oordeel "2 van de 3 weken op norm" rust op die ene zone. Dat is geen defect in wat hier gebouwd
-is — fase 1 las dezelfde deelrijen, en de vereniging verbreedt ze juist — maar het beperkt wat de
-poort kan BETEKENEN. Wie hier verder gaat, meet eerst hoeveel dagen een bewaarde rij op PROD draagt.
+DE BEWAARDE RIJ DEKT OP PROD DE HELE WEEK — GEMETEN, read-only, `rows_written` 0 en `changed_db`
+false. Beide rijen dragen 4 dag-entries: 2026-07-20 op 2026-07-20, 07-21, 07-23 en 07-25, en
+2026-07-27 op 2026-07-27, 07-28, 07-30 en 08-01. `planner_days` telt voor diezelfde twee weken
+exact 4 trainbare dagen, op exact diezelfde datums. De rij loopt dus tot zaterdag — dag 6 — en niet
+tot "wat verstreken was": op 2026-07-20 stond die zaterdag nog in de toekomst. Rustdagen leveren
+geen entry (`entryFromDay` geeft null zonder sessie), dus 4 entries IS het complete plan.
+
+De poortsets die daaruit volgen: 2026-07-20 → `tempo`; 2026-07-27 → `tempo` plus `drempel`. De twee
+`recovery`-entries dragen geen `blokken` en leveren dus terecht geen werkzone. Opvallend en niet
+verder onderzocht: het `tempo`-label van 2026-07-20 komt uit een `long_z2`-rit — een Z2-blok waarvan
+het bandmidden in tempo valt.
+
+DE LOKALE ÉÉN-DAG-RIJEN WAREN EEN HARNESS-ARTEFACT. Lokaal droeg elke bewaarde week één
+trainingsdag, wat het vermoeden gaf dat de poort structureel te smal was. Prod weerlegt dat: de
+shot-harness pint een klok en schrijft daardoor een deelweek weg. Meet zulke vragen dus op PROD.
+
+DE COHERENTIE-EIS DIE HIERUIT VOLGT: DE POORTSET MOET DEZELFDE SPAN DEKKEN ALS DE NORM. De norm is
+een WEEKdosis — prikkels x minuten-per-prikkel over een hele week. Een poort die uit een PARTIËLE
+rij komt beschrijft die week niet en legt een weekgrootheid naast een deelverzameling. Zolang de rij
+alle trainingsdagen draagt, zoals op prod gemeten, valt de span samen en is de vergelijking geldig.
+Wie de schrijfroute ooit verandert, toetst deze eis opnieuw.
+
+## 7. Fase 1c — de weekregel spreekt de noemer niet meer tegen
+
+`weekZones_` gaf alle drie de zones onvoorwaardelijk een norm, dus een niet-beoordeelde zone stond
+in waarschuwkleur naast een noemer die haar niet meetelde: twee uitspraken over dezelfde week op één
+scherm. De regels komen nu als DATA uit de lib — `BlokWeek.zoneRegels` draagt per zone een norm of
+`null` — en de kaart leidt niets meer af. Een zone buiten de effectieve poort blijft STAAN met zijn
+geleverde minuten, toont een streepje op de norm-plek en krijgt neutrale kleur; dezelfde vorm die
+het blok-totaal al droeg. Weglaten zou verbergen wat er gereden is, dempen zou het als misser lezen.
+
+GEMETEN NA DE BOUW, over alle 64 shots: 224 van de 224 weekregels hebben een noemer die gelijk is
+aan het aantal zones met een getal, en elke regel draagt minstens één streepje. 8 van de 64 shots
+zijn byte- en sha256-identiek aan de voor-staat — precies de 8 `overname`-shots, waar de kaart
+zwijgt; die vormen de interne controle dat het verschil in de andere 56 van de code komt.
