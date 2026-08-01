@@ -41,25 +41,23 @@ function zondag_(iso: string): string {
   return `${z.getFullYear()}-${mm}-${dd}`;
 }
 
-/** De drie werkzones van één week, op de UI-namen uit ZoneBars. */
+/** De UI-namen uit ZoneBars, op de zone-sleutels van de munt. */
+const ZONE_NAAM: Record<string, string> = {
+  tempo: "Tempo",
+  drempel: "Drempel",
+  anaeroob: "VO2max",
+};
+
+/** ROADMAP punt 14 fase 1c — de drie werkzones van één week, ONGEWIJZIGD overgenomen uit
+ * `week.zoneRegels`. Deze functie leidt niets meer af: welke zone beoordeeld is staat in `norm`
+ * (null = niet beoordeeld). Vóór 1c gaf hij alle drie de zones met een norm terug, waardoor een
+ * niet-beoordeelde zone in waarschuwkleur naast een noemer stond die haar niet meetelde. */
 function weekZones_(week: BlokWeek) {
-  return [
-    {
-      naam: "Tempo",
-      geleverd: week.geleverdTempo,
-      gevraagd: week.gevraagdTempo,
-    },
-    {
-      naam: "Drempel",
-      geleverd: week.geleverdDrempel,
-      gevraagd: week.gevraagdDrempel,
-    },
-    {
-      naam: "VO2max",
-      geleverd: week.geleverdAnaeroob,
-      gevraagd: week.gevraagdAnaeroob,
-    },
-  ];
+  return week.zoneRegels.map((r) => ({
+    naam: ZONE_NAAM[r.zone] ?? r.zone,
+    geleverd: r.geleverd,
+    norm: r.norm,
+  }));
 }
 
 function Regel({ week }: { week: BlokWeek }) {
@@ -151,13 +149,16 @@ function Regel({ week }: { week: BlokWeek }) {
               {i > 0 && " · "}
               <span
                 style={{
+                  // Norm null = niet beoordeeld: streepje en NEUTRALE kleur. Exact de vorm die
+                  // BlokTotaal hieronder al draagt — één regel, twee lezers.
                   color:
-                    !gedempt && z.geleverd < z.gevraagd
+                    !gedempt && z.norm != null && z.geleverd < z.norm
                       ? "var(--warn)"
                       : undefined,
                 }}
               >
-                {z.naam} {Math.round(z.geleverd)}/{z.gevraagd}
+                {z.naam} {Math.round(z.geleverd)}/
+                {z.norm == null ? "—" : z.norm}
               </span>
             </span>
           ))}

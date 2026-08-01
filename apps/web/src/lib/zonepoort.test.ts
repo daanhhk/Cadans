@@ -309,3 +309,69 @@ describe("punt 14 fase 1b — de blokpoort", () => {
     expect(w1?.zonesVoorgeschreven).not.toContain("tempo");
   });
 });
+
+// ── FASE 1c — DE PER-ZONE REGELS KOMEN ALS DATA UIT DE LIB ───────────────────
+// De kaart gaf alle drie de zones onvoorwaardelijk een norm, dus een niet-beoordeelde zone stond
+// in waarschuwkleur naast een noemer die haar niet meetelde. `zoneRegels` draagt nu per zone een
+// norm of null; de kaart leidt niets meer af. apps/web heeft geen render-testinfrastructuur, dus
+// dit toetst de PRODUCENT.
+describe("punt 14 fase 1c — zoneRegels", () => {
+  /** Een blok waarin ALLE weken exact dit ene bewaarde plan dragen, zodat de poort vastligt. */
+  function metPoort(blokken: unknown[]) {
+    const basis = blokMetPlan();
+    const eigen = [0, 7, 14, 21].map((d) => ({
+      datum: verschuif_(START, d + 1),
+      blokken,
+    }));
+    const r = referent({ weekplans: eigen, activities: basis.activities });
+    if (!r) throw new Error("referent onverwacht null");
+    return r;
+  }
+
+  it("(I) poort {drempel}: tempo en anaeroob dragen norm null, drempel een getal", () => {
+    const r = metPoort([
+      { minuten: 45, zone: "drempel", pctLo: 92, pctHi: 100 },
+    ]);
+    for (const w of r.weeks) {
+      expect(w.zonesVoorgeschreven).toEqual(["drempel"]);
+      const per = new Map(w.zoneRegels.map((x) => [x.zone, x.norm]));
+      // Alle drie de zones staan er nog — weglaten zou verbergen wat er gereden is.
+      expect(w.zoneRegels.map((x) => x.zone)).toEqual([
+        "tempo",
+        "drempel",
+        "anaeroob",
+      ]);
+      expect(per.get("tempo")).toBeNull();
+      expect(per.get("anaeroob")).toBeNull();
+      expect(typeof per.get("drempel")).toBe("number");
+    }
+  });
+
+  it("(J) poort {tempo, drempel}: exact twee regels met een getal, één met null", () => {
+    const r = metPoort([
+      { minuten: 30, zone: "tempo", pctLo: 80, pctHi: 88 },
+      { minuten: 45, zone: "drempel", pctLo: 92, pctHi: 100 },
+    ]);
+    for (const w of r.weeks) {
+      expect(w.zonesVoorgeschreven).toEqual(["tempo", "drempel"]);
+      const metGetal = w.zoneRegels.filter((x) => x.norm != null);
+      const zonder = w.zoneRegels.filter((x) => x.norm == null);
+      expect(metGetal).toHaveLength(2);
+      expect(zonder).toHaveLength(1);
+      expect(zonder[0]?.zone).toBe("anaeroob");
+      // De geleverde minuten blijven staan, ook zonder norm.
+      expect(typeof zonder[0]?.geleverd).toBe("number");
+    }
+  });
+
+  it("de norm in zoneRegels is DEZELFDE als de gevraagd-velden — geen tweede rekenweg", () => {
+    const r = metPoort([
+      { minuten: 45, zone: "drempel", pctLo: 92, pctHi: 100 },
+    ]);
+    for (const w of r.weeks) {
+      const drempel = w.zoneRegels.find((x) => x.zone === "drempel");
+      expect(drempel?.norm).toBe(w.gevraagdDrempel);
+      expect(drempel?.geleverd).toBe(w.geleverdDrempel);
+    }
+  });
+});

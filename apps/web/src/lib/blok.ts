@@ -262,6 +262,14 @@ export function weekKwaliteitMinuten(
 
 export type BlokWeekStatus = "compleet" | "lopend" | "toekomst";
 
+/** Eén zone-regel van één blokweek. `norm` null = niet in de effectieve poort, dus niet
+ * beoordeeld: de kaart toont dan een streepje en NEUTRALE kleur, nooit waarschuwkleur. */
+export interface BlokZoneRegel {
+  zone: Zone5Key;
+  geleverd: number;
+  norm: number | null;
+}
+
 export interface BlokWeek {
   weekMonday: string;
   blokWeek: number;
@@ -283,6 +291,13 @@ export interface BlokWeek {
    * nergens alle drie de werkzones programmeert (0 van de 35 cellen), dus een oordeel over alle
    * drie beoordeelt zones die die week nooit gevraagd zijn. Zie docs/PUNT14-BOUWDOC.md §1. */
   zonesVoorgeschreven: Zone5Key[];
+  /** FASE 1c — DE PER-ZONE REGELS VAN DEZE WEEK, als DATA. De kaart leidt hier niets meer af:
+   * `norm` null betekent "deze zone is niet beoordeeld" en dat is het enige signaal dat de
+   * render nodig heeft. Reden dat dit uit de lib komt en niet uit de kaart: `weekZones_` gaf
+   * alle drie de zones onvoorwaardelijk terug, dus een niet-beoordeelde zone stond in
+   * waarschuwkleur naast een noemer die haar niet meetelde — twee uitspraken over dezelfde week
+   * op één scherm. Zelfde vorm als het blok-totaal in die kaart al draagt. */
+  zoneRegels: BlokZoneRegel[];
   /** FASE 1b — WAAROP die poort rust. "week" = deze week draagt een eigen bewaard plan; "blok" =
    * hij valt terug op de vereniging over het blok; "geen" = nergens in het blok staat een plan.
    * Machineleesbaar en geen copy: een volgende ronde moet kunnen zien waarop een oordeel rustte. */
@@ -447,6 +462,26 @@ export function buildBlokReferent(input: {
     ).length;
     const geleverdOk = telt ? zonesOpNorm === zonesVoorgeschreven.length : null;
 
+    // FASE 1c — de regels volgen de EFFECTIEVE poort van DEZE week (`poortHerkomst` "week" → de
+    // eigen poortset, "blok" → de blokpoort); `zonesVoorgeschreven` draagt die al. Een zone
+    // buiten de poort blijft STAAN met zijn geleverde minuten en krijgt norm null: weglaten zou
+    // verbergen wat er wél gereden is, en dempen zou het als een misser laten lezen.
+    const gevraagdPerZone: Record<string, number> = {
+      tempo: gevraagdTempo,
+      drempel: gevraagdDrempel,
+      anaeroob: gevraagdAnaeroob,
+    };
+    const geleverdPerZone: Record<string, number> = {
+      tempo: k.tempo,
+      drempel: k.drempel,
+      anaeroob: k.anaeroob,
+    };
+    const zoneRegels: BlokZoneRegel[] = WERKZONES.map((z) => ({
+      zone: z,
+      geleverd: geleverdPerZone[z] ?? 0,
+      norm: zonesVoorgeschreven.includes(z) ? (gevraagdPerZone[z] ?? 0) : null,
+    }));
+
     weeks.push({
       weekMonday,
       blokWeek,
@@ -463,6 +498,7 @@ export function buildBlokReferent(input: {
       zonesOpNorm,
       zonesVoorgeschreven,
       poortHerkomst,
+      zoneRegels,
       ritMinuten: k.ritMinuten,
       zoneDekking,
       status,
