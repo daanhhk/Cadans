@@ -165,6 +165,19 @@ const SCENARIOS = [
       6: { minuten: 120, dagtype: "weekend" },
     },
   },
+  // WEEKSTEM (ROADMAP punt 10 fase B): de klok staat op VRIJDAG en er zijn alleen trainingsdagen
+  // op maandag en dinsdag. Die twee zijn dus VERSTREKEN en ongereden — een gemiste sleutelsessie —
+  // en er staat GEEN trainingsdag meer die de prikkel kan dragen. Dat is precies het geval waarin
+  // de weekstem spreekt; geen bestaand scenario draagt die combinatie, want die hebben allemaal
+  // een weekenddag vooruit.
+  {
+    name: "v7-weekstem",
+    dagOffset: 3,
+    spec: {
+      0: { minuten: 60, dagtype: "vrij" },
+      1: { minuten: 60, dagtype: "vrij" },
+    },
+  },
   // OVERNAME: de acht-wekengrens vóór het A-event van 2027-04-17. Eigen absolute weekmaandag,
   // want de overname-kaart bestaat alleen binnen EVENT_OVERNAME_WEKEN van het hoofdevent en dat
   // ligt ver buiten de echte week. ROADMAP punt 9 fase B.

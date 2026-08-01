@@ -464,6 +464,54 @@ export function blokReviewRegel(r: BlokReview): string {
   );
 }
 
+// ── ROADMAP punt 10 fase B — DE WEEK-TEKORT-STEM ─────────────────────────────
+// Staat hier en niet in een eigen module, zodat `zoneLijst_`, `ZONE_NAAM_` en `seedIndex` PRIVÉ
+// blijven; ze exporteren of dupliceren zou een tweede bron voor zone-namen opleveren.
+//
+// DE ZIN STELT VAST EN CLAIMT GEEN DAAD. De app verandert hier niets: hij meldt dat een prikkel
+// weg is en dat er deze week geen dag meer staat om hem op te pakken. Beide TERMEN staan erin —
+// gevraagd en gereden — want een saldo verbergt zijn termen (WERKWIJZE, "meet beide kanten in
+// dezelfde eenheid, en bewaar de termen").
+//
+// DE TOON IS FUNCTIONEEL EN NIET DEFINITIEF; hij gaat mee in de gezamenlijke coach-copy-ronde,
+// samen met het sleutel-inhaalblok en de overname-kaart.
+
+/** Eén tekort-zone met zijn twee termen. ONAFGEROND binnen; deze functie rondt af. */
+export interface WeekTekortZin {
+  zone: Zone5Key;
+  gevraagd: number;
+  geleverd: number;
+}
+
+export function weekTekortRegel(
+  zones: WeekTekortZin[],
+  weekMonday: string,
+): string {
+  if (zones.length === 0) return "";
+  const namen = zoneLijst_(zones.map((z) => z.zone));
+  // AFRONDEN GEBEURT HIER, één keer, op de grootheid die de zin noemt — de rekenlaag geeft
+  // onafgerond terug. Enkelvoud/meervoud volgt het AFGERONDE getal, anders leest "1 minuten".
+  const termen = zones
+    .map((z) => {
+      const gevraagd = Math.round(z.gevraagd);
+      const geleverd = Math.round(z.geleverd);
+      const eenheid = gevraagd === 1 ? "minuut" : "minuten";
+      return `${gevraagd} ${ZONE_NAAM_[z.zone]}-${eenheid} waarvan je er ${geleverd} reed`;
+    })
+    .join(", en ");
+  const enkel = zones.length === 1;
+  const die = enkel ? "die prikkel" : "die prikkels";
+  const pool = [
+    `Je plan vroeg deze week op de dagen die geweest zijn ${termen}. Er staat geen trainingsdag meer om ${die} op te pakken.`,
+    `Op de verstreken dagen van deze week stond ${termen}. ${enkel ? "Die prikkel is" : "Die prikkels zijn"} weg: er komt geen trainingsdag meer om ${enkel ? "hem" : "ze"} in te halen.`,
+  ];
+  return (
+    pool[seedIndex(`${weekMonday}|weektekort|${namen}`, pool.length)] ??
+    pool[0] ??
+    ""
+  );
+}
+
 // ── 5b-i — de EFFECT-regel (heeft het blok gewerkt) ──────────────────────────
 // VOORWAARDELIJK (M55): de coach biedt aan en stelt niet vast. Bij `niet_meetbaar` doet hij
 // EXPLICIET geen uitspraak — dat is het hele punt van de derde toestand: niet concluderen uit

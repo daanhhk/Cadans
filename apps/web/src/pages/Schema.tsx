@@ -38,6 +38,7 @@ interface SchemaData {
   /** ROADMAP stap 2 — dosis-trede-voorstel, of null. */
   dosisTredeVoorstel: DosisTredeVoorstel | null;
   eventOvernameVoorstel: EventOvernameVoorstel | null;
+  grenzen: readonly number[];
   weekMonday: string;
 }
 
@@ -189,6 +190,7 @@ export function Schema() {
       blokReview={data.blokReview}
       dosisTredeVoorstel={data.dosisTredeVoorstel}
       eventOvernameVoorstel={data.eventOvernameVoorstel}
+      grenzen={data.grenzen}
       testVoorstel={data.testVoorstel}
       weekMonday={data.weekMonday}
     />

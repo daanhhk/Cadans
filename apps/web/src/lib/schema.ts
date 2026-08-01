@@ -1299,6 +1299,8 @@ export async function loadSchemaWeek(): Promise<{
   dosisTredeVoorstel: DosisTredeVoorstel | null;
   /** ROADMAP punt 9 fase B — de overname-vraag, of null als er niets te vragen valt. */
   eventOvernameVoorstel: EventOvernameVoorstel | null;
+  /** De zone-grenzen waarop dit beeld is gerekend (ROADMAP punt 6 fase 2). */
+  grenzen: readonly number[];
   /** De maandag van de getoonde week (de sleutel van de goedkeuring). */
   weekMonday: string;
 }> {
@@ -1611,6 +1613,10 @@ export async function loadSchemaWeek(): Promise<{
     testVoorstel,
     dosisTredeVoorstel: dosisTredeKaart,
     eventOvernameVoorstel: eventOvernameKaart,
+    // ROADMAP punt 10 fase B: de weekstem rekent per zone en heeft dus de GESYNCHRONISEERDE
+    // grenzen nodig. Ze gaan mee in de payload in plaats van client-zijde opnieuw afgeleid te
+    // worden — één bron, dezelfde die de blok-terugblik al gebruikt.
+    grenzen,
     weekMonday: monday,
   };
 }

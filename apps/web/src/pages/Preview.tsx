@@ -909,6 +909,7 @@ export function Preview() {
 
       <SchemaView
         key={f.key}
+        grenzen={ZONE5_GRENZEN_DEFAULT}
         proposalWeek={f.proposalWeek}
         readiness={f.readiness}
         doneByDate={f.doneByDate}

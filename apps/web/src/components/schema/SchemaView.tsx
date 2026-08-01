@@ -25,6 +25,7 @@ import {
 } from "../../lib/schema";
 import { openSleutelDagen, sleutelPrikkelOpen } from "../../lib/sleutelinhaal";
 import type { TestVoorstel } from "../../lib/testvoorstel";
+import { bouwWeekTekort } from "../../lib/weektekort";
 import { Card, Overline } from "../ui";
 import { ActionButtons } from "./ActionButtons";
 import { AlignChip } from "./AlignChip";
@@ -48,6 +49,7 @@ import { isTestVoorstelAfgewezen, TestVoorstelCard } from "./TestVoorstelCard";
 import { isVerlengAfgewezen, VerlengCard } from "./VerlengCard";
 import { isVerlichtAfgewezen, VerlichtCard } from "./VerlichtCard";
 import { WeekLoad } from "./WeekLoad";
+import { WeekTekortBlok } from "./WeekTekortBlok";
 import { WorkoutDetail } from "./WorkoutDetail";
 import { WorkoutPickerSheet } from "./WorkoutPickerSheet";
 
@@ -124,6 +126,7 @@ export function SchemaView({
   blokReview = null,
   dosisTredeVoorstel = null,
   eventOvernameVoorstel = null,
+  grenzen,
   testVoorstel = null,
   weekMonday,
 }: {
@@ -140,6 +143,9 @@ export function SchemaView({
   blokReview?: BlokReview | null;
   dosisTredeVoorstel?: DosisTredeVoorstel | null;
   eventOvernameVoorstel?: EventOvernameVoorstel | null;
+  /** ROADMAP punt 6 fase 2 — de zone-grenzen. VERPLICHT: een default hier zou de
+   * gesynchroniseerde zones stil kunnen maskeren. */
+  grenzen: readonly number[];
   /** 5b-ii — testvoorstel voor de rustweek, of null. */
   testVoorstel?: TestVoorstel | null;
   /** Maandag van de getoonde week (sleutel van de goedkeuring); default = view.weekMonday. */
@@ -163,6 +169,21 @@ export function SchemaView({
       readiness,
       settings,
     ],
+  );
+  // ROADMAP punt 10 fase B — DE WEEK-TEKORT-STEM. Hier berekend en niet in `loadSchemaWeek`,
+  // omdat de poorten `view.days` nodig hebben (state, coach, done) en die afgeleide hier valt.
+  // Alle drie de poorten zitten in `bouwWeekTekort`; null betekent zwijgen.
+  const weekTekort = useMemo(
+    () =>
+      bouwWeekTekort({
+        days: view.days,
+        proposalWeek,
+        doneByDate,
+        todayISO,
+        weekMonday: weekMonday ?? view.weekMonday,
+        grenzen,
+      }),
+    [view, proposalWeek, doneByDate, todayISO, weekMonday, grenzen],
   );
   const [selected, setSelected] = useState(todayISO);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -364,6 +385,14 @@ export function SchemaView({
           voorstel={dosisTredeVoorstel}
           coachNaam={view.coachNaam}
         />
+      )}
+
+      {/* ROADMAP punt 10 fase B — DE WEEK-TEKORT-STEM, als LAATSTE van de weekkaarten. Hij vraagt
+          niets, dus hij hoort onder de voorstel-kaarten; en staat de blok-terugblik op het scherm,
+          dan komt hij daar automatisch onder — zelfde plaatsingsregel als de vermoeidheidskaart in
+          fase A. Zelfbegrenzend: alle drie de poorten zitten in `bouwWeekTekort`. */}
+      {weekTekort && (
+        <WeekTekortBlok tekort={weekTekort} coachNaam={view.coachNaam} />
       )}
 
       {day && (
