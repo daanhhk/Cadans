@@ -1,7 +1,7 @@
 import type { PlannerDay, SettingsInput } from "@cadans/shared";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { ActValuesRow } from "./activities";
-import { blokUitvoering, buildBlokReferent } from "./blok";
+import { blokUitvoering, buildBlokReferent, buildBlokReview } from "./blok";
 import { buildWeekProposal } from "./proposal";
 import { buildWeekplanEntries } from "./weekplanBlob";
 import { werkzoneLabelsVan_ } from "./zonelabels";
@@ -139,6 +139,33 @@ function blokMetPlan(extra: Partial<Record<string, number>> = {}) {
   return { weekplans, activities };
 }
 
+/** De entries van UITSLUITEND de opgegeven blokweken (0-based index binnen het blok). */
+function alleenWeken_(entries: unknown[], idx: number[]): unknown[] {
+  const vensters = idx.map((i) => ({
+    van: verschuif_(START, i * 7),
+    tot: verschuif_(START, i * 7 + 6),
+  }));
+  return entries.filter((e) => {
+    const dt = (e as { datum?: unknown }).datum;
+    if (typeof dt !== "string") return false;
+    return vensters.some((v) => dt >= v.van && dt <= v.tot);
+  });
+}
+
+/** De hele kaart, met het blok 2026-06-29 t/m 2026-07-20 als AFGEROND venster. */
+const review = (o: { weekplans: unknown[]; activities: ActValuesRow[] }) =>
+  buildBlokReview({
+    activities: o.activities,
+    doel: "Onderhoud",
+    weekUren: 5,
+    doelStart: START,
+    weekMondayISO: verschuif_(START, 28),
+    todayISO: verschuif_(START, 28),
+    ctlDelta: null,
+    weekplans: o.weekplans,
+    grenzen: ZONE5_GRENZEN_DEFAULT,
+  });
+
 const referent = (o: { weekplans: unknown[]; activities: ActValuesRow[] }) =>
   buildBlokReferent({
     activities: o.activities,
@@ -254,19 +281,12 @@ describe("punt 14 — de zone-poort, met de producent in de lus", () => {
 // shots van fase 1 lieten zien. De blokpoort is de vereniging over het blok; binnen één blok
 // liggen doel en fase vast, dus dat is bewijs uit dezelfde bron.
 describe("punt 14 fase 1b — de blokpoort", () => {
-  it("(F) ÉÉN bewaarde week draagt het hele blok, en de op-plan-week leest als geleverd", () => {
+  it("(F) een week ZONDER eigen plan erft de blokpoort, en op-plan gereden leest als geleverd", () => {
+    // FASE 1d: de bron zijn TWEE opbouwweken. Vóór 1d droeg één bewaarde week het hele blok;
+    // dat is nu juist wat test M verbiedt — zie §6 van het bouwdoc.
     const basis = blokMetPlan();
-    // Alleen de entries van de TWEEDE opbouwweek bewaren.
-    const tweede = verschuif_(START, 7);
-    const zondag = verschuif_(tweede, 6);
-    const alleenTweede = basis.weekplans.filter((e) => {
-      const d = (e as { datum?: unknown }).datum;
-      return typeof d === "string" && d >= tweede && d <= zondag;
-    });
-    expect(alleenTweede.length).toBeGreaterThan(0);
-
     const r = referent({
-      weekplans: alleenTweede,
+      weekplans: alleenWeken_(basis.weekplans, [1, 2]),
       activities: basis.activities,
     });
     if (!r) throw new Error("referent onverwacht null");
@@ -274,7 +294,7 @@ describe("punt 14 fase 1b — de blokpoort", () => {
     for (const w of opbouw) expect(w.telt).toBe(true);
     expect(opbouw[0]?.poortHerkomst).toBe("blok");
     expect(opbouw[1]?.poortHerkomst).toBe("week");
-    expect(opbouw[2]?.poortHerkomst).toBe("blok");
+    expect(opbouw[2]?.poortHerkomst).toBe("week");
     // En het oordeel staat: exact volgens plan gereden is geleverd.
     for (const w of opbouw) expect(w.geleverdOk).toBe(true);
   });
@@ -372,6 +392,144 @@ describe("punt 14 fase 1c — zoneRegels", () => {
       const drempel = w.zoneRegels.find((x) => x.zone === "drempel");
       expect(drempel?.norm).toBe(w.gevraagdDrempel);
       expect(drempel?.geleverd).toBe(w.geleverdDrempel);
+    }
+  });
+});
+
+// ── FASE 1d — DE DELOADWEEK IS GEEN BEWIJS, DUN BEWIJS IS ZWIJGEN ────────────
+// GEMETEN op prod: het blok 2026-06-29 t/m 2026-07-20 droeg alleen het plan van de DELOADWEEK,
+// poortset {tempo}. De blokpoort werd daarmee {tempo}, en met tempo 58, 68 en 67 tegen norm 24 las
+// elke week als geleverd — terwijl drempel op 37, 21 en 35 tegen 47 stond. De poort poortte precies
+// de zone met het OVERSCHOT en dempte die met het TEKORT.
+describe("punt 14 fase 1d — waar het bewijs vandaan mag komen", () => {
+  /** Het prod-geval: geen enkele opbouwweek met plan, alleen de deloadweek, en die schrijft
+   * uitsluitend tempo voor. De ritten hebben tempo in overvloed en drempel te kort. */
+  function prodGeval() {
+    const basis = blokMetPlan({ tempo: 40, drempel: -35 });
+    const deloadTempo = [
+      {
+        datum: verschuif_(START, 22),
+        blokken: [{ minuten: 40, zone: "tempo", pctLo: 80, pctHi: 88 }],
+      },
+    ];
+    return { weekplans: deloadTempo, activities: basis.activities };
+  }
+
+  it("(K) alleen de deloadweek draagt een plan → de terugblik ZWIJGT", () => {
+    const g = prodGeval();
+    // DE KERN-ASSERTIE STAAT VOORAAN, zodat de faalboodschap in de rood-toets het OORDEEL draagt
+    // en niet een opzet-detail. De rood-kant is dan te METEN in plaats van aan te nemen.
+    const rev = review(g);
+    const uitslag =
+      rev == null
+        ? "zwijgt"
+        : `spreekt: geleverd=${rev.uitvoering.geleverd}, poort=${JSON.stringify(
+            rev.weeks[0]?.zonesVoorgeschreven,
+          )}, weken op norm=${rev.weeks
+            .filter((w) => w.telt)
+            .map((w) => w.geleverdOk)
+            .join(",")}`;
+    expect(uitslag).toBe("zwijgt");
+
+    const r = referent(g);
+    if (!r) throw new Error("referent onverwacht null");
+
+    // De opzet klopt: tempo ruim boven norm, drempel eronder. Zonder deze twee zou groen ook
+    // kunnen komen doordat er niets te poorten viel.
+    const w1 = r.weeks[0];
+    if (!w1) throw new Error("geen weken");
+    expect(w1.geleverdTempo).toBeGreaterThan(w1.gevraagdTempo);
+    expect(w1.geleverdDrempel).toBeLessThan(w1.gevraagdDrempel);
+
+    // De deloadweek levert geen bewijs, dus de blokpoort is leeg.
+    for (const w of r.weeks.filter((w) => w.blokWeek <= 3)) {
+      expect(w.poortHerkomst).toBe("geen");
+      expect(w.telt).toBe(false);
+      expect(w.geleverdOk).toBeNull();
+    }
+  });
+
+  it("(L) twee opbouwweken met plan dragen het blok, de derde erft, en het oordeel VALT", () => {
+    const basis = blokMetPlan({ drempel: -35 });
+    const r = referent({
+      weekplans: alleenWeken_(basis.weekplans, [0, 1]),
+      activities: basis.activities,
+    });
+    if (!r) throw new Error("referent onverwacht null");
+    const opbouw = r.weeks.filter((w) => w.blokWeek <= 3);
+    expect(opbouw[0]?.poortHerkomst).toBe("week");
+    expect(opbouw[1]?.poortHerkomst).toBe("week");
+    expect(opbouw[2]?.poortHerkomst).toBe("blok");
+    for (const w of opbouw) expect(w.telt).toBe(true);
+    // Drempel staat in de poort en komt tekort, dus de weken vallen.
+    for (const w of opbouw) {
+      expect(w.zonesVoorgeschreven).toContain("drempel");
+      expect(w.geleverdOk).toBe(false);
+    }
+  });
+
+  it("(M) ÉÉN opbouwweek met plan is te dun bewijs → zwijgen", () => {
+    const basis = blokMetPlan();
+    const r = referent({
+      weekplans: alleenWeken_(basis.weekplans, [1]),
+      activities: basis.activities,
+    });
+    if (!r) throw new Error("referent onverwacht null");
+    const opbouw = r.weeks.filter((w) => w.blokWeek <= 3);
+    // De week met een EIGEN plan houdt zijn eigen poort — die regel blijft ongewijzigd.
+    expect(opbouw[1]?.poortHerkomst).toBe("week");
+    expect(opbouw[1]?.telt).toBe(true);
+    // De twee zonder eigen plan vinden geen blokpoort meer: één opbouwweek is te dun.
+    for (const w of [opbouw[0], opbouw[2]]) {
+      expect(w?.poortHerkomst).toBe("geen");
+      expect(w?.telt).toBe(false);
+      expect(w?.geleverdOk).toBeNull();
+    }
+    // Eén beoordeelbare week haalt BLOK_MIN_BEOORDEELBARE_WEKEN niet, dus de kaart zwijgt.
+    expect(
+      review({
+        weekplans: alleenWeken_(basis.weekplans, [1]),
+        activities: basis.activities,
+      }),
+    ).toBeNull();
+  });
+});
+
+// ── FASE 1d — DE DELOADWEEK ISOLEREN ─────────────────────────────────────────
+// K meet de deload-term NIET: daar is er maar één bewaarde week, dus de minimum-bewijslast
+// blokkeert de poort al en de deload-term is gemaskeerd. Deze test zet de bewijslast buitenspel
+// (TWEE opbouwweken met plan) en laat alleen de deloadweek verschillen. Zonder hem zou "de
+// deloadweek levert geen bewijs" nergens rood worden.
+describe("punt 14 fase 1d — de deloadweek, geïsoleerd", () => {
+  it("(N) een tempo-label uit de deloadweek mag het oordeel NIET omkeren", () => {
+    const basis = blokMetPlan({ tempo: -40 });
+    // Twee opbouwweken schrijven UITSLUITEND drempel voor; de deloadweek uitsluitend tempo.
+    const drempelDag = (i: number) => ({
+      datum: verschuif_(START, i * 7 + 1),
+      blokken: [{ minuten: 45, zone: "drempel", pctLo: 92, pctHi: 100 }],
+    });
+    const deloadTempo = {
+      datum: verschuif_(START, 22),
+      blokken: [{ minuten: 40, zone: "tempo", pctLo: 80, pctHi: 88 }],
+    };
+    const r = referent({
+      weekplans: [drempelDag(0), drempelDag(1), deloadTempo],
+      activities: basis.activities,
+    });
+    if (!r) throw new Error("referent onverwacht null");
+    const opbouw = r.weeks.filter((w) => w.blokWeek <= 3);
+
+    // De opzet klopt: tempo ONDER norm, drempel erboven. Telde de deloadweek als bewijs, dan trok
+    // hij tempo de poort in en zou elke week vallen op een zone die geen opbouwweek voorschreef.
+    const w1 = opbouw[0];
+    if (!w1) throw new Error("geen weken");
+    expect(w1.geleverdTempo).toBeLessThan(w1.gevraagdTempo);
+    expect(w1.geleverdDrempel).toBeGreaterThanOrEqual(w1.gevraagdDrempel);
+
+    for (const w of opbouw) {
+      expect(w.zonesVoorgeschreven).toEqual(["drempel"]);
+      expect(w.telt).toBe(true);
+      expect(w.geleverdOk).toBe(true);
     }
   });
 });

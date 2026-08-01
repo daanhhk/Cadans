@@ -59,6 +59,12 @@ const VIEWPORT_W = 390;
 const VIEWPORT_H = 1800;
 const HEIGHT_CAP = 4000;
 
+/** BLOK_MIN_BEOORDEELBARE_WEKEN uit apps/web/src/lib/blok.ts — het minimum aantal opbouwweken
+ * met een bewaard plan waarop de blok-terugblik nog een uitspraak doet. Hier bewust een LOSSE
+ * kopie: de harness is een los script zonder bundler, en de waarde hoort mee te bewegen als de
+ * lib hem verhoogt. Loopt hij uiteen, dan zwijgt de kaart op de shots en zie je dat meteen. */
+const BEWIJSWEKEN = 2;
+
 const DAGEN = ["ma", "di", "wo", "do", "vr", "za", "zo"];
 const DAY_RE = /^(ma|di|wo|do|vr|za|zo)\s*\d{1,2}$/i;
 
@@ -420,6 +426,34 @@ async function sweep(page, scenario, monday, results, seededSettings) {
     await apiPut(`/api/planner/${wkMonday}`, {
       days: plannerDays(wkMonday, scenario.spec),
     });
+
+    // ROADMAP punt 14 fase 1d — VOLLEDIGE WEEKPLAN-RIJEN VOOR HET BEOORDEELDE BLOK.
+    //
+    // De blok-terugblik poort op de nominale zone-labels uit de BEWAARDE weekplan-rijen, en die
+    // ontstonden hier alleen als bijproduct: de app schrijft de BEKEKEN week weg, dus een scenario
+    // dat één keer op zijn eigen maandag laadt liet precies één rij achter — en dan nog van een
+    // week BUITEN het beoordeelde blok. Elke uitspraak over de poortset op deze shots was daarmee
+    // artefact. Sinds fase 1d vraagt de poort minstens BLOK_MIN_BEOORDEELBARE_WEKEN OPBOUWWEKEN
+    // met een bewaard plan, anders zwijgt de kaart.
+    //
+    // GEEN GEFABRICEERDE ENTRIES. Deze voorloop zet de planner voor die weken en laadt /schema met
+    // de klok op elke maandag, zodat de APP ZELF de rij wegschrijft langs zijn eigen route
+    // (persistWeekplan → PUT /api/weekplan/:monday). Een met de hand geschreven rij zou een vorm
+    // kunnen dragen die de producent nooit levert — dan meet je je eigen fixture.
+    //
+    // WELK BLOK. blokReviewVenster geeft in blokweek 1 het VORIGE blok (start -28 dagen) en in
+    // blokweek 4 het LOPENDE (start -21). De deloadweek slaan we over: die levert sinds 1d geen
+    // bewijs meer.
+    const blokStart = plusDays(wkMonday, blokWeek === 4 ? -21 : -28);
+    for (let i = 0; i < BEWIJSWEKEN; i++) {
+      const m = plusDays(blokStart, i * 7);
+      await apiPut(`/api/planner/${m}`, {
+        days: plannerDays(m, scenario.spec),
+      });
+      await page.clock.setFixedTime(new Date(`${m}T08:00:00`));
+      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
+      await settle(page);
+    }
 
     // DE KLOK PER SCENARIO. Stond dit één keer in main() vóór de lus, dan lag ELK scenario
     // volledig vooruit en was een VERSTREKEN dag per constructie onbereikbaar. Offset 0 (of

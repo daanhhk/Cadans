@@ -373,18 +373,34 @@ export function buildBlokReferent(input: {
   // Doel zonder mesocyclus → geen kalender-deload, dus ook blokweek 4 draagt de volle norm.
   const heeftDeload = profileForDoel_(input.doel ?? "")?.mesoCyclus !== false;
 
-  // FASE 1b — DE BLOKPOORT: de VERENIGING van de labels over alle weken van dit blok die een
-  // bewaard plan dragen, DELOADWEEK INBEGREPEN. Dat is geen versoepeling maar bewijs uit dezelfde
-  // bron: binnen één blok liggen doel en fase vast, en de poortset is gemeten stabiel over de
-  // zeven weekvormen. Nodig omdat de bewaarde weekplannen er meestal NIET zijn — op prod 2 van de
-  // laatste 12 maandagen, lokaal 1 van de 4 opbouwweken. Zonder deze terugval zwijgt de terugblik
-  // volledig, en dat is precies wat de shots van fase 1 lieten zien.
+  // FASE 1b/1d — DE BLOKPOORT: de VERENIGING van de labels over de bewaarde weekplannen van de
+  // OPBOUWWEKEN. Nodig omdat de rijen er lang niet altijd staan; zonder terugval zwijgt de
+  // terugblik volledig, en dat is precies wat de shots van fase 1 lieten zien. Binnen één blok
+  // liggen doel en fase vast, dus een opbouwweek is bewijs uit dezelfde bron.
+  //
+  // FASE 1d — DE DELOADWEEK LEVERT GEEN BEWIJS. Zijn sessies zijn korter en heten nominaal vaker
+  // tempo, dus als ENIGE bron vertekent hij de poort. GEMETEN op prod: het blok 2026-06-29 t/m
+  // 2026-07-20 droeg alleen het plan van de deloadweek, poortset {tempo}. De blokpoort werd
+  // daarmee {tempo}, en met tempo 58, 68 en 67 tegen norm 24 las elke week als geleverd — terwijl
+  // drempel op 37, 21 en 35 tegen 47 stond. De poort poortte dus precies de zone met het
+  // OVERSCHOT en dempte de zone met het TEKORT, en het blok zou een dosisverhoging hebben
+  // uitgelokt. Een poort kan een oordeel OMKEREN, niet alleen afzwakken.
+  //
+  // FASE 1d — TE DUN BEWIJS IS ZWIJGEN. Dragen minder dan BLOK_MIN_BEOORDEELBARE_WEKEN
+  // opbouwweken een bewaard plan, dan blijft de blokpoort LEEG. Dat is dezelfde minimum-bewijslast
+  // die het oordeel zelf al draagt (zie `beoordeeldeWeken` hieronder), nu ook op de poort: poort
+  // en oordeel krijgen zo dezelfde span. Geen nieuwe constante.
   const blokPoort = (() => {
     const gezien = new Set<Zone5Key>();
-    for (let i = 0; i < BLOK_WEKEN; i++) {
+    let metPlan = 0;
+    for (let i = 0; i < BLOK_OPBOUWWEKEN; i++) {
       const m = shiftIso_(input.startMonday, i * 7);
-      for (const z of poortsetVoorWeek_(input.weekplans, m)) gezien.add(z);
+      const poort = poortsetVoorWeek_(input.weekplans, m);
+      if (poort.length === 0) continue;
+      metPlan++;
+      for (const z of poort) gezien.add(z);
     }
+    if (metPlan < BLOK_MIN_BEOORDEELBARE_WEKEN) return [];
     return WERKZONES.filter((z) => gezien.has(z));
   })();
 
