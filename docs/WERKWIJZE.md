@@ -249,6 +249,22 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   ingetrokken". Aanleiding: test F codeerde "één bewaarde week draagt het hele blok", precies wat
   fase 1d afschaft en wat test M sindsdien verbiedt; F is herijkt op twee opbouwweken en behield
   zijn eigenlijke doel — een week zonder eigen plan erft de blokpoort.
+- **Een gewicht dat SORTEERT is geen gewicht dat VERDEELT.** Lees af welk mechanisme een getal
+  consumeert vóór je zijn bedoeling uit het getal afleidt. Een score die alleen een rangorde bepaalt
+  draagt geen quotum, hoe proportioneel hij er ook uitziet. Aanleiding: `intentGewichten.vo2` 0,20
+  op `PROFILES.onderhoud` las als "ruwweg een prikkel per twee weken", terwijl `goalEffWeights_`
+  niet normaliseert en `goalPickIntent_` uitsluitend sorteert — in Base scoort die term 0,10 tegen
+  sweetspot 0,600 en drempel 0,550, en er bestaat geen enkele plek die gewichten als proportie
+  uitdeelt.
+- **Toets een "per constructie onbereikbaar" op de ruimte waarin de app WERKT, niet op de as waarop
+  je hem vond.** Een uitputtende sweep is alleen uitputtend over zijn eigen assen: houdt hij per cel
+  één dagduur en één dekkingstoestand vast, dan kan hij het geval waarin de rangorde BINNEN de week
+  verschuift niet bevatten, en leest zijn nul als een structurele onmogelijkheid. Zelfde familie als
+  "enumereer met de functie die de app zelf aanroept", nu op de vorm van de MEETRUIMTE. Aanleiding:
+  M1 van punt 14 mat 0 van 10800 combinaties met drie kwaliteitssoorten; via `buildWeekProposal` met
+  ongelijke dagduren binnen één week levert Onderhoud in Peak wél drempel, sweetspot en vo2 — het
+  haalbaarheidsfilter weert vo2 van de lange dag en de coverage-boost wisselt van kant zodra high
+  gedekt is.
 
 ## Vorm van een CC-prompt
 

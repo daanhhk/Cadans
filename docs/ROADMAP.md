@@ -281,7 +281,7 @@ punten staat onder *Gesloten — vindplaats*.
     gebruiker daarna zonder richting achter, en dat is hetzelfde gat — het herstel en de nieuwe
     doelvraag horen in één kaart en worden samen opgelost. Kwam binnen tijdens punt 9 fase B,
     waar de bevestigingspoort aanvankelijk óók over `Recovery` lag. Raakt `DOELEN-SPEC`.
-14. **De anaeroob-term van de per-zone-norm** — deels (FASE 1 AF) · ENGINE voor fase 2. De norm vraagt
+14. **De anaeroob-term van de per-zone-norm** — af · CLIENT. De norm vraagt
     anaerobe minuten die het plan nauwelijks of niet programmeert, dus de blok-terugblik kan
     "niet geleverd" zeggen over een blok dat EXACT volgens plan is gereden. GEMETEN over 21 cellen
     (7 weekvormen x 3 doelen), drie opbouwweken met recency-rotatie: het plan haalt nooit minder
@@ -300,17 +300,42 @@ punten staat onder *Gesloten — vindplaats*.
     en zijn vorm, `blokDosisNorm` is niet geraakt. GEMETEN dat herwegen niet helpt: vier
     norm-vormen — bibliotheek-breed, doel-gewogen, doel-plus-fase-gewogen, en exact de twee
     geroteerde intents — leveren alle vier 1 van de 35 cellen op norm. Mét de poort leest een
-    exact volgens plan gereden week als geleverd in 22 van de 35. FASE 2 BLIJFT OPEN en is ENGINE:
-    de vo2-slotverdeling. `goalWorkout_` ontwijkt alleen de VORIGE intent, dus de rotatie loopt
-    over de bovenste twee en de derde kwaliteitssoort komt per constructie nooit aan de beurt —
-    uitputtend getoetst over 10800 combinaties, 0 keer drie soorten. Het Onderhoud-profiel
-    declareert vo2 0,20 en de rotatie gooit dat weg. Eerst een wat-als-meting, dan pas bouwen.
+    exact volgens plan gereden week als geleverd in 22 van de 35.
+    FASE 2 IS GESLOTEN ZONDER BOUW, verdict `docs/PUNT14-FASE2-VERDICT.md`. De wat-als — de rotatie
+    ontwijkt de laatste TWEE intents, zodat de derde soort gegarandeerd aan de beurt komt — maakt de
+    week op ELKE gemeten weekvorm zwakker: bij Onderhoud 87 naar 71, 102 naar 80, 102 naar 71, 87
+    naar 71, 80 naar 65, 87 naar 71 en 90 naar 80 kwaliteitsminuten, met de kwaliteitsdagen
+    onveranderd op 3. En hij KEERT HET OORDEEL OM: het plan gaat een anaeroob-label dragen in 7 van
+    de 7, dus anaeroob doet mee aan de poort van fase 1 en haalt zijn norm in 2 van de 7 — een exact
+    volgens plan gereden week leest van 7 van 7 geleverd naar 0 van 7. Dat is het defect van fase 1,
+    opnieuw binnengehaald langs de plan-kant. TWEE PREMISSEN UIT FASE 1 ZIJN GECORRIGEERD: de
+    gewichten SORTEREN en verdelen niet, dus "vo2 0,20 is een prikkel per twee weken" volgt nergens
+    uit het mechanisme; en de derde soort is niet per constructie onbereikbaar — bij Onderhoud in
+    Peak levert de week drempel, sweetspot en vo2, doordat de coverage-boost van kant wisselt zodra
+    high gedekt is. De vo2-declaratie van `PROFILES.onderhoud` blijft staan: in Peak scoort ze 0,35
+    en komt ze aantoonbaar aan de beurt. WAT ONGEMETEN BLIJFT is de vorm die TOEVOEGT in plaats van
+    ruilt; die staat als punt 16.
 15. **De dosis van de twee klim-doelen** — open · ENGINE. Ook mét de zone-poort van punt 14 zakken
     ze: Korte beklimmingen levert 39 werkminuten en Lange beklimmingen 46, tegen een norm van 84.
     Dat is een DOSIS-vraag en geen verdelings-vraag — de zones kloppen, er is te weinig van. Kwam
     binnen bij de meting van punt 14 (`docs/PUNT14-BOUWDOC.md` §3) en is daar bewust buiten scope
     gehouden. HARDE DATUM: korte beklimmingen wordt half februari 2027 het actieve doel, dus dit
     moet daarvóór af. Raakt `DOELEN-SPEC`.
+16. **De goedkope bereik-prikkel** — open · ENGINE plus norm. Een prikkel boven de drempel die
+    TOEVOEGT in plaats van RUILT: sprints of hard starts aan het eind van een Z2-rit, of een korte
+    set achter sweet-spot-werk. Kwam binnen bij punt 14 fase 2, waar de RUIL-vorm meetbaar is
+    afgewezen (7 van 7 weekvormen zwakker, blok-oordeel van 7 van 7 naar 0 van 7) en de TOEVOEG-vorm
+    expliciet ongemeten bleef. HET SJABLOON BESTAAT AL EN IS ONBEREIKBAAR: `combo_ss_sprints`
+    (`planner.ts:2583`) heeft een volledige bouwer, een zonemap en een downgrade-regel, en NUL
+    producenten; idem `combo_z2_vo2` en `combo_all_three`. DRIE VRAGEN, in deze volgorde. (i) DE
+    ROUTE — niet via de archetype-bibliotheek, want alle 35 archetypes worden op een KWALITEITSSLOT
+    getrokken en elke toevoeging daar is een ruil; de duurdag is de plek, en bij Onderhoud is die
+    dicht via `langeRitPerWeek: 0`, `effortsInLangeRit: false` en de `macroFase !== "Base"`-eis in de
+    weekend-tak. (ii) DE NORM — een anaeroob label opent de poort van punt 14 fase 1 en daarmee een
+    norm van 10 minuten, terwijl 6x15s 1,5 minuut levert; zonder aanpassing leest een exact volgens
+    plan gereden week weer als niet geleverd. (iii) DE PLAATS — winter-Onderhoud of pas de opmaat
+    naar korte beklimmingen, waar dezelfde prikkel hoe dan ook nodig is. GAAT NA PUNT 15: die draagt
+    de harde datum en raakt dezelfde dosis-vraag. Raakt `DOELEN-SPEC`.
 
 ## De tijdslijn
 
