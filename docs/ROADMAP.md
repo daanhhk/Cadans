@@ -281,7 +281,7 @@ punten staat onder *Gesloten — vindplaats*.
     gebruiker daarna zonder richting achter, en dat is hetzelfde gat — het herstel en de nieuwe
     doelvraag horen in één kaart en worden samen opgelost. Kwam binnen tijdens punt 9 fase B,
     waar de bevestigingspoort aanvankelijk óók over `Recovery` lag. Raakt `DOELEN-SPEC`.
-14. **De anaeroob-term van de per-zone-norm** — deels (FASE 1 af) · CLIENT plus ENGINE voor fase 2. De norm vraagt
+14. **De anaeroob-term van de per-zone-norm** — deels (FASE 1 AF) · ENGINE voor fase 2. De norm vraagt
     anaerobe minuten die het plan nauwelijks of niet programmeert, dus de blok-terugblik kan
     "niet geleverd" zeggen over een blok dat EXACT volgens plan is gereden. GEMETEN over 21 cellen
     (7 weekvormen x 3 doelen), drie opbouwweken met recency-rotatie: het plan haalt nooit minder

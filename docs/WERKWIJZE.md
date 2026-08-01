@@ -234,6 +234,21 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   las (tempo 58, 68 en 67 tegen norm 24, drempel 37, 21 en 35 tegen 47) en de app een
   dosisverhoging voorstelde. Volgt hieruit: leg naast elke poort de minimum-bewijslast die het
   OORDEEL al draagt, zodat poort en oordeel dezelfde span hebben.
+- **Een term kan GEMASKEERD zijn door een andere term in plaats van ongedekt.** Wordt een rood-toets
+  nergens rood, stel dan eerst vast of een TWEEDE voorwaarde het geval al afvangt vóór je
+  concludeert dat de term niet gedekt is. Zet die voorwaarde opzij en meet de term LOS. Zelfde
+  familie als "landt een fix op N plekken, dan moet de rood-test per plek rood zijn", nu tussen twee
+  termen binnen dezelfde functie. Aanleiding: bij punt 14 fase 1d bleef de deload-term rood-loos
+  omdat de bewijslast-drempel bij één bewaarde week de poort al blokkeert; met twee opbouwweken viel
+  hij direct, op `['tempo','drempel']` tegen `['drempel']`.
+- **Een test die de OUDE regel vastpint moet mee wanneer die regel valt.** Dat is geen verzwakking
+  maar de herijking die erbij hoort — de regel is vervangen, dus de test die hem vastlegde is
+  vervallen. Onderscheid hem scherp van een assertie die een MECHANISME toetst: die wordt NOOIT
+  bijgesteld om groen te worden, en een test aanpassen omdat hij faalt is en blijft verboden. De
+  vraag is dus niet "faalt hij" maar "pint hij een regel vast die we net expliciet hebben
+  ingetrokken". Aanleiding: test F codeerde "één bewaarde week draagt het hele blok", precies wat
+  fase 1d afschaft en wat test M sindsdien verbiedt; F is herijkt op twee opbouwweken en behield
+  zijn eigenlijke doel — een week zonder eigen plan erft de blokpoort.
 
 ## Vorm van een CC-prompt
 
