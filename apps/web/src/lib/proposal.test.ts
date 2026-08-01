@@ -500,6 +500,79 @@ describe("buildWeekProposal", () => {
     expect(rFtp.macroFase).toBe("Base");
   });
 
+  // ROADMAP punt 9 fase B, NALEVERING — HERSTEL VALT BUITEN DE BEVESTIGINGSPOORT.
+  // A-race op DONDERDAG 2027-04-15, peildag VRIJDAG 2027-04-16: zelfde week, al gereden, dus
+  // `eventFase_` levert macroFase "Recovery" met wekenTot 0.
+  describe("herstel na een gereden A-race", () => {
+    const RACE_GEREDEN: EventItem[] = [
+      {
+        datum: "2027-04-15",
+        naam: "AGR",
+        type: "race",
+        prioriteit: "A",
+        afstandKm: 240,
+        hoogtemeters: 3000,
+        klimType: "kort",
+        notitie: null,
+      },
+    ];
+    const weekVan = (start: string, dagen: number) => {
+      const [y, m, d] = start.split("-").map(Number);
+      return [0, 1, 2, 3, 4, 5, 6].map((n) => {
+        const dt = new Date(y ?? 2027, (m ?? 1) - 1, (d ?? 1) + n);
+        return {
+          datum: `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`,
+          train: n !== 2 && n !== 4,
+          dag: null,
+          minuten: n === 5 ? 180 : dagen,
+          dagtype: n === 5 || n === 6 ? "weekend" : "vrij",
+          toelichting: null,
+          voorgesteldType: null,
+          gedaan: false,
+        };
+      }) as unknown as PlannerDay[];
+    };
+
+    function run(todayISO: string, weekStart: string, bevestigd?: boolean) {
+      return buildWeekProposal({
+        settings: settings(),
+        plannerDays: weekVan(weekStart, 60),
+        events: RACE_GEREDEN,
+        activities: [],
+        weekplans: [],
+        wellness: WELL_OK,
+        rpe: [],
+        todayISO,
+        ...(bevestigd === undefined ? {} : { overnameBevestigd: bevestigd }),
+      });
+    }
+
+    // (a) GEMETEN VÓÓR DE FIX: macroFase "Build" met toonbare fase "Recovery" — een opbouwweek
+    //     onder een herstel-kop, twee dagen na de race. Een afgewezen overname nam het herstel af.
+    it("een AFGEWEZEN overname neemt het herstel NIET af", () => {
+      expect(run("2027-04-16", "2027-04-12", false).macroFase).toBe("Recovery");
+      expect(run("2027-04-16", "2027-04-12").macroFase).toBe("Recovery");
+    });
+
+    // (b) BALK EN PLAN LOPEN GELIJK. Dit is de assertie die het defect zichtbaar zou hebben
+    //     gemaakt: de toonbare fase mag niet iets anders beweren dan waarop het plan gebouwd is.
+    it("balk en plan noemen dezelfde fase", () => {
+      const r = run("2027-04-16", "2027-04-12", false);
+      expect(r.fase).toBe(r.macroFase);
+      expect(r.fase).toBe("Recovery");
+    });
+
+    // (d) HET GEPARKEERDE FASE-B2-GAT, BEWUST ONGEMOEID. De maandag ná de raceweek levert weer de
+    //     DOEL-fase en geen herstelweek: `eventFase_`'s Recovery-tak kijkt alleen binnen de
+    //     huidige week. Dat is geen bug van deze nalevering maar het al geparkeerde punt uit
+    //     docs/EVENT-OVERNAME-BOUWDOC.md §10. Deze assertie legt vast dát het open staat.
+    it("de maandag NA de raceweek geeft de doel-fase — fase B2, bewust open", () => {
+      const r = run("2027-04-19", "2027-04-19", false);
+      expect(r.macroFase).not.toBe("Recovery");
+      expect(r.fase).toBe(r.macroFase);
+    });
+  });
+
   // ── LAAG 1b — cross-week recency (ONgegate: benign, kiest tussen even geldige
   //    sleutelsessies). De week moet in de TOEKOMST liggen, anders plaatst de allocator
   //    niets (allocToday, planner.ts:537) en meet je de keyIntensity-fallback.
@@ -791,6 +864,9 @@ describe("buildWeekProposal", () => {
     ).toBe(false);
   });
 
+  // LET OP, dit geval dekt ook de NALEVERING op punt 9 fase B: er wordt hier GEEN
+  // `overnameBevestigd` meegegeven, dus dit is het AFGEWEZEN geval. De taperdagen dragen de taper
+  // dus ook zonder bevestiging — de per-dag-overlay hangt aan `taperCtx`, niet aan de poort.
   it("taper: nabij A-event → lichtere sessies vs controle zonder nabij event", () => {
     const taper = buildWeekProposal({
       settings: settings(),

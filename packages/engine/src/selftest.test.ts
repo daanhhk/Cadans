@@ -4876,17 +4876,27 @@ describe("engine selftest", () => {
       "Recovery",
       effectiveMacroFase_("Recovery", "Base", { doel: "Onderhoud" }, 0, true),
     );
-    // GEVONDEN TIJDENS DE BOUW, EN BEWUST ZO GELATEN. Zonder bevestiging levert dezelfde invoer
-    // de DOEL-fase, dus de herstelweek ná een gereden A-race komt er niet als Daan de overname
-    // heeft afgewezen. Dat is een GAT, geen ontwerp: herstel na een race die je écht gereden hebt
-    // is geen periodiseringskeuze. Het valt samen met het al geparkeerde punt "na het event volgt
-    // geen herstelweek" (bouwdoc §10, fase B2) en wordt daar opgelost — niet hier, want dat zou
-    // de bevestigings-voorwaarde uit §7.1 weer half maken. Deze regel legt de huidige toestand
-    // vast zodat B2 hem ziet, en beweert NIET dat hij goed is.
+    // HERSTEL VALT BUITEN DE POORT — nagelevering op fase B. Bij de bouw pinde hier een assertie
+    // dat een afgewezen overname óók het herstel afnam; dat was een GAT en is nu gerepareerd.
+    // GEMETEN vóór de fix, met een A-race twee dagen eerder in dezelfde week en een afgewezen
+    // overname: het plan werd op "Build" gebouwd terwijl het scherm "Recovery" toonde.
+    // Recovery is geen keuze maar een constatering over een rit die al gereden is.
     assert_(
-      "effFase Recovery zonder bevestiging → doel-fase (GAT, fase B2)",
-      "Base",
+      "effFase Recovery ZONDER bevestiging → nog steeds Recovery",
+      "Recovery",
       effectiveMacroFase_("Recovery", "Base", { doel: "Onderhoud" }, 0, false),
+    );
+    assert_(
+      "effFase Recovery met vijfde argument weggelaten → nog steeds Recovery",
+      "Recovery",
+      effectiveMacroFase_("Recovery", "Base", { doel: "FTP" }, 0),
+    );
+    // En de poort blijft dicht voor de rest van de AS: Build op dezelfde afstand vraagt wél een
+    // bevestiging. Zonder dat contrast zou de tak hierboven ook door een kapotte poort slagen.
+    assert_(
+      "effFase Build zonder bevestiging → doel-fase, ook op wekenTot 0",
+      "Base",
+      effectiveMacroFase_("Build", "Base", { doel: "FTP" }, 0, false),
     );
     // LEGACY-DOEL via normalizeDoel_. LET OP — DEZE TWEE REGELS ZIJN GEEN BEWIJS VOOR DE
     // NORMALISATIE, en dat is met opzet zo opgeschreven. GEMETEN: haal `normalizeDoel_` uit
@@ -6022,8 +6032,9 @@ describe("engine selftest", () => {
   // ROADMAP punt 9 FASE B (de overname is een voorstel): +12. De bevestigings-vlag expliciet op
   // de grens-asserties, de niet-bevestigde tak (false, weggelaten, null), het vastgelegde
   // herstel-gat voor B2, en de vijfweg-lus die de keten zonder bevestiging doel-gestuurd houdt.
-  // 1435→1447.
-  it("exactly 1447 assertions", () => {
-    expect(assertCount).toBe(1447);
+  // 1435→1447. NALEVERING: +2 voor de Recovery-tak buiten de poort (afgewezen en weggelaten) en
+  // de tegenproef dat Build op dezelfde afstand wél een bevestiging vraagt. 1447→1449.
+  it("exactly 1449 assertions", () => {
+    expect(assertCount).toBe(1449);
   });
 });

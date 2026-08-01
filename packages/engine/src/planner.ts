@@ -127,7 +127,17 @@ export function effectiveMacroFase_(
   // argument valt dan naar de veilige kant, namelijk doel-gestuurd.
   overnameBevestigd?: any,
 ): any {
-  // 1. Het event wint alleen als het binnen de grens ligt ÉN de overname bevestigd is.
+  // 0. HERSTEL VALT BUITEN DE POORT. De bevestiging gaat over de periodiserings-AS — mikken we
+  //    op het event of maken we het blok af — en die as is Base/Build/Peak. "Recovery" hoort daar
+  //    niet in: dat is geen keuze maar een CONSTATERING over een A-race die al gereden is,
+  //    dezelfde categorie als de taper-overlay, en die hangt ook niet aan een bevestiging. Een
+  //    afgewezen overname mag geen herstel afnemen.
+  //
+  //    GEMETEN VÓÓR DE REPARATIE, met een A-race eerder in dezelfde week en een afgewezen
+  //    overname: het plan werd op "Build" gebouwd terwijl het scherm "Recovery" toonde — een
+  //    opbouwweek onder een herstel-kop, twee dagen na de race.
+  if (eventMacroFase === "Recovery") return "Recovery";
+  // 1. Voor de rest van de as wint het event alleen binnen de grens ÉN na bevestiging.
   if (
     overnameBevestigd === true &&
     eventMacroFase != null &&
