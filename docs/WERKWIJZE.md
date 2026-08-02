@@ -366,6 +366,13 @@ Geen commit of merge op rood: `pnpm install --frozen-lockfile`, `pnpm lint`, `pn
 
 Prod-acties zijn approval-gated en gaan nooit stilzwijgend: `wrangler deploy` **vanuit `workers/api`** (niet `pnpm deploy`), met **`pnpm build` ervoor** omdat de assets-binding naar `apps/web/dist` wijst. Remote-D1-mutaties idem, in strikte volgorde: migratie eerst, dan deploy. Nooit prod-D1 met de hand bewerken.
 
+DEPLOY-VOLGORDE: BUILD VÓÓR DEPLOY, NIET ERNA. De Worker `cadans-api` draagt een
+assets-binding op `../../apps/web/dist`. `wrangler deploy` uploadt wat daar op dat moment
+staat, dus een deploy zonder verse `pnpm build` publiceert de VORIGE front-end-bundel bij een
+nieuwe Worker. De volledige gate loopt daarom vóór de deploy, en `wrangler` draait vanuit
+`workers/api` (de gepinde versie staat alleen daar; vanaf de repo-root pakt hij een nieuwere).
+`apps/web` heeft GEEN eigen publicatiestap — de Worker-deploy neemt de dist mee.
+
 Remote-D1 **lezen** is een ander verhaal dan bewerken: een read-only `SELECT` via `wrangler d1 execute --remote` is approval-gated maar toegestaan, en vaak de zuiverste meetbron — het is exact wat de app ziet, zonder tussenlaag of aanname. De drempel-ijking van de doortrain-kaart leunde op 376 echte CTL-rijen die zo zijn opgehaald. Een MUTATIE op prod-D1 blijft verboden; het onderscheid is lezen versus schrijven, niet de tool.
 
 LET OP bij een meting: `wrangler d1 execute --file` verwerkt het bestand als IMPORT en geeft alleen een SAMENVATTING terug (aantal queries, gelezen en geschreven rijen), GEEN resultaatrijen — met én zonder `--json`. Voor een meting draai je elk statement los met `--command --json`. Gevonden op 27-07-2026 bij de ijk-meting; CC meldde het als afwijking.
@@ -494,3 +501,4 @@ Volg de FOCUS uit het bovenste STAND-blok.
 - 2026-08-02 — twee lessen toegevoegd in *Recon en bewijslast*: een acceptatie-getal hoort bij het ontwerp waarop het gemeten is, en een eis dat een suite onaangeraakt blijft toets je tegen de grootheid die je verandert.
 - 2026-08-02 — besluit toegevoegd in *Prod en veiligheid*: een groene, gate-klare bouw gaat naar prod zodra hij kan, en "de gebruiker merkt er niets van" is geen grond om te wachten. Plus een les in *Recon en bewijslast*: een byte-vergelijking tegen prod draagt een klok.
 - 2026-08-02 — twee lessen toegevoegd in *Recon en bewijslast*: een uitspraak over wat de gebruiker merkt die op één cel gemeten is mag niet als algemene uitspraak landen (en een kanteling citeer je met beide richtingen), en het mechanisme dat een slot opent is niet het mechanisme dat het vult.
+- 2026-08-02 — blok toegevoegd in *Prod en veiligheid*: build vóór deploy, niet erna — de assets-binding uploadt wat er op dat moment in apps/web/dist staat.
