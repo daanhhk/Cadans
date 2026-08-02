@@ -715,13 +715,6 @@ export function Instellingen() {
                   style={{ ...fieldStyle, width: 160, colorScheme: "dark" }}
                 />
               </Row>
-              <Row label="Blok-duur" sub="weken" last>
-                <NumInput
-                  value={form.doelDuur}
-                  onChange={set("doelDuur")}
-                  unit="wk"
-                />
-              </Row>
             </Section>
 
             <Section title="Doelen & events">

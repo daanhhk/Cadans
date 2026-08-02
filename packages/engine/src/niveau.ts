@@ -12,7 +12,7 @@
  * per-month fallback, so the default returns 0 (behaviour-identical for the
  * suite). See the flag in the port report.
  */
-import { normalizeDoel_ } from "./phase";
+import { DOEL_BLOK_WEKEN, normalizeDoel_ } from "./phase";
 import { formatDate, stripTime_ } from "./utils";
 
 // ── Injectable seam for the untported getGewicht() (Settings.gs:315). ─────────
@@ -780,6 +780,16 @@ export function ftpBandFromProjection_(
   currentCtl: any,
   plateauCtl: any,
   gewicht?: any,
+  // NIVEAUKAART-RONDE — DE SLEUTELSESSIE-REGEL, aangeleverd door de client. Optioneel: ontbreekt
+  // hij of is hij leeg, dan blijft de literal hieronder staan en is deze functie byte-identiek.
+  //
+  // WAAROM DE COMPOSITIE CLIENT-ZIJDE LANDT EN DE VORM HIER BLIJFT. Het getal komt uit
+  // `blokDosisNorm`, en die woont in `apps/web/src/lib/blok.ts` waar `packages/engine` per
+  // constructie niet uit kan importeren — dezelfde grens die bij punt 15 fase 1 de asserties naar
+  // `apps/web` dwong. De hele array naar de client verhuizen zou hem over twee lagen splitsen;
+  // deze parameter houdt de VORM op één plek en laat de client uitsluitend aanleveren wat hij als
+  // enige kan weten. Zie docs/NIVEAUKAART-BOUWDOC.md §2.5.
+  sleutelRegel?: any,
 ): any {
   if (!currentFtp) return null;
   var dCtl = Math.max(
@@ -795,7 +805,9 @@ export function ftpBandFromProjection_(
     lowWkg: gewicht ? Math.round((lowW / gewicht) * 100) / 100 : null,
     highWkg: gewicht ? Math.round((highW / gewicht) * 100) / 100 : null,
     aannames: [
-      "2 sleutelsessies per week, consequent",
+      typeof sleutelRegel === "string" && sleutelRegel.trim()
+        ? sleutelRegel
+        : "2 sleutelsessies per week, consequent",
       "Regelmaat ≥ 90% — geen lange onderbrekingen",
       "Herstel & voeding op orde",
       "FTP-winst vlakt af richting je plafond",
@@ -818,13 +830,21 @@ export function ctlAtWeek_(currentCtl: any, plateauCtl: any, weeks: any): any {
   );
 }
 
-// Hele weken (ceil) van vandaag tot doelStart + doelDuur*7 dagen (= testdag). Clamp ≥ 0; null bij
+// Hele weken (ceil) van vandaag tot de TESTWEEK van het LOPENDE blok. Clamp ≥ 0; null bij
 // ontbrekende/ongeldige input. Kalender-datum-rekenkunde (DST-veilig).
-export function doelTestWeken_(
-  doelStartISO: any,
-  doelDuurWeeks: any,
-  todayISO: any,
-): any {
+//
+// NIVEAUKAART-RONDE — DE TELLER ANKERT OP HET LOPENDE BLOK, niet op één vaste datum. De oude vorm
+// rekende `doelStart` plus `doelDuur` maal 7 uit en herhaalde NOOIT, terwijl `computeMacroPhase`
+// sinds punt 9 cyclisch 1..DOEL_BLOK_WEKEN telt. `doelStart` wordt bovendien nergens automatisch
+// opgeschoven, dus die vaste datum veroudert per constructie. GEMETEN over 6570 cellen: 504 gelijk,
+// 504 exact één week te hoog (blok 1) en 5562 op 0 terwijl er wél een testweek komt. Voor Daans
+// `doelStart` 2026-06-29 gaf de functie vanaf 2026-09-21 voorgoed 0, en `isTest` bleef waar.
+//
+// DEZELFDE TELLING ALS `computeMacroPhase`: `Math.round` op het DAGverschil — de DST-correctie die
+// ook `phase.ts:149`, `planner.ts:307` en `niveau.ts` zelf dragen — dan `floor(diff / 7) + 1`, dan
+// het blok. De testweek is blokweek DOEL_BLOK_WEKEN van het blok waarin `today` valt.
+// Zie docs/NIVEAUKAART-BOUWDOC.md §2.2.
+export function doelTestWeken_(doelStartISO: any, todayISO: any): any {
   function parse(iso: any) {
     if (!iso || typeof iso !== "string") return null;
     var m = iso.split("-");
@@ -833,15 +853,21 @@ export function doelTestWeken_(
     return isNaN(d.getTime()) ? null : d;
   }
   var start = parse(doelStartISO),
-    today = parse(todayISO),
-    dur = Number(doelDuurWeeks);
-  if (!start || !today || !isFinite(dur) || dur <= 0) return null;
-  var test = new Date(
+    today = parse(todayISO);
+  if (!start || !today) return null;
+  var diffDays = Math.round((today.getTime() - start.getTime()) / 86400000);
+  var absWeek = Math.floor(diffDays / 7) + 1;
+  if (absWeek < 1) absWeek = 1;
+  // Het blok waarin `today` valt, 0-gebaseerd; de testweek is er de laatste week van.
+  var blokIdx = Math.floor((absWeek - 1) / DOEL_BLOK_WEKEN);
+  var testWeekAbs = blokIdx * DOEL_BLOK_WEKEN + DOEL_BLOK_WEKEN;
+  // De maandag van die testweek, in kalenderdagen vanaf `doelStart` — DST-veilig.
+  var testMaandag = new Date(
     start.getFullYear(),
     start.getMonth(),
-    start.getDate() + dur * 7,
+    start.getDate() + (testWeekAbs - 1) * 7,
   );
-  var days = Math.round((test.getTime() - today.getTime()) / 86400000);
+  var days = Math.round((testMaandag.getTime() - today.getTime()) / 86400000);
   return Math.max(0, Math.ceil(days / 7));
 }
 

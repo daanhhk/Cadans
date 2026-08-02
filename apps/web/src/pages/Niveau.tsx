@@ -135,11 +135,12 @@ export function Niveau() {
       // eftp blijft de fallback als settings.ftp ontbreekt. VermogenSnapshot toont eftp apart.
       currentFtp: settings?.ftp ?? eftp ?? null,
       gewicht: settings?.gewicht ?? null,
-      testWeken: doelTestWeken_(
-        settings?.doelStart ?? null,
-        settings?.doelDuur ?? null,
-        todayIso(),
-      ) as number | null,
+      // NIVEAUKAART-RONDE: `doelTestWeken_` ankert op het LOPENDE blok en leest `doelDuur` niet
+      // meer; de blok-lengte komt uit `DOEL_BLOK_WEKEN`.
+      doel: settings?.doel ?? null,
+      testWeken: doelTestWeken_(settings?.doelStart ?? null, todayIso()) as
+        | number
+        | null,
       // T28: de INGESTELDE weekuren (settings.weekUren) zijn de projectie-baseline indien
       // opgegeven; anders val terug op recent gereden weekvolume (42d), anders → component → 8.
       weeklyHoursDefault:

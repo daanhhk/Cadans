@@ -6,7 +6,7 @@ import {
 } from "@cadans/engine";
 import { useId, useMemo, useState } from "react";
 import { nlDec1, nlInt } from "../../lib/format";
-import { projectionDirection } from "../../lib/niveau";
+import { projectionDirection, sleutelAannameRegel } from "../../lib/niveau";
 import { Card, Num, Overline } from "../ui";
 
 // DoelProjectie [Fase 2 · Visie] — natgetrokken uit design/src/niveau.jsx DoelProjectie.
@@ -40,6 +40,8 @@ export interface DoelProjectieProps {
   currentFtp: number | null;
   gewicht: number | null;
   testWeken: number | null;
+  /** NIVEAUKAART-RONDE: voedt de sleutelsessie-aanname; null → de engine-literal blijft staan. */
+  doel: string | null;
   /** Recent weekvolume (uren) → slider-default; null → val terug op 8. GAS-parity. */
   weeklyHoursDefault: number | null;
 }
@@ -394,6 +396,7 @@ function ProjectionChart({
 export function DoelProjectie({
   label,
   sub,
+  doel,
   projectieMode,
   dims,
   currentCtl,
@@ -449,11 +452,15 @@ export function DoelProjectie({
     const ctlAtTest = isTest
       ? (ctlAtWeek_(currentCtl, plateau, testWeken) as number | null)
       : null;
+    // NIVEAUKAART-RONDE: de sleutelsessie-aanname volgt het PLAN. De uren komen van de SCHUIF
+    // (`hours`) en niet uit `settings.weekUren` — de schuif is de grootheid waarop deze projectie
+    // draait, dus de aanname hoort ermee mee te bewegen. Zie docs/NIVEAUKAART-BOUWDOC.md §2.4.
     const band = ftpBandFromProjection_(
       currentFtp,
       currentCtl,
       isTest ? ctlAtTest : plateau,
       gewicht,
+      sleutelAannameRegel(doel, hours),
     ) as FtpBand;
     return { plateau, weeks, sooner, band, ctlAtTest };
   }, [
@@ -465,6 +472,7 @@ export function DoelProjectie({
     gewicht,
     isTest,
     testWeken,
+    doel,
   ]);
 
   // Mensentaal-richting (test-modus): bouwt de gebruiker fitheid op / vast / af richting de test?
@@ -472,9 +480,14 @@ export function DoelProjectie({
     ? projectionDirection(currentCtl, proj.ctlAtTest)
     : null;
 
+  // NIVEAUKAART-RONDE — DE NUL-TAK. Sinds de teller op het lopende blok ankert is 0 een ECHTE,
+  // terugkerende waarde: de testweek zelf. "~0 wkn tot testdag" leest dan als een defect, terwijl
+  // het juist de week IS.
   const horizonLabel =
     projectieMode === "test" && testWeken != null
-      ? `~${testWeken} wkn tot testdag`
+      ? testWeken === 0
+        ? "testweek · deze week"
+        : `~${testWeken} wkn tot testdag`
       : "12 wk";
 
   return (
@@ -703,8 +716,14 @@ export function DoelProjectie({
                         color: "var(--text-primary)",
                       }}
                     >
-                      FTP-test over ~{testWeken}{" "}
-                      {testWeken === 1 ? "week" : "weken"}
+                      {testWeken === 0 ? (
+                        "FTP-test is deze week"
+                      ) : (
+                        <>
+                          FTP-test over ~{testWeken}{" "}
+                          {testWeken === 1 ? "week" : "weken"}
+                        </>
+                      )}
                     </div>
                     {direction && (
                       <div

@@ -13,6 +13,7 @@ import type { SettingsInput } from "@cadans/shared";
 import type { GapDim } from "../components/niveau/DoelProjectie";
 import { TIERS, tierIndex } from "../components/niveau/tiers";
 import type { ActValuesRow } from "./activities";
+import { blokDosisNorm } from "./blok";
 import { parseLocalDate } from "./dates";
 import { instapNiveau } from "./effect";
 
@@ -247,4 +248,42 @@ export function buildGoalDims(
       pct: g.pct,
     };
   });
+}
+
+/**
+ * NIVEAUKAART-RONDE — DE SLEUTELSESSIE-AANNAME onder de FTP-projectie.
+ *
+ * `ftpBandFromProjection_` droeg "2 sleutelsessies per week, consequent" als LITERAL in een doel-
+ * én fase-onafhankelijke array, terwijl het getal dat de app zelf hanteert `prikkels` uit
+ * `blokDosisNorm` is — en dat hangt aan doel, fase ÉN weekuren. GEMETEN over 5 doelen x 4 fases x
+ * 4..14 uur: FTP en Korte beklimmingen geven 3 in Base, Build én Peak vanaf 5 uur en 2 bij 4 uur;
+ * Conditie en Lange beklimmingen 2 in Base en Peak en 3 in Build vanaf 5 uur; Onderhoud altijd 3.
+ * De literal klopt dus alleen bij 4 uur, of bij Conditie en Lange beklimmingen buiten Build.
+ *
+ * WAAROM DE DRIE FASES WORDEN LANGSGELOPEN in plaats van er één te pinnen: de Niveau-tab laadt
+ * alleen `getSettings` en `getActivities` — geen events, geen `overnameBevestigd` — dus
+ * `effectiveMacroFase_` is daar per constructie niet te berekenen. Een fase die daar tóch gepind
+ * wordt is een TWEEDE fase-bron die van het Schema-scherm kan afwijken zodra de event-overname
+ * vuurt. Enumereren sluit dat uit, en het past op de horizon van de kaart: de projectie loopt tot
+ * de testdag en beslaat dus meerdere fases. Zie docs/NIVEAUKAART-BOUWDOC.md §2.4.
+ *
+ * GEEN ENKELVOUDS-TAK: `prikkels` is `min(quotum, urenPrikkels)` met beide termen minstens 2, dus
+ * 1 is per constructie onbereikbaar en een "1 sleutelsessie"-tak zou dode code zijn.
+ *
+ * `null` zodra een van de drie aanroepen `null` geeft — dan blijft de engine-literal staan.
+ */
+export function sleutelAannameRegel(
+  doel: string | null,
+  weekUren: number | null,
+): string | null {
+  const prikkels: number[] = [];
+  for (const fase of ["Base", "Build", "Peak"]) {
+    const n = blokDosisNorm(doel, weekUren, 0, undefined, fase);
+    if (!n) return null;
+    prikkels.push(n.prikkels);
+  }
+  const min = Math.min(...prikkels);
+  const max = Math.max(...prikkels);
+  const aantal = min === max ? String(min) : `${min} à ${max}`;
+  return `${aantal} sleutelsessies per week, consequent`;
 }

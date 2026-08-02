@@ -44,6 +44,7 @@ import {
   ctlPlateauFromVolume_,
   ctlReeksMaandelijks_,
   DEMOTE_MAP,
+  DOEL_BLOK_WEKEN,
   DOEL_OPTIONS,
   DOSIS_TREDE_MAX,
   dashActualsByDate_,
@@ -1508,33 +1509,155 @@ describe("engine selftest", () => {
   });
 
   it("testDoelTestWeken", () => {
-    // 2026-06-02 + 12*7 = 2026-08-25; vanaf 2026-06-11 = 75 dgn → ceil(75/7) = 11.
+    // NIVEAUKAART-RONDE — HERIJKT OP DE NIEUWE ARITY. Deze vijf asserties pinden de regel "de
+    // testdag is `doelStart` plus `doelDuur` maal 7", en precies die regel is ingetrokken: de
+    // teller ankert nu op de TESTWEEK van het LOPENDE blok. Dat is geen verzwakking maar de
+    // herijking die erbij hoort — het MECHANISME dat ze toetsen (kalenderrekenen, ceil, clamp op
+    // 0, null bij ongeldige invoer) staat er onverkort, op de nieuwe regel.
+    //
+    // Blokstart 2026-06-02, blok-lengte DOEL_BLOK_WEKEN: de testweek van blok 1 begint op
+    // 2026-08-18 (start plus 11 weken).
     assert_(
       "doelTestWeken normaal",
-      11,
-      doelTestWeken_("2026-06-02", 12, "2026-06-11"),
+      10,
+      doelTestWeken_("2026-06-02", "2026-06-11"),
     );
-    // testdag al voorbij → clamp 0.
+    // In de testweek zelf → 0, de hele week door.
     assert_(
-      "doelTestWeken voorbij->0",
+      "doelTestWeken in de testweek->0",
       0,
-      doelTestWeken_("2026-06-02", 1, "2026-08-01"),
+      doelTestWeken_("2026-06-02", "2026-08-18"),
     );
-    // exact veelvoud (7 dgn) → 1 week.
     assert_(
-      "doelTestWeken ceil exact",
-      1,
-      doelTestWeken_("2026-06-02", 1, "2026-06-02"),
+      "doelTestWeken einde testweek->0",
+      0,
+      doelTestWeken_("2026-06-02", "2026-08-24"),
+    );
+    // Op de blokstart zelf: nog 11 weken te gaan.
+    assert_(
+      "doelTestWeken op blokstart",
+      11,
+      doelTestWeken_("2026-06-02", "2026-06-02"),
     );
     assert_(
       "doelTestWeken missing->null",
       null,
-      doelTestWeken_(null, 12, "2026-06-11"),
+      doelTestWeken_(null, "2026-06-11"),
+    );
+    // De `doelDuur`-parameter bestaat niet meer; wat de null-tak nu bewaakt is een ongeldige
+    // PEILDAG. Zonder deze assertie zou die tak ongedekt zijn.
+    assert_(
+      "doelTestWeken bad-today->null",
+      null,
+      doelTestWeken_("2026-06-02", null),
+    );
+
+    // (a) CYCLUS — de teller herhaalt. De oude vorm gaf hier 0 en bleef daar voorgoed.
+    assert_(
+      "doelTestWeken cyclus 2026-10-05",
+      9,
+      doelTestWeken_("2026-06-29", "2026-10-05"),
+    );
+    // (b) OFF-BY-ONE. De testweek is blokweek DOEL_BLOK_WEKEN, dus de maandag ligt op
+    // (DOEL_BLOK_WEKEN - 1) weken na de blokstart — niet op DOEL_BLOK_WEKEN.
+    assert_(
+      "doelTestWeken off-by-one 2026-08-02",
+      7,
+      doelTestWeken_("2026-06-29", "2026-08-02"),
+    );
+    // (c) DE TESTWEEK ZELF, en de sprong naar het volgende blok op de maandag erna.
+    assert_(
+      "doelTestWeken testweek start",
+      0,
+      doelTestWeken_("2026-06-29", "2026-09-14"),
     );
     assert_(
-      "doelTestWeken bad-dur->null",
+      "doelTestWeken testweek eind",
+      0,
+      doelTestWeken_("2026-06-29", "2026-09-20"),
+    );
+    assert_(
+      "doelTestWeken volgend blok",
+      11,
+      doelTestWeken_("2026-06-29", "2026-09-21"),
+    );
+
+    // (d) MECHANISCHE KOPPELING met de functie die de app zelf aanroept. GEEN eigen raster
+    // nabouwen: de maandag waarop de teller 0 wordt moet volgens `computeMacroPhase` ZELF de
+    // testweek zijn, in hetzelfde blok als de peildag. 2027-03-29 kruist de zomertijdgrens.
+    var koppelOk = 0,
+      koppelTotaal = 0;
+    ["2026-06-29", "2027-03-29"].forEach((ds: string) => {
+      var p = ds.split("-").map(Number);
+      var start = new Date(
+        p[0] as number,
+        (p[1] as number) - 1,
+        p[2] as number,
+      );
+      for (var w = 0; w < 156; w++) {
+        var today = new Date(
+          start.getFullYear(),
+          start.getMonth(),
+          start.getDate() + w * 7,
+        );
+        var iso =
+          today.getFullYear() +
+          "-" +
+          String(today.getMonth() + 1).padStart(2, "0") +
+          "-" +
+          String(today.getDate()).padStart(2, "0");
+        var n = doelTestWeken_(ds, iso);
+        var maandag = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          today.getDate() + n * 7,
+        );
+        var opTest = computeMacroPhase(start, maandag);
+        var opVandaag = computeMacroPhase(start, today);
+        koppelTotaal++;
+        if (
+          opTest.week === DOEL_BLOK_WEKEN &&
+          opTest.isTestWeek === true &&
+          opTest.blokNr === opVandaag.blokNr
+        ) {
+          koppelOk++;
+        }
+      }
+    });
+    assert_("doelTestWeken koppeling totaal", 312, koppelTotaal);
+    assert_("doelTestWeken koppeling ok", 312, koppelOk);
+
+    // (e) NIVEAUKAART-RONDE — de vijfde parameter van `ftpBandFromProjection_`. MET een regel
+    // vervangt hij UITSLUITEND de eerste aanname; ZONDER blijft de literal staan. Beide kanten
+    // staan er, want een assertie die alleen de nieuwe tak toetst laat de terugval ongedekt.
+    var bandMet: any = ftpBandFromProjection_(
+      275,
+      50,
+      60,
       null,
-      doelTestWeken_("2026-06-02", 0, "2026-06-11"),
+      "3 sleutelsessies per week, consequent",
+    );
+    assert_(
+      "ftpBand sleutelRegel vervangt regel 0",
+      "3 sleutelsessies per week, consequent",
+      bandMet.aannames[0],
+    );
+    assert_("ftpBand aannames blijft 4 regels", 4, bandMet.aannames.length);
+    assert_(
+      "ftpBand regel 1 ongemoeid",
+      "Regelmaat ≥ 90% — geen lange onderbrekingen",
+      bandMet.aannames[1],
+    );
+    assert_(
+      "ftpBand regel 3 ongemoeid",
+      "FTP-winst vlakt af richting je plafond",
+      bandMet.aannames[3],
+    );
+    var bandZonder: any = ftpBandFromProjection_(275, 50, 60, null);
+    assert_(
+      "ftpBand zonder sleutelRegel houdt de literal",
+      "2 sleutelsessies per week, consequent",
+      bandZonder.aannames[0],
     );
   });
 
@@ -6282,7 +6405,7 @@ describe("engine selftest", () => {
   // herstel-gat voor B2, en de vijfweg-lus die de keten zonder bevestiging doel-gestuurd houdt.
   // 1435→1447. NALEVERING: +2 voor de Recovery-tak buiten de poort (afgewezen en weggelaten) en
   // de tegenproef dat Build op dezelfde afstand wél een bevestiging vraagt. 1447→1449.
-  it("exactly 1514 assertions", () => {
-    expect(assertCount).toBe(1514);
+  it("exactly 1527 assertions", () => {
+    expect(assertCount).toBe(1527);
   });
 });

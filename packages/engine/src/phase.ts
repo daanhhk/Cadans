@@ -63,6 +63,20 @@ export const B_TAPER_DAGEN = 3;
  * `week` en `isTestWeek` behouden hun betekenis: de week BINNEN het blok, en of dat de testweek
  * is. Alleen het gedrag voorbij week 12 verandert.
  */
+/**
+ * DE LENGTE VAN HET DOEL-BLOK, in weken. HERKOMST: PLAN — `DOELEN-SPEC` §2B stelt vast dat het
+ * doel-blok TWAALF weken is en HERHAALT.
+ *
+ * DIT IS GEEN KNOP. De constante bestaat om te voorkomen dat twee functies over dezelfde
+ * blok-lengte uiteen kunnen lopen — `computeMacroPhase` hier en `doelTestWeken_` in `niveau.ts`,
+ * die vóór de niveaukaart-ronde nog op `settings.doelDuur` rekende en dus kon afwijken. Er is geen
+ * tweede waarde en er komt er geen.
+ *
+ * DE FASE-LADDER (4 / 8 / 11) BLIJFT LITERAL. Die op deze constante betrekken zou een afleiding
+ * suggereren die nergens varieert — dode bedrading met een nettere naam.
+ */
+export const DOEL_BLOK_WEKEN = 12;
+
 export function computeMacroPhase(startDate: any, today: any): any {
   if (!startDate) startDate = new Date();
   if (!today) today = new Date();
@@ -84,10 +98,10 @@ export function computeMacroPhase(startDate: any, today: any): any {
   );
   var absWeek = Math.floor(diffDays / 7) + 1;
   if (absWeek < 1) absWeek = 1;
-  // Cyclisch 1..12. De oude cap `if (week > 12) week = 12` is hiermee overbodig: de blokweek
-  // kan per constructie niet meer boven 12 komen.
-  var week = ((absWeek - 1) % 12) + 1;
-  var blokNr = Math.floor((absWeek - 1) / 12) + 1;
+  // Cyclisch 1..DOEL_BLOK_WEKEN. De oude cap `if (week > 12) week = 12` is hiermee overbodig: de
+  // blokweek kan per constructie niet meer boven de blok-lengte komen.
+  var week = ((absWeek - 1) % DOEL_BLOK_WEKEN) + 1;
+  var blokNr = Math.floor((absWeek - 1) / DOEL_BLOK_WEKEN) + 1;
 
   var fase,
     isTestWeek = false;

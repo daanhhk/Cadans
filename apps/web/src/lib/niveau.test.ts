@@ -8,6 +8,7 @@ import {
   maandLabel,
   onderhoudVloerW,
   projectionDirection,
+  sleutelAannameRegel,
   tierProgress,
   weekTss,
   wkgSince,
@@ -209,5 +210,49 @@ describe("DE INVOER-TOETS — de behoud-lat leest de RITTEN, niet de ingestelde 
   it("250 zakt onder de vloer, 265 niet", () => {
     expect(A?.onTrack).toBe(false);
     expect(C?.onTrack).toBe(true);
+  });
+});
+
+// ── NIVEAUKAART-RONDE — de sleutelsessie-aanname onder de FTP-projectie ─────
+// Spec: docs/NIVEAUKAART-BOUWDOC.md §2.4 en §4 (f).
+//
+// DEZE TEST KAN NIET ENGINE-ZIJDE. Hij vouwt met `blokDosisNorm` uit `apps/web/src/lib/blok.ts`,
+// en `packages/engine` kan daar per constructie niet uit importeren — dezelfde grens die bij punt
+// 15 fase 1 de asserties naar `apps/web` dwong.
+describe("sleutelAannameRegel", () => {
+  it("(f) FTP bij 5 uur geeft 3 — de literal zei 2", () => {
+    expect(sleutelAannameRegel("FTP", 5)).toContain("3 sleutelsessies");
+  });
+
+  it("(f) FTP bij 4 uur geeft 2 — onder PRIKKEL_UREN_DREMPEL kapt de uren-regel af", () => {
+    expect(sleutelAannameRegel("FTP", 4)).toContain("2 sleutelsessies");
+  });
+
+  it("(f) Onderhoud geeft 3, ook bij 3 uur — de frequentie is daar beschermd", () => {
+    expect(sleutelAannameRegel("Onderhoud", 3)).toContain("3 sleutelsessies");
+  });
+
+  it("(f) Lange beklimmingen bij 8 uur geeft een BEREIK: 2 in Base en Peak, 3 in Build", () => {
+    const r = sleutelAannameRegel("Lange beklimmingen", 8);
+    expect(r).toContain("2");
+    expect(r).toContain("3");
+    expect(r).toContain("sleutelsessies per week, consequent");
+  });
+
+  it("de regel eindigt altijd op de vaste staart, en enkelvoud bestaat niet", () => {
+    for (const [doel, uren] of [
+      ["FTP", 5],
+      ["Conditie", 4],
+      ["Korte beklimmingen", 12],
+    ] as [string, number][]) {
+      expect(sleutelAannameRegel(doel, uren)).toMatch(
+        /sleutelsessies per week, consequent$/,
+      );
+    }
+  });
+
+  it("null zodra blokDosisNorm null geeft — dan blijft de engine-literal staan", () => {
+    expect(sleutelAannameRegel("FTP", null)).toBeNull();
+    expect(sleutelAannameRegel("FTP", 0)).toBeNull();
   });
 });
