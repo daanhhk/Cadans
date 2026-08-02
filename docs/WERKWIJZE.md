@@ -274,6 +274,19 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   assertie vouwt met `planZone5_`, en die woont in `apps/web/src/lib/zonemunt.ts`, waar
   `packages/engine` per constructie niet uit kan importeren. Een goede uitkomst op een verkeerde
   grond wordt een volgende keer op de verkeerde grond herhaald.
+- **Een poort die bepaalt WAAROP geoordeeld wordt, laat de norm-massa van alles daarbuiten
+  VERDAMPEN.** Poort de VORM van een eis, nooit stilzwijgend ook het TOTAAL — anders zakt de lat mee
+  met de poort en merkt niemand het. Aanleiding: punt 14 fase 1 besliste terecht wélke zones
+  meedoen, maar in 98 van de 105 gemeten cellen lag de som van de zone-normen BINNEN die poortset
+  onder de totaalnorm, en 24 cellen lazen GELEVERD terwijl de week onder zijn eigen norm zat —
+  scherpst Korte beklimmingen in Peak, effectieve eis 34 tegen een norm van 78. De reparatie is een
+  TWEEDE, onafhankelijke eis naast de poort, niet een aanpassing ván de poort.
+  EN DE VOOR DE HAND LIGGENDE REPARATIE IS HIER GEMETEN EN FOUT: de norm-massa herverdelen over de
+  poortset zakte van 92 naar 46 geleverde cellen en trok Onderhoud van 27 van 27 naar 18 van 27 —
+  precies het defect dat punt 14 net had weggenomen. De reden is structureel: de poortset draagt
+  NOMINALE labels terwijl de meting PROPORTIONEEL splitst, dus de hele norm bij één label leggen
+  eist minuten in een zone waar het plan ze door bandoverloop niet legt. Minuten TELLEN lijdt daar
+  niet aan; norm bij een LABEL leggen wel.
 
 ## Vorm van een CC-prompt
 

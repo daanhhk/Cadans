@@ -315,7 +315,7 @@ punten staat onder *Gesloten — vindplaats*.
     high gedekt is. De vo2-declaratie van `PROFILES.onderhoud` blijft staan: in Peak scoort ze 0,35
     en komt ze aantoonbaar aan de beurt. WAT ONGEMETEN BLIJFT is de vorm die TOEVOEGT in plaats van
     ruilt; die staat als punt 16.
-15. **De dosis van de twee klim-doelen** — open (FASE 1 af) · CLIENT voor fase 2, ENGINE voor fase 3. Ook mét de zone-poort van punt 14 zakken
+15. **De dosis van de twee klim-doelen** — open (FASE 1 EN 2 AF) · ENGINE voor fase 3. Ook mét de zone-poort van punt 14 zakken
     ze: Korte beklimmingen levert 39 werkminuten en Lange beklimmingen 46, tegen een norm van 84.
     Dat is een DOSIS-vraag en geen verdelings-vraag — de zones kloppen, er is te weinig van. Kwam
     binnen bij de meting van punt 14 (`docs/PUNT14-BOUWDOC.md` §3) en is daar bewust buiten scope
@@ -342,7 +342,8 @@ punten staat onder *Gesloten — vindplaats*.
     `Math.round(totaalMin * 0.85)` in plaats van `tssFromBlokken_`. EN DE INTENSITEIT VAN DE
     EFFORTS: de band 85-92 heeft haar midden op 88,5 en draagt daarmee het label `tempo`, terwijl
     `DOELEN-SPEC` §3.3 voor dit doel herhaalbare BOVENDREMPEL-inspanningen in de lange rit vraagt.
-    FASE 2 IS GESPECIFICEERD, spec `docs/PUNT15-FASE2-BOUWDOC.md` — CLIENT, geen engine. DE
+    FASE 2 IS AF per 02-08-2026, spec `docs/PUNT15-FASE2-BOUWDOC.md`, bouw `a15bcbb` — CLIENT,
+    geen engine, niet gedeployed omdat Onderhoud en FTP in geen enkele cel kantelen. DE
     PREMISSE IS OPNIEUW GECORRIGEERD: het tekort is niet klim-specifiek maar DOEL-BREED EN
     FASE-GEBONDEN. In Peak liggen FTP 9 van 9, Conditie 9 van 9, Korte beklimmingen 9 van 9 en
     Lange beklimmingen 7 van 9 cellen onder de norm; in Base Conditie 9 van 9 en Lange
