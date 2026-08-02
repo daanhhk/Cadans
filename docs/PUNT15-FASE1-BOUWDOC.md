@@ -125,3 +125,55 @@ parkeerlijst.
   vingerafdrukken in `onderhoudInvariance.test.ts` pinnen `vt`, `naam`, `min`, `tss` en `zones` en
   raken `blokken` niet, dus ook die horen ongewijzigd groen te blijven. Beweegt er toch iets:
   melden en stoppen.
+
+## 6. De lezers buiten de munt — nagekomen, uit de recon
+
+DE RECON VOND DRIE LEZERS DIE §2 NIET NOEMDE, en ze veranderen alle drie van gedrag. Dat is
+GEEN reden om af te zien: ze veranderen alle drie in dezelfde richting, namelijk dat deze sessie
+zichtbaar wordt op plekken waar elke andere sessie dat al is. Wat de sessie VOORSCHRIJFT verandert
+niet — `naam`, `focus`, `zones`, `totaalMin`, `structuur`, `intent`, `tss`, `eindopmerking` en
+`tooLong` blijven byte voor byte gelijk. Alles loopt door één trechter: `toSession`
+(`apps/web/src/lib/schema.ts:766`) zet vandaag `blokken: []` en straks de echte lijst.
+
+6.1 DE ZONEBALK. `ZoneBar.tsx:19` via `silhouetSegments` (`schema.ts:203`) levert bij een lege
+    lijst nul segmenten en rendert `null`. De zaterdagsessie draagt vandaag dus GEEN zonebalk
+    terwijl ze 30 kwaliteitsminuten voorschrijft; met blokken verschijnt hij. Aanroepers
+    `WorkoutDetail.tsx:105` en `:163`. BEDOELD.
+
+6.2 DE GEPLAND-TEGEN-GEDAAN-VERGELIJKING. `zoneCompareRows` (`schema.ts:541`, aangeroepen op
+    `:646`) houdt bij een lege lijst de PLAN-kolom op nul in alle vijf zones, dus een gereden
+    zaterdag vergelijkt vandaag tegen een plan van nul. Met blokken staan daar echte minuten.
+    Gerenderd door `ZoneCompare.tsx` en `DoneCompareCard.tsx`. BEDOELD — maar hier kan een
+    OORDEEL kantelen, en dat is de enige plek waar dat kan. Zie de stop-conditie in §7.
+
+6.3 DE BEWAARDE WEEKPLAN-RIJ. `buildWeekplanEntries` (`weekplanBlob.ts:128` en `:165`) schrijft
+    vandaag `blokken: null` en straks de array. Die rij komt via `workoutFromFrozenEntry`
+    (`proposal.ts:234`) terug bij dezelfde twee lezers voor VERSTREKEN dagen, en voedt de poortset
+    van punt 14. FORWARD-ONLY EN BEKENDE GRENS: bestaande rijen worden NIET gebackfilld, dus voor
+    weken die al bewaard zijn blijft het oude beeld staan en blijft de poortset ongewijzigd. Pas
+    weken die ná de deploy worden bewaard dragen het `tempo`-label. Dezelfde grens die de
+    blok-terugblik al kent; geen migratie, geen backfill.
+
+NIET GERAAKT, GEMETEN IN DE RECON. `workers/api/src` leest `blokken` nergens — de blob gaat als
+ondoorzichtige JSON door. In `packages/engine/src` is `getTrainingLibrary_` (`planner.ts:1526`,
+`segmentsFromBlokken_`) de enige lezer buiten de tests, en die rendert uitsluitend de zes
+`TRAINING_CATS_`-types; `combo_long_with_efforts` komt alleen uit de weekplanner (`planner.ts:542`,
+`878`, `884`, `894`) en zit in geen pool, dus deze lezer ziet de sessie nooit. Verder ongemoeid:
+`VariantRow.tsx:83` (bibliotheekvarianten) en `Preview.tsx:44` (DEV-fixture). GEEN ENKELE
+selftest-assertie pint de AFWEZIGHEID van blokken op dit type; `selftest.test.ts:472` doet dat wel,
+maar voor `recovery`.
+
+## 7. Stop-condities
+
+7.1 DE VERGELIJKINGS-CHIP MAG NIET KANTELEN ZONDER DAT HET GEMETEN IS. Bouw een gereden zaterdag
+    op de keten-fixture uit §5 — doel Korte beklimmingen, weekvorm V1, `doelStart` 2026-06-29, klok
+    op 2026-07-27 — met een activiteit waarvan de zoneminuten EXACT de gevouwen planminuten van die
+    sessie dragen, dus een perfect uitgevoerde rit. Meet de chip en de score VOOR en NA de bouw.
+    Blijft de chip op de "op plan"-tak: doorbouwen en beide waarden rapporteren. Kantelt hij bij een
+    PERFECT uitgevoerde rit: NIET COMMITTEN, melden en stoppen — dan meet de vergelijking iets
+    anders dan ze beweert en is dat een eigen ronde.
+
+7.2 DE VINGERAFDRUKKEN. `weekvormAs.test.ts` draait doel FTP, en `PROFILES.ftp` draagt
+    `effortsInLangeRit: false`; de 48 vingerafdrukken in `onderhoudInvariance.test.ts` pinnen `vt`,
+    `naam`, `min`, `tss` en `zones` en raken `blokken` niet. Beide horen byte-identiek groen te
+    blijven. Beweegt er iets: NIET COMMITTEN, melden en stoppen.
