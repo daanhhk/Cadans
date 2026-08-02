@@ -2465,9 +2465,31 @@ export function genericCombo(
     // Beschikbaarheid leidend (zelfde patroon als genericLongZ2). De NOMINALE waarden — 3x10
     // werkminuten, 3x5 intra-rust, warmup 15, uitrijden 15 — blijven wat ze zijn; `fixedNominal`
     // rekent daarmee, en `totaalMin` hangt DAAROM alleen van de gevraagde tijd af.
+    // ROADMAP punt 15 fase 3b — DE VORM IS DOEL-SPECIFIEK. `profileForDoel_` normaliseert intern,
+    // dezelfde lijn als de `debtEnabled`-gate. ONTBREEKT `effortsVorm`, dan gelden de waarden van
+    // vóór deze fase — en dat pad moet byte-identiek blijven, want de weekend-tak in
+    // `buildWorkout` levert dit type ook ZONDER `spreiding.effortsInLangeRit`, bij elk doel, zodra
+    // `!dekking.high` en de fase niet Base is. Zie docs/PUNT15-FASE3B-BOUWDOC.md M6.
+    const vormDefault_ = {
+      reps: 3,
+      onMin: 10,
+      rest: 5,
+      pctLo: 85,
+      pctHi: 92,
+      bpmLo: 92,
+      bpmHi: 99,
+      as: "lengte",
+      label: "Efforts",
+      notitie: "Tempo/SS blokken, <rest> min rust",
+    };
+    const vorm: any = {
+      ...vormDefault_,
+      ...((profileForDoel_(doel) as any)?.effortsVorm ?? {}),
+    };
+
     const requested = Math.max(60, mins || 120);
-    const nominalWork = 30; // 3 x 10
-    const nominalRest = 15; // 3 x 5
+    const nominalWork = vorm.reps * vorm.onMin;
+    const nominalRest = vorm.reps * vorm.rest;
     const fixedNominal = 15 + nominalWork + nominalRest + 15;
     const minBase = 30;
     const fits = requested >= fixedNominal + minBase;
@@ -2497,18 +2519,45 @@ export function genericCombo(
       (mesoWeek != null ? mesoFactor(mesoWeek) : 1) *
       dosisTredeFactor(settings && settings.doel, dosisTrede);
     const room = Math.max(0, baseNominal - minBase);
-    let workScale = 1;
-    if (f > 1) {
-      const addedWork = Math.min(nominalWork * (f - 1), room);
-      workScale = (nominalWork + addedWork) / nominalWork;
-    } else if (f < 1) {
-      // DOSIS-SPIEGEL (deload): letterlijke spiegel van de f>1-tak, en de Z2-basis absorbeert de
-      // vrijgekomen tijd vanzelf omdat `totaalMin` niet meebeweegt.
-      workScale = f;
+
+    // ROADMAP punt 15 fase 3b — TWEE PROGRESSIE-ASSEN.
+    //
+    // AS "lengte": ongewijzigd ten opzichte van fase 3a, alleen staan er nu `vorm.reps` en
+    // `vorm.onMin` waar 3 en 10 stonden.
+    //
+    // AS "aantal": `onMin` staat VAST en het AANTAL herhalingen schaalt — DOELEN-SPEC §3.3 (ii)
+    // vraagt de dosis in het aantal. DAARBIJ BREEKT DE REM UIT FASE 3a: die rekende alleen op
+    // `nominalWork`, terwijl elke extra herhaling ook een intra-rust MEEBRENGT. GEMETEN zonder
+    // herrekening, gevraagde dag 120 bij mesoWeek 3 plus trede 4: 8x6 met een Z2-basis van 18,
+    // onder `minBase` 30. Mét de herrekening — elke herhaling kost `onMin + rest` uit de ruimte —
+    // wordt dat 6x6 met basis 36. `totaalMin` blijft in beide gevallen 120.
+    let repsEff = vorm.reps;
+    let onMin = vorm.onMin;
+    if (vorm.as === "aantal") {
+      if (f > 1) {
+        const kGewenst = Math.round((nominalWork * (f - 1)) / vorm.onMin);
+        const kMax = Math.floor(room / (vorm.onMin + vorm.rest));
+        repsEff = vorm.reps + Math.max(0, Math.min(kGewenst, kMax));
+      } else if (f < 1) {
+        repsEff = Math.max(1, Math.round(vorm.reps * f));
+      }
+    } else {
+      let workScale = 1;
+      if (f > 1) {
+        const addedWork = Math.min(nominalWork * (f - 1), room);
+        workScale = (nominalWork + addedWork) / nominalWork;
+      } else if (f < 1) {
+        // DOSIS-SPIEGEL (deload): letterlijke spiegel van de f>1-tak, en de Z2-basis absorbeert de
+        // vrijgekomen tijd vanzelf omdat `totaalMin` niet meebeweegt.
+        workScale = f;
+      }
+      onMin = r1_(vorm.onMin * workScale);
     }
-    const onMin = r1_(10 * workScale);
-    const werk = 3 * onMin;
-    const baseMin = totaalMin - 45 - werk;
+    const werk = r1_(repsEff * onMin);
+    // De 45 die hier stond was 15 warmup plus 15 uitrijden plus DRIE intra-rusten van 5. De rust
+    // is nu variabel in aantal én lengte, dus die telt apart. Bij de terugval-vorm geeft
+    // 30 + 3*5 exact 45 terug en blijft dit pad byte-identiek.
+    const baseMin = totaalMin - (30 + repsEff * vorm.rest) - werk;
 
     // ROADMAP punt 15 fase 1 — DEZE SESSIE DECLAREERT HAAR ZONES. Tot nu toe gaf deze tak als
     // ENIGE kwaliteitsdragende sessie in de app geen `blokken` terug. `planZone5_` leest juist
@@ -2535,9 +2584,9 @@ export function genericCombo(
       pctHi: pctHi,
     });
     const blokken: any[] = [blok_(15, 55, 70), blok_(baseMin, 65, 75)];
-    for (let i = 0; i < 3; i++) {
-      blokken.push(blok_(onMin, 85, 92));
-      blokken.push(blok_(5, 45, 55));
+    for (let i = 0; i < repsEff; i++) {
+      blokken.push(blok_(onMin, vorm.pctLo, vorm.pctHi));
+      blokken.push(blok_(vorm.rest, 45, 55));
     }
     blokken.push(blok_(15, 55, 65));
 
@@ -2563,11 +2612,11 @@ export function genericCombo(
           "Stabiele Z2",
         ],
         [
-          "Efforts",
-          "3x " + onMin + "min",
-          wattsRange(ftp, 85, 92),
-          bpmRange(lthr, 92, 99),
-          "Tempo/SS blokken, 5 min rust",
+          vorm.label,
+          repsEff + "x " + onMin + "min",
+          wattsRange(ftp, vorm.pctLo, vorm.pctHi),
+          bpmRange(lthr, vorm.bpmLo, vorm.bpmHi),
+          String(vorm.notitie).replace("<rest>", String(vorm.rest)),
         ],
         ["Uitrijden", "15 min", wattsRange(ftp, 55, 65), "—", "Z2 uit"],
       ],
@@ -2575,7 +2624,11 @@ export function genericCombo(
       // `intent.low` telt drie intra-rusten als TWEE en is daarmee 5 minuten scheef; dat is een
       // bekend en genoteerd punt uit fase 1, het raakt geen werkzone, en repareren valt buiten
       // deze fase (docs/PUNT15-FASE1-BOUWDOC.md §2).
-      intent: { low: 15 + baseMin + 10 + 15, high: r1_(werk), anaerobic: 0 },
+      intent: {
+        low: 15 + baseMin + (repsEff - 1) * vorm.rest + 15,
+        high: r1_(werk),
+        anaerobic: 0,
+      },
       // ROADMAP punt 15 fase 3a — TSS UIT DE EIGEN BLOKKEN. GEMETEN dat dit de ENIGE sessie mét
       // blokken was waarvan de gemelde TSS afweek van `tssFromBlokken_`: 36 van de 36
       // voorkomens, gemiddeld +7,9, minimum +2 en maximum +18, en de fout groeide met de duur

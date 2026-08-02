@@ -74,13 +74,17 @@ function plannerDays(min: Record<number, number>): PlannerDay[] {
 type Blok = { minuten: number; zone: string; pctLo: number; pctHi: number };
 
 /** De sessie zoals de weekplanner haar bouwt: 120 minuten beschikbaar, Build, klim-doel. */
+// HERIJKT bij fase 3b op doel FTP. Dat doel draagt geen `effortsVorm`, dus dit is exact de
+// TERUGVAL — de universele vorm die deze tests sinds fase 1 toetsen. De klim-doelen hebben sinds
+// 3b hun EIGEN vorm en worden engine-zijde geasserteerd (selftest, 3b A t/m H). Geen verzwakking:
+// de fixture wijst nu naar het doel dat de getoetste vorm werkelijk draagt.
 function sessie() {
   return genericCombo(
     "combo_long_with_efforts",
     120,
     { ftp: 280, lthr: 170 },
     1,
-    "Korte beklimmingen",
+    "FTP",
   ) as {
     blokken: Blok[];
     totaalMin: number;
@@ -159,14 +163,19 @@ describe("punt 15 fase 1 — de keten, met de producent in de lus", () => {
     } as never) as { days: { datum: string }[] };
   }
 
-  it("de week levert 68,5 werkminuten en tempo zit in de poortset", () => {
+  it("de week levert 68,5 werkminuten — en de dosis beweegt niet mee met 3b", () => {
     const r = week();
     const blokken = r.days.flatMap((d) =>
       rauweBlokkenVan_(d as never),
     ) as unknown[];
     const zm = planZone5_(blokken, ZONE5_GRENZEN_DEFAULT);
+    // DE KERNASSERTIE VAN 3b: de band verplaatst massa en maakt er niets bij. 68,5 stond er vóór
+    // 3b en staat er ná 3b.
     expect(zm.tempo + zm.drempel + zm.anaeroob).toBeCloseTo(68.5, 1);
-    expect(werkzoneLabelsVan_(blokken)).toContain("tempo");
+    // HERIJKT: de poortset draagt bij dit doel sinds 3b GEEN tempo meer, en dat is BEDOELD — de
+    // band 85-92 (nominaal tempo) is 100-108 geworden. Zie de 3b-asserties onderaan.
+    expect(werkzoneLabelsVan_(blokken)).toContain("drempel");
+    expect(werkzoneLabelsVan_(blokken)).not.toContain("tempo");
   });
 });
 
@@ -495,12 +504,14 @@ describe("punt 15 fase 2 — zones geslaagd, totaal gezakt", () => {
 
 /** genericCombo op een gevraagde dagduur, met expliciete mesoweek en trede. */
 function combo_(mins: number, mesoWeek: number, trede?: number) {
+  // HERIJKT bij fase 3b op doel FTP: de LENGTE-as die 3a bouwde is de terugval-vorm, en die
+  // draagt FTP. `klim_kort` schaalt sinds 3b op het AANTAL en heeft eigen asserties engine-zijde.
   return genericCombo(
     "combo_long_with_efforts",
     mins,
-    { ftp: 280, lthr: 170, doel: "Korte beklimmingen" },
+    { ftp: 280, lthr: 170, doel: "FTP" },
     mesoWeek,
-    "Korte beklimmingen",
+    "FTP",
     trede,
   ) as never as {
     blokken: Blok[];
@@ -511,7 +522,25 @@ function combo_(mins: number, mesoWeek: number, trede?: number) {
   };
 }
 
-const effortsBlokken_ = (b: Blok[]) => b.filter((x) => x.pctLo === 85);
+/** De efforts-blokken, BAND-AGNOSTISCH: alles wat geen warmup (55-70), Z2-basis (65-75),
+ * intra-rust (45-55) of uitrijden (55-65) is. Sinds fase 3b verschilt de band per doel, dus een
+ * filter op `pctLo === 85` zou stil leeg teruggeven bij een klim-doel. */
+const effortsBlokken_ = (b: Blok[]) =>
+  b.filter((x) => x.pctLo !== 55 && x.pctLo !== 65 && x.pctLo !== 45);
+
+/** De LENGTE-as met de dosis-trede-factor waarop fase 3a gemeten is. `Korte beklimmingen` droeg
+ * die meting, maar schaalt sinds 3b op het AANTAL; `Lange beklimmingen` draagt de lengte-as én
+ * reproduceert 3x11,5 en 3x15 exact. Bij FTP geeft trede 4 hier 3x14,8 — `dosisTredeFactor` is
+ * doel-specifiek, en dat was in 3a al zo maar viel toen niet op. */
+const comboLang_ = (mins: number, mesoWeek: number, trede?: number) =>
+  genericCombo(
+    "combo_long_with_efforts",
+    mins,
+    { ftp: 280, lthr: 170, doel: "Lange beklimmingen" },
+    mesoWeek,
+    "Lange beklimmingen",
+    trede,
+  ) as never as { blokken: Blok[]; totaalMin: number; structuur: string[][] };
 
 describe("punt 15 fase 3a — term 1, de hendel", () => {
   it("(a) f = 1 laat alles staan: 3x10, high 30, en de oude totaalMin", () => {
@@ -541,12 +570,12 @@ describe("punt 15 fase 3a — term 1, de hendel", () => {
   });
 
   it("(c) DE GROEI: op 150 minuten geeft mesoWeek 3 3x11,5 en met trede 4 3x15", () => {
-    const a = combo_(150, 3, 0);
+    const a = comboLang_(150, 3, 0);
     expect(effortsBlokken_(a.blokken).map((b) => b.minuten)).toEqual([
       11.5, 11.5, 11.5,
     ]);
     expect(a.totaalMin).toBe(150);
-    const b = combo_(150, 3, 4);
+    const b = comboLang_(150, 3, 4);
     expect(effortsBlokken_(b.blokken).map((b2) => b2.minuten)).toEqual([
       15, 15, 15,
     ]);
@@ -562,7 +591,11 @@ describe("punt 15 fase 3a — term 1, de hendel", () => {
       );
     }
     // En de structuur meldt wat er staat.
-    expect(a.structuur.find((r) => r[0] === "Efforts")?.[1]).toBe("3x 11.5min");
+    // Het LABEL is sinds 3b doel-specifiek: "Drempelblokken" bij klim_lang. De regel zelf toont
+    // onverkort wat er staat.
+    expect(a.structuur.find((r) => r[0] === "Drempelblokken")?.[1]).toBe(
+      "3x 11.5min",
+    );
   });
 
   it("(d) DE DELOAD-SPIEGEL: mesoWeek 4 zakt intent.high van 30 naar 18", () => {
@@ -729,5 +762,89 @@ describe("punt 15 — het Peak-quotum", () => {
     ).toBeCloseTo(78, 1);
     expect(w.totaalOpNorm).toBe(false);
     expect(w.geleverdOk).toBe(false);
+  });
+});
+
+// ── FASE 3b — DE DOEL-SPECIFIEKE BAND, DOOR DE PIJPLIJN ─────────────────────
+// Spec: docs/PUNT15-FASE3B-BOUWDOC.md. DRAGENDE REDEN dat deze asserties HIER landen en niet
+// engine-zijde: ze vouwen met `planZone5_` en `werkzoneLabelsVan_`, en die wonen in apps/web,
+// waar packages/engine per constructie niet uit kan importeren. De vorm van de sessie zelf wordt
+// wél engine-zijde geasserteerd (selftest, 3b A t/m H).
+describe("punt 15 fase 3b — de dosis beweegt niet, de zones wel", () => {
+  /** De week zoals de app hem bouwt, op een gegeven doel. V1 in Build. */
+  function weekVoor(doel: string) {
+    vi.setSystemTime(MAANDAG);
+    return buildWeekProposal({
+      settings: { ...SETTINGS, doel, doelStart: iso(-28), weekUren: 5 },
+      plannerDays: plannerDays(V1),
+      events: [
+        { datum: "2027-04-17", naam: "AGR", type: "race", prioriteit: "A" },
+      ],
+      activities: [],
+      weekplans: [],
+      wellness: [],
+      rpe: [],
+      todayISO: iso(0),
+    } as never) as { days: { datum: string }[] };
+  }
+  const zonesVan = (r: { days: { datum: string }[] }) =>
+    planZone5_(
+      r.days.flatMap((d) => rauweBlokkenVan_(d as never)),
+      ZONE5_GRENZEN_DEFAULT,
+    );
+  const labelsVan = (r: { days: { datum: string }[] }) =>
+    werkzoneLabelsVan_(r.days.flatMap((d) => rauweBlokkenVan_(d as never)));
+
+  it("(I) Korte beklimmingen V1 in Build levert 68,5 werkminuten — gelijk aan vóór 3b", () => {
+    const zm = zonesVan(weekVoor("Korte beklimmingen"));
+    expect(zm.tempo + zm.drempel + zm.anaeroob).toBeCloseTo(68.5, 1);
+  });
+
+  it("(J) Lange beklimmingen V1 in Build levert 76,0 werkminuten — gelijk aan vóór 3b", () => {
+    const zm = zonesVan(weekVoor("Lange beklimmingen"));
+    expect(zm.tempo + zm.drempel + zm.anaeroob).toBeCloseTo(76.0, 1);
+  });
+
+  it("(K) DE ZONE-VERSCHUIVING bij Korte beklimmingen, en die is juist WEL bedoeld", () => {
+    // Vóór 3b: tempo 25,5 · drempel 29,6 · anaeroob 13,5. De band verplaatst massa, meer niet —
+    // de som blijft 68,5, zie (I).
+    const zm = zonesVan(weekVoor("Korte beklimmingen"));
+    // EEN KEER afronden, op de gerapporteerde grootheid — nooit per deel. anaeroob meet 24,75 en
+    // dat IS 24,8 op een decimaal; een toBeCloseTo met precisie 1 valt daar precies op de rand.
+    const r1 = (x: number) => Math.round(x * 10) / 10;
+    expect(r1(zm.tempo)).toBe(4.0);
+    expect(r1(zm.drempel)).toBe(39.8);
+    expect(r1(zm.anaeroob)).toBe(24.8);
+  });
+
+  it("(L) de poortset van klim_kort verliest tempo; klim_lang houdt drempel plus tempo", () => {
+    for (const off of [-28, -56]) {
+      // Build en Peak.
+      vi.setSystemTime(MAANDAG);
+      const kort = buildWeekProposal({
+        settings: {
+          ...SETTINGS,
+          doel: "Korte beklimmingen",
+          doelStart: iso(off),
+          weekUren: 5,
+        },
+        plannerDays: plannerDays(V1),
+        events: [
+          { datum: "2027-04-17", naam: "AGR", type: "race", prioriteit: "A" },
+        ],
+        activities: [],
+        weekplans: [],
+        wellness: [],
+        rpe: [],
+        todayISO: iso(0),
+      } as never) as { days: { datum: string }[] };
+      const l = labelsVan(kort);
+      expect(l, `Korte beklimmingen offset ${off}`).toContain("drempel");
+      expect(l, `Korte beklimmingen offset ${off}`).toContain("anaeroob");
+      expect(l, `Korte beklimmingen offset ${off}`).not.toContain("tempo");
+    }
+    const lang = labelsVan(weekVoor("Lange beklimmingen"));
+    expect(lang).toContain("drempel");
+    expect(lang).toContain("tempo");
   });
 });

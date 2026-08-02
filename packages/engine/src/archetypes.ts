@@ -1620,6 +1620,28 @@ export const PROFILES: any = {
     kwaliteitPerWeek: { Base: 3, Build: 3, Peak: 3 },
     // §3.3 (iii): de inspanningen horen LAAT in een lange rit.
     spreiding: { midweekMinGap: 1, weekendBlok: true, effortsInLangeRit: true },
+    // ROADMAP punt 15 fase 3b — DE VORM VAN DE EFFORTS-ARM. HERKOMST: PLAN, DOELEN-SPEC §3.3 (ii)
+    // — herhaalbare BOVENDREMPEL-blokken, en de dosis stijgt in het AANTAL herhalingen. GEMETEN
+    // dat dit de DOSIS niet raakt: elke band met dezelfde werk-som (5x6 = 30) geeft identieke
+    // werkminuten in alle 18 gemeten cellen; wat verschuift is uitsluitend de zone-verdeling.
+    // Zie docs/PUNT15-FASE3B-BOUWDOC.md M1.
+    //
+    // DE BPM-BAND IS DISPLAY. Hij volgt de conventie van planner.ts zelf (85-92 draagt daar
+    // 92-99, 88-94 draagt 95-102, 108-115 draagt 100-108) en doet in GEEN enkele
+    // zone-boekhouding mee — `planZone5_` en `pctZoneBucket_` lezen uitsluitend pctLo/pctHi.
+    // Er valt hier dus niets aan te ijken.
+    effortsVorm: {
+      reps: 5,
+      onMin: 6,
+      rest: 3,
+      pctLo: 100,
+      pctHi: 108,
+      bpmLo: 98,
+      bpmHi: 105,
+      as: "aantal",
+      label: "Klimherhalingen",
+      notitie: "Bovendrempel-blokken, <rest> min rust",
+    },
     langeRitPerWeek: 1, // §3.3 BESCHERMD: de intervalsessie ÉN de lange rit.
     // GEERFD van het oude `klim`-profiel: de splitsing gaat over intent en quotum, niet over
     // de volume-respons.
@@ -1640,6 +1662,24 @@ export const PROFILES: any = {
     // weekendpaar, residu is de midweekse kwaliteit.
     kwaliteitPerWeek: { Base: 2, Build: 3, Peak: 2 },
     spreiding: { midweekMinGap: 1, weekendBlok: true, effortsInLangeRit: true },
+    // ROADMAP punt 15 fase 3b — DE VORM VAN DE EFFORTS-ARM. HERKOMST: PLAN, DOELEN-SPEC §3.4 (i)
+    // — AANHOUDENDE blokken van acht tot dertig minuten ROND DE DREMPEL, opgebouwd in
+    // tijd-in-zone, dus de progressie loopt over de LENGTE en niet over het aantal. Nominaal werk
+    // 30 en `fixedNominal` 75: gelijk aan vandaag, dus de dosis beweegt niet. GEMETEN: 3x10 op
+    // 95-102 geeft 70,7 gemiddeld en 14 van de 18 cellen op norm — identiek aan de huidige band.
+    // De BPM-band is DISPLAY, zie de toelichting bij `klim_kort`.
+    effortsVorm: {
+      reps: 3,
+      onMin: 10,
+      rest: 5,
+      pctLo: 95,
+      pctHi: 102,
+      bpmLo: 96,
+      bpmHi: 103,
+      as: "lengte",
+      label: "Drempelblokken",
+      notitie: "Aanhoudend rond de drempel, <rest> min rust",
+    },
     langeRitPerWeek: 1,
     volumeResponse: { vo2Slope: 0.03, vo2Cap: 0.15 },
   },

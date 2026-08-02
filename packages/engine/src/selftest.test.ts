@@ -66,6 +66,7 @@ import {
   GOAL_KWALITEIT_INTENTS_,
   GOAL_PROFILES_,
   gatherWeekplanEntries_,
+  genericCombo,
   genericLongZ2,
   genericPendelIntervals,
   genericPendelZ2,
@@ -4564,6 +4565,197 @@ describe("engine selftest", () => {
       2,
       PROFILES.conditie.kwaliteitPerWeek.Base,
     );
+
+    // ROADMAP punt 15 fase 3b — DE DOEL-SPECIFIEKE EFFORTS-VORM, rechtstreeks op `genericCombo`.
+    // Alle getallen hieronder zijn GEMETEN, niet afgeleid; zie docs/PUNT15-FASE3B-BOUWDOC.md.
+    const combo3b_ = (doel: string, mins: number, mw: number, trede: number) =>
+      genericCombo(
+        "combo_long_with_efforts",
+        mins,
+        { ftp: 280, lthr: 160 },
+        mw,
+        doel,
+        trede,
+      );
+    const eff3b_ = (wo: any) =>
+      wo.blokken.filter(
+        (b: any) => b.pctLo !== 55 && b.pctLo !== 65 && b.pctLo !== 45,
+      );
+    const basis3b_ = (wo: any) =>
+      wo.blokken.find((b: any) => b.pctLo === 65).minuten;
+    /** reps x onMin @pctLo-pctHi in ÉÉN string, zodat vorm én band in één assertie zitten. */
+    const vorm3b_ = (wo: any) => {
+      const e = eff3b_(wo);
+      return `${e.length}x${e[0].minuten}@${e[0].pctLo}-${e[0].pctHi}`;
+    };
+
+    // (A t/m E) klim_kort: as "aantal" op de band 100-108 (DOELEN-SPEC §3.3 (ii)).
+    assert_(
+      "3b A klim_kort d120 mw1 t0 vorm",
+      "5x6@100-108",
+      vorm3b_(combo3b_("Korte beklimmingen", 120, 1, 0)),
+    );
+    assert_(
+      "3b A basis",
+      45,
+      basis3b_(combo3b_("Korte beklimmingen", 120, 1, 0)),
+    );
+    assert_(
+      "3b A totaalMin",
+      120,
+      combo3b_("Korte beklimmingen", 120, 1, 0).totaalMin,
+    );
+    assert_(
+      "3b B klim_kort d120 mw3 t0 vorm",
+      "6x6@100-108",
+      vorm3b_(combo3b_("Korte beklimmingen", 120, 3, 0)),
+    );
+    assert_(
+      "3b B basis",
+      36,
+      basis3b_(combo3b_("Korte beklimmingen", 120, 3, 0)),
+    );
+    // (C) DE REM BINDT: trede 4 levert NIET meer dan mesoWeek 3 alleen, want de ruimte is op.
+    assert_(
+      "3b C klim_kort d120 mw3 t4 vorm",
+      "6x6@100-108",
+      vorm3b_(combo3b_("Korte beklimmingen", 120, 3, 4)),
+    );
+    assert_(
+      "3b C basis blijft 36",
+      36,
+      basis3b_(combo3b_("Korte beklimmingen", 120, 3, 4)),
+    );
+    // (D) room 0 op een dag van 105: er groeit niets, ook niet op trede 4.
+    assert_(
+      "3b D klim_kort d105 mw3 t4 vorm",
+      "5x6@100-108",
+      vorm3b_(combo3b_("Korte beklimmingen", 105, 3, 4)),
+    );
+    assert_(
+      "3b D basis op de vloer",
+      30,
+      basis3b_(combo3b_("Korte beklimmingen", 105, 3, 4)),
+    );
+    // (E) deload: het AANTAL krimpt, de lengte niet.
+    assert_(
+      "3b E klim_kort d120 mw4 vorm",
+      "3x6@100-108",
+      vorm3b_(combo3b_("Korte beklimmingen", 120, 4, 0)),
+    );
+    assert_(
+      "3b E basis",
+      63,
+      basis3b_(combo3b_("Korte beklimmingen", 120, 4, 0)),
+    );
+
+    // (F) klim_lang: as "lengte" op de band 95-102 (§3.4 (i)) — de lengte beweegt, het aantal niet.
+    assert_(
+      "3b F klim_lang mw1",
+      "3x10@95-102",
+      vorm3b_(combo3b_("Lange beklimmingen", 120, 1, 0)),
+    );
+    assert_(
+      "3b F klim_lang mw1 basis",
+      45,
+      basis3b_(combo3b_("Lange beklimmingen", 120, 1, 0)),
+    );
+    assert_(
+      "3b F klim_lang mw3",
+      "3x11.5@95-102",
+      vorm3b_(combo3b_("Lange beklimmingen", 120, 3, 0)),
+    );
+    assert_(
+      "3b F klim_lang mw3 basis",
+      40.5,
+      basis3b_(combo3b_("Lange beklimmingen", 120, 3, 0)),
+    );
+    assert_(
+      "3b F klim_lang mw3 t4",
+      "3x15@95-102",
+      vorm3b_(combo3b_("Lange beklimmingen", 120, 3, 4)),
+    );
+    assert_(
+      "3b F klim_lang mw3 t4 basis",
+      30,
+      basis3b_(combo3b_("Lange beklimmingen", 120, 3, 4)),
+    );
+    assert_(
+      "3b F klim_lang mw4",
+      "3x6@95-102",
+      vorm3b_(combo3b_("Lange beklimmingen", 120, 4, 0)),
+    );
+    assert_(
+      "3b F klim_lang mw4 basis",
+      57,
+      basis3b_(combo3b_("Lange beklimmingen", 120, 4, 0)),
+    );
+
+    // (G) TERUGVAL. FTP draagt geen `effortsVorm`, dus dit pad is byte-identiek aan vóór 3b. Dat
+    // is DRAGEND: de weekend-tak in `buildWorkout` levert dit type ook zonder
+    // `spreiding.effortsInLangeRit`, bij elk doel, zodra `!dekking.high` en de fase niet Base is.
+    assert_(
+      "3b G terugval FTP mw1",
+      "3x10@85-92",
+      vorm3b_(combo3b_("FTP", 120, 1, 0)),
+    );
+    assert_(
+      "3b G terugval FTP mw1 basis",
+      45,
+      basis3b_(combo3b_("FTP", 120, 1, 0)),
+    );
+    assert_(
+      "3b G terugval FTP mw3",
+      "3x11.5@85-92",
+      vorm3b_(combo3b_("FTP", 120, 3, 0)),
+    );
+    assert_(
+      "3b G terugval FTP mw3 basis",
+      40.5,
+      basis3b_(combo3b_("FTP", 120, 3, 0)),
+    );
+    assert_(
+      "3b G terugval FTP mw4",
+      "3x6@85-92",
+      vorm3b_(combo3b_("FTP", 120, 4, 0)),
+    );
+    assert_(
+      "3b G terugval FTP mw4 basis",
+      57,
+      basis3b_(combo3b_("FTP", 120, 4, 0)),
+    );
+
+    // (H) DE VINGERAFDRUK-DELTA. Uitsluitend `tss` beweegt, met +6, bij BEIDE klim-doelen. De
+    // gelijk-asserties eronder dragen de andere helft: een vergelijking die twee kanten gelijk
+    // noemt, draagt de uitspraak dat ze ELDERS verschillen.
+    for (const mins of [105, 120, 150]) {
+      const ref = combo3b_("FTP", mins, 1, 0);
+      for (const doel of ["Korte beklimmingen", "Lange beklimmingen"]) {
+        const wo = combo3b_(doel, mins, 1, 0);
+        assert_(`3b H tss +6 ${doel} d${mins}`, ref.tss + 6, wo.tss);
+        assert_(
+          `3b H totaalMin gelijk ${doel} d${mins}`,
+          ref.totaalMin,
+          wo.totaalMin,
+        );
+        assert_(
+          `3b H zones gelijk ${doel} d${mins}`,
+          JSON.stringify(ref.zones),
+          JSON.stringify(wo.zones),
+        );
+        assert_(
+          `3b H intent.high gelijk ${doel} d${mins}`,
+          ref.intent.high,
+          wo.intent.high,
+        );
+        assert_(
+          `3b H naam gelijk ${doel} d${mins}`,
+          ref.naam.replace("FTP", doel),
+          wo.naam,
+        );
+      }
+    }
+
     // effectiveMesoWeek_: Onderhoud (mesoCyclus:false) → altijd 1; de vier andere doelen ongewijzigd.
     for (const mw of [1, 2, 3, 4]) {
       assert_(
@@ -6090,7 +6282,7 @@ describe("engine selftest", () => {
   // herstel-gat voor B2, en de vijfweg-lus die de keten zonder bevestiging doel-gestuurd houdt.
   // 1435→1447. NALEVERING: +2 voor de Recovery-tak buiten de poort (afgewezen en weggelaten) en
   // de tegenproef dat Build op dezelfde afstand wél een bevestiging vraagt. 1447→1449.
-  it("exactly 1459 assertions", () => {
-    expect(assertCount).toBe(1459);
+  it("exactly 1514 assertions", () => {
+    expect(assertCount).toBe(1514);
   });
 });
