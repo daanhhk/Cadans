@@ -405,6 +405,23 @@ punten staat onder *Gesloten — vindplaats*.
     bleek de FASE-MODULATIE te zijn en niet het quotum — in Build levert datzelfde quotum daar 0
     anaerobe minuten in 9 van de 9. DAT BLIJFT OPEN, als eigen ronde, samen met de vraag waarom
     Peak voor `klim_kort` in elke gemeten cel identiek aan Build wordt.
+    FASE 3b IS AF per 02-08-2026 en LIVE op Worker Version
+    `caccdcc1-385e-4c12-ad01-a6a3a3fa3927`, spec `docs/PUNT15-FASE3B-BOUWDOC.md`, bouw
+    `829c47e`. De efforts-arm draagt nu een doel-specifieke band: `klim_kort` 5x6 op 100-108 op
+    de AANTAL-as (§3.3 (ii)), `klim_lang` 3x10 op 95-102 op de LENGTE-as (§3.4 (i)); een doel
+    zonder `effortsVorm` houdt de oude vorm. DE DRAGENDE UITKOMST: de band verplaatst
+    ZONE-MASSA en verandert de DOSIS niet — 18 van de 18 gemeten cellen leveren identieke
+    werkminuten, en op V1 in Build gaat tempo van 25,5 naar 4,0, drempel van 29,6 naar 39,8 en
+    anaeroob van 13,5 naar 24,8 bij een ongewijzigd totaal van 68,5.
+    FASE 3c DRAAGT WAT 3b EXPLICIET HEEFT LATEN LIGGEN, in deze volgorde.
+    (i) DE SESSIE SCHAALT NIET MET DE RITDUUR: V1 met zaterdag 120 en V4 met zaterdag 240 leveren
+    allebei 68,5 werkminuten, met de efforts-arm aan beide uiteinden op 30,0. `DOELEN-SPEC`
+    §3.3 (iii) vraagt juist inspanningen laat in een GROEIENDE lange rit.
+    (ii) DE SESSIE OVERSCHRIJDT DE OPGEGEVEN DAG in 4 van de 18 cellen per klim-doel — 105
+    minuten terwijl de langste opgegeven dag 60 is, want `totaalMin` is geankerd op
+    `fixedNominal`. Dat schendt `DOELEN-SPEC` §2A: de gebruiker levert de TIJD.
+    (iii) DE DOSIS-VERHOGING BIJ `klim_lang`: 3x14 op 95-102 tilt 14 van de 18 cellen naar 18 van
+    18, maar duwt de overschrijding uit (ii) van 105 naar 117 minuten. Dus pas NA (ii).
     NOTITIE VOOR 3b, UIT FASE 3a: term 1 rekt de LENGTE van de herhalingen — 3x10 naar 3x11,5 op
     mesoWeek 3, naar 3x15 op mesoWeek 3 plus trede 4. Op 85-92 is dat sweetspot-progressie en
     consistent met de bibliotheek. Gaat de band omhoog, dan verandert lengte het KARAKTER en moet
