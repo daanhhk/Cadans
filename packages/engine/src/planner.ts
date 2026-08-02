@@ -1836,7 +1836,7 @@ export function buildWorkout(
     );
   }
   if (type.indexOf("combo_") === 0) {
-    return genericCombo(type, mins, settings, mesoWeek, doel);
+    return genericCombo(type, mins, settings, mesoWeek, doel, dosisTrede);
   }
 
   // Doel-specifieke library. Normaliseert op dezelfde string als `profileForDoel_`: kiest de
@@ -2454,21 +2454,61 @@ export function genericCombo(
   settings: any,
   mesoWeek: any,
   doel: any,
+  // ROADMAP punt 15 fase 3a — DE DOSIS-TREDE. Optioneel en trailing: weggelaten of 0 geeft
+  // `dosisTredeFactor` 1 en dus byte-identieke uitvoer voor elke bestaande aanroeper.
+  dosisTrede?: any,
 ): any {
   const ftp = settings.ftp,
     lthr = settings.lthr;
 
   if (type === "combo_long_with_efforts") {
-    // Beschikbaarheid leidend (zelfde patroon als genericLongZ2).
+    // Beschikbaarheid leidend (zelfde patroon als genericLongZ2). De NOMINALE waarden — 3x10
+    // werkminuten, 3x5 intra-rust, warmup 15, uitrijden 15 — blijven wat ze zijn; `fixedNominal`
+    // rekent daarmee, en `totaalMin` hangt DAAROM alleen van de gevraagde tijd af.
     const requested = Math.max(60, mins || 120);
-    const fixed = 75; // 15 warmup + 45 efforts (3×(10+5)) + 15 uitrijden
+    const nominalWork = 30; // 3 x 10
+    const nominalRest = 15; // 3 x 5
+    const fixedNominal = 15 + nominalWork + nominalRest + 15;
     const minBase = 30;
-    const fits = requested >= fixed + minBase;
-    const baseMin = fits ? requested - fixed : minBase;
-    const totaalMin = fixed + baseMin;
+    const fits = requested >= fixedNominal + minBase;
+    const baseNominal = fits ? requested - fixedNominal : minBase;
+    const totaalMin = fixedNominal + baseNominal;
     const tooLong = fits
       ? null
-      : { available: requested, needed: fixed + minBase };
+      : { available: requested, needed: fixedNominal + minBase };
+
+    // ROADMAP punt 15 fase 3a — DE HENDEL. GEMETEN dat deze sessie er geen had: over ritduur 90
+    // tot 300 minuten leverde ze steeds exact 30,0 werkminuten, `mesoWeek` 1 t/m 4 gaven
+    // identieke uitvoer, en `dosisTrede` kwam hier per constructie niet aan. Door de volledige
+    // pijplijn in Build ging FTP V1 van 95,0 naar 121,4 over trede 0 t/m 4 terwijl Korte
+    // beklimmingen op 68,5 tot 79,5 kwam MET de efforts-zaterdag aan beide uiteinden op 30,0. De
+    // werktijd schaalt nu mee, exact zoals `expandArchetype_` dat doet.
+    //
+    // DE RUIMTE-REM IS DRAGEND. De groei komt UITSLUITEND uit de Z2-basis en stopt zodra die op
+    // `minBase` staat — zelfde vorm als `addedWork = min(nominalWork x (f-1), room)` daar. ZONDER
+    // rem loopt de sessie bij een gevraagde dag van 105 minuten door naar 109,5 op mesoWeek 3 en
+    // 120,0 op trede 4, en vraagt de app dus MEER tijd dan de gebruiker heeft opgegeven — in
+    // strijd met DOELEN-SPEC §2A: de gebruiker levert de TIJD, de app de INHOUD.
+    //
+    // DE BAND 85-92 BLIJFT ONGEMOEID en de intra-rust schaalt NIET mee, precies zoals
+    // `expandArchetype_` `offMin` ongemoeid laat: karakter-invariant, alleen de dosis beweegt.
+    const r1_ = (x: number) => Math.round(x * 10) / 10;
+    const f =
+      (mesoWeek != null ? mesoFactor(mesoWeek) : 1) *
+      dosisTredeFactor(settings && settings.doel, dosisTrede);
+    const room = Math.max(0, baseNominal - minBase);
+    let workScale = 1;
+    if (f > 1) {
+      const addedWork = Math.min(nominalWork * (f - 1), room);
+      workScale = (nominalWork + addedWork) / nominalWork;
+    } else if (f < 1) {
+      // DOSIS-SPIEGEL (deload): letterlijke spiegel van de f>1-tak, en de Z2-basis absorbeert de
+      // vrijgekomen tijd vanzelf omdat `totaalMin` niet meebeweegt.
+      workScale = f;
+    }
+    const onMin = r1_(10 * workScale);
+    const werk = 3 * onMin;
+    const baseMin = totaalMin - 45 - werk;
 
     // ROADMAP punt 15 fase 1 — DEZE SESSIE DECLAREERT HAAR ZONES. Tot nu toe gaf deze tak als
     // ENIGE kwaliteitsdragende sessie in de app geen `blokken` terug. `planZone5_` leest juist
@@ -2496,7 +2536,7 @@ export function genericCombo(
     });
     const blokken: any[] = [blok_(15, 55, 70), blok_(baseMin, 65, 75)];
     for (let i = 0; i < 3; i++) {
-      blokken.push(blok_(10, 85, 92));
+      blokken.push(blok_(onMin, 85, 92));
       blokken.push(blok_(5, 45, 55));
     }
     blokken.push(blok_(15, 55, 65));
@@ -2524,16 +2564,23 @@ export function genericCombo(
         ],
         [
           "Efforts",
-          "3x 10min",
+          "3x " + onMin + "min",
           wattsRange(ftp, 85, 92),
           bpmRange(lthr, 92, 99),
           "Tempo/SS blokken, 5 min rust",
         ],
         ["Uitrijden", "15 min", wattsRange(ftp, 55, 65), "—", "Z2 uit"],
       ],
-      // Intent: efforts work (30) is vast high, low = warmup + base + intra-rest + uitrijden
-      intent: { low: 15 + baseMin + 10 + 15, high: 30, anaerobic: 0 },
-      tss: Math.round(totaalMin * 0.85),
+      // Intent: de efforts-werktijd is high, low = warmup + base + intra-rest + uitrijden.
+      // `intent.low` telt drie intra-rusten als TWEE en is daarmee 5 minuten scheef; dat is een
+      // bekend en genoteerd punt uit fase 1, het raakt geen werkzone, en repareren valt buiten
+      // deze fase (docs/PUNT15-FASE1-BOUWDOC.md §2).
+      intent: { low: 15 + baseMin + 10 + 15, high: r1_(werk), anaerobic: 0 },
+      // ROADMAP punt 15 fase 3a — TSS UIT DE EIGEN BLOKKEN. GEMETEN dat dit de ENIGE sessie mét
+      // blokken was waarvan de gemelde TSS afweek van `tssFromBlokken_`: 36 van de 36
+      // voorkomens, gemiddeld +7,9, minimum +2 en maximum +18, en de fout groeide met de duur
+      // (+2 bij 105 minuten, +26 bij 300). Elk ander sjabloon met blokken stond exact 0 af.
+      tss: tssFromBlokken_(blokken),
       eindopmerking:
         "Lange rit met geïntegreerde efforts — dekt low + high in één sessie.",
       tooLong: tooLong,

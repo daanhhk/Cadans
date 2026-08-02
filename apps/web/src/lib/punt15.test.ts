@@ -1,4 +1,8 @@
-import { computeMacroPhase, genericCombo } from "@cadans/engine";
+import {
+  computeMacroPhase,
+  genericCombo,
+  tssFromBlokken_,
+} from "@cadans/engine";
 import type { PlannerDay, SettingsInput } from "@cadans/shared";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { ActValuesRow } from "./activities";
@@ -123,15 +127,19 @@ describe("punt 15 fase 1 — de bouwer", () => {
     ]);
   });
 
-  it("intent en tss zijn ONGEWIJZIGD — fase 1 raakt de inhoud van het plan niet", () => {
+  it("intent, zones en tss — de tss komt sinds fase 3a uit de eigen blokken", () => {
     const wo = sessie();
     expect(wo.intent).toEqual({
       low: 15 + 45 + 10 + 15,
       high: 30,
       anaerobic: 0,
     });
-    expect(wo.tss).toBe(Math.round(wo.totaalMin * 0.85));
     expect(wo.zones).toEqual(["low", "high"]);
+    // HERIJKT bij fase 3a, en dat is geen verzwakking: deze assertie pinde met
+    // `Math.round(totaalMin * 0.85)` precies de regel vast die fase 3a INTREKT. Beide kanten staan
+    // er nu, zodat de test ook faalt als de twee ooit toevallig samenvallen.
+    expect(wo.tss).toBe(tssFromBlokken_(wo.blokken));
+    expect(wo.tss).not.toBe(Math.round(wo.totaalMin * 0.85));
   });
 });
 
@@ -450,5 +458,160 @@ describe("punt 15 fase 2 — zones geslaagd, totaal gezakt", () => {
       // En dus valt de week — dat is de CONJUNCTIE, en zonder term 2 zou dit true zijn.
       expect(w.geleverdOk).toBe(false);
     }
+  });
+});
+
+// ── FASE 3a — DE HENDEL EN DE TSS ───────────────────────────────────────────
+// Spec: docs/PUNT15-FASE3-BOUWDOC.md §7. Twee termen op de ENGINE: de werktijd van de efforts
+// schaalt met mesoFactor x dosisTredeFactor, begrensd door de Z2-basis, en de TSS komt uit de
+// eigen blokken. Deze asserties landen HIER en niet in selftest.test.ts, om dezelfde reden als de
+// bouwer-assertie van fase 1: (b) en (e) vouwen met `planZone5_`, en die woont in apps/web, waar
+// packages/engine per constructie niet uit kan importeren. De rest staat ernaast zodat de hele
+// fase op één plek te lezen is.
+
+/** genericCombo op een gevraagde dagduur, met expliciete mesoweek en trede. */
+function combo_(mins: number, mesoWeek: number, trede?: number) {
+  return genericCombo(
+    "combo_long_with_efforts",
+    mins,
+    { ftp: 280, lthr: 170, doel: "Korte beklimmingen" },
+    mesoWeek,
+    "Korte beklimmingen",
+    trede,
+  ) as never as {
+    blokken: Blok[];
+    totaalMin: number;
+    intent: { low: number; high: number; anaerobic: number };
+    tss: number;
+    structuur: string[][];
+  };
+}
+
+const effortsBlokken_ = (b: Blok[]) => b.filter((x) => x.pctLo === 85);
+
+describe("punt 15 fase 3a — term 1, de hendel", () => {
+  it("(a) f = 1 laat alles staan: 3x10, high 30, en de oude totaalMin", () => {
+    for (const wo of [combo_(120, 1), combo_(120, 1, 0), combo_(120, 1)]) {
+      expect(effortsBlokken_(wo.blokken).map((b) => b.minuten)).toEqual([
+        10, 10, 10,
+      ]);
+      expect(wo.intent.high).toBe(30);
+      expect(wo.totaalMin).toBe(120);
+      expect(wo.blokken.reduce((a, b) => a + b.minuten, 0)).toBe(wo.totaalMin);
+    }
+  });
+
+  it("(b) DE RUIMTE-REM: op een dag van 105 minuten is er geen ruimte, dus niets groeit", () => {
+    // baseNominal is daar precies minBase (30), dus room 0 — ook op mesoWeek 3 met trede 4.
+    for (const [mw, tr] of [
+      [1, 0],
+      [3, 0],
+      [3, 4],
+    ] as [number, number][]) {
+      const wo = combo_(105, mw, tr);
+      expect(effortsBlokken_(wo.blokken).map((b) => b.minuten)).toEqual([
+        10, 10, 10,
+      ]);
+      expect(wo.totaalMin).toBe(105);
+    }
+  });
+
+  it("(c) DE GROEI: op 150 minuten geeft mesoWeek 3 3x11,5 en met trede 4 3x15", () => {
+    const a = combo_(150, 3, 0);
+    expect(effortsBlokken_(a.blokken).map((b) => b.minuten)).toEqual([
+      11.5, 11.5, 11.5,
+    ]);
+    expect(a.totaalMin).toBe(150);
+    const b = combo_(150, 3, 4);
+    expect(effortsBlokken_(b.blokken).map((b2) => b2.minuten)).toEqual([
+      15, 15, 15,
+    ]);
+    expect(b.totaalMin).toBe(150);
+    // De Z2-basis vangt het verschil exact op; totaalMin beweegt niet.
+    const basis = (wo: typeof a) =>
+      wo.blokken.find((x) => x.pctLo === 65)?.minuten ?? 0;
+    expect(basis(a) - basis(b)).toBeCloseTo(3 * 15 - 3 * 11.5, 5);
+    for (const wo of [a, b]) {
+      expect(wo.blokken.reduce((x, y) => x + y.minuten, 0)).toBeCloseTo(
+        wo.totaalMin,
+        5,
+      );
+    }
+    // En de structuur meldt wat er staat.
+    expect(a.structuur.find((r) => r[0] === "Efforts")?.[1]).toBe("3x 11.5min");
+  });
+
+  it("(d) DE DELOAD-SPIEGEL: mesoWeek 4 zakt intent.high van 30 naar 18", () => {
+    const vol = combo_(150, 1);
+    const deload = combo_(150, 4);
+    expect(vol.intent.high).toBe(30);
+    expect(deload.intent.high).toBe(18);
+    expect(deload.totaalMin).toBe(vol.totaalMin);
+  });
+
+  it("de band 85-92 en de intra-rust blijven ONGEMOEID — karakter-invariant", () => {
+    const wo = combo_(150, 3, 4);
+    for (const b of effortsBlokken_(wo.blokken)) {
+      expect([b.pctLo, b.pctHi]).toEqual([85, 92]);
+      expect(b.zone).toBe("tempo");
+    }
+    expect(
+      wo.blokken.filter((b) => b.pctLo === 45).map((b) => b.minuten),
+    ).toEqual([5, 5, 5]);
+  });
+});
+
+describe("punt 15 fase 3a — term 2, de TSS", () => {
+  it("(e) tss komt uit de blokken en NIET uit het vaste tarief", () => {
+    for (const [mins, mw, tr] of [
+      [120, 1, 0],
+      [150, 3, 0],
+      [240, 1, 0],
+    ] as [number, number, number][]) {
+      const wo = combo_(mins, mw, tr);
+      expect(wo.tss).toBe(tssFromBlokken_(wo.blokken));
+      expect(wo.tss).not.toBe(Math.round(wo.totaalMin * 0.85));
+    }
+  });
+});
+
+describe("punt 15 fase 3a — (f) de trede bereikt de zaterdag, via de producent", () => {
+  /** De week zoals de app hem bouwt, op een gegeven dosis-trede. */
+  function weekOpTrede(trede: number) {
+    vi.setSystemTime(MAANDAG);
+    return buildWeekProposal({
+      settings: SETTINGS,
+      plannerDays: plannerDays(V1),
+      events: [],
+      activities: [],
+      weekplans: [],
+      wellness: [],
+      rpe: [],
+      todayISO: iso(0),
+      dosisTrede: trede,
+    } as never) as { days: { datum: string }[] };
+  }
+
+  const werk = (r: { days: { datum: string }[] }) => {
+    const blokken = r.days.flatMap((d) => rauweBlokkenVan_(d as never));
+    const zm = planZone5_(blokken, ZONE5_GRENZEN_DEFAULT);
+    return zm.tempo + zm.drempel + zm.anaeroob;
+  };
+
+  /** De werkminuten van UITSLUITEND de efforts-zaterdag. */
+  const zaterdag = (r: { days: { datum: string }[] }) => {
+    const d = r.days.find((x) => x.datum === iso(5));
+    const zm = planZone5_(rauweBlokkenVan_(d as never), ZONE5_GRENZEN_DEFAULT);
+    return zm.tempo + zm.drempel + zm.anaeroob;
+  };
+
+  it("trede 0 reproduceert de nulmeting, en trede 4 tilt de zaterdag mee", () => {
+    const t0 = weekOpTrede(0);
+    expect(werk(t0)).toBeCloseTo(68.5, 1);
+    expect(zaterdag(t0)).toBeCloseTo(30, 1);
+    // VOOR deze bouw stond de zaterdag op trede 4 óók nog op 30,0 en kwam de week op 79,5.
+    const t4 = weekOpTrede(4);
+    expect(zaterdag(t4)).toBeGreaterThan(30);
+    expect(werk(t4)).toBeGreaterThan(79.5);
   });
 });
