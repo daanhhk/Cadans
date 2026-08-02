@@ -364,7 +364,34 @@ punten staat onder *Gesloten — vindplaats*.
     27,0 / 23,0 / 21,9 over Base, Build en Peak tegen FTP 32,3 / 32,3 / 25,1 en `klim_lang` 36,0 /
     27,5 / 25,1, bij een norm van 26 per prikkel. Daar horen ook de vaste TSS van
     `combo_long_with_efforts` en de efforts-band 85-92 bij, die nominaal `tempo` heet terwijl
-    `DOELEN-SPEC` §3.3 bovendrempel vraagt. EN EEN OPEN VRAAG DIE FASE 2 ONTTOETSBAAR MAAKT: door
+    `DOELEN-SPEC` §3.3 bovendrempel vraagt.
+    FASE 3a IS AF per 02-08-2026, bouwdoc `3736575`, bouw `9066920` — ENGINE, uitsluitend
+    `packages/engine/src/planner.ts`, niet gedeployed. Twee termen: de HENDEL met ruimte-rem (de
+    werktijd van de efforts schaalt met `mesoFactor` maal `dosisTredeFactor`, begrensd door de
+    Z2-basis) en de TSS uit de blokken. De BAND is NIET aangeraakt, dus karakter-invariant.
+    FASE 3b IS DE BAND, EN ER GAAT EEN VRAAG AAN VOORAF. GEMETEN dat elke bovendrempel-band voor
+    `klim_kort` bij het huidige Peak-quotum van 2 de poortset in Peak op uitsluitend `anaeroob`
+    laat vallen — precies de omkering die punt 14 fase 1 wegnam. Met `vo2_hill_repeats` zakt de
+    week van 68,5 naar 52,0 in Build en van 46,5 naar 30,0 in Peak; met `threshold_4x8_seiler`
+    blijft het totaal gelijk (69 naar 71, 47 naar 49) maar valt de poortset opnieuw op anaeroob.
+    Met Peak-quotum 3 klopt het wél: Korte beklimmingen in Peak gaat van 47 tegen 52 op twee
+    kwaliteitsdagen naar 71 tegen 78 op drie, met poortset anaeroob plus drempel. `klim_lang`
+    hangt er NIET aan: met `threshold_long` (3x14 @95-102) gaat Build van 76,0 naar 88,0 en Peak
+    van 52,0 naar 64,0, en halen alle 18 cellen hun norm.
+    HET PEAK-QUOTUM KOMT DUS VOOR 3b. Wat er al ligt: `kwaliteitPerWeek.Peak` is 2 bij `ftp`,
+    `conditie`, `klim_kort` en `klim_lang`; `DOELEN-SPEC` §3.1 en §3.3 geven een UREN-regel
+    zonder fase-clausule, en `urenPrikkels` in `blokDosisNorm` implementeert die uren-regel al.
+    GEMETEN effect van quotum 3 in Peak, los: elk doel krijgt een derde kwaliteitsdag — FTP V2 44
+    naar 76 en V4 45 naar 70, Korte V1 47 naar 69, Lange V7 62 naar 102 — en 0 van de 90 cellen
+    buiten Peak bewegen; maar de norm stijgt mee (52 naar 78, 56 naar 84), waardoor de cellen
+    onder norm van 17 op 45 naar 21 op 45 gaan. TWEE OPEN PUNTEN: bij `klim_lang` trekt quotum 3
+    een vo2-sessie de Peak-week in die `DOELEN-SPEC` §3.4 juist niet wil, en Peak wordt voor
+    `klim_kort` in elke gemeten cel identiek aan Build. Beide eerst meten.
+    NOTITIE VOOR 3b, UIT FASE 3a: term 1 rekt de LENGTE van de herhalingen — 3x10 naar 3x11,5 op
+    mesoWeek 3, naar 3x15 op mesoWeek 3 plus trede 4. Op 85-92 is dat sweetspot-progressie en
+    consistent met de bibliotheek. Gaat de band omhoog, dan verandert lengte het KARAKTER en moet
+    de progressie naar het AANTAL herhalingen (`DOELEN-SPEC` §3.3 (ii)).
+    EN EEN OPEN VRAAG DIE FASE 2 ONTTOETSBAAR MAAKT: door
     de norm het quotum te laten volgen, kan de meetlat niet meer melden dat het plan in Peak zijn
     eigen norm niet haalt. `kwaliteitPerWeek.Peak` is 2 bij `ftp`, `conditie`, `klim_kort` en
     `klim_lang`, terwijl het commentaar boven `klim_kort` zegt dat 3 in Build ÉN Peak alle drie de

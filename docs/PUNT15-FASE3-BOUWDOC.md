@@ -94,10 +94,26 @@ dosis beweegt (`DOELEN-SPEC` §2A).
 
 MET RUIMTE-REM, EN DIE IS DRAGEND. De groei komt UITSLUITEND uit de Z2-basis en stopt zodra die op
 `minBase` (30) staat — zelfde vorm als `addedWork = min(nominalWork x (f-1), room)` in
-`expandArchetype_`. ZONDER die rem loopt de sessie bij een gevraagde 105 minuten door naar 120 en
-vraagt de app méér tijd dan de gebruiker heeft opgegeven; dat is in strijd met `DOELEN-SPEC` §2A —
-de gebruiker levert de TIJD, de app de INHOUD. GEMETEN zonder rem, mesoWeek 3: gevraagd 90 en 105
-geven allebei 109,5 op trede 0 en 120,0 op trede 4.
+`expandArchetype_`.
+
+### CORRECTIE 02-08-2026 — de grond voor de rem stond hier fout
+
+DE OORSPRONKELIJKE GROND WAS: zonder rem loopt de sessie bij een gevraagde 105 minuten door naar
+120 en vraagt de app méér tijd dan de gebruiker heeft opgegeven, met 109,5 op trede 0 en 120,0 op
+trede 4. DIE TWEE GETALLEN KOMEN UIT DE WAT-ALS, waarin `fixed` met f meegroeide en `totaalMin`
+dus ook.
+
+HET GEBOUWDE ONTWERP ANKERT `totaalMin` OP `fixedNominal`. De sessie kan de opgegeven dag per
+constructie NIET overschrijden — dat staat hierboven ook zo in de rekenvolgorde — en dus kan dat
+bewijs er niet uit komen. De meting reproduceert niet, en dat is geen defect maar het gevolg van
+een ontwerpwijziging tussen de wat-als en de bouw.
+
+WAT DE REM WERKELIJK VOORKOMT is dat de Z2-BASIS onder `minBase` (30) zakt. GEMETEN bij een
+gevraagde dag van 105 minuten en mesoWeek 3: MÉT rem 3x10 met een basis van 30; ZONDER rem 3x11,5
+met een basis van 25,5, en op trede 4 3x15 met een basis van 15.
+
+DE REM BLIJFT DRAGEND, op die grond. Een "lange rit met efforts" waarvan de lange rit nog 15
+minuten duurt is geen coherente sessie, en bij hogere waarden van f wordt de basis negatief.
 
 TERM 2 — DE TSS. `tss` wordt `tssFromBlokken_(blokken)` in plaats van
 `Math.round(totaalMin * 0.85)`.
@@ -131,8 +147,10 @@ DE DELOAD-SPIEGEL GAAT MEEDOEN: op mesoWeek 4 zakt `intent.high` van 30 naar 18.
 
 - ROOD PER TERM. Draai term 1 en term 2 elk APART terug en noteer welke tests vallen. Grep na elke
   rood-patch op de eigen markering: een patch die niets RAAKT leest als een niet-gedekte term.
-- ROOD OP DE RUIMTE-REM APART. Zet de rem uit en toon dat de sessie bij een gevraagde dag van 105
-  minuten over die tijd heen loopt; met de rem niet.
+- ROOD OP DE RUIMTE-REM APART. Zet de rem uit en meet de Z2-BASIS, niet `totaalMin` — zie de
+  CORRECTIE bij §7. Bij een gevraagde dag van 105 minuten en mesoWeek 3 zakt die basis zonder rem
+  van 30 naar 25,5, en op trede 4 naar 15; `totaalMin` blijft in beide gevallen 105, want het
+  ontwerp ankert hem op `fixedNominal`.
 - BYTE-IDENTIEK OP TREDE 0 EN MESOWEEK 1: `weekvormAs.test.ts` en `onderhoudInvariance.test.ts`
   onaangeraakt en groen.
 - EEN BESTAANDE TEST WORDT HERIJKT, EN DAT IS GEEN VERZWAKKING. In

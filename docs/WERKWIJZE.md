@@ -299,6 +299,23 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   Zelfde familie als "een acceptatie-eis toetst alleen wat de ingreep kán raken", nu op het
   MEETINSTRUMENT in plaats van op de ingreep. De ontbrekende schrijfroute stond al in `HANDOFF.md`;
   de eis had daartegen gelegd moeten worden vóór hij verstuurd werd.
+- **Een acceptatie-getal hoort bij het ONTWERP waarop het gemeten is.** Verandert het mechanisme
+  tussen wat-als en bouw, dan vervalt elk getal uit die wat-als als EIS, en moet de rood-meting op
+  het NIEUWE mechanisme opnieuw geformuleerd worden. Aanleiding: het rem-bewijs "105 gevraagd geeft
+  109,5 en op trede 4 120,0" kwam uit een wat-als waarin `fixed` met f meegroeide; het gebouwde
+  ontwerp ankert `totaalMin` op `fixedNominal` en kan de opgegeven dag per constructie niet
+  overschrijden, dus die meting KON niet reproduceren. Het juiste bewijs is een ander: zonder rem
+  zakt de Z2-basis van 30 naar 25,5, en op trede 4 naar 15. Zelfde familie als "een controle wordt
+  getoetst tegen de payload uit hetzelfde prompt", nu één stap wijder — niet tegen de meegestuurde
+  TEKST maar tegen het meegestuurde ONTWERP.
+- **Een eis dat een SUITE onaangeraakt blijft, toets je tegen de grootheid die je verandert.** Grep
+  die suite op die grootheid vóór je hem onaanraakbaar verklaart; anders geef je twee eisen die
+  elkaar uitsluiten. Aanleiding: `onderhoudInvariance.test.ts` moest onaangeraakt ÉN groen blijven,
+  terwijl chat-zijde al gemeten was dat de TSS van deze sessie met 2, 4 en 8 verschuift — en die
+  vingerafdruk draagt `tss`. De herijking was juist, en is zelf een BEGRENZINGSBEWIJS: 16 van de 48
+  cellen bewegen, uitsluitend op `tss`, terwijl `vt`, `naam`, `min`, `zones`, `macroFase` en
+  `mesoWeek` alle 48 keer identiek staan. Zelfde familie als "een instructie om iets te BEHOUDEN
+  veronderstelt dat het er staat", nu op een testsuite in plaats van op een docregel.
 
 ## Vorm van een CC-prompt
 
@@ -439,3 +456,4 @@ Volg de FOCUS uit het bovenste STAND-blok.
 - 2026-08-01 — les toegevoegd in *Recon en bewijslast*: een proportionele splitsing produceert zones die het plan nooit voorschreef; poort op het nominale label, niet op een minuten-drempel.
 - 2026-08-01 — les toegevoegd in *Recon en bewijslast*: meet de voor-staat alleen vanaf een schone werkboom — eerst committen of stashen, dan meten.
 - 2026-08-02 — les toegevoegd in *Recon en bewijslast*: de shot-harness zaait alleen de plan-kant, dus een kaart-element dat een tekort aan de GELEVERDE kant vereist is per constructie niet te fotograferen; dat is een grens op de acceptatie-eis, niet op de bouw.
+- 2026-08-02 — twee lessen toegevoegd in *Recon en bewijslast*: een acceptatie-getal hoort bij het ontwerp waarop het gemeten is, en een eis dat een suite onaangeraakt blijft toets je tegen de grootheid die je verandert.
