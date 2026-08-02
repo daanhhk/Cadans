@@ -957,7 +957,15 @@ export function DoelProjectie({
                     hidden={!assumOpen}
                     style={{
                       padding: "0 12px 11px",
-                      display: "flex",
+                      // `hidden` ALLEEN volstaat hier NIET. Het attribuut werkt via de
+                      // browser-regel `[hidden] { display: none }`, en een INLINE `display`
+                      // verslaat die per specificiteit — het paneel stond daardoor permanent
+                      // open terwijl de knop, het label en de pijl wél omklapten, want die
+                      // lezen `assumOpen` rechtstreeks. `hidden` blijft staan voor de
+                      // semantiek en houdt het element in de DOM, zodat `aria-controls` op de
+                      // knop naar iets blijft wijzen. Zet deze display NOOIT terug op een
+                      // vaste "flex".
+                      display: assumOpen ? "flex" : "none",
                       flexDirection: "column",
                       gap: "var(--s-1)",
                     }}
