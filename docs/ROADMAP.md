@@ -130,7 +130,9 @@ punten staat onder *Gesloten — vindplaats*.
    grootheid aan beide kanten, anders staat de kaart de hele periode groen op een ingetypt
    getal. `activeGoalProfile_` gaat door `normalizeDoel_`, `projectieKey` is verwijderd en één
    selftest-invariant houdt de sleutels van `PROFILES` en `GOAL_PROFILES_` gelijk. Bouw in
-   `3651fc1`.
+   `3651fc1`. VISUEEL BEVESTIGD OP PROD op 2 augustus 2026, Worker Version `1f8ec371`: de kaart
+   toont "DOEL-GEREEDHEID · FTP" met "opbouw naar FTP-test", niet de girona-lat. Daarmee is de
+   check die sinds 31-07-2026 openstond gedaan.
 9. **Het doel stuurt de periodisering niet** — af · ENGINE plus CLIENT plus DATA. GEMETEN met AGR op 17-04-2027,
    identiek voor doel FTP, Onderhoud en Beklimmingen: Base t/m 2027-02-15, Build vanaf
    2027-02-22, Peak vanaf 2027-03-22, Taper vanaf 2027-04-12. De fase komt volledig uit de
@@ -365,8 +367,11 @@ punten staat onder *Gesloten — vindplaats*.
     27,5 / 25,1, bij een norm van 26 per prikkel. Daar horen ook de vaste TSS van
     `combo_long_with_efforts` en de efforts-band 85-92 bij, die nominaal `tempo` heet terwijl
     `DOELEN-SPEC` §3.3 bovendrempel vraagt.
+    FASE 1, 2 EN 3a STAAN LIVE per 02-08-2026, Worker Version
+    `1f8ec371-c7f4-4078-8bce-7dc764434bf1`, gebouwd van `ec8098c`. Geen migratie: `0009` blijft
+    de hoogste.
     FASE 3a IS AF per 02-08-2026, bouwdoc `3736575`, bouw `9066920` — ENGINE, uitsluitend
-    `packages/engine/src/planner.ts`, niet gedeployed. Twee termen: de HENDEL met ruimte-rem (de
+    `packages/engine/src/planner.ts`. Twee termen: de HENDEL met ruimte-rem (de
     werktijd van de efforts schaalt met `mesoFactor` maal `dosisTredeFactor`, begrensd door de
     Z2-basis) en de TSS uit de blokken. De BAND is NIET aangeraakt, dus karakter-invariant.
     FASE 3b IS DE BAND, EN ER GAAT EEN VRAAG AAN VOORAF. GEMETEN dat elke bovendrempel-band voor

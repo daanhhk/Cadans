@@ -316,6 +316,13 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   cellen bewegen, uitsluitend op `tss`, terwijl `vt`, `naam`, `min`, `zones`, `macroFase` en
   `mesoWeek` alle 48 keer identiek staan. Zelfde familie als "een instructie om iets te BEHOUDEN
   veronderstelt dat het er staat", nu op een testsuite in plaats van op een docregel.
+- **Een byte-vergelijking tegen PROD draagt een KLOK.** De shots tonen "Laatst gesynct · <tijd>",
+  dus twee runs op verschillende minuten verschillen per constructie. GEMETEN bij de deploy van
+  punt 15: 1 van de 8 shots byte-identiek, en de zeven andere verschilden UITSLUITEND op 11:39
+  tegen 11:44. Lees zo'n uitslag dus niet als "zeven shots bewogen", maar stel eerst vast WAAROP ze
+  bewegen — een verschil dat volledig in een tijdstempel zit, is juist het bewijs dat er niets
+  anders bewoog. Zelfde familie als de warmloop-regel en de verzadigde-bak-regel: het instrument
+  draagt een variabele die niets met de code te maken heeft.
 
 ## Vorm van een CC-prompt
 
@@ -351,6 +358,19 @@ LET OP bij een meting: `wrangler d1 execute --file` verwerkt het bestand als IMP
 CC KAN visuele verificatie doen. `tools/shots/shot.mjs` (Playwright met Chromium) seedt de LOKALE D1 via de API, pint de browser-klok en schiet de weekkaart plus alle zeven dagkaarten weg als PNG met een `.txt` ernaast (console-errors mét falende URL, request-telling, innerText); CC leest die PNG's zelf terug. Twee regels die erbij horen: de klok is ÓÓK in de browser een fixture-variabele (`page.clock.setFixedTime`, vóór de eerste `goto`), en de app is `height: 100dvh` met een eigen scrollende `main` — een `fullPage`-shot snijdt dus af, de viewport wordt op de gemeten scrollhoogte gezet. CC BEOORDEELT ZELF wat uit een screenshot vast te stellen is en geeft een UITSPRAAK: klopt, klopt niet, of niet toetsbaar op dit geval. Beschrijven wat hij ziet is NIET genoeg — dan velt Daan alsnog het oordeel, en dat was precies het werk dat de harness moest overnemen. Kan CC iets niet vaststellen, dan zegt hij EXPLICIET wat Daan moet openen, op welk scherm, en waar hij precies naar kijkt; dat is de enige route naar Daan toe. De harness draait ook TEGEN PROD: doel-URL als argument, geen seed, geen backup, geen enkele schrijf-aanroep van de harness zelf. Prod staat achter een whole-origin Basic-auth-gate, dus hij krijgt `httpCredentials` plus een preflight mét Authorization-header; het wachtwoord komt uit `CADANS_BASIC_AUTH_PASSWORD` of uit het git-ignored `tools/shots/.prod-auth`, en blijft uit prompt, rapport en uitvoer.
 
 BESLUIT, en het blijft staan: er komt GEEN read-only-modus die de mount-sync van de app onderdrukt. Een pageload tegen prod schrijft drie dingen — twee idempotente intervals-syncs en één `PUT /api/weekplan/<maandag>` die via `mergeFrozenWeekplan` geen historie kan herschrijven. Dat is bewust geaccepteerd: een harness die een SPECIALE modus fotografeert, kan liegen over de normale. Hoort de app niet te schrijven bij het laden, dan is dat een app-defect en geen camera-defect, en dan repareer je de app.
+
+BESLUIT — EEN GROENE, GATE-KLARE BOUW GAAT NAAR PROD ZODRA HIJ KAN. "De gebruiker merkt er niets
+van" is EXPLICIET GEEN grond om te wachten: een deploy die niets verandert draagt ook geen risico,
+terwijl uitstellen wél iets kost. Geldige gronden om te wachten zijn er wel — een migratie die nog
+niet remote is, een bouw waarvan de tweede helft nog komt, een effect dat niet te overzien is.
+Wacht een deploy toch, dan draagt het STAND-blok de REDEN én de voorwaarde waaronder hij alsnog
+gaat.
+
+AANLEIDING: punt 15 fase 1, 2 en 3a zijn elk apart met dezelfde onderbouwing niet gedeployed — bij
+doel FTP inert, dus een deploy toont niets — en stapelden zo tot één deploy van drie rondes. PER
+RONDE KLOPTE HET, CUMULATIEF NIET. Fase 2 had bovendien een DATUM: Daans Peak begint 2026-08-24 en
+daar wordt de meetlat-correctie dragend. En bij één deploy van drie rondes is een probleem op prod
+niet meer aan een ronde toe te schrijven.
 
 Secrets komen nooit in de chat of in een rapport; alleen de NAAM. Lokaal draaien via `.dev.vars` (staat in `.gitignore`).
 
@@ -457,3 +477,4 @@ Volg de FOCUS uit het bovenste STAND-blok.
 - 2026-08-01 — les toegevoegd in *Recon en bewijslast*: meet de voor-staat alleen vanaf een schone werkboom — eerst committen of stashen, dan meten.
 - 2026-08-02 — les toegevoegd in *Recon en bewijslast*: de shot-harness zaait alleen de plan-kant, dus een kaart-element dat een tekort aan de GELEVERDE kant vereist is per constructie niet te fotograferen; dat is een grens op de acceptatie-eis, niet op de bouw.
 - 2026-08-02 — twee lessen toegevoegd in *Recon en bewijslast*: een acceptatie-getal hoort bij het ontwerp waarop het gemeten is, en een eis dat een suite onaangeraakt blijft toets je tegen de grootheid die je verandert.
+- 2026-08-02 — besluit toegevoegd in *Prod en veiligheid*: een groene, gate-klare bouw gaat naar prod zodra hij kan, en "de gebruiker merkt er niets van" is geen grond om te wachten. Plus een les in *Recon en bewijslast*: een byte-vergelijking tegen prod draagt een klok.
