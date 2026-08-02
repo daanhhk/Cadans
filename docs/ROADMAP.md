@@ -383,15 +383,28 @@ punten staat onder *Gesloten — vindplaats*.
     kwaliteitsdagen naar 71 tegen 78 op drie, met poortset anaeroob plus drempel. `klim_lang`
     hangt er NIET aan: met `threshold_long` (3x14 @95-102) gaat Build van 76,0 naar 88,0 en Peak
     van 52,0 naar 64,0, en halen alle 18 cellen hun norm.
-    HET PEAK-QUOTUM KOMT DUS VOOR 3b. Wat er al ligt: `kwaliteitPerWeek.Peak` is 2 bij `ftp`,
-    `conditie`, `klim_kort` en `klim_lang`; `DOELEN-SPEC` §3.1 en §3.3 geven een UREN-regel
-    zonder fase-clausule, en `urenPrikkels` in `blokDosisNorm` implementeert die uren-regel al.
-    GEMETEN effect van quotum 3 in Peak, los: elk doel krijgt een derde kwaliteitsdag — FTP V2 44
-    naar 76 en V4 45 naar 70, Korte V1 47 naar 69, Lange V7 62 naar 102 — en 0 van de 90 cellen
-    buiten Peak bewegen; maar de norm stijgt mee (52 naar 78, 56 naar 84), waardoor de cellen
-    onder norm van 17 op 45 naar 21 op 45 gaan. TWEE OPEN PUNTEN: bij `klim_lang` trekt quotum 3
-    een vo2-sessie de Peak-week in die `DOELEN-SPEC` §3.4 juist niet wil, en Peak wordt voor
-    `klim_kort` in elke gemeten cel identiek aan Build. Beide eerst meten.
+    HET PEAK-QUOTUM IS AF per 02-08-2026 en LIVE op Worker Version
+    `c5b67eb7-8eb3-456f-b21c-4dffa882cd4a`: `kwaliteitPerWeek.Peak` van 2 naar 3 bij `klim_kort`
+    en `ftp`, spec `docs/PUNT15-PEAKQUOTUM-BOUWDOC.md`, bouwdoc `438f33d`, bouw `d93774d`.
+    `klim_lang` en `conditie` blijven op 2 en `onderhoud` stond al op 3. GEMETEN en BEGRENSD: 18
+    van de 135 cellen bewegen, 0 daarvan buiten Peak — 9 bij FTP en 9 bij Korte beklimmingen.
+    Korte Peak V1 gaat van 46,5 naar 68,5 werkminuten en de poortset van tempo plus anaeroob naar
+    tempo, drempel én anaeroob. DAARMEE IS FASE 3b ONTGRENDELD: de omkering die hem blokkeerde —
+    poortset in Peak op uitsluitend `anaeroob` zodra de band omhooggaat — bestaat niet meer.
+    EVALUATIEPUNT 2026-09-21, wanneer de blok-terugblik het afgeronde mesoblok 9 t/m 12 draagt:
+    levert Daan in twee of drie van de drie Peak-weken maar twee kwaliteitsdagen, dan was 3 te veel
+    voor zijn uren. Wat die kaart NIET beslist is of 3 beter is dan 2 — de norm volgt het quotum.
+    DE MEETGROND, VAN VÓÓR DE BOUW: `kwaliteitPerWeek.Peak` stond op 2 bij `ftp`, `conditie`,
+    `klim_kort` en `klim_lang`, terwijl `DOELEN-SPEC` §3.1 en §3.3 een UREN-regel geven zonder
+    fase-clausule en `urenPrikkels` in `blokDosisNorm` die regel al implementeert. GEMETEN effect
+    van quotum 3 in Peak over ALLE VIJF de doelen, los: elk doel krijgt een derde kwaliteitsdag —
+    FTP V2 44 naar 76 en V4 45 naar 70, Korte V1 47 naar 69, Lange V7 62 naar 102 — en 0 van de 90
+    cellen buiten Peak bewegen; de norm stijgt mee (52 naar 78, 56 naar 84), waardoor de cellen
+    onder norm van 17 op 45 naar 21 op 45 gaan. Op die meting is de bouw BEPERKT tot `klim_kort` en
+    `ftp`: bij `klim_lang` trok quotum 3 een vo2-sessie de Peak-week in die §3.4 niet wil, en dat
+    bleek de FASE-MODULATIE te zijn en niet het quotum — in Build levert datzelfde quotum daar 0
+    anaerobe minuten in 9 van de 9. DAT BLIJFT OPEN, als eigen ronde, samen met de vraag waarom
+    Peak voor `klim_kort` in elke gemeten cel identiek aan Build wordt.
     NOTITIE VOOR 3b, UIT FASE 3a: term 1 rekt de LENGTE van de herhalingen — 3x10 naar 3x11,5 op
     mesoWeek 3, naar 3x15 op mesoWeek 3 plus trede 4. Op 85-92 is dat sweetspot-progressie en
     consistent met de bibliotheek. Gaat de band omhoog, dan verandert lengte het KARAKTER en moet
@@ -609,6 +622,17 @@ niet; hij verliest niet. Een punt gaat eruit zodra een STAP het opneemt — niet
 - Gat-dag-types via meegegeven datum.
 
 ### CLIENT
+
+- DE AANNAME-REGEL ONDER DE FTP-PROJECTIE KLOPT NIET MEER. `packages/engine/src/niveau.ts:798`
+  draagt "2 sleutelsessies per week, consequent" als LITERAL in een doel- én fase-onafhankelijke
+  array, terwijl `PROFILES.ftp` sinds de Peak-quotum-bouw 3 draagt in Base, Build ÉN Peak. De
+  functie krijgt geen doel en geen fase mee, dus de kaart onderbouwt zijn schatting met een aanname
+  die de app zelf niet volgt. Kwam binnen bij de prod-verificatie van 2026-08-02.
+- DE TESTWEEK-TELLING WIJST OP DE DAG ERNÁ. De kaart zegt "FTP-test over ~8 weken" omdat
+  `doelTestWeken_` rekent met `doelStart` plus `doelDuur` maal 7 (2026-09-21), terwijl de testweek
+  per `computeMacroPhase` blokweek 12 is met maandag 2026-09-14 — zes weken. Het juiste anker is
+  `doelStart` plus (`doelDuur` min 1) maal 7. Bijkomend: `computeMacroPhase` hardcodeert 12 terwijl
+  `doelTestWeken_` `settings.doelDuur` leest, dus die twee kunnen sowieso uiteenlopen.
 
 - `GET /api/checkin/:datum` GEEFT 404 bij afwezigheid, terwijl de huisregel elders 200 met
   `null` of een lege lijst is (`/api/settings`, `/api/planner/:monday`). Cosmetisch — de client

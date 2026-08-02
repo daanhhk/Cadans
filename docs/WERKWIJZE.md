@@ -323,6 +323,21 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   bewegen — een verschil dat volledig in een tijdstempel zit, is juist het bewijs dat er niets
   anders bewoog. Zelfde familie als de warmloop-regel en de verzadigde-bak-regel: het instrument
   draagt een variabele die niets met de code te maken heeft.
+- **Een uitspraak over WAT DE GEBRUIKER MERKT die op ÉÉN cel gemeten is, mag niet als algemene
+  uitspraak in een bouwdoc landen.** Zelfde familie als "citeer een meting met het predicaat dat
+  gemeten is", een stap verder: hier viel geen kwalificatie weg, maar werd een uitspraak over een
+  ENKELE cel gelezen als uitspraak over de hele meetruimte. Aanleiding: het bouwdoc van het
+  Peak-quotum zei dat het oordeel bij Daan niet kantelt — waar voor zijn weekvorm — terwijl over
+  negen weekvormen er drie naar niet-geleverd kantelen en twee de andere kant op. Die negen cellen
+  waren al gemeten. EN DE TWEEDE HELFT: een kanteling citeer je met BEIDE richtingen, anders leest
+  een netto-verschuiving als een eenzijdige verslechtering — FTP ging van 3 van 9 naar 2 van 9,
+  maar Korte beklimmingen van 2 van 9 naar 4 van 9 met nul cellen de verkeerde kant op.
+- **Het mechanisme dat een SLOT OPENT is niet het mechanisme dat het VULT.** Stel bij een wat-als
+  vast welke ingreep het waargenomen gevolg werkelijk VEROORZAAKT, vóór je de ingreep afwijst.
+  Aanleiding: quotum 3 haalde bij `klim_lang` in 8 van de 9 weekvormen anaeroob werk binnen dat
+  `DOELEN-SPEC` §3.4 niet wil — maar in BUILD levert datzelfde quotum daar 0 anaerobe minuten in 9
+  van de 9. De oorzaak is `GOAL_FASE_MOD_.Peak` (vo2 +0,15, sweetspot -0,10), niet het quotum.
+  Zelfde familie als "een acceptatie-eis toetst alleen wat de ingreep kán raken".
 
 ## Vorm van een CC-prompt
 
@@ -478,3 +493,4 @@ Volg de FOCUS uit het bovenste STAND-blok.
 - 2026-08-02 — les toegevoegd in *Recon en bewijslast*: de shot-harness zaait alleen de plan-kant, dus een kaart-element dat een tekort aan de GELEVERDE kant vereist is per constructie niet te fotograferen; dat is een grens op de acceptatie-eis, niet op de bouw.
 - 2026-08-02 — twee lessen toegevoegd in *Recon en bewijslast*: een acceptatie-getal hoort bij het ontwerp waarop het gemeten is, en een eis dat een suite onaangeraakt blijft toets je tegen de grootheid die je verandert.
 - 2026-08-02 — besluit toegevoegd in *Prod en veiligheid*: een groene, gate-klare bouw gaat naar prod zodra hij kan, en "de gebruiker merkt er niets van" is geen grond om te wachten. Plus een les in *Recon en bewijslast*: een byte-vergelijking tegen prod draagt een klok.
+- 2026-08-02 — twee lessen toegevoegd in *Recon en bewijslast*: een uitspraak over wat de gebruiker merkt die op één cel gemeten is mag niet als algemene uitspraak landen (en een kanteling citeer je met beide richtingen), en het mechanisme dat een slot opent is niet het mechanisme dat het vult.
