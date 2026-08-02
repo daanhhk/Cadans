@@ -2470,11 +2470,43 @@ export function genericCombo(
       ? null
       : { available: requested, needed: fixed + minBase };
 
+    // ROADMAP punt 15 fase 1 — DEZE SESSIE DECLAREERT HAAR ZONES. Tot nu toe gaf deze tak als
+    // ENIGE kwaliteitsdragende sessie in de app geen `blokken` terug. `planZone5_` leest juist
+    // `blokken`, dus de 30 efforts-minuten waren onzichtbaar voor de zone-munt en `zone` belandde
+    // niet eens in de poortset van punt 14. GEMETEN over 5 doelen x 3 fases x 7 weekvormen (480
+    // sessies): 28 sessies zonder blokken, alle van dit type, alle bij de twee klim-doelen in
+    // Build en Peak, samen 840 gedeclareerde intent-high-minuten. Zie docs/PUNT15-FASE1-BOUWDOC.md.
+    //
+    // GEEN NIEUW GETAL: elke band staat al in de `structuur` hieronder, en de volgorde en de
+    // minuten volgen die structuur exact, sommerend tot `totaalMin` (15 + baseMin + 3x10 + 3x5 +
+    // 15 = 75 + baseMin). `zone` komt uit `pctZoneBucket_` op het MIDDEN van de eigen band —
+    // hetzelfde patroon als `expandArchetype_` (archetypes.ts:151) en de bouwer hierboven, geen
+    // eigen mapping. De intra-rust is de enige band die de `structuur` niet noemt; die volgt de
+    // uitrij-conventie van dit bestand (45-55, zie de cool-down op regel 1381) en is NIET DRAGEND:
+    // elke waarde onder 56 valt in `rust`, en `rust` doet in geen enkel oordeel mee.
+    //
+    // `intent` en `tss` blijven ONGEWIJZIGD. De blokken dekken `totaalMin` en niet `intent.low` —
+    // die twee lopen 5 minuten uiteen omdat `fixed` drie intra-rusten telt en `intent.low` er twee;
+    // het verschil zit uitsluitend in rust en raakt geen werkzone.
+    const blok_ = (minuten: number, pctLo: number, pctHi: number) => ({
+      minuten: minuten,
+      zone: pctZoneBucket_(Math.round((pctLo + pctHi) / 2)),
+      pctLo: pctLo,
+      pctHi: pctHi,
+    });
+    const blokken: any[] = [blok_(15, 55, 70), blok_(baseMin, 65, 75)];
+    for (let i = 0; i < 3; i++) {
+      blokken.push(blok_(10, 85, 92));
+      blokken.push(blok_(5, 45, 55));
+    }
+    blokken.push(blok_(15, 55, 65));
+
     return {
       naam: "Lange rit + " + doel + " efforts (" + totaalMin + " min)",
       focus: "volume + key zone",
       zones: ["low", "high"],
       totaalMin: totaalMin,
+      blokken: blokken,
       structuur: [
         [
           "Warmup",
