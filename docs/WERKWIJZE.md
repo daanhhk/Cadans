@@ -287,6 +287,18 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   NOMINALE labels terwijl de meting PROPORTIONEEL splitst, dus de hele norm bij één label leggen
   eist minuten in een zone waar het plan ze door bandoverloop niet legt. Minuten TELLEN lijdt daar
   niet aan; norm bij een LABEL leggen wel.
+- **De shot-harness zaait alleen de PLAN-kant.** De GELEVERDE kant komt uit de activiteiten in de
+  lokale D1, en daar bestaat geen API-schrijfroute voor: de enige write is `/sync/activities`, en
+  die trekt van Intervals. Elk kaart-element waarvan de conditie een TEKORT aan de GELEVERDE kant
+  vereist, is dus per constructie niet te fotograferen. Vraag er geen shot voor; zeg meteen wat
+  Daan moet openen, op welk scherm en waar hij naar kijkt. Aanleiding: `totaalOpNorm` uit punt 15
+  fase 2 komt in 0 van de 72 shots voor. Het Peak-scenario voor Korte beklimmingen is gebouwd en na
+  meting weer weggehaald — Daans echte ritten leveren in dat blok 118 werkminuten tegen een
+  Peak-norm van circa 53, dus zones én totaal ruim gehaald.
+  DE EIGENLIJKE LES ZIT IN DE TWEEDE HELFT: dit is een grens op de ACCEPTATIE-EIS, niet op de bouw.
+  Zelfde familie als "een acceptatie-eis toetst alleen wat de ingreep kán raken", nu op het
+  MEETINSTRUMENT in plaats van op de ingreep. De ontbrekende schrijfroute stond al in `HANDOFF.md`;
+  de eis had daartegen gelegd moeten worden vóór hij verstuurd werd.
 
 ## Vorm van een CC-prompt
 
@@ -426,3 +438,4 @@ Volg de FOCUS uit het bovenste STAND-blok.
 - 2026-08-01 — les toegevoegd in *Recon en bewijslast*: een grep die het eigen bestand uitfiltert kan de aanroeper binnen dat bestand niet zien.
 - 2026-08-01 — les toegevoegd in *Recon en bewijslast*: een proportionele splitsing produceert zones die het plan nooit voorschreef; poort op het nominale label, niet op een minuten-drempel.
 - 2026-08-01 — les toegevoegd in *Recon en bewijslast*: meet de voor-staat alleen vanaf een schone werkboom — eerst committen of stashen, dan meten.
+- 2026-08-02 — les toegevoegd in *Recon en bewijslast*: de shot-harness zaait alleen de plan-kant, dus een kaart-element dat een tekort aan de GELEVERDE kant vereist is per constructie niet te fotograferen; dat is een grens op de acceptatie-eis, niet op de bouw.
