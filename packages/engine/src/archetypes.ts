@@ -1609,7 +1609,15 @@ export const PROFILES: any = {
     },
     // §3.3: een korte-intervalsessie, een drempelsessie, een groeiende lange rit. In Build en
     // Peak consumeert de efforts-arm er een, dus 3 levert daar alle drie.
-    kwaliteitPerWeek: { Base: 3, Build: 3, Peak: 2 },
+    //
+    // ROADMAP punt 15 — PEAK VAN 2 NAAR 3. §3.3 noemt die drie elementen ZONDER fase-clausule en
+    // maakt de intervalsessie én de lange rit beschermd; Base en Build droegen al 3, dus Peak 2
+    // was de uitzondering zonder spec-grond. HERKOMST: PLAN, niet SIGNAAL — dit getal is NIET op
+    // een reeks te ijken, want `blokDosisNorm` leidt de norm via `min(quotum, urenPrikkels)`
+    // een-op-een uit dit quotum af, zodat de geleverd-telling zichzelf zou meten. GEMETEN wat het
+    // extra slot levert: in 9 van de 9 weekvormen een DREMPELsessie met nul anaeroob — precies het
+    // element dat bij quotum 2 wegviel. Zie docs/PUNT15-PEAKQUOTUM-BOUWDOC.md.
+    kwaliteitPerWeek: { Base: 3, Build: 3, Peak: 3 },
     // §3.3 (iii): de inspanningen horen LAAT in een lange rit.
     spreiding: { midweekMinGap: 1, weekendBlok: true, effortsInLangeRit: true },
     langeRitPerWeek: 1, // §3.3 BESCHERMD: de intervalsessie ÉN de lange rit.
@@ -1640,7 +1648,12 @@ export const PROFILES: any = {
     soort: "capaciteit",
     intentGewichten: GOAL_INTENT_WEIGHTS_FTP_,
     faseModulatie: GOAL_FASE_MOD_,
-    kwaliteitPerWeek: { Base: 3, Build: 3, Peak: 2 },
+    // ROADMAP punt 15 — PEAK VAN 2 NAAR 3. §3.1 geeft een UREN-regel zonder fase-clausule: twee
+    // sleutelsessies tot circa vier uur, drie vanaf vijf à zes uur. Base en Build droegen al 3, dus
+    // ook hier was Peak 2 de uitzondering zonder spec-grond. HERKOMST: PLAN, niet SIGNAAL — niet op
+    // een reeks te ijken, om dezelfde reden als bij `klim_kort` hierboven: de norm volgt dit
+    // quotum, dus een telling die het quotum beoordeelt is een cirkel.
+    kwaliteitPerWeek: { Base: 3, Build: 3, Peak: 3 },
     spreiding: {
       midweekMinGap: 1,
       weekendBlok: false,

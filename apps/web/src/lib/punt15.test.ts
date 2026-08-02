@@ -179,11 +179,28 @@ describe("punt 15 fase 1 — de keten, met de producent in de lus", () => {
 const FASE_OFFSET = { Base: 0, Build: -28, Peak: -56, Test: -84 } as const;
 
 describe("punt 15 fase 2 — term 1, de norm kent het fase-quotum", () => {
-  it("Peak begrenst FTP op 2 prikkels, Build en Base laten 3 staan", () => {
-    // PROFILES.ftp: Base 3, Build 3, Peak 2. Bij 5 weekuren gaf de oude regel altijd 3.
-    expect(blokDosisNorm("FTP", 5, 0, undefined, "Base")?.prikkels).toBe(3);
-    expect(blokDosisNorm("FTP", 5, 0, undefined, "Build")?.prikkels).toBe(3);
-    expect(blokDosisNorm("FTP", 5, 0, undefined, "Peak")?.prikkels).toBe(2);
+  it("het FASE-quotum stuurt, niet alleen de uren-drempel", () => {
+    // HERIJKT bij de Peak-quotum-ronde: `ftp` droeg dit mechanisme, maar draagt sinds die bouw
+    // Peak 3 en kan het verschil dus niet meer laten zien. `Lange beklimmingen` draagt als ENIGE
+    // nog Base 2 / Build 3 / Peak 2, dus daar blijft Build 3 tegen Peak 2 meetbaar. Dat is
+    // herijking en geen verzwakking: het MECHANISME — `blokDosisNorm` leest `kwaliteitPerWeek`
+    // en niet alleen `urenPrikkels` — staat er onverkort.
+    expect(
+      blokDosisNorm("Lange beklimmingen", 5, 0, undefined, "Build")?.prikkels,
+    ).toBe(3);
+    expect(
+      blokDosisNorm("Lange beklimmingen", 5, 0, undefined, "Peak")?.prikkels,
+    ).toBe(2);
+    expect(
+      blokDosisNorm("Lange beklimmingen", 5, 0, undefined, "Base")?.prikkels,
+    ).toBe(2);
+    // En de twee die naar 3 gingen geven nu in ALLE DRIE de fases 3 bij 5 weekuren.
+    for (const f of ["Base", "Build", "Peak"]) {
+      expect(blokDosisNorm("FTP", 5, 0, undefined, f)?.prikkels).toBe(3);
+      expect(
+        blokDosisNorm("Korte beklimmingen", 5, 0, undefined, f)?.prikkels,
+      ).toBe(3);
+    }
   });
 
   it("de uren-drempel blijft de bovengrens — het quotum verhoogt nooit", () => {
@@ -332,9 +349,16 @@ const referent_ = (doel: string, offset: number) => {
 };
 
 describe("punt 15 fase 2 — de stop-condities: Onderhoud en FTP kantelen nergens", () => {
+  // HERIJKT bij de Peak-quotum-ronde. FTP in PEAK is er UIT en staat als eigen geval hieronder:
+  // het quotum ging daar van 2 naar 3, dus de norm van 56 naar 84 terwijl het plan van 70,0 naar
+  // 78,0 werkminuten groeit — de norm stijgt harder dan het plan en het oordeel kantelt. Dat is
+  // een BEDOELD gevolg van een besluit met herkomst PLAN, en geen bewijs tegen dat besluit: de
+  // norm volgt het quotum, dus deze telling kan het quotum per constructie niet beoordelen
+  // (docs/PUNT15-PEAKQUOTUM-BOUWDOC.md §2). Onderhoud en FTP in Base en Build bewegen niet.
   for (const doel of ["Onderhoud", "FTP"]) {
     for (const [naam, off] of Object.entries(FASE_OFFSET)) {
       if (naam === "Test") continue;
+      if (doel === "FTP" && naam === "Peak") continue;
       it(`${doel} in ${naam}: een EXACT volgens plan gereden week leest als geleverd`, () => {
         const r = referent_(doel, off);
         if (!r) throw new Error("referent onverwacht null");
@@ -613,5 +637,97 @@ describe("punt 15 fase 3a — (f) de trede bereikt de zaterdag, via de producent
     const t4 = weekOpTrede(4);
     expect(zaterdag(t4)).toBeGreaterThan(30);
     expect(werk(t4)).toBeGreaterThan(79.5);
+  });
+});
+
+// ── HET PEAK-QUOTUM — 3 VOOR klim_kort EN ftp ───────────────────────────────
+// Spec: docs/PUNT15-PEAKQUOTUM-BOUWDOC.md. HERKOMST PLAN: de norm volgt het quotum via
+// min(quotum, urenPrikkels), dus een geleverd-telling die het quotum beoordeelt meet zichzelf.
+// Wat hier getoetst wordt is daarom het MECHANISME en de BEGRENZING, niet of 3 beter is dan 2.
+describe("punt 15 — het Peak-quotum", () => {
+  it("het extra slot brengt een DREMPEL-dag in de Peak-week, via de producent", () => {
+    // Fixture uit de spec: doel Korte beklimmingen, doelStart 2026-06-01 → blokweek 9 = Peak.
+    vi.setSystemTime(MAANDAG);
+    const doelStart = iso(-56);
+    const r = buildWeekProposal({
+      settings: {
+        ...SETTINGS,
+        doel: "Korte beklimmingen",
+        doelStart,
+        weekUren: 5,
+      },
+      plannerDays: plannerDays(V1),
+      events: [
+        { datum: "2027-04-17", naam: "AGR", type: "race", prioriteit: "A" },
+      ],
+      activities: [],
+      weekplans: [],
+      wellness: [],
+      rpe: [],
+      todayISO: iso(0),
+    } as never) as { days: { datum: string }[] };
+
+    const blokken = r.days.flatMap((d) => rauweBlokkenVan_(d as never));
+    // DRIE dagen met kwaliteitsminuten — bij quotum 2 waren dat er twee.
+    const kwaliteitsDagen = r.days.filter((d) => {
+      const zm = planZone5_(
+        rauweBlokkenVan_(d as never),
+        ZONE5_GRENZEN_DEFAULT,
+      );
+      return zm.tempo + zm.drempel + zm.anaeroob > 0;
+    }).length;
+    expect(kwaliteitsDagen).toBe(3);
+    // En de sessie die erbij komt is een DREMPELsessie: het element uit DOELEN-SPEC §3.3 dat bij
+    // quotum 2 wegviel. Bij quotum 2 was de poortset tempo plus anaeroob.
+    expect(werkzoneLabelsVan_(blokken)).toContain("drempel");
+    // HERKOMST van de getallen (spec §5): 46,5 naar 68,5 werkminuten. Eén keer afronden, op de
+    // gerapporteerde grootheid — nooit per deel.
+    const zm = planZone5_(blokken, ZONE5_GRENZEN_DEFAULT);
+    expect(zm.tempo + zm.drempel + zm.anaeroob).toBeCloseTo(68.5, 1);
+  });
+
+  it("BEGRENZING: alleen klim_kort en ftp bewegen, en alleen in Peak", () => {
+    // De drie die NIET bewegen horen er expliciet bij, anders waaiert de wijziging later stil uit.
+    for (const f of ["Base", "Build", "Peak"]) {
+      expect(blokDosisNorm("FTP", 5, 0, undefined, f)?.prikkels).toBe(3);
+      expect(
+        blokDosisNorm("Korte beklimmingen", 5, 0, undefined, f)?.prikkels,
+      ).toBe(3);
+    }
+    expect(
+      blokDosisNorm("Lange beklimmingen", 5, 0, undefined, "Peak")?.prikkels,
+    ).toBe(2);
+    expect(blokDosisNorm("Conditie", 5, 0, undefined, "Peak")?.prikkels).toBe(
+      2,
+    );
+    expect(blokDosisNorm("Onderhoud", 5, 0, undefined, "Peak")?.prikkels).toBe(
+      3,
+    );
+  });
+
+  it("GEVOLG DAT DE SPEC NIET NOEMDE: het oordeel van FTP in Peak kantelt op V1", () => {
+    // De norm gaat van 56 naar 84 terwijl het plan van 70,0 naar 78,0 werkminuten groeit — de norm
+    // stijgt harder. Een exact volgens plan gereden Peak-week leest daardoor als NIET geleverd.
+    // Vastgelegd zodat het geen verrassing wordt, niet omdat het het besluit weerlegt.
+    const b = blokOpPlan_("FTP", FASE_OFFSET.Peak);
+    const r = buildBlokReferent({
+      doelStart: b.doelStart,
+      activities: b.activities,
+      doel: "FTP",
+      weekUren: 5,
+      startMonday: b.blokStart,
+      todayISO: schuif_(b.blokStart, 28),
+      grenzen: ZONE5_GRENZEN_DEFAULT,
+      weekplans: b.weekplans,
+    });
+    if (!r) throw new Error("referent onverwacht null");
+    const w = r.weeks[0];
+    if (!w) throw new Error("geen weken");
+    expect(w.gevraagd).toBe(84);
+    expect(
+      w.geleverdTempo + w.geleverdDrempel + w.geleverdAnaeroob,
+    ).toBeCloseTo(78, 1);
+    expect(w.totaalOpNorm).toBe(false);
+    expect(w.geleverdOk).toBe(false);
   });
 });

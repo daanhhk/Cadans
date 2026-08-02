@@ -4508,6 +4508,62 @@ describe("engine selftest", () => {
     assert_("onderhoud langeRitPerWeek 0", 0, p.langeRitPerWeek);
     assert_("onderhoud vo2Slope 0", 0, p.volumeResponse.vo2Slope);
     assert_("onderhoud vo2Cap 0", 0, p.volumeResponse.vo2Cap);
+
+    // ROADMAP punt 15 — HET PEAK-QUOTUM, op ALLE VIJF de profielen. `klim_kort` en `ftp` gingen
+    // van 2 naar 3 omdat DOELEN-SPEC §3.3 respectievelijk §3.1 hun aantal ZONDER fase-clausule
+    // noemt en Base en Build er al 3 droegen. `klim_lang` (§3.4) en `conditie` (§3.5) maken de
+    // midweekse kwaliteit juist RESIDU en noemen geen aantal, dus die blijven op 2.
+    //
+    // DE TWEE DIE NIET BEWEGEN STAAN ER EXPLICIET BIJ. Zonder die twee kan de wijziging later stil
+    // uitwaaieren over de andere profielen zonder dat iets rood wordt — dan bewaakt deze assertie
+    // alleen nog de richting waarin ze wél is doorgevoerd.
+    //
+    // HERKOMST: PLAN, niet SIGNAAL. `blokDosisNorm` leidt de norm via `min(quotum, urenPrikkels)`
+    // een-op-een uit dit quotum af, dus een geleverd-telling die het quotum beoordeelt meet
+    // zichzelf. Hier valt niets te ijken. Zie docs/PUNT15-PEAKQUOTUM-BOUWDOC.md.
+    assert_(
+      "klim_kort kwaliteitPerWeek.Peak 3",
+      3,
+      PROFILES.klim_kort.kwaliteitPerWeek.Peak,
+    );
+    assert_(
+      "ftp kwaliteitPerWeek.Peak 3",
+      3,
+      PROFILES.ftp.kwaliteitPerWeek.Peak,
+    );
+    assert_(
+      "klim_lang kwaliteitPerWeek.Peak 2",
+      2,
+      PROFILES.klim_lang.kwaliteitPerWeek.Peak,
+    );
+    assert_(
+      "conditie kwaliteitPerWeek.Peak 2",
+      2,
+      PROFILES.conditie.kwaliteitPerWeek.Peak,
+    );
+    // En Base en Build blijven waar ze stonden: de wijziging raakt UITSLUITEND Peak.
+    assert_(
+      "klim_kort Base 3 onbewogen",
+      3,
+      PROFILES.klim_kort.kwaliteitPerWeek.Base,
+    );
+    assert_(
+      "klim_kort Build 3 onbewogen",
+      3,
+      PROFILES.klim_kort.kwaliteitPerWeek.Build,
+    );
+    assert_("ftp Base 3 onbewogen", 3, PROFILES.ftp.kwaliteitPerWeek.Base);
+    assert_("ftp Build 3 onbewogen", 3, PROFILES.ftp.kwaliteitPerWeek.Build);
+    assert_(
+      "klim_lang Base 2 onbewogen",
+      2,
+      PROFILES.klim_lang.kwaliteitPerWeek.Base,
+    );
+    assert_(
+      "conditie Base 2 onbewogen",
+      2,
+      PROFILES.conditie.kwaliteitPerWeek.Base,
+    );
     // effectiveMesoWeek_: Onderhoud (mesoCyclus:false) → altijd 1; de vier andere doelen ongewijzigd.
     for (const mw of [1, 2, 3, 4]) {
       assert_(
@@ -6034,7 +6090,7 @@ describe("engine selftest", () => {
   // herstel-gat voor B2, en de vijfweg-lus die de keten zonder bevestiging doel-gestuurd houdt.
   // 1435→1447. NALEVERING: +2 voor de Recovery-tak buiten de poort (afgewezen en weggelaten) en
   // de tegenproef dat Build op dezelfde afstand wél een bevestiging vraagt. 1447→1449.
-  it("exactly 1449 assertions", () => {
-    expect(assertCount).toBe(1449);
+  it("exactly 1459 assertions", () => {
+    expect(assertCount).toBe(1459);
   });
 });
