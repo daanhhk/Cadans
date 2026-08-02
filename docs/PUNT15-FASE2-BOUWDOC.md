@@ -157,6 +157,17 @@ nieuwe koppeling bereikbaar.
 - DE VASTE TSS van `combo_long_with_efforts` — `Math.round(totaalMin * 0.85)` in plaats van
   `tssFromBlokken_` — en de efforts-band 85-92, die met haar midden op 88,5 nominaal `tempo` heet
   terwijl `DOELEN-SPEC` §3.3 voor dit doel BOVENDREMPEL vraagt. Beide horen bij fase 3.
+- HET PEAK-QUOTUM ZELF, ALS OPEN VRAAG VOOR FASE 3. Term 1 laat de norm meezakken naar
+  `kwaliteitPerWeek`, en daarmee wordt het quotum ONTTOETSBAAR: wat de meetlat tot nu toe meldde —
+  het plan haalt zijn eigen norm niet in Peak — verdwijnt zodra de norm het quotum volgt. En er is
+  reden om aan dat quotum te twijfelen. `kwaliteitPerWeek.Peak` is 2 bij `ftp`, `conditie`,
+  `klim_kort` en `klim_lang`, terwijl het commentaar BOVEN `klim_kort` zegt dat 3 in Build ÉN Peak
+  alle drie de elementen levert, en `DOELEN-SPEC` §3.1 drie sleutelsessies noemt vanaf vijf à zes
+  uur ZONDER fase-clausule. Die tegenspraak stond er al; term 1 haalt alleen de meetlat weg die hem
+  kon melden. DE VRAAG voor fase 3 is dus niet "hoe repareren we de norm" maar "klopt het
+  Peak-quotum van 2, of hoort het 3 te zijn" — en dat is een DOSIS-vraag over het plan, niet over
+  de meetlat. Hier bewust NIET beantwoord: term 1 volgt het quotum zoals het is, en beweegt het
+  niet.
 - DE EVENT-OVERNAME, als BEKENDE GRENS en niet als omissie. `effectiveMacroFase_` kan de fase van
   het PLAN verzetten vanaf acht weken voor het hoofdevent; de norm volgt in fase 2 de DOEL-fase uit
   `computeMacroPhase`. Voor AGR 2027-04-17 valt die grens op 2027-02-22. Vanaf dat moment kunnen

@@ -363,7 +363,13 @@ punten staat onder *Gesloten — vindplaats*.
     27,0 / 23,0 / 21,9 over Base, Build en Peak tegen FTP 32,3 / 32,3 / 25,1 en `klim_lang` 36,0 /
     27,5 / 25,1, bij een norm van 26 per prikkel. Daar horen ook de vaste TSS van
     `combo_long_with_efforts` en de efforts-band 85-92 bij, die nominaal `tempo` heet terwijl
-    `DOELEN-SPEC` §3.3 bovendrempel vraagt.
+    `DOELEN-SPEC` §3.3 bovendrempel vraagt. EN EEN OPEN VRAAG DIE FASE 2 ONTTOETSBAAR MAAKT: door
+    de norm het quotum te laten volgen, kan de meetlat niet meer melden dat het plan in Peak zijn
+    eigen norm niet haalt. `kwaliteitPerWeek.Peak` is 2 bij `ftp`, `conditie`, `klim_kort` en
+    `klim_lang`, terwijl het commentaar boven `klim_kort` zegt dat 3 in Build ÉN Peak alle drie de
+    elementen levert, en `DOELEN-SPEC` §3.1 drie sleutelsessies noemt vanaf vijf à zes uur zonder
+    fase-clausule. Klopt dat Peak-quotum van 2, of hoort het 3 te zijn? Die tegenspraak stond er
+    al; fase 2 haalt alleen de meetlat weg die hem kon melden.
 16. **De goedkope bereik-prikkel** — open · ENGINE plus norm. Een prikkel boven de drempel die
     TOEVOEGT in plaats van RUILT: sprints of hard starts aan het eind van een Z2-rit, of een korte
     set achter sweet-spot-werk. Kwam binnen bij punt 14 fase 2, waar de RUIL-vorm meetbaar is
