@@ -339,6 +339,34 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   van de 9. De oorzaak is `GOAL_FASE_MOD_.Peak` (vo2 +0,15, sweetspot -0,10), niet het quotum.
   Zelfde familie als "een acceptatie-eis toetst alleen wat de ingreep kán raken".
 
+- **Een SCHRIJFPAD controleer je aan BEIDE uiteinden, net als een leespad.** Een route-guard die
+  een afwezige sleutel netjes overslaat zegt NIETS over wat de laag erachter met de rij doet.
+  Aanleiding: het bouwdoc van de niveaukaart beloofde in §2.3 dat de bewaarde `doelDuur` blijft
+  staan en schreef in §3 voor om het veld uit `NUM_KEYS` te halen. De chat had `api.ts:775`
+  (`if ("doelDuur" in body)`) gelezen en was daar gestopt, terwijl `writeSettings`
+  (`workers/api/src/db/repo.ts:56`) FULL-REPLACE is met `doelDuur: s.doelDuur ?? null` binnen één
+  `onConflictDoUpdate` — de eerstvolgende opslag vanuit Instellingen had de kolom op NULL gezet.
+  Bovendien is `SettingsForm` een mapped type over de DTO, dus het had niet eens gecompileerd. CC
+  ving beide vóór de bouw en stopte. Zelfde familie als "een pad kan dood zijn aan zijn INVOER of
+  aan zijn UITVOER", nu op een SCHRIJFpad.
+- **Een grep-EIS toets je tegen de echte trefferverdeling vóór je hem verstuurt.** "Nul treffers"
+  is een controle die per constructie kan falen op treffers die er HOREN te staan, en dan stopt de
+  uitvoerder terecht op een eis die zelf niet klopte. Aanleiding: dezelfde ronde eiste nul
+  treffers op `doelDuur` in `apps/web/src` en `packages/engine/src`, terwijl er 32 stonden in 24
+  bestanden waarvan 23 `SettingsInput`-fixtures die de sleutel moeten dragen zolang het DTO-veld
+  bestaat. De bereikbare eis was nul op DRIE genoemde bestanden; daar stonden er zes. Zelfde
+  familie als "een controle wordt getoetst tegen de payload uit hetzelfde prompt".
+- **Een render-conditie die op een BROWSER-DEFAULT leunt, verliest van een inline stijl op
+  hetzelfde element.** `hidden={!open}` werkt via de UA-regel `[hidden] { display: none }`, en die
+  wordt verslagen door élke expliciete `display`. Aanleiding: het aannames-paneel in
+  `DoelProjectie.tsx` droeg `hidden={!assumOpen}` naast een inline `display: "flex"` en stond
+  daardoor PERMANENT open, terwijl knop, label en pijl wél kantelden — de toestand was dus zichtbaar
+  correct en het paneel niet. Het broertje `WorkoutDetail.tsx:158` draagt geen inline `display` en
+  is per constructie in orde; de vindpatroon-toets gaf één treffer, niet twee. EN DE VINDPLAATS IS
+  DE EIGENLIJKE LES: 897 tests en 8 prod-shots lieten dit staan, want `apps/web` heeft geen
+  render-testinfrastructuur en de shot-harness laadt uitsluitend `/schema`. Daans oog was het enige
+  instrument dat erbij kon. Zelfde familie als "het beeld blijft het controlemiddel op de tekst",
+  nu op een scherm waar geen camera staat.
 ## Vorm van een CC-prompt
 
 - **Eén plain code-blok**, zonder taal-tag — dat is de één-tap-kopie op mobiel. Nooit proza in het blok mengen; Claude's kader eromheen staat als gewone tekst.
@@ -502,3 +530,6 @@ Volg de FOCUS uit het bovenste STAND-blok.
 - 2026-08-02 — besluit toegevoegd in *Prod en veiligheid*: een groene, gate-klare bouw gaat naar prod zodra hij kan, en "de gebruiker merkt er niets van" is geen grond om te wachten. Plus een les in *Recon en bewijslast*: een byte-vergelijking tegen prod draagt een klok.
 - 2026-08-02 — twee lessen toegevoegd in *Recon en bewijslast*: een uitspraak over wat de gebruiker merkt die op één cel gemeten is mag niet als algemene uitspraak landen (en een kanteling citeer je met beide richtingen), en het mechanisme dat een slot opent is niet het mechanisme dat het vult.
 - 2026-08-02 — blok toegevoegd in *Prod en veiligheid*: build vóór deploy, niet erna — de assets-binding uploadt wat er op dat moment in apps/web/dist staat.
+- 2026-08-02 — les toegevoegd in *Recon en bewijslast*: een schrijfpad controleer je aan beide uiteinden — een route-guard die een afwezige sleutel overslaat zegt niets over de laag erachter. Aanleiding: de doelDuur-tegenspraak, waar `writeSettings` full-replace bleek en de eerstvolgende opslag de kolom op NULL had gezet.
+- 2026-08-02 — les toegevoegd in *Recon en bewijslast*: een grep-eis toets je tegen de echte trefferverdeling vóór je hem verstuurt; "nul treffers" kan per constructie falen op treffers die er horen te staan.
+- 2026-08-02 — les toegevoegd in *Recon en bewijslast*: een render-conditie die op een browser-default leunt verliest van een inline stijl op hetzelfde element. 897 tests en 8 prod-shots lieten het staan; alleen Daans oog kon erbij.

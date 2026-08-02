@@ -640,16 +640,6 @@ niet; hij verliest niet. Een punt gaat eruit zodra een STAP het opneemt — niet
 
 ### CLIENT
 
-- DE AANNAME-REGEL ONDER DE FTP-PROJECTIE KLOPT NIET MEER. `packages/engine/src/niveau.ts:798`
-  draagt "2 sleutelsessies per week, consequent" als LITERAL in een doel- én fase-onafhankelijke
-  array, terwijl `PROFILES.ftp` sinds de Peak-quotum-bouw 3 draagt in Base, Build ÉN Peak. De
-  functie krijgt geen doel en geen fase mee, dus de kaart onderbouwt zijn schatting met een aanname
-  die de app zelf niet volgt. Kwam binnen bij de prod-verificatie van 2026-08-02.
-- DE TESTWEEK-TELLING WIJST OP DE DAG ERNÁ. De kaart zegt "FTP-test over ~8 weken" omdat
-  `doelTestWeken_` rekent met `doelStart` plus `doelDuur` maal 7 (2026-09-21), terwijl de testweek
-  per `computeMacroPhase` blokweek 12 is met maandag 2026-09-14 — zes weken. Het juiste anker is
-  `doelStart` plus (`doelDuur` min 1) maal 7. Bijkomend: `computeMacroPhase` hardcodeert 12 terwijl
-  `doelTestWeken_` `settings.doelDuur` leest, dus die twee kunnen sowieso uiteenlopen.
 
 - `GET /api/checkin/:datum` GEEFT 404 bij afwezigheid, terwijl de huisregel elders 200 met
   `null` of een lege lijst is (`/api/settings`, `/api/planner/:monday`). Cosmetisch — de client
@@ -690,6 +680,13 @@ niet; hij verliest niet. Een punt gaat eruit zodra een STAP het opneemt — niet
   herleiden. Ongewijzigd geparkeerd.
 
 ### TOOLING
+
+- DE SHOT-HARNESS LAADT UITSLUITEND `/schema`. Er is geen scenario voor de Niveau-tab en geen voor
+  Instellingen, dus wat daar staat is per constructie niet te fotograferen. KOSTEN GEMETEN op
+  2026-08-02: het aannames-paneel op de Niveau-tab kon niet dichtklappen — `hidden` naast een
+  inline `display` — en dat overleefde 897 tests en 8 prod-shots. `apps/web` heeft bovendien geen
+  render-testinfrastructuur, want `@testing-library` ontbreekt, dus er viel voor dat defect ook
+  geen rood-test te schrijven. Daans oog was het enige instrument dat erbij kon.
 
 - DE SHOT-HARNESS IS BLIND VOOR DE KLIM-DOELEN. `tools/shots/shot.mjs:267` seedt doel `"FTP"`, en
   `spreiding.effortsInLangeRit` staat uitsluitend op `klim_kort` en `klim_lang`. Er is geen enkel
