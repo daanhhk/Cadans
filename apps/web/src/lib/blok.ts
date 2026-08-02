@@ -12,6 +12,7 @@
 // de norm. De engine wordt hier niet aangeraakt (client-only, geen autorisatie gegeven).
 import {
   CYCLING_TYPES,
+  computeMacroPhase,
   DOSIS_TREDE_MAX,
   DOSIS_TREDE_STAP_MIN,
   KWALITEIT_MIN_PER_PRIKKEL,
@@ -161,6 +162,11 @@ export function blokDosisNorm(
   // de aanroepers die de gesynchroniseerde waarde WEL moeten doorgeven krijgen hem verplicht
   // (zie `buildBlokReview`). Zie docs/ZONE-SYNC-BOUWDOC.md §5.
   grenzen: readonly number[] = ZONE5_GRENZEN_DEFAULT,
+  // ROADMAP punt 15 fase 2 — DE MACROFASE van de week waarover geoordeeld wordt. OPTIONEEL, en
+  // met opzet: deze functie heeft aanroepers die byte-identiek moeten blijven, en zonder fase
+  // valt hij terug op precies het oude gedrag. De aanroepers die de fase WEL kennen geven hem
+  // door. Zie docs/PUNT15-FASE2-BOUWDOC.md §4.
+  fase?: string | null,
 ): BlokDosisNorm | null {
   if (weekUren == null || !Number.isFinite(weekUren) || weekUren <= 0) {
     return null;
@@ -175,8 +181,35 @@ export function blokDosisNorm(
     DOSIS_TREDE_STAP_MIN * trede;
   // Onderhoud: de FREQUENTIE is het beschermde deel — drie kwaliteitsdagen, ook bij drie uur
   // (DOELEN-SPEC §3.2). Bij de overige doelen schaalt het aantal prikkels met de uren.
-  const prikkels =
-    d === "Onderhoud" ? 3 : weekUren >= PRIKKEL_UREN_DREMPEL ? 3 : 2;
+  //
+  // ROADMAP punt 15 fase 2 — HET FASE-QUOTUM BEGRENST DE NORM. `kwaliteitPerWeek.Peak` is 2 bij
+  // `ftp`, `conditie`, `klim_kort` en `klim_lang`, terwijl deze norm 3 prikkels rekende zodra
+  // `weekUren` >= PRIKKEL_UREN_DREMPEL. Het plan kon zijn eigen meetlat daar per constructie niet
+  // halen: op weekvorm V1 in Peak valt bij zowel FTP als Korte beklimmingen dezelfde derde
+  // kwaliteitsdag weg, en FTP zakt van 94,9 werkminuten in Build naar 70,0 in Peak. GEMETEN over
+  // 5 doelen x 3 fases x 9 weekvormen: in Peak lagen FTP 9 van 9, Conditie 9 van 9, Korte
+  // beklimmingen 9 van 9 en Lange beklimmingen 7 van 9 cellen onder de norm.
+  //
+  // HERKOMST: PLAN. Het quotum staat in `PROFILES` en komt uit DOELEN-SPEC, niet uit een reeks —
+  // hier valt dus niets te ijken.
+  //
+  // DE TERUGVAL IS DRAGEND. `kwaliteitPerWeek` kent Base, Build en Peak en GEEN Test, terwijl
+  // `computeMacroPhase` in week 12 "Test" teruggeeft en de referent ook voor blokweek 4 een
+  // `gevraagd` uitrekent. Zonder terugval levert `Math.min(undefined, 3)` NaN op de kaart. Deze
+  // val heeft bij punt 9 fase A al een keer toegeslagen — daar viel de blokteller dood op "Test".
+  const urenPrikkels = weekUren >= PRIKKEL_UREN_DREMPEL ? 3 : 2;
+  const quotumRuw = fase
+    ? (
+        profileForDoel_(d)?.kwaliteitPerWeek as
+          | Record<string, number>
+          | undefined
+      )?.[fase]
+    : undefined;
+  const quotum =
+    typeof quotumRuw === "number" && Number.isFinite(quotumRuw)
+      ? quotumRuw
+      : urenPrikkels;
+  const prikkels = d === "Onderhoud" ? 3 : Math.min(quotum, urenPrikkels);
   // ZONE-MUNT fase 1b — de VORM komt uit de BIBLIOTHEEK-signatuur, niet uit de gerenderde week:
   // `threshold_2x20` vraagt 0 tempo en `sweetspot_2x15` 0 drempel, dus een norm die de week
   // uitleest zwaait mee met de variant-rotatie van de recency-seed (ZONE-MUNT-ONTWERP §3.2). De
@@ -291,6 +324,14 @@ export interface BlokWeek {
    * nergens alle drie de werkzones programmeert (0 van de 35 cellen), dus een oordeel over alle
    * drie beoordeelt zones die die week nooit gevraagd zijn. Zie docs/PUNT14-BOUWDOC.md §1. */
   zonesVoorgeschreven: Zone5Key[];
+  /** ROADMAP punt 15 fase 2 — HAALT DE SOM VAN DE WERKMINUTEN DE TOTAALNORM? `null` zodra `telt`
+   * false is, net als `geleverdOk`: geen oordeel is geen misser. GEMETEN waarom dit ERBIJ moet en
+   * niet IN de poort: in 98 van de 105 cellen ligt de som van de zone-normen BINNEN de poortset
+   * lager dan de totaalnorm, en 24 van de 135 cellen lazen GELEVERD terwijl de werkminuten onder
+   * hun eigen totaalnorm lagen — scherpst Korte beklimmingen in Peak, effectieve eis 34 tegen een
+   * norm van 78. De norm-massa van de zones die buiten de poort vallen verdampte zonder dat iets
+   * dat merkte. Zie docs/PUNT15-FASE2-BOUWDOC.md §1 M3. */
+  totaalOpNorm: boolean | null;
   /** FASE 1c — DE PER-ZONE REGELS VAN DEZE WEEK, als DATA. De kaart leidt hier niets meer af:
    * `norm` null betekent "deze zone is niet beoordeeld" en dat is het enige signaal dat de
    * render nodig heeft. Reden dat dit uit de lib komt en niet uit de kaart: `weekZones_` gaf
@@ -362,12 +403,30 @@ export function buildBlokReferent(input: {
    * welke werkzone-labels het plan van die week voorschreef. Weggelaten → lege poortset → `telt`
    * false, want een week zonder bewaard plan is een DATAGAT en geen misser. */
   weekplans?: unknown[] | null;
+  /** ROADMAP punt 15 fase 2 — de doelstart, waaruit de MACROFASE van dit blok volgt. VERPLICHT en
+   * niet optioneel, om dezelfde reden als `grenzen` en `weekplans`: een optioneel veld valt bij
+   * een aanroeper stil weg, en dan valt de norm stil terug op het oude quotum terwijl de grep naar
+   * de aanroep slaagt en de tests groen zijn — het dode-invoer-patroon uit docs/WERKWIJZE.md. */
+  doelStart: string | null;
 }): BlokReferent | null {
+  // ROADMAP punt 15 fase 2 — DE FASE PER OPBOUWWEEK. `computeMacroPhase` neemt DATE-objecten,
+  // geen ISO-strings. Het 12-weekse fase-raster en het 4-weekse blokraster tellen allebei vanaf
+  // `doelStart`, dus de drie opbouwweken van een blok vallen per constructie in ÉÉN fase (1-3
+  // Base, 5-7 Build, 9-11 Peak); alleen blokweek 4 van het derde blok raakt Test. Dat wordt in
+  // zonepoort/punt15-tests geasserteerd, niet aangenomen.
+  const faseVanWeek = (weekMonday: string): string | null => {
+    if (!input.doelStart) return null;
+    const s = parseLocalDate(input.doelStart);
+    const w = parseLocalDate(weekMonday);
+    if (!s || !w) return null;
+    return (computeMacroPhase(s, w) as { fase?: string })?.fase ?? null;
+  };
   const dosis = blokDosisNorm(
     input.doel,
     input.weekUren,
     input.dosisTrede,
     input.grenzen,
+    faseVanWeek(input.startMonday),
   );
   if (!dosis) return null;
   // Doel zonder mesocyclus → geen kalender-deload, dus ook blokweek 4 draagt de volle norm.
@@ -476,7 +535,22 @@ export function buildBlokReferent(input: {
     const zonesOpNorm = zonesVoorgeschreven.filter(
       (z) => opNormPerZone[z as "tempo" | "drempel" | "anaeroob"],
     ).length;
-    const geleverdOk = telt ? zonesOpNorm === zonesVoorgeschreven.length : null;
+    // ROADMAP punt 15 fase 2 — DE TWEEDE, ONAFHANKELIJKE EIS. De per-zone-poort blijft hierboven
+    // byte voor byte zoals punt 14 hem maakte; deze eis telt ALLE DRIE de werkzones, ook die
+    // BUITEN de poortset, en legt geen norm bij een LABEL maar telt minuten. Dat is precies waarom
+    // hij niet lijdt aan de bandoverloop die de herverdeel-wat-als om zeep hielp: die zakte van 92
+    // naar 46 geleverde cellen en trok Onderhoud van 27 van 27 naar 18 van 27 — het defect dat
+    // punt 14 fase 1 net had weggenomen.
+    //
+    // TEGEN `gevraagd`, NIET tegen een opnieuw berekende norm: `gevraagd` draagt de mesoFactor van
+    // blokweek 4 al. Twee keer rekenen zou twee grootheden opleveren die uit elkaar kunnen lopen.
+    // En de drie werkzone-waarden zijn EXACT dezelfde die het per-zone-oordeel hierboven leest —
+    // geen tweede vouwing.
+    const werkTotaal = k.tempo + k.drempel + k.anaeroob;
+    const totaalOpNorm = telt ? werkTotaal >= gevraagd : null;
+    const geleverdOk = telt
+      ? zonesOpNorm === zonesVoorgeschreven.length && totaalOpNorm === true
+      : null;
 
     // FASE 1c — de regels volgen de EFFECTIEVE poort van DEZE week (`poortHerkomst` "week" → de
     // eigen poortset, "blok" → de blokpoort); `zonesVoorgeschreven` draagt die al. Een zone
@@ -514,6 +588,7 @@ export function buildBlokReferent(input: {
       zonesOpNorm,
       zonesVoorgeschreven,
       poortHerkomst,
+      totaalOpNorm,
       zoneRegels,
       ritMinuten: k.ritMinuten,
       zoneDekking,
@@ -792,8 +867,32 @@ export function dosisTredeVoorstel(input: {
   const blokStart = blokStartVoorWeek(input.doelStart, input.weekMondayISO);
   if (input.beantwoordBlok === blokStart) return null;
 
-  const nu = blokDosisNorm(input.doel, input.weekUren, huidig);
-  const straks = blokDosisNorm(input.doel, input.weekUren, huidig + 1);
+  // ROADMAP punt 15 fase 2 — DEZELFDE fase aan BEIDE aanroepen. `blokStart` staat hierboven al,
+  // dus dit is geen tweede afleiding. En het moet ÉÉN waarde zijn: gaven `nu` en `straks` een
+  // andere fase mee, dan zou het getoonde verschil mede een FASEWISSEL meten in plaats van alleen
+  // de trede — en dat is precies wat deze kaart beweert te tonen.
+  const sDoelStart = input.doelStart ? parseLocalDate(input.doelStart) : null;
+  const sBlokStart = parseLocalDate(blokStart);
+  const blokFase =
+    sDoelStart && sBlokStart
+      ? ((computeMacroPhase(sDoelStart, sBlokStart) as { fase?: string })
+          ?.fase ?? null)
+      : null;
+
+  const nu = blokDosisNorm(
+    input.doel,
+    input.weekUren,
+    huidig,
+    undefined,
+    blokFase,
+  );
+  const straks = blokDosisNorm(
+    input.doel,
+    input.weekUren,
+    huidig + 1,
+    undefined,
+    blokFase,
+  );
   if (!nu || !straks) return null;
 
   return {
@@ -873,6 +972,7 @@ export function buildBlokReview(input: {
   if (!venster) return null;
 
   const ref = buildBlokReferent({
+    doelStart: input.doelStart,
     activities: input.activities,
     doel: input.doel,
     weekUren: input.weekUren,

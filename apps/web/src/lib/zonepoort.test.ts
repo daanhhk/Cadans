@@ -168,6 +168,7 @@ const review = (o: { weekplans: unknown[]; activities: ActValuesRow[] }) =>
 
 const referent = (o: { weekplans: unknown[]; activities: ActValuesRow[] }) =>
   buildBlokReferent({
+    doelStart: null,
     activities: o.activities,
     doel: "Onderhoud",
     weekUren: 5,
@@ -529,7 +530,11 @@ describe("punt 14 fase 1d — de deloadweek, geïsoleerd", () => {
     for (const w of opbouw) {
       expect(w.zonesVoorgeschreven).toEqual(["drempel"]);
       expect(w.telt).toBe(true);
-      expect(w.geleverdOk).toBe(true);
+      // HERIJKT bij punt 15 fase 2: `geleverdOk` is sindsdien de CONJUNCTIE van het per-zone-
+      // oordeel en de nieuwe totaal-eis, en deze fixture rijdt 40 tempo-minuten te weinig, dus hij
+      // zakt terecht op het TOTAAL. Wat deze test toetst is de POORT, en dat is de per-zone-kant:
+      // met de deloadweek als bewijs trekt tempo de poort in en wordt zonesOpNorm 1 van 2.
+      expect(w.zonesOpNorm).toBe(w.zonesVoorgeschreven.length);
     }
   });
 });

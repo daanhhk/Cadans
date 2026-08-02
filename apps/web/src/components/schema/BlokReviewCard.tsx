@@ -71,7 +71,13 @@ function Regel({ week }: { week: BlokWeek }) {
   // programmeert nergens alle drie de werkzones (0 van de 35 gemeten cellen), dus "1/3" beloofde
   // een derde zone die die week nooit gevraagd is.
   const noemer = week.zonesVoorgeschreven.length;
-  const opNorm = noemer > 0 && week.zonesOpNorm === noemer;
+  const zonesOk = noemer > 0 && week.zonesOpNorm === noemer;
+  // ROADMAP punt 15 fase 2 — het oordeel is de CONJUNCTIE van de zones en het TOTAAL. Slaagt een
+  // week op de zones maar zakt hij op het totaal, dan moet de kaart tonen WAAROP het viel; anders
+  // leest "2/2" naast een niet-geleverd-oordeel en spreekt de kaart zichzelf tegen — dezelfde
+  // fout die fase 1c van punt 14 dichtte. Toon is feitelijk en gaat mee in de coach-copy-ronde.
+  const totaalMist = zonesOk && week.totaalOpNorm === false;
+  const opNorm = zonesOk && week.totaalOpNorm !== false;
   const kleur = gedempt
     ? "var(--text-muted)"
     : opNorm
@@ -102,6 +108,17 @@ function Regel({ week }: { week: BlokWeek }) {
           }}
         >
           {kort_(week.weekMonday)}
+          {totaalMist && !gedempt && (
+            <span
+              style={{
+                marginLeft: "var(--s-2)",
+                fontSize: "var(--fs-caption)",
+                color: "var(--warn)",
+              }}
+            >
+              totaal onder norm
+            </span>
+          )}
           {gedempt && (
             <span
               style={{

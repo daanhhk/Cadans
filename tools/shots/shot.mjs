@@ -184,6 +184,21 @@ const SCENARIOS = [
       1: { minuten: 60, dagtype: "vrij" },
     },
   },
+  // KLIM-KORT (ROADMAP punt 15): het enige scenario met een ANDER doel. Nodig omdat
+  // `combo_long_with_efforts` uitsluitend bij `klim_kort` en `klim_lang` vuurt, en fase 2 het
+  // blok-oordeel juist op die doelen omkeert. Lange zaterdag (180) zodat die sessie ook echt
+  // gekozen wordt; blokweek 1 zodat de blok-terugblik in beeld staat.
+  {
+    name: "klim-kort",
+    doel: "Korte beklimmingen",
+    blokWeek: 1,
+    spec: {
+      1: { minuten: 60, dagtype: "vrij" },
+      3: { minuten: 60, dagtype: "vrij" },
+      4: { minuten: 90, dagtype: "vrij" },
+      5: { minuten: 180, dagtype: "weekend" },
+    },
+  },
   // OVERNAME: de acht-wekengrens vóór het A-event van 2027-04-17. Eigen absolute weekmaandag,
   // want de overname-kaart bestaat alleen binnen EVENT_OVERNAME_WEKEN van het hoofdevent en dat
   // ligt ver buiten de echte week. ROADMAP punt 9 fase B.
@@ -421,7 +436,13 @@ async function sweep(page, scenario, monday, results, seededSettings) {
     const blokWeek = scenario.blokWeek ?? 1;
     const doelStart = plusDays(wkMonday, -(blokWeek - 1) * 7);
     if (seededSettings) {
-      await apiPut("/api/settings", { ...seededSettings, doelStart });
+      // HET DOEL PER SCENARIO. `OVERRIDES.doel` staat op "FTP" en geen scenario overschreef dat,
+      // dus geen enkele shot kon een klim-doel tonen — terwijl `spreiding.effortsInLangeRit`
+      // alleen op `klim_kort` en `klim_lang` staat en punt 15 het oordeel juist daar omkeert.
+      // Zelfde mechaniek als `doelStart` hierboven: weggelaten → de gezaaide waarde blijft staan,
+      // dus de bestaande scenario's zijn byte-identiek.
+      const doel = scenario.doel ?? seededSettings.doel;
+      await apiPut("/api/settings", { ...seededSettings, doelStart, doel });
     }
     await apiPut(`/api/planner/${wkMonday}`, {
       days: plannerDays(wkMonday, scenario.spec),

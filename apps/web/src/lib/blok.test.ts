@@ -264,6 +264,7 @@ const RECON_ACTS: ActValuesRow[] = [
 
 function reconRef(todayISO = "2026-07-27") {
   const r = buildBlokReferent({
+    doelStart: null,
     activities: RECON_ACTS,
     doel: "FTP",
     weekUren: 5,
@@ -295,6 +296,7 @@ describe("de zone-grenzen dragen door tot in de norm", () => {
   it("(b) buildBlokReferent geeft de grenzen door aan de weeknormen", () => {
     const maak = (grenzen?: readonly number[]) =>
       buildBlokReferent({
+        doelStart: null,
         activities: RECON_ACTS,
         doel: "FTP",
         weekUren: 5,
@@ -394,6 +396,7 @@ describe("de zone-grenzen dragen door tot in de norm", () => {
 
   it("(c) zonder gesynchroniseerde zones is het gedrag dat van vandaag, langs de volle weg", () => {
     const viaNull = buildBlokReferent({
+      doelStart: null,
       activities: RECON_ACTS,
       doel: "FTP",
       weekUren: 5,
@@ -403,6 +406,7 @@ describe("de zone-grenzen dragen door tot in de norm", () => {
       grenzen: zone5Grenzen(null),
     });
     const zonder = buildBlokReferent({
+      doelStart: null,
       activities: RECON_ACTS,
       doel: "FTP",
       weekUren: 5,
@@ -465,6 +469,7 @@ describe("buildBlokReferent — het gemeten blok 29-06 t/m 20-07", () => {
 
 function zoneRef(weken: ActValuesRow[]) {
   const r = buildBlokReferent({
+    doelStart: null,
     activities: weken,
     doel: "FTP",
     weekUren: 5,
@@ -594,6 +599,7 @@ describe("blokCheck — drie uitkomsten", () => {
       weekRit("2026-07-14", 25),
     ];
     const ref = buildBlokReferent({
+      doelStart: null,
       activities: acts,
       doel: "FTP",
       weekUren: 5,
@@ -629,6 +635,7 @@ describe("dekkings-poort — te weinig zonedata is niet te beoordelen", () => {
       weekRit("2026-07-14", 118),
     ];
     const ref = buildBlokReferent({
+      doelStart: null,
       activities: acts,
       doel: "FTP",
       weekUren: 5,
@@ -646,6 +653,7 @@ describe("dekkings-poort — te weinig zonedata is niet te beoordelen", () => {
   it("week zonder ritten telt WEL mee (niet gereden is een echte misser)", () => {
     const acts = [weekRit("2026-06-30", 110), weekRit("2026-07-14", 118)];
     const ref = buildBlokReferent({
+      doelStart: null,
       activities: acts,
       doel: "FTP",
       weekUren: 5,
@@ -675,6 +683,7 @@ describe("Onderhoud — uitvoering wél, effect niet (CTL hoort te dalen)", () =
   ];
   function ref() {
     const r = buildBlokReferent({
+      doelStart: null,
       activities: acts,
       doel: "Onderhoud",
       weekUren: 3,
