@@ -315,12 +315,33 @@ punten staat onder *Gesloten — vindplaats*.
     high gedekt is. De vo2-declaratie van `PROFILES.onderhoud` blijft staan: in Peak scoort ze 0,35
     en komt ze aantoonbaar aan de beurt. WAT ONGEMETEN BLIJFT is de vorm die TOEVOEGT in plaats van
     ruilt; die staat als punt 16.
-15. **De dosis van de twee klim-doelen** — open · ENGINE. Ook mét de zone-poort van punt 14 zakken
+15. **De dosis van de twee klim-doelen** — open (FASE 1 af) · ENGINE. Ook mét de zone-poort van punt 14 zakken
     ze: Korte beklimmingen levert 39 werkminuten en Lange beklimmingen 46, tegen een norm van 84.
     Dat is een DOSIS-vraag en geen verdelings-vraag — de zones kloppen, er is te weinig van. Kwam
     binnen bij de meting van punt 14 (`docs/PUNT14-BOUWDOC.md` §3) en is daar bewust buiten scope
     gehouden. HARDE DATUM: korte beklimmingen wordt half februari 2027 het actieve doel, dus dit
     moet daarvóór af. Raakt `DOELEN-SPEC`.
+    FASE 1 IS AF per 02-08-2026, bouwdoc `docs/PUNT15-FASE1-BOUWDOC.md`, bouw `6a5620d`. NIET
+    gedeployed, en dat is een besluit: `spreiding.effortsInLangeRit` staat alleen op `klim_kort` en
+    `klim_lang`, dus bij doel FTP is de bouw per constructie inert en zou een deploy niets tonen.
+    DE PREMISSE IS GECORRIGEERD: de 39 en 46 zijn weekvorm V1 in fase BUILD (gemeten 38,5 en 46,0),
+    de norm voor deze twee doelen is 78 en niet 84 — 3 prikkels maal
+    `KWALITEIT_MIN_PER_PRIKKEL_DEFAULT` 26, want 84 is de FTP-norm — en het tekort is FASE-GEBONDEN
+    in plaats van doel-breed: in Base leveren de twee doelen gemiddeld 85,0 en 82,4 over de zeven
+    weekvormen. DE EERSTE TERM WAS GEEN DOSIS MAAR EEN GAT IN DE MUNT: `genericCombo` gaf voor
+    `combo_long_with_efforts` geen `blokken` terug terwijl `planZone5_` juist dat veld leest, dus
+    de efforts-minuten waren onzichtbaar voor de zone-munt en het label belandde niet in de poortset
+    van punt 14. Uitputtend gemeten over 480 sessies: 28 zonder blokken, alle van dit type, samen
+    840 onzichtbare intent-high-minuten. GEMETEN EFFECT: Build Korte beklimmingen 42,4 naar 72,4 en
+    Lange beklimmingen 56,5 naar 86,5, Peak Korte 20,0 naar 50,0 en Lange 27,4 naar 57,4, met 78 van
+    de 106 gemeten regels ongewijzigd.
+    WAT FASE 2 NOG DRAAGT. Het RESTERENDE TEKORT: Build Korte beklimmingen blijft op 68,5 tegen 78,
+    en Peak op 46,5 met maar twee kwaliteitsdagen. DE POORT-OMKERING IN PEAK: daar leest Korte
+    beklimmingen 7 van de 7 weekvormen als GELEVERD op 16,5 werkminuten, omdat de poortset
+    uitsluitend `anaeroob` is en dat de enige zone is die klopt. DE VASTE TSS: deze sessie rekent
+    `Math.round(totaalMin * 0.85)` in plaats van `tssFromBlokken_`. EN DE INTENSITEIT VAN DE
+    EFFORTS: de band 85-92 heeft haar midden op 88,5 en draagt daarmee het label `tempo`, terwijl
+    `DOELEN-SPEC` §3.3 voor dit doel herhaalbare BOVENDREMPEL-inspanningen in de lange rit vraagt.
 16. **De goedkope bereik-prikkel** — open · ENGINE plus norm. Een prikkel boven de drempel die
     TOEVOEGT in plaats van RUILT: sprints of hard starts aan het eind van een Z2-rit, of een korte
     set achter sweet-spot-werk. Kwam binnen bij punt 14 fase 2, waar de RUIL-vorm meetbaar is
@@ -565,3 +586,12 @@ niet; hij verliest niet. Een punt gaat eruit zodra een STAP het opneemt — niet
 - DE HISTORISCHE GRENZEN. Elke activiteit draagt `icu_power_zones`, maar die wordt niet per rit
   bewaard: alleen de nieuwste wint. Een zone-wijziging midden in een blok is daarmee niet te
   herleiden. Ongewijzigd geparkeerd.
+
+### TOOLING
+
+- DE SHOT-HARNESS IS BLIND VOOR DE KLIM-DOELEN. `tools/shots/shot.mjs:267` seedt doel `"FTP"`, en
+  `spreiding.effortsInLangeRit` staat uitsluitend op `klim_kort` en `klim_lang`. Er is geen enkel
+  scenario voor een van die twee, dus de hele klim-tak — de lange rit met efforts voorop — is
+  visueel ONVERIFIEERD; geen shot kan die sessie tonen. KORTE BEKLIMMINGEN WORDT HALF FEBRUARI 2027
+  HET ACTIEVE DOEL, dus dit gat sluit zichzelf niet. Kwam binnen bij punt 15 fase 1, waar de
+  zonebalk daardoor "niet toetsbaar" bleef.

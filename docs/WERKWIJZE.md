@@ -265,6 +265,15 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   ongelijke dagduren binnen één week levert Onderhoud in Peak wél drempel, sweetspot en vo2 — het
   haalbaarheidsfilter weert vo2 van de lange dag en de coverage-boost wisselt van kant zodra high
   gedekt is.
+- **Een VLOER is geen DOEL — kies de plek van een test nooit om een getal stabiel te houden.** De
+  vloeren in `HANDOFF.md` mogen meestijgen; dat staat al in de gate-paragraaf, en ze zijn er om
+  REGRESSIE te betrappen, niet om nagestreefd te worden. Kies de plek van een assertie op wat ze
+  NODIG heeft. Aanleiding: de bouwer-assertie van punt 15 fase 1 landde in
+  `apps/web/src/lib/punt15.test.ts` en dat is JUIST, maar de opgegeven reden was dat de
+  engine-assert-count dan op 1449 blijft. De DRAGENDE reden is een andere en is dwingend: die
+  assertie vouwt met `planZone5_`, en die woont in `apps/web/src/lib/zonemunt.ts`, waar
+  `packages/engine` per constructie niet uit kan importeren. Een goede uitkomst op een verkeerde
+  grond wordt een volgende keer op de verkeerde grond herhaald.
 
 ## Vorm van een CC-prompt
 
