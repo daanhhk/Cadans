@@ -315,7 +315,7 @@ punten staat onder *Gesloten — vindplaats*.
     high gedekt is. De vo2-declaratie van `PROFILES.onderhoud` blijft staan: in Peak scoort ze 0,35
     en komt ze aantoonbaar aan de beurt. WAT ONGEMETEN BLIJFT is de vorm die TOEVOEGT in plaats van
     ruilt; die staat als punt 16.
-15. **De dosis van de twee klim-doelen** — open (FASE 1 af) · ENGINE. Ook mét de zone-poort van punt 14 zakken
+15. **De dosis van de twee klim-doelen** — open (FASE 1 af) · CLIENT voor fase 2, ENGINE voor fase 3. Ook mét de zone-poort van punt 14 zakken
     ze: Korte beklimmingen levert 39 werkminuten en Lange beklimmingen 46, tegen een norm van 84.
     Dat is een DOSIS-vraag en geen verdelings-vraag — de zones kloppen, er is te weinig van. Kwam
     binnen bij de meting van punt 14 (`docs/PUNT14-BOUWDOC.md` §3) en is daar bewust buiten scope
@@ -342,6 +342,28 @@ punten staat onder *Gesloten — vindplaats*.
     `Math.round(totaalMin * 0.85)` in plaats van `tssFromBlokken_`. EN DE INTENSITEIT VAN DE
     EFFORTS: de band 85-92 heeft haar midden op 88,5 en draagt daarmee het label `tempo`, terwijl
     `DOELEN-SPEC` §3.3 voor dit doel herhaalbare BOVENDREMPEL-inspanningen in de lange rit vraagt.
+    FASE 2 IS GESPECIFICEERD, spec `docs/PUNT15-FASE2-BOUWDOC.md` — CLIENT, geen engine. DE
+    PREMISSE IS OPNIEUW GECORRIGEERD: het tekort is niet klim-specifiek maar DOEL-BREED EN
+    FASE-GEBONDEN. In Peak liggen FTP 9 van 9, Conditie 9 van 9, Korte beklimmingen 9 van 9 en
+    Lange beklimmingen 7 van 9 cellen onder de norm; in Base Conditie 9 van 9 en Lange
+    beklimmingen 5 van 9; Onderhoud 0 van 27 in alle fases. Gemeten over 5 doelen x 3 fases x 9
+    weekvormen. TWEE TERMEN. (1) DE NORM KENT HET FASE-QUOTUM: `kwaliteitPerWeek.Peak` is 2 bij
+    `ftp`, `conditie`, `klim_kort` en `klim_lang` terwijl `blokDosisNorm` 3 prikkels rekent
+    zodra `weekUren` >= 5, dus het plan kan zijn eigen meetlat per constructie niet halen — op V1
+    in Peak valt bij zowel FTP als Korte beklimmingen dezelfde derde kwaliteitsdag weg. (2) ER KOMT
+    EEN EIS OP HET TOTAAL: in 98 van de 105 cellen ligt de som van de zone-normen BINNEN de poortset
+    lager dan de totaalnorm, en 24 van de 135 cellen lezen GELEVERD terwijl de werkminuten onder hun
+    eigen totaalnorm liggen — scherpst Korte beklimmingen in Peak, effectieve eis 34 tegen norm 78.
+    Dat is geen fout van punt 14: die poort besliste welke zones meedoen, en de norm-massa van de
+    zones die eruit vallen verdampt zonder dat iets dat merkt. HERVERDELEN IS GEMETEN EN VERWORPEN
+    (92 van de 135 geleverd wordt 46, Onderhoud zakt naar 18 van 27) omdat de poortset NOMINALE
+    labels draagt terwijl `planZone5_` proportioneel splitst. De aangenomen vorm laat 13 cellen
+    kantelen en 0 de andere kant op; Onderhoud en FTP bewegen niet.
+    FASE 3 IS DE DOSIS ZELF · ENGINE, eigen autorisatie. Werkminuten per kwaliteitsdag: `klim_kort`
+    27,0 / 23,0 / 21,9 over Base, Build en Peak tegen FTP 32,3 / 32,3 / 25,1 en `klim_lang` 36,0 /
+    27,5 / 25,1, bij een norm van 26 per prikkel. Daar horen ook de vaste TSS van
+    `combo_long_with_efforts` en de efforts-band 85-92 bij, die nominaal `tempo` heet terwijl
+    `DOELEN-SPEC` §3.3 bovendrempel vraagt.
 16. **De goedkope bereik-prikkel** — open · ENGINE plus norm. Een prikkel boven de drempel die
     TOEVOEGT in plaats van RUILT: sprints of hard starts aan het eind van een Z2-rit, of een korte
     set achter sweet-spot-werk. Kwam binnen bij punt 14 fase 2, waar de RUIL-vorm meetbaar is
