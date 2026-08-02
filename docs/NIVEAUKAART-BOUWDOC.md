@@ -78,13 +78,36 @@ De teller gaat daarmee 2, 1, 0 (de testweek zelf), en springt op de maandag erna
 volgende blok. Voor Daan: 2026-08-02 geeft 7 (was 8), 2026-09-14 tot en met 2026-09-20 geeft 0,
 2026-09-21 geeft 11 (was 0), 2026-12-07 geeft weer 0.
 
-### 2.3 `doelDuur` verliest zijn enige lezer en gaat uit het formulier
+### 2.3 De Blok-duur-RIJ gaat weg; de OPSLAG blijft ongemoeid
 
-Na 2.2 leest niets meer `settings.doelDuur`. De rij "Blok-duur · weken" in Instellingen stuurt dan
-niets meer aan, en een invoerveld dat niets doet is een belofte die de app niet waarmaakt.
-Daan-besluit 2 augustus 2026: de rij gaat eruit. De D1-kolom `doel_duur`, het veld op de
-`SettingsInput`-DTO en de worker-route blijven ONGEMOEID — forward-only, geen migratie, en de
-bewaarde waarde blijft staan.
+Na 2.2 leest geen enkele consument `settings.doelDuur` nog voor een uitkomst. De rij "Blok-duur ·
+weken" in Instellingen stuurt dan niets meer aan, en een invoerveld dat niets doet is een belofte die
+de app niet waarmaakt. Daan-besluit 2 augustus 2026: de RIJ gaat eruit.
+
+DE FORMULIER-LAAG BLIJFT ONGEMOEID, EN DAT IS DWINGEND. De eerste versie van dit doc schreef het
+tegenovergestelde voor — formulierveld, default en mapping eruit — en dat was fout op twee
+onafhankelijke gronden, beide nagelezen in de bron:
+- TYPE. `SettingsForm` is `Record<keyof SettingsInput, string>` (`apps/web/src/lib/settings.ts:9`),
+  een mapped type over de DTO. Zolang `SettingsInput.doelDuur` bestaat
+  (`packages/shared/src/settings.ts:19`) KUNNEN `EMPTY_FORM` en `settingsToForm` de sleutel niet
+  missen; het compileert niet eens.
+- DATAVERLIES. Het PUT-contract is FULL-REPLACE. De kop van `settings.ts` zegt het, `api.ts:762`
+  herhaalt het ("weggelaten velden → null; geen partial-merge") en `writeSettings`
+  (`workers/api/src/db/repo.ts:56`) voert het uit met `doelDuur: s.doelDuur ?? null` binnen één
+  `onConflictDoUpdate` over het hele vals-object. Valt `doelDuur` uit `NUM_KEYS`, dan zit hij niet
+  meer in de body en zet de EERSTVOLGENDE opslag vanuit Instellingen `doel_duur` in D1 op NULL —
+  precies wat deze paragraaf verbiedt.
+
+De waarde blijft dus rondpompen langs GET, form en PUT: onzichtbaar en onveranderbaar, maar intact.
+De D1-kolom `doel_duur`, het DTO-veld en de worker-route blijven ongemoeid; geen migratie,
+forward-only. Het veld HELEMAAL opruimen raakt DTO, route en een migratie en is daarmee een eigen
+ronde met een eigen afweging. Die is hier bewust NIET genomen: de kolom kost niets om te houden.
+
+CC ving deze tegenspraak vóór de bouw en stopte. Zelfde familie als "een controle wordt getoetst
+tegen de payload uit hetzelfde prompt", nu tussen twee paragrafen van HETZELFDE doc: 2.3 beloofde
+behoud en 3 schreef de verwijdering voor die dat behoud onmogelijk maakt. En de chat had de
+route-guard `if ("doelDuur" in body)` wél gelezen en de SCHRIJFKANT erachter niet — één uiteinde
+gecontroleerd, het andere niet.
 
 ### 2.4 De aannameregel wordt doel- en uren-bewust, en fase-COMPLEET
 
@@ -131,8 +154,9 @@ FASE A — de teller.
   "testweek · deze week" en de regel eronder "FTP-test is deze week"; verder ongewijzigd. De grafiek
   vraagt geen aanpassing: `Math.max(4, 0)` geeft 4 en de marker op week 0 staat op de linkerrand,
   wat voor "deze week" juist is.
-- `apps/web/src/pages/Instellingen.tsx` plus `apps/web/src/lib/settings.ts`: de rij "Blok-duur", het
-  formulierveld, de default en de mapping eruit. DTO, worker-route en D1-kolom ongemoeid.
+- `apps/web/src/pages/Instellingen.tsx`: uitsluitend de RIJ "Blok-duur · weken" eruit, met de
+  `NumInput` die erin staat. `apps/web/src/lib/settings.ts` blijft ONGEMOEID — zie 2.3 — en het
+  DTO-veld, de worker-route en de D1-kolom eveneens.
 
 FASE B — de aannameregel.
 - `packages/engine/src/niveau.ts`: `ftpBandFromProjection_` krijgt `sleutelRegel` als vijfde,
