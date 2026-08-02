@@ -422,6 +422,23 @@ punten staat onder *Gesloten — vindplaats*.
     `fixedNominal`. Dat schendt `DOELEN-SPEC` §2A: de gebruiker levert de TIJD.
     (iii) DE DOSIS-VERHOGING BIJ `klim_lang`: 3x14 op 95-102 tilt 14 van de 18 cellen naar 18 van
     18, maar duwt de overschrijding uit (ii) van 105 naar 117 minuten. Dus pas NA (ii).
+    FASE 3c IS GEMETEN EN AFGEBAKEND per 02-08-2026, spec `docs/PUNT15-FASE3C-BOUWDOC.md`. DE
+    PREMISSE IS VOOR DE VIERDE KEER GECORRIGEERD: de efforts-rit is in GEEN ENKELE tekort-cel de
+    drager van het tekort, maar de enige term met een OVERSCHOT — plus 4 minuten per keer. Over
+    Build en Peak liggen bij Korte beklimmingen 10 van de 18 cellen onder norm, samen 106,9
+    minuten, en de ontleding per sessie sluit op -107,2.
+    (i) DE RITDUUR-SCHALING VERVALT. De arm zit met 30 werkminuten al op het vo2-plafond 31 van de
+    bibliotheek, en geen enkele duurband reikt boven 135 minuten — boven die duur bestaat er dus
+    geen anker, en een regel die de dosis met de ritduur laat groeien zou met de hand gekozen zijn.
+    (iii) DE DOSIS-VERHOGING BIJ `klim_lang` IS GEPARKEERD achter (ii). Ze is wél verankerd — 3x14
+    is 42 werkminuten, exact het drempel-plafond van `threshold_long` — maar ze mikt op het doel
+    met 13,8 minuten tekort over 18 cellen, bij een event zonder datum.
+    (ii) WORDT GEBOUWD. 8 van de 135 cellen zetten een sessie van 105 minuten op een dag van 60, en
+    `tooLong` heeft VIER producenten en NUL lezers in de hele repo. WAT-ALS gemeten: precies 8
+    cellen bewegen en nul daarbuiten, de kwaliteitsdagen blijven overal 3, en Korte beklimmingen
+    gaat op W3 en W4 van 68,5 naar 49,9 tegen een norm van 52. Dat verlies is de waarheid die
+    verschijnt: de 68,5 van vandaag bestond uit 45 minuten die de gebruiker niet had opgegeven.
+    HET EIGENLIJKE TEKORT IS EEN NORM-VRAAG en staat als punt 17.
     NOTITIE VOOR 3b, UIT FASE 3a: term 1 rekt de LENGTE van de herhalingen — 3x10 naar 3x11,5 op
     mesoWeek 3, naar 3x15 op mesoWeek 3 plus trede 4. Op 85-92 is dat sweetspot-progressie en
     consistent met de bibliotheek. Gaat de band omhoog, dan verandert lengte het KARAKTER en moet
@@ -448,6 +465,20 @@ punten staat onder *Gesloten — vindplaats*.
     plan gereden week weer als niet geleverd. (iii) DE PLAATS — winter-Onderhoud of pas de opmaat
     naar korte beklimmingen, waar dezelfde prikkel hoe dan ook nodig is. GAAT NA PUNT 15: die draagt
     de harde datum en raakt dezelfde dosis-vraag. Raakt `DOELEN-SPEC`.
+17. **De norm is voor de klim-doelen onbereikbaar** — open · NORM plus BIBLIOTHEEK. GEMETEN op
+    weekvorm V1 in Build, norm én plan op DEZELFDE dosis-trede: FTP levert 95 tegen 84, 108,2 tegen
+    96 en 121,4 tegen 108 en is overal GELEVERD; Korte beklimmingen levert 68,5 tegen 78, 79,6
+    tegen 90 en 85,5 tegen 102, dus het gat GROEIT van -9,5 naar -16,5; Lange beklimmingen blijft
+    rond -2,5 en sluit nooit. De norm stijgt 6 minuten per trede terwijl de efforts-arm op een
+    zaterdag van 120 na één stap tegen de ruimte-rem loopt: 30, 36, 36. DE KLIF: 4,75 uur geeft 2
+    prikkels en norm 52 en leest GELEVERD, 5,0 uur geeft 3 prikkels en norm 78 en leest ONDER NORM
+    — bij hetzelfde plan van 68,5. AAN DE PLAN-KANT: elk vo2-sjabloon dat een dag van 60 raakt
+    levert 8 tot 20 werkminuten, elk sjabloon met 22 of meer begint pas op 61 of hoger, en
+    `vo2_sandwich` haalt zijn 31 door 8 vo2-minuten in 20 tempo-minuten te verpakken. CRITERIUM: een
+    EXACT volgens plan gereden week moet zijn eigen norm kunnen halen. DE VAL: de norm naar het plan
+    buigen is zichzelf meten, dezelfde val als het fase-quotum in punt 15 fase 2. Eerst meten wat
+    een sessie van 60 minuten per zone EERLIJK kan dragen, dan pas kiezen tussen bibliotheek en
+    norm. Raakt `DOELEN-SPEC`.
 
 ## De tijdslijn
 
