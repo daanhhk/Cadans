@@ -152,7 +152,10 @@ export function LevelCard({
             <div
               style={{
                 height: "100%",
-                width: `${nlInt(tp.pct * 100)}%`,
+                // CSS-BREEDTE, GEEN TEKST: een CSS-parser leest dit, geen mens. Zie de gelijke
+                // grond in ZoneCompare — een decimaal-formatter zou hier "33,3%" zetten en de
+                // balk stil naar nul breedte klappen, onzichtbaar voor het float-net.
+                width: `${Math.round(tp.pct * 100)}%`,
                 borderRadius: "var(--r-pill)",
                 background: "var(--accent-grad)",
               }}

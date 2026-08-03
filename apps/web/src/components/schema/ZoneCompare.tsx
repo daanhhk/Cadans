@@ -1,4 +1,4 @@
-import { nlInt, nlUpTo1 } from "../../lib/format";
+import { nlUpTo1 } from "../../lib/format";
 import type { DoneCompareZone } from "../../lib/schema";
 
 // Per-zone gepland-vs-gedaan overlay-bars, design-geankerd op ZoneCompare/ZoneCompareRow
@@ -16,6 +16,10 @@ const ZNAME: Record<number, string> = {
 
 function CompareRow({ r, scale }: { r: DoneCompareZone; scale: number }) {
   const zc = `var(--zone-${r.z})`;
+  // CSS-BREEDTES, GEEN TEKST. Math.round en niet nlInt: dit belandt in een style-attribuut dat
+  // een CSS-parser leest, niet een mens. Wordt de opmaakfunctie ooit een decimaal-variant, dan
+  // staat er "33,3%" in de CSS en klapt de balk stil naar nul breedte — en het float-net kan dat
+  // per constructie niet zien, want innerText leest geen attributen.
   const planPct = (r.plan / scale) * 100;
   const donePct = (r.done / scale) * 100;
   const unplanned = r.plan === 0 && r.done > 0;
@@ -81,7 +85,7 @@ function CompareRow({ r, scale }: { r: DoneCompareZone; scale: number }) {
             left: 0,
             top: 0,
             bottom: 0,
-            width: `${nlInt(planPct)}%`,
+            width: `${Math.round(planPct)}%`,
             background: `color-mix(in srgb, ${zc} var(--zcompare-plan-strength), transparent)`,
             borderRadius: "var(--r-xs)",
           }}
@@ -93,7 +97,7 @@ function CompareRow({ r, scale }: { r: DoneCompareZone; scale: number }) {
             top: "50%",
             transform: "translateY(-50%)",
             height: "var(--zcompare-done-h)",
-            width: `${nlInt(donePct)}%`,
+            width: `${Math.round(donePct)}%`,
             minWidth: r.done > 0 ? 3 : 0,
             background: zc,
             borderRadius: "var(--r-pill)",
