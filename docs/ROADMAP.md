@@ -490,7 +490,7 @@ punten staat onder *Gesloten — vindplaats*.
     buigen is zichzelf meten, dezelfde val als het fase-quotum in punt 15 fase 2. Eerst meten wat
     een sessie van 60 minuten per zone EERLIJK kan dragen, dan pas kiezen tussen bibliotheek en
     norm. Raakt `DOELEN-SPEC`.
-18. **De afronding op het scherm** — open · CLIENT. Een sessieduur wordt KAAL gerenderd en toont
+18. **De afronding op het scherm** — af · CLIENT plus TOOLING. Een sessieduur wordt KAAL gerenderd en toont
     daardoor float-ruis: `WorkoutDetail.tsx:57` zet `session.totaalMin` zonder opmaak op het
     scherm en `expandArchetype_` (`planner.ts:1383`) telt `warm + cool + mainMin` op uit blokken
     die elk al op één decimaal zijn afgerond, dus er staat "59.800000000000004 min" bij
@@ -502,6 +502,21 @@ punten staat onder *Gesloten — vindplaats*.
     `expandArchetype_` zou elke vingerafdruk laten bewegen. ER HOORT EEN MECHANISCH NET BIJ, in de
     shot-harness: een regex op de innerText-`.txt` die afgaat op elk getal met twee of meer
     decimalen, zodat deze hele familie voortaan valt op élk scherm dat de harness fotografeert.
+    PUNT 18 IS AF per 03-08-2026, over vier commits: `ec1602d` het net plus de zeven ontbrekende
+    routes, `1ce1732` het bereik van het net, `c780ef9` de fix, `0d928ce` de CSS-correctie.
+    DE PREMISSE HIERBOVEN WAS ONVOLLEDIG, op twee punten. (1) "Eén formatter aan de renderrand"
+    dekte alleen de KALE getallen — de plekken waar een `number` rechtstreeks in de JSX belandt.
+    Er bleek een TWEEDE familie: strings die de ENGINE al vervuild aanlevert, met `structuur[i][1]`
+    als drager — gemeten 51 gevallen over 660 weken, waaronder een cooldown van
+    "9.000000000000004 min" bij Drempel 2x20. Die is client-zijde opgemaakt met `nlBlokDuur` en de
+    engine is NIET geraakt: diezelfde cel wordt door `dslBlockFromRow_` geparseerd voor de workout
+    naar intervals.icu en Garmin, en een Nederlandse komma in de bron laat die parse stilzwijgend
+    terugvallen op één enkele lap. (2) De regel is daarom VERBREED van duur-opmaak naar: GEEN ENKEL
+    COMPONENT RENDERT EEN KAAL GETAL. Duur door `nlUpTo1`, watt en TSS door `nlInt`, W/kg door
+    `nlDec2`; bestaande afronders blijven staan. De keerzijde staat in `0d928ce`: een CSS-waarde is
+    GEEN tekst en houdt `Math.round`.
+    HET NET STAAT HARD OP VIER DECIMALEN en faalt de run op een treffer. Vier is gemeten: de ruis
+    droeg er veertien, elke legitieme waarde hoogstens drie.
 19. **Het dagtype weekend is een kalendernaam, geen eigenschap** — open · ENGINE. `deriveDagtype`
     (`apps/web/src/lib/planner.ts:18`) leidt het type af uit za/zo, terwijl de gebruiker alleen
     pendel, trainen en minuten opgeeft; `assignWorkouts` geeft weekend- en vrije dagen daarna
@@ -511,6 +526,37 @@ punten staat onder *Gesloten — vindplaats*.
     een eigenschap van de dag, de kalendernaam is dat niet. EERST METEN wat het verschil in de
     praktijk oplevert, dan pas bouwen: de takken zijn via `buildWeekProposal` grotendeels
     onbereikbaar, dus het kan zijn dat er niets aan hangt. Raakt `DOELEN-SPEC`.
+20. **De push-beschrijving draagt dezelfde ruis** — open · ENGINE, transport-nabij.
+    `buildWorkoutDescription_` (`zones.ts:569`) zet `totaalMin` RAUW in de beschrijving die naar
+    intervals.icu gaat, en hergebruikt daarin dezelfde blokstrings die punt 18 client-zijde heeft
+    opgemaakt. Wat Daan in de app ziet klopt dus, en wat in zijn agenda en op zijn fietscomputer
+    belandt niet. DE FIX IS HIER NIET DEZELFDE: dit is geen renderrand maar TRANSPORT, en dezelfde
+    tekst wordt door `dslBlockFromRow_` geparseerd — een Nederlandse komma verminkt de laps. Eigen
+    ronde, RECON-FIRST: eerst meten wie die string leest en schrijft, dan pas een vorm kiezen.
+    Engine, dus stop-en-verifieer vóór enige wijziging.
+21. **De rit-sheet is voor geen enkele DOM-ingreep bereikbaar** — open · TOOLING.
+    `RideDetailLink.tsx:30` rendert de sheet met `{open && ...}`: hij staat pas ná een klik in de
+    DOM. De leespas van de harness opent `hidden` en inline `display`, maar wat er niet IS valt
+    daar per constructie buiten. Dit is de DERDE manier waarop inhoud buiten het net valt, na die
+    twee. Vandaag gedekt door de code-regel (geen kaal getal) en niet door de camera. Wil je hem
+    onder het net brengen, dan moet de harness klikken — en dan hoort er ook een assertie bij dat
+    de sheet daadwerkelijk open kwam.
+22. **Twee shots zijn niet byte-deterministisch** — open · TOOLING. `v7/09-vorm` en
+    `v7/10-trainingen` verschillen tussen twee runs van ONGEWIJZIGDE code, met telkens identieke
+    `innerText`; het verschil is dus puur pixel. VERMOEDEN: een animatie of overgang die `settle`
+    niet uitzit — beide schermen dragen bewegende elementen die de andere zeven niet hebben.
+    Zolang dit staat moet elke PNG-vergelijking die twee UITSLUITEN, en dat is een gat in het
+    begrenzingsbewijs: juist op die twee schermen kan een regressie ongezien blijven.
+23. **De mount-flake, en zes routes zonder vangnet** — open · TOOLING. `settle` geeft op terwijl de
+    `innerText` nog "Laden…" is; de shot toont dan een ladende pagina. Treft BEIDE harness-versies,
+    dus het is geen gevolg van een bouw. Op `/schema` wordt het opgevangen door de
+    zeven-knoppen-assertie op de dagstrip — die faalt hard en de run stopt. De zeven nieuwe routes
+    hebben zo'n mount-assertie NIET, dus daar zou een ladende pagina stil als geldige shot
+    doorgaan. Elke route hoort een eigen goedkope aanwezigheids-assertie te krijgen.
+24. **`12-activiteiten` wordt afgesneden** — open · TOOLING. Die pagina heeft 5898 pixels nodig
+    tegen `HEIGHT_CAP` 4000, dus de PNG is afgekapt en een VISUELE controle van dat scherm kan
+    vandaag niet. De `innerText` in de `.txt` is wél compleet, dus tekstuele controle en het
+    float-net werken er gewoon. Keuze: de cap verhogen, of het scherm in stukken schieten.
 
 ## De tijdslijn
 

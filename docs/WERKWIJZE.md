@@ -414,6 +414,33 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   `redenCode.test.ts` groen op grond van ÉÉN gelezen fixture, terwijl drie andere weekend-fixtures
   op een dag van 60 stonden en wél omvielen. Zelfde familie als "een grep die het eigen bestand
   uitfiltert, kan de aanroeper binnen dat bestand niet zien".
+- **Opmaak hoort UITSLUITEND op tekst die een MENS leest.** Een waarde die door een PARSER gelezen
+  wordt, blijft kaal. Drie plekken in deze repo waar dat dragend is: een CSS-waarde in een
+  style-attribuut (een decimaal-formatter zet er "33,3%" neer en de balk klapt stil naar nul
+  breedte), de push-DSL naar intervals.icu en Garmin, en `structuur[i][1]` — die cel wordt door
+  `dslBlockFromRow_` geparseerd, dus een Nederlandse komma in de BRON laat die parse stilzwijgend
+  terugvallen op één enkele lap. Het float-net kan de eerste soort per constructie niet zien, want
+  `innerText` leest geen attributen. Vandaar de regel vooraf en niet de meting achteraf: opmaken
+  gebeurt op de renderrand, en alleen daar waar een oog kijkt.
+- **Het begrenzingsbewijs van de shot-harness gaat op de PNG's, NOOIT op de `.txt`.** Twee dingen in
+  die tekstbestanden wisselen aantoonbaar tussen twee runs van dezelfde code: de teller
+  `PUT /api/weekplan/<maandag>` (2 of 3) en de gepland-noemer (`/372` tegen `/379`, die uit de
+  bewaarde weekplan-rijen komt). Een `.txt`-vergelijking leest dat als een wijziging en je gaat een
+  defect zoeken dat er niet is. De PNG's zijn wél deterministisch; die dragen het bewijs.
+- **`v7/09-vorm` en `v7/10-trainingen` zijn NIET byte-deterministisch.** Gemeten over meerdere
+  runs van ONGEWIJZIGDE code, met telkens identieke `innerText` — het verschil is puur pixel.
+  Sluit die twee uit van elke PNG-vergelijking zolang dat niet is opgelost, en zeg in het rapport
+  dát je ze uitsluit. Vergelijk dus 77 en niet 79.
+- **Geen treffer van het net is GEEN bewijs van afwezigheid.** Negen scenario's dekken een fractie
+  van de weekruimte. De blokstructuur-ruis is 51 gevallen over 660 weken en kwam in GEEN ENKELE
+  shot voor, terwijl hij aantoonbaar bestaat — hij zat achter een dichtgeklapt onderdeel en in
+  weekvormen die de harness niet draait. Generaliseer nooit van de scenario's naar de code: het net
+  bewijst een treffer, het bewijst geen schoonheid. Wat de hele code afdekt is een test bij de
+  PRODUCENT, niet een steekproef bij de camera.
+- **Een rood-meting van vóór een herformattering is ONTKRACHT.** Draait biome over het bestand
+  tussen je rood-meting en je commit, herhaal die meting daarna. Zelfde familie als de bestaande les
+  dat een biome-reformattering een red-patch ongemerkt kan opheffen, nu op de VOLGORDE in plaats van
+  op de inhoud: niet de patch verdwijnt, maar het bewijs eronder veroudert.
 ## Vorm van een CC-prompt
 
 - **Eén plain code-blok**, zonder taal-tag — dat is de één-tap-kopie op mobiel. Nooit proza in het blok mengen; Claude's kader eromheen staat als gewone tekst.
