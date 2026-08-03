@@ -357,15 +357,34 @@ export function dslBlockFromRow_(row: any, ftp: number): any {
   const powStr = String(row[2] || "");
   const note = String(row[4] || "");
 
-  const repMatch = /^\s*(\d+)\s*x\s*(\d+)\s*(min|sec|s)\b/i.exec(durStr);
+  // ROADMAP punt 20 — het WERKGETAL mag een decimale breuk dragen; het aantal blijft heel.
+  // Zonder deze breuk matchte "2x 9.7 min" NIET, viel de cel door naar dslDurationSec_, werd
+  // 7 minuten EN verloor hij zijn twee herhalingen: 6069 cellen over de meetpopulatie.
+  const repMatch = /^\s*(\d+)\s*x\s*(\d+(?:\.\d+)?)\s*(min|sec|s)\b/i.exec(
+    durStr,
+  );
   if (repMatch) {
     const reps = parseInt(repMatch[1] as string, 10);
-    const workDur = parseInt(repMatch[2] as string, 10);
+    const workRaw = repMatch[2] as string;
     const workUnit = /min/i.test(repMatch[3] as string) ? "m" : "s";
     const workPct = dslMidPct_(powStr, ftp);
     if (workPct == null) return null;
 
-    const lines = [`${reps}x`, `- ${workDur}${workUnit} ${workPct}%`];
+    // BYTE-IDENTIEK BIJ EEN HEEL WERKGETAL, en dat is een harde eis: de waarde en de eenheid
+    // gaan ongewijzigd mee, dus "3x 10 min" blijft "- 10m" en "3x 120 sec" blijft "- 120s" —
+    // niet "- 2m". Alleen een BREUK wordt doorgerekend naar hele seconden, in de vorm die de
+    // niet-herhalings-tak hieronder al gebruikt; "3x 9.7 min" wordt daarmee "- 582s".
+    let workTxt: string;
+    if (/^\d+$/.test(workRaw)) {
+      workTxt = `${parseInt(workRaw, 10)}${workUnit}`;
+    } else {
+      const workSec = Math.round(
+        workUnit === "m" ? Number(workRaw) * 60 : Number(workRaw),
+      );
+      workTxt = workSec % 60 === 0 ? `${workSec / 60}m` : `${workSec}s`;
+    }
+
+    const lines = [`${reps}x`, `- ${workTxt} ${workPct}%`];
 
     const rest = dslRestFromNote_(note);
     if (rest && rest.duration > 0) {
@@ -422,12 +441,29 @@ export function dslMidPct_(powStr: any, ftp: number): any {
   return r ? r.mid : null;
 }
 
+// ROADMAP punt 20 — DE DUUR MOET HEEL GELEZEN WORDEN, NIET HALF.
+//
+// De oude regexen waren `/(\d+)\s*min/i` en `/(\d+)\s*(?:sec|s)\b/i`. Twee gebreken, en het
+// tweede is het gevaarlijke. (1) Geen decimaal-steun. (2) De scan mag MIDDEN in een getal
+// beginnen: op "24.7 min" faalt `24` omdat er een punt volgt, waarna de scan doorschuift en
+// `7 min` vindt — 7 minuten in plaats van 24,7. En op "6.9999999999999964 min" vond hij
+// `9999999999999964`, goed voor een Duration van ruim 19 miljard jaar. GEMETEN over 100327
+// cellen: 38302 fout, waarvan 21085 te LANG.
+//
+// DE ANKERGROEP is de reparatie van (2): het getal mag alleen beginnen aan het STRINGBEGIN of
+// direct na een teken dat geen cijfer en geen punt is. Bewust GEEN lookbehind — die is in deze
+// doelomgeving niet gegarandeerd. Het getal is daarmee de TWEEDE capture.
+//
+// GEEN KOMMA-TAK: §6 van docs/PUNT20-RECON.md mat nul komma-cellen bij 179 bestaande rustnoten,
+// dus die tak zou dode code zijn. De komma ontstaat pas op de renderrand en gaat nooit terug de
+// push in.
 export function dslDurationSec_(str: any): number {
   if (!str) return 0;
-  const m = /(\d+)\s*min/i.exec(str);
-  if (m) return parseInt(m[1] as string, 10) * 60;
-  const s = /(\d+)\s*(?:sec|s)\b/i.exec(str);
-  if (s) return parseInt(s[1] as string, 10);
+  // Rond EEN keer af, op de grootheid die wordt teruggegeven: hele seconden.
+  const m = /(^|[^\d.])(\d+(?:\.\d+)?)\s*min/i.exec(str);
+  if (m) return Math.round(Number(m[2]) * 60);
+  const s = /(^|[^\d.])(\d+(?:\.\d+)?)\s*(?:sec|s)\b/i.exec(str);
+  if (s) return Math.round(Number(s[2]));
   return 0;
 }
 
@@ -451,11 +487,19 @@ export function zwoStepFromRow_(row: any, ftp: number): any {
   const powStr = String(row[2] || "");
   const note = String(row[4] || "");
 
-  const repMatch = /^\s*(\d+)\s*x\s*(\d+)\s*(min|sec|s)\b/i.exec(durStr);
+  // ROADMAP punt 20 — zelfde breuk als in dslBlockFromRow_. DIT IS HET PRIMAIRE PUSH-PAD:
+  // buildEventPayload probeert ZWO EERST en keert bij succes meteen terug (push.ts:83-87), dus
+  // dit is wat er werkelijk op Garmin landt. De uitvoer is hier al in seconden, dus alleen
+  // doorrekenen met EEN afronding; voor hele minuten verandert er per constructie niets.
+  const repMatch = /^\s*(\d+)\s*x\s*(\d+(?:\.\d+)?)\s*(min|sec|s)\b/i.exec(
+    durStr,
+  );
   if (repMatch) {
     const reps = parseInt(repMatch[1] as string, 10);
-    const workDur = parseInt(repMatch[2] as string, 10);
-    const workSec = /min/i.test(repMatch[3] as string) ? workDur * 60 : workDur;
+    const workDur = Number(repMatch[2] as string);
+    const workSec = Math.round(
+      /min/i.test(repMatch[3] as string) ? workDur * 60 : workDur,
+    );
     const workRange = dslPowerRange_(powStr, ftp);
     if (!workRange) return null;
 

@@ -33,6 +33,31 @@ const W_ZWO: any = {
     ["Cooldown", "8 min", "124-152W", "—", "Easy uit"],
   ],
 };
+// ROADMAP punt 20 — DECIMALE DUREN. W_ZWO hierboven draagt uitsluitend HELE minuten en kon het
+// defect per constructie niet raken: "24.7 min" leverde 7 minuten en "2x 9.7 min" verloor zijn
+// twee herhalingen én werd 7 minuten. Deze fixture toetst het ARTEFACT dat werkelijk gepusht
+// wordt — de gedecodeerde ZWO — en niet of er iets terugkomt. W_ZWO blijft ONGEWIJZIGD; die is
+// het bewijs dat de hele minuten niet bewegen.
+const W_ZWO_DECIMAAL: any = {
+  naam: "Decimale duren",
+  focus: "threshold",
+  totaalMin: 65,
+  tss: 46,
+  eindopmerking: "Uit de echte planner-uitvoer.",
+  structuur: [
+    ["Warmup", "8 min", "140-190W", "<151", "Inrijden, opbouwend"],
+    ["Z2", "24.7 min", "190-202W", "139-164", "Stabiel"],
+    [
+      "Hoge cadans 95+rpm",
+      "2x 9.7 min",
+      "196-207W",
+      "169-189",
+      "4 min rust @ 60%",
+    ],
+    ["Cooldown", "5 min", "126-154W", "—", "Easy uit"],
+  ],
+};
+
 // ZWO/DSL falen (lege watt-range) → description-fallback.
 const W_FALLBACK: any = {
   naam: "Los blok",
@@ -60,6 +85,29 @@ describe("buildEventPayload (byte-faithful IntervalsApi.gs)", () => {
     expect(typeof p.file_contents_base64).toBe("string");
     expect(p.file_contents_base64.length).toBeGreaterThan(0);
     expect(p.description).toBeUndefined();
+  });
+
+  it("ROADMAP 20: decimale duren landen als hele seconden in het ZWO-artefact", () => {
+    const p = buildEventPayload(
+      W_ZWO_DECIMAAL,
+      "2026-07-20",
+      "Ride",
+      1,
+      1,
+      280,
+    );
+    expect(typeof p.file_contents_base64).toBe("string");
+    const zwo = Buffer.from(p.file_contents_base64, "base64").toString("utf8");
+
+    // 8 min en 5 min blijven staan waar ze stonden.
+    expect(zwo).toContain('<Warmup Duration="480"');
+    expect(zwo).toContain('<Cooldown Duration="300"');
+    // 24,7 min = 1482 s. Vóór deze bouw stond hier 420 — de scan vond de "7" van "24.7".
+    expect(zwo).toContain('Duration="1482"');
+    expect(zwo).not.toContain('Duration="420"');
+    // 2x 9,7 min met 4 min rust: de herhaling BESTAAT weer, en 9,7 min = 582 s.
+    expect(zwo).toContain('<IntervalsT Repeat="2" OnDuration="582"');
+    expect(zwo).toContain('OffDuration="240"');
   });
 
   it("sessie 2/2: _s2-suffix, uur 17, (sessie 2/2) in de naam", () => {

@@ -55,6 +55,7 @@ import {
   dosisTredeFactor,
   dslBlockFromRow_,
   dslPowerRange_,
+  dslRestFromNote_,
   effectiveMacroFase_,
   effectiveMesoWeek_,
   effortsDagMinimum_,
@@ -130,6 +131,7 @@ import {
   zoneActsByDateFromTab_,
   zoneDebt_,
   zoneTimesFromCell_,
+  zwoStepFromRow_,
 } from "./index";
 
 // ── assert helpers with a module-level counter (replaces the ctx-based ones) ──
@@ -144,6 +146,75 @@ function assertClose_(name: string, expected: any, actual: any, eps = 0.01) {
 }
 
 // ── top-level test helpers ported from SelfTest.gs ──────────────────
+// ROADMAP punt 20 — DE BEDOELDE DUUR VAN EEN STRUCTUUR-RIJ, in hele seconden.
+//
+// Deze helper bestaat omdat de drie "push-parse"-asserties alleen toetsten DAT er geparseerd
+// werd en niet WAT eruit kwam: ze keken uitsluitend of `dslBlockFromRow_` niet null gaf. Een
+// cel als "24.7 min" gaf keurig een blok terug — van 7 minuten. Zie docs/PUNT20-RECON.md §7.
+//
+// Hij leidt de bedoeling af uit de CEL ZELF, niet uit de parser die getoetst wordt; anders
+// meet de assertie zichzelf. Decimalen worden hier expliciet wél gelezen.
+function _bedoeldeDuurSec_(row: any): number | null {
+  const dur = String(row[1] || "");
+  const note = String(row[4] || "");
+  const rep = /^\s*(\d+)\s*x\s*(\d+(?:\.\d+)?)\s*(min|sec|s)\b/i.exec(dur);
+  if (rep) {
+    const reps = parseInt(rep[1] as string, 10);
+    const werk = Number(rep[2]);
+    const werkSec = /min/i.test(rep[3] as string) ? werk * 60 : werk;
+    // De rust komt uit dezelfde bron als de parser hem leest, zodat een wijziging daar
+    // BEIDE kanten meeneemt in plaats van de assertie stil te laten afwijken.
+    const rest = dslRestFromNote_(note);
+    const rustSec = rest && rest.duration > 0 ? rest.duration : 0;
+    return Math.round(reps * (werkSec + rustSec));
+  }
+  const m = /(^|[^\d.])(\d+(?:\.\d+)?)\s*min/i.exec(dur);
+  if (m) return Math.round(Number(m[2]) * 60);
+  const s = /(^|[^\d.])(\d+(?:\.\d+)?)\s*(?:sec|s)\b/i.exec(dur);
+  if (s) return Math.round(Number(s[2]));
+  return null;
+}
+
+/** De duur in seconden die de DSL-uitvoer werkelijk draagt.
+ * Op REGELS gesplitst in plaats van met een meerregelige regex: de DSL-vorm is regelgebaseerd
+ * ("Nx", dan een werkregel, dan optioneel een rustregel) en dat leest hier eerlijker. */
+function _dslDuurSec_(out: any): number | null {
+  if (typeof out !== "string") return null;
+  const regels = out.split("\n");
+  const repKop = /^(\d+)x$/.exec(regels[0] as string);
+  const duurVan = (r: string): number | null => {
+    const m = /^- ([\d.]+)(m|s) /.exec(r);
+    if (!m) return null;
+    return m[2] === "m" ? Number(m[1]) * 60 : Number(m[1]);
+  };
+  if (repKop) {
+    const reps = parseInt(repKop[1] as string, 10);
+    const werk = duurVan(regels[1] as string);
+    if (werk == null) return null;
+    const rust = regels.length > 2 ? (duurVan(regels[2] as string) ?? 0) : 0;
+    return Math.round(reps * (werk + rust));
+  }
+  const one = duurVan(regels[0] as string);
+  return one == null ? null : Math.round(one);
+}
+
+/** De duur in seconden die de ZWO-uitvoer werkelijk draagt. */
+function _zwoDuurSec_(xml: any): number | null {
+  if (typeof xml !== "string") return null;
+  const iv =
+    /<IntervalsT Repeat="(\d+)" OnDuration="(\d+)"[^>]*OffDuration="(\d+)"/.exec(
+      xml,
+    );
+  if (iv) {
+    return (
+      parseInt(iv[1] as string, 10) *
+      (parseInt(iv[2] as string, 10) + parseInt(iv[3] as string, 10))
+    );
+  }
+  const d = /Duration="(\d+)"/.exec(xml);
+  return d ? parseInt(d[1] as string, 10) : null;
+}
+
 function _dcRow_(date: any, o?: any): any {
   o = o || {};
   const r: any = [
@@ -1972,13 +2043,26 @@ describe("engine selftest", () => {
       // (4)+(5) elke structuur-rij push-parsebaar + row[2] reproduceert watts(pctLo)-watts(pctHi)
       let pushOk = true,
         wattOk = true;
+      // ROADMAP punt 20 — NIET ALLEEN "parst", maar "parst GOED", per blok en in BEIDE
+      // parsers. De null-toets hieronder blijft staan; hij wordt AANGEVULD.
+      let dslDuurOk = true,
+        zwoDuurOk = true;
       wo.structuur.forEach((row: any) => {
         if (dslBlockFromRow_(row, 275) == null) pushOk = false;
+        const bedoeld = _bedoeldeDuurSec_(row);
+        if (bedoeld != null) {
+          const d = _dslDuurSec_(dslBlockFromRow_(row, 275));
+          if (d == null || Math.abs(d - bedoeld) > 1) dslDuurOk = false;
+          const z = _zwoDuurSec_(zwoStepFromRow_(row, 275));
+          if (z == null || Math.abs(z - bedoeld) > 1) zwoDuurOk = false;
+        }
         const r = dslPowerRange_(row[2], 275);
         if (!r || row[2] !== watts(275, r.lo) + "-" + watts(275, r.hi) + "W")
           wattOk = false;
       });
       assert_("arch " + rec.id + " push-parse", true, pushOk);
+      assert_("arch " + rec.id + " push-duur dsl", true, dslDuurOk);
+      assert_("arch " + rec.id + " push-duur zwo", true, zwoDuurOk);
       assert_("arch " + rec.id + " watt-roundtrip", true, wattOk);
       // (6) tss == tssFromBlokken_(blokken)
       assert_("arch " + rec.id + " tss", tssFromBlokken_(wo.blokken), wo.tss);
@@ -2072,13 +2156,26 @@ describe("engine selftest", () => {
       assertClose_("lib " + rec.id + " ~doelMin", dm, wo.totaalMin, 1.5);
       let pushOk = true,
         wattOk = true;
+      // ROADMAP punt 20 — NIET ALLEEN "parst", maar "parst GOED", per blok en in BEIDE
+      // parsers. De null-toets hieronder blijft staan; hij wordt AANGEVULD.
+      let dslDuurOk = true,
+        zwoDuurOk = true;
       wo.structuur.forEach((row: any) => {
         if (dslBlockFromRow_(row, 275) == null) pushOk = false;
+        const bedoeld = _bedoeldeDuurSec_(row);
+        if (bedoeld != null) {
+          const d = _dslDuurSec_(dslBlockFromRow_(row, 275));
+          if (d == null || Math.abs(d - bedoeld) > 1) dslDuurOk = false;
+          const z = _zwoDuurSec_(zwoStepFromRow_(row, 275));
+          if (z == null || Math.abs(z - bedoeld) > 1) zwoDuurOk = false;
+        }
         const r = dslPowerRange_(row[2], 275);
         if (!r || row[2] !== watts(275, r.lo) + "-" + watts(275, r.hi) + "W")
           wattOk = false;
       });
       assert_("lib " + rec.id + " push-parse", true, pushOk);
+      assert_("lib " + rec.id + " push-duur dsl", true, dslDuurOk);
+      assert_("lib " + rec.id + " push-duur zwo", true, zwoDuurOk);
       assert_("lib " + rec.id + " watt-roundtrip", true, wattOk);
       assert_("lib " + rec.id + " tss", tssFromBlokken_(wo.blokken), wo.tss);
       let tagsOk = rec.effectTags.length > 0;
@@ -6657,7 +6754,7 @@ describe("engine selftest", () => {
   // herstel-gat voor B2, en de vijfweg-lus die de keten zonder bevestiging doel-gestuurd houdt.
   // 1435→1447. NALEVERING: +2 voor de Recovery-tak buiten de poort (afgewezen en weggelaten) en
   // de tegenproef dat Build op dezelfde afstand wél een bevestiging vraagt. 1447→1449.
-  it("exactly 1567 assertions", () => {
-    expect(assertCount).toBe(1567);
+  it("exactly 1643 assertions", () => {
+    expect(assertCount).toBe(1643);
   });
 });
