@@ -317,7 +317,7 @@ punten staat onder *Gesloten — vindplaats*.
     high gedekt is. De vo2-declaratie van `PROFILES.onderhoud` blijft staan: in Peak scoort ze 0,35
     en komt ze aantoonbaar aan de beurt. WAT ONGEMETEN BLIJFT is de vorm die TOEVOEGT in plaats van
     ruilt; die staat als punt 16.
-15. **De dosis van de twee klim-doelen** — open (FASE 1 EN 2 AF) · ENGINE voor fase 3. Ook mét de zone-poort van punt 14 zakken
+15. **De dosis van de twee klim-doelen** — af · ENGINE plus CLIENT plus norm. Ook mét de zone-poort van punt 14 zakken
     ze: Korte beklimmingen levert 39 werkminuten en Lange beklimmingen 46, tegen een norm van 84.
     Dat is een DOSIS-vraag en geen verdelings-vraag — de zones kloppen, er is te weinig van. Kwam
     binnen bij de meting van punt 14 (`docs/PUNT14-BOUWDOC.md` §3) en is daar bewust buiten scope
@@ -450,6 +450,17 @@ punten staat onder *Gesloten — vindplaats*.
     elementen levert, en `DOELEN-SPEC` §3.1 drie sleutelsessies noemt vanaf vijf à zes uur zonder
     fase-clausule. Klopt dat Peak-quotum van 2, of hoort het 3 te zijn? Die tegenspraak stond er
     al; fase 2 haalt alleen de meetlat weg die hem kon melden.
+    PUNT 15 IS AF per 03-08-2026 en LIVE op Worker Version
+    `cdd32a42-7e9b-4983-bd5a-87c79f62da3c`, bouw `f8f1ebb`. FASE 3c BOUWDE UITSLUITEND TERM (ii),
+    de fit-poort: de efforts-arm mag alleen een dag pakken die de sessie draagt, en de ondergrens
+    is AFGELEID uit `effortsVorm` van het profiel (`effortsDagMinimum_`) en staat nergens als
+    getal — vandaag 105 voor beide klim-profielen. TERM (i), de ritduur-schaling, IS VERVALLEN;
+    de grond staat in `docs/PUNT15-FASE3C-BOUWDOC.md` §8: de arm zit met 30 werkminuten al op het
+    vo2-plafond 31 en boven 135 minuten bestaat er geen duurband, dus elke regel daar zou met de
+    hand gekozen zijn. TERM (iii), de dosis-verhoging bij `klim_lang`, is door (ii) ONTGRENDELD —
+    de fit-poort schaalt vanzelf mee naar 117 — maar blijft GEPARKEERD achter punt 17: ze mikt op
+    13,8 minuten tekort over 18 cellen bij een event zonder datum, en het eigenlijke tekort is een
+    NORM-vraag. Dat maakt punt 15 af en punt 17 de opvolger.
 16. **De goedkope bereik-prikkel** — open · ENGINE plus norm. Een prikkel boven de drempel die
     TOEVOEGT in plaats van RUILT: sprints of hard starts aan het eind van een Z2-rit, of een korte
     set achter sweet-spot-werk. Kwam binnen bij punt 14 fase 2, waar de RUIL-vorm meetbaar is
@@ -479,6 +490,27 @@ punten staat onder *Gesloten — vindplaats*.
     buigen is zichzelf meten, dezelfde val als het fase-quotum in punt 15 fase 2. Eerst meten wat
     een sessie van 60 minuten per zone EERLIJK kan dragen, dan pas kiezen tussen bibliotheek en
     norm. Raakt `DOELEN-SPEC`.
+18. **De afronding op het scherm** — open · CLIENT. Een sessieduur wordt KAAL gerenderd en toont
+    daardoor float-ruis: `WorkoutDetail.tsx:57` zet `session.totaalMin` zonder opmaak op het
+    scherm en `expandArchetype_` (`planner.ts:1383`) telt `warm + cool + mainMin` op uit blokken
+    die elk al op één decimaal zijn afgerond, dus er staat "59.800000000000004 min" bij
+    `Sweet Spot lage cadans 3x7`. GEZIEN OP DAANS EIGEN SCHERM. DE FIX IS ÉÉN FORMATTER AAN DE
+    RENDERRAND — maximaal één decimaal, achterliggende nul weg, zodat "60 min", "59,8 min" en
+    "60,5 min" alle drie kloppen; die halve minuut is echt en komt uit intervallen van 90
+    seconden — en die formatter hoort op ÉLKE plek die een duur toont, niet alleen op
+    `WorkoutDetail`. GEEN ENGINE-WIJZIGING: afronden is presentatie, en een ronding in
+    `expandArchetype_` zou elke vingerafdruk laten bewegen. ER HOORT EEN MECHANISCH NET BIJ, in de
+    shot-harness: een regex op de innerText-`.txt` die afgaat op elk getal met twee of meer
+    decimalen, zodat deze hele familie voortaan valt op élk scherm dat de harness fotografeert.
+19. **Het dagtype weekend is een kalendernaam, geen eigenschap** — open · ENGINE. `deriveDagtype`
+    (`apps/web/src/lib/planner.ts:18`) leidt het type af uit za/zo, terwijl de gebruiker alleen
+    pendel, trainen en minuten opgeeft; `assignWorkouts` geeft weekend- en vrije dagen daarna
+    verschillende per-dag-takken. Een deload-zaterdag en een deload-vrijdag van dezelfde lengte
+    lopen dus door verschillende takken. Bereikbaar op de dagen waar de allocator niet komt:
+    verstreken, gereden, taper- en deload-uitgesloten. In strijd met `DOELEN-SPEC` §2A — duur is
+    een eigenschap van de dag, de kalendernaam is dat niet. EERST METEN wat het verschil in de
+    praktijk oplevert, dan pas bouwen: de takken zijn via `buildWeekProposal` grotendeels
+    onbereikbaar, dus het kan zijn dat er niets aan hangt. Raakt `DOELEN-SPEC`.
 
 ## De tijdslijn
 
