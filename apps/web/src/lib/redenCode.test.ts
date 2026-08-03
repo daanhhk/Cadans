@@ -1,4 +1,4 @@
-import { assignWorkouts } from "@cadans/engine";
+import { assignWorkouts, effortsDagMinimum_ } from "@cadans/engine";
 import type { SettingsInput } from "@cadans/shared";
 import { describe, expect, it } from "vitest";
 
@@ -47,6 +47,16 @@ function settings(o: Partial<SettingsInput> = {}): SettingsInput {
     ...o,
   };
 }
+
+/**
+ * ROADMAP punt 15 fase 3c — een dag die de efforts-sessie DRAAGT. De weekend-tak zet
+ * `combo_long_with_efforts` sinds die fase alleen op een dag die lang genoeg is (DOELEN-SPEC §2A:
+ * de gebruiker levert de TIJD). De default-dag van deze fixtures is 60 minuten en ligt daar
+ * aantoonbaar onder, dus de drie combo-takken hieronder krijgen een dag op de grens. AFGELEID en
+ * niet getypt, zodat hij meeschuift als `effortsVorm` wijzigt. Dit raakt de FIXTURE, niet het
+ * mechanisme: wat deze tests toetsen is de koppeling redenCode ↔ reden-string.
+ */
+const DRAAGT_EFFORTS = effortsDagMinimum_("FTP");
 
 function d(iso: string, type: string, dagIdx = 0, minuten = 60): GDay {
   const [y, m, day] = iso.split("-").map(Number);
@@ -146,7 +156,7 @@ describe("assignWorkouts redenCode ↔ reden-string koppeling (per tak)", () => 
   });
 
   it("catchup_high (weekend, high-debt forceert combo)", () => {
-    const [x] = run([d("2026-03-14", "weekend")], {
+    const [x] = run([d("2026-03-14", "weekend", 0, DRAAGT_EFFORTS)], {
       debt: { low: 0, high: 40, anaerobic: 0 },
     });
     expect(x.reden).toBe("Inhaalsessie — intensiteit tekort");
@@ -154,7 +164,7 @@ describe("assignWorkouts redenCode ↔ reden-string koppeling (per tak)", () => 
   });
 
   it("catchup_anaerobic (weekend, anaerobic-debt forceert combo)", () => {
-    const [x] = run([d("2026-03-14", "weekend")], {
+    const [x] = run([d("2026-03-14", "weekend", 0, DRAAGT_EFFORTS)], {
       debt: { low: 0, high: 0, anaerobic: 25 },
     });
     expect(x.reden).toBe("Inhaalsessie — anaeroob tekort");
@@ -170,7 +180,7 @@ describe("assignWorkouts redenCode ↔ reden-string koppeling (per tak)", () => 
   });
 
   it("long_with_efforts (weekend, high-gat buiten Base)", () => {
-    const [x] = run([d("2026-03-14", "weekend")], {
+    const [x] = run([d("2026-03-14", "weekend", 0, DRAAGT_EFFORTS)], {
       macroFase: "Build",
       dekking: { low: true, high: false, anaerobic: false },
     });

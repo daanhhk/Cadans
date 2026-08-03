@@ -57,6 +57,7 @@ import {
   dslPowerRange_,
   effectiveMacroFase_,
   effectiveMesoWeek_,
+  effortsDagMinimum_,
   eftpFromActivities_,
   eventFase_,
   expandArchetype_,
@@ -1659,6 +1660,257 @@ describe("engine selftest", () => {
       "2 sleutelsessies per week, consequent",
       bandZonder.aannames[0],
     );
+  });
+
+  // ── ROADMAP punt 15 fase 3c — DE FIT-POORT OP DE EFFORTS-RIT ──────────────
+  // De arm koos de LANGSTE eligible dag zonder ondergrens, en `genericCombo` ankert `totaalMin`
+  // op `fixedNominal` plus `minBase`. GEMETEN in 8 van de 135 cellen: 105 minuten op een dag van
+  // 60. DOELEN-SPEC §2A — de gebruiker levert de TIJD. Zie docs/PUNT15-FASE3C-BOUWDOC.md §6/§7.
+  //
+  // GEEN ENKELE ASSERTIE HIERONDER DRAAGT DE GRENS ALS GETAL: hij wordt telkens GEMETEN uit
+  // `genericCombo` zelf of gelezen uit `effortsDagMinimum_`, zodat alles meeschuift als
+  // `effortsVorm` wijzigt.
+  it("test3cFitPoort", () => {
+    const S3c: any = { ftp: 280, lthr: 160 };
+    /** De kleinste gevraagde dagduur waarop `genericCombo` GEEN `tooLong` meer meldt. */
+    const grensMin_ = (doel: string): number => {
+      for (let m = 60; m <= 200; m++) {
+        const wo: any = genericCombo(
+          "combo_long_with_efforts",
+          m,
+          S3c,
+          1,
+          doel,
+        );
+        if (wo.tooLong == null) return m;
+      }
+      return -1;
+    };
+
+    // (T1) KOPPELING. De poort en de bouwer moeten op ÉÉN grens staan. Meet hem uit de bouwer en
+    // leg hem naast de afgeleide poort-waarde; zo kan er geen tweede definitie ontstaan.
+    for (const doel of ["Korte beklimmingen", "Lange beklimmingen"]) {
+      const gemeten = grensMin_(doel);
+      assert_(`3c T1 grens gemeten ${doel}`, true, gemeten > 0);
+      assert_(
+        `3c T1 poort == bouwer ${doel}`,
+        gemeten,
+        effortsDagMinimum_(doel),
+      );
+    }
+
+    /** Zeven planner-dagen; `langsteType` en `langsteMin` bepalen de kandidaat voor de arm. */
+    const week3c_ = (langsteMin: number, langsteType: string): any[] => {
+      const basis = new Date();
+      const dag = (n: number, type: string, minuten: number) => {
+        const dt = new Date(
+          basis.getFullYear(),
+          basis.getMonth(),
+          basis.getDate() + n,
+        );
+        return {
+          dagIdx: n,
+          type: type,
+          datum: dt,
+          minuten: minuten,
+          train: true,
+          gedaan: false,
+          voorgesteldType: null,
+          reden: null,
+          redenCode: null,
+          archetypeId: null,
+        };
+      };
+      return [
+        dag(1, "vrij", 60),
+        dag(2, "vrij", 60),
+        dag(4, "vrij", 60),
+        dag(5, langsteType, langsteMin),
+      ];
+    };
+    const draai3c_ = (days: any[], doel: string, fase: string) => {
+      assignWorkouts(
+        days,
+        { ftp: 280, lthr: 160, doel: doel, pendelDuurMin: 80, pendelAantal: 2 },
+        1,
+        fase,
+        { low: false, high: false, anaerobic: false },
+        { signal: "normal" },
+        null,
+        null,
+        null,
+        false,
+        null,
+        days,
+      );
+      return days;
+    };
+
+    for (const doel of ["Korte beklimmingen", "Lange beklimmingen"]) {
+      const grens = effortsDagMinimum_(doel);
+      const quotum = (PROFILES as any)[
+        doel === "Korte beklimmingen" ? "klim_kort" : "klim_lang"
+      ].kwaliteitPerWeek;
+      for (const fase of ["Build", "Peak"]) {
+        // (T2) PLAATSING — op de grens staat de rol er, één minuut eronder niet.
+        const opGrens = draai3c_(week3c_(grens, "weekend"), doel, fase);
+        const rollenOp = opGrens.map((d: any) => d.reden || "").join(" | ");
+        assert_(
+          `3c T2 op grens plaatst efforts ${doel} ${fase}`,
+          true,
+          rollenOp.indexOf("efforts") >= 0,
+        );
+
+        const eronder = draai3c_(week3c_(grens - 1, "weekend"), doel, fase);
+        const rollenOnder = eronder.map((d: any) => d.reden || "").join(" | ");
+        assert_(
+          `3c T2 onder grens plaatst geen efforts ${doel} ${fase}`,
+          false,
+          rollenOnder.indexOf("efforts") >= 0,
+        );
+        // DE VRIJGEKOMEN DAG GAAT NIET VERLOREN. Hij valt door naar de gewone
+        // kwaliteits-allocatie, dus het AANTAL kwaliteitsdagen is gelijk met en zonder poort —
+        // de poort verplaatst werk, hij haalt het niet weg. GEMETEN: de dag wordt `threshold`
+        // bij `klim_kort` en `sweet_spot` bij `klim_lang` in plaats van de efforts-rit.
+        // NIET tegen `kwaliteitPerWeek` geasserteerd: dat quotum is een PLAFOND dat de
+        // allocator alleen vult waar een archetype past, geen garantie.
+        const kwalTel_ = (ds: any[]) =>
+          ds.filter(
+            (d: any) =>
+              d.voorgesteldType &&
+              d.voorgesteldType !== "long_z2" &&
+              d.voorgesteldType !== "pendel_z2" &&
+              d.voorgesteldType !== "recovery",
+          ).length;
+        void quotum;
+        assert_(
+          `3c T2 kwaliteitsdagen onveranderd ${doel} ${fase}`,
+          kwalTel_(opGrens),
+          kwalTel_(eronder),
+        );
+
+        const vrijgekomen: any = eronder.filter((x: any) => x.dagIdx === 5)[0];
+        assert_(
+          `3c T2 vrijgekomen dag draagt kwaliteit ${doel} ${fase}`,
+          true,
+          !!vrijgekomen &&
+            vrijgekomen.voorgesteldType !== "long_z2" &&
+            vrijgekomen.voorgesteldType !== "combo_long_with_efforts",
+        );
+
+        // (T2b) DAGTYPE IS GEEN GROND — de arm kiest op beschikbare TIJD, niet op de kalender.
+        const vrijOp = draai3c_(week3c_(grens, "vrij"), doel, fase);
+        assert_(
+          `3c T2b vrij op grens plaatst efforts ${doel} ${fase}`,
+          true,
+          vrijOp
+            .map((d: any) => d.reden || "")
+            .join(" | ")
+            .indexOf("efforts") >= 0,
+        );
+        const vrijOnder = draai3c_(week3c_(grens - 1, "vrij"), doel, fase);
+        assert_(
+          `3c T2b vrij onder grens plaatst geen efforts ${doel} ${fase}`,
+          false,
+          vrijOnder
+            .map((d: any) => d.reden || "")
+            .join(" | ")
+            .indexOf("efforts") >= 0,
+        );
+
+        // (T3) DE OVERSCHRIJDING IS WEG. Zonder poort 1 zette de arm hier een sessie van
+        // `effortsDagMinimum_` op een dag die korter is; deze assertie valt daar precies op om.
+        const dagMet: any = opGrens.filter(
+          (d: any) => d.voorgesteldType === "combo_long_with_efforts",
+        )[0];
+        assert_(`3c T3 efforts-dag gevonden ${doel} ${fase}`, true, !!dagMet);
+        const wo: any = genericCombo(
+          "combo_long_with_efforts",
+          dagMet.minuten,
+          S3c,
+          1,
+          doel,
+        );
+        assert_(
+          `3c T3 totaalMin <= dagminuten ${doel} ${fase}`,
+          true,
+          wo.totaalMin <= dagMet.minuten,
+        );
+      }
+    }
+
+    // (T4) DE WEEKEND-TAK, DIRECT. Deze tak is via `buildWeekProposal` NIET te bereiken: de
+    // endurance-fill (stap 4) claimt élke resterende eligible dag, dus de per-dag-takken vuren
+    // alleen op NIET-eligible dagen — verstreken, gedaan, taper of een deloadweek. GEMETEN dat ook
+    // een deloadweek hem niet bereikt: 0 combo's in alle acht gemeten deload-cellen. Daarom een
+    // DIRECTE test op de tak, met een dag die de allocator al heeft toegewezen.
+    const weekendDag_ = (minuten: number) => {
+      const basis = new Date();
+      // VERSTREKEN dag: `eligible_` eist `datum >= today`, dus deze valt buiten de allocator en
+      // buiten de endurance-fill — precies de toestand waarin de per-dag-weekend-tak vuurt.
+      const dt = new Date(
+        basis.getFullYear(),
+        basis.getMonth(),
+        basis.getDate() - 5,
+      );
+      return [
+        {
+          dagIdx: 5,
+          type: "weekend",
+          datum: dt,
+          minuten: minuten,
+          train: true,
+          gedaan: false,
+          voorgesteldType: null,
+          reden: null,
+          redenCode: null,
+          archetypeId: null,
+        },
+      ];
+    };
+    const debtDraai_ = (minuten: number) => {
+      const days = weekendDag_(minuten);
+      const debt = { low: 0, high: 40, anaerobic: 0 };
+      assignWorkouts(
+        days,
+        {
+          ftp: 280,
+          lthr: 160,
+          doel: "FTP",
+          pendelDuurMin: 80,
+          pendelAantal: 2,
+        },
+        1,
+        "Build",
+        { low: true, high: true, anaerobic: true },
+        { signal: "normal" },
+        null,
+        null,
+        debt,
+        false,
+        null,
+        days,
+      );
+      return { dag: days[0] as any };
+    };
+    const grensFtp = effortsDagMinimum_("FTP");
+    const onder = debtDraai_(grensFtp - 1);
+    assert_(
+      "3c T4 onder grens geen combo",
+      "long_z2",
+      onder.dag.voorgesteldType,
+    );
+    // En de INHAAL-tak is niet gelopen: er is niets gecompenseerd. `debtWerk` zelf is een KOPIE
+    // (planner.ts:722), dus van buiten niet waarneembaar; `redenCode` is het waarneembare gevolg
+    // van diezelfde tak en draagt de assertie.
+    assert_("3c T4 onder grens redenCode", "long_weekend", onder.dag.redenCode);
+    const opGrensW = debtDraai_(grensFtp);
+    assert_(
+      "3c T4 op grens wel combo",
+      "combo_long_with_efforts",
+      opGrensW.dag.voorgesteldType,
+    );
+    assert_("3c T4 op grens redenCode", "catchup_high", opGrensW.dag.redenCode);
   });
 
   // ── Fase 1 deel 1 — archetype-expander (puur) ──
@@ -6405,7 +6657,7 @@ describe("engine selftest", () => {
   // herstel-gat voor B2, en de vijfweg-lus die de keten zonder bevestiging doel-gestuurd houdt.
   // 1435→1447. NALEVERING: +2 voor de Recovery-tak buiten de poort (afgewezen en weggelaten) en
   // de tegenproef dat Build op dezelfde afstand wél een bevestiging vraagt. 1447→1449.
-  it("exactly 1527 assertions", () => {
-    expect(assertCount).toBe(1527);
+  it("exactly 1567 assertions", () => {
+    expect(assertCount).toBe(1567);
   });
 });

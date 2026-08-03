@@ -526,9 +526,23 @@ export function allocateQualityWeek_(
     !!spreiding.effortsInLangeRit &&
     (macroFase === "Build" || macroFase === "Peak");
   if (effortsArm) {
+    // ROADMAP punt 15 fase 3c — POORT 1: DE ARM PAKT ALLEEN EEN DAG DIE DE SESSIE DRAAGT.
+    //
+    // GROND: DOELEN-SPEC §2A — de gebruiker levert de TIJD, de app de INHOUD. Zonder deze poort
+    // koos de arm de LANGSTE eligible dag zonder ondergrens, en `genericCombo` zette daar een
+    // sessie neer die op zijn `fixedNominal` plus `minBase` is geankerd. GEMETEN in 8 van de 135
+    // cellen: 105 minuten op een opgegeven dag van 60. Dan lopen de week ÉN de meetlat scheef —
+    // de week wordt 3u45 en wordt daarna afgemeten tegen een norm die op 3 uur is berekend.
+    // Zie docs/PUNT15-FASE3C-BOUWDOC.md §6 en §7.
+    //
+    // De ondergrens is AFGELEID uit de vorm van het doel (`effortsDagMinimum_`) en staat nergens
+    // als getal. Blijft er geen kandidaat over, dan vuurt de arm NIET: `cov` en `remaining`
+    // blijven staan en de dag valt door naar de gewone kwaliteits-allocatie.
+    const dagMin = effortsDagMinimum_(doel);
     let lr: any = null;
     elig.forEach((d: any) => {
       if (d.type === "pendel") return;
+      if (effortsRequested_(d.minuten) < dagMin) return;
       if (
         !lr ||
         d.minuten > lr.minuten ||
@@ -874,13 +888,26 @@ export function assignWorkouts(
     } else if (d.type === "weekend") {
       // Debt-aware: groot high/anaerobic tekort → forceer combo met
       // expliciete high-blokken (i.p.v. alleen long_z2 + klim-sim).
-      if (debtActief && debtWerk.high > DEBT_FORCE_HIGH_MIN) {
+      //
+      // ROADMAP punt 15 fase 3c — POORT 2: DEZELFDE FIT-EIS ALS DE ARM. Dezelfde grond, DOELEN-SPEC
+      // §2A: de gebruiker levert de TIJD. Alle DRIE de takken die hieronder
+      // `combo_long_with_efforts` zetten hangen eraan; past de sessie niet, dan valt de dag door
+      // naar de bestaande `long_z2`-takken en worden de debt-neveneffecten (`debtWerk` op 0,
+      // `debtForced`) NIET gezet — er is dan namelijk niets gecompenseerd.
+      // Zie docs/PUNT15-FASE3C-BOUWDOC.md §6 en §7.
+      const effortsPast =
+        effortsRequested_(d.minuten) >= effortsDagMinimum_(doel);
+      if (effortsPast && debtActief && debtWerk.high > DEBT_FORCE_HIGH_MIN) {
         type = "combo_long_with_efforts";
         debtWerk.high = 0; // gecompenseerd
         debtForced = true;
         reden = "Inhaalsessie — " + redenZoneLabel_("high") + " tekort";
         redenCode = "catchup_high";
-      } else if (debtActief && debtWerk.anaerobic > DEBT_FORCE_ANAER_MIN) {
+      } else if (
+        effortsPast &&
+        debtActief &&
+        debtWerk.anaerobic > DEBT_FORCE_ANAER_MIN
+      ) {
         type = "combo_long_with_efforts";
         debtWerk.anaerobic = 0;
         debtForced = true;
@@ -890,7 +917,7 @@ export function assignWorkouts(
         type = "long_z2";
         reden = "Lange duurrit — weekend";
         redenCode = "long_weekend";
-      } else if (!dekking.high && macroFase !== "Base") {
+      } else if (effortsPast && !dekking.high && macroFase !== "Base") {
         type = "combo_long_with_efforts";
         reden = "Lange rit met blokken — intensiteit aanvullen";
         redenCode = "long_with_efforts";
@@ -2448,6 +2475,54 @@ export function genericPendelIntervals(
   };
 }
 
+/**
+ * DE EFFORTS-ARM — ÉÉN definitie voor de vorm, de gevraagde tijd en de dag-ondergrens.
+ *
+ * Deze vier stonden binnen `genericCombo` en zijn hier naartoe getild zodat de POORT in
+ * `assignWorkouts` en de BOUWER dezelfde waarden lezen. Een tweede kopie zou onvermijdelijk
+ * uiteenlopen zodra `effortsVorm` wijzigt, en dan poort de allocator op een grens die de sessie
+ * niet meer heeft. Refactor, geen gedragswijziging: de waarden zijn ongewijzigd.
+ */
+const EFFORTS_VORM_DEFAULT_ = {
+  reps: 3,
+  onMin: 10,
+  rest: 5,
+  pctLo: 85,
+  pctHi: 92,
+  bpmLo: 92,
+  bpmHi: 99,
+  as: "lengte",
+  label: "Efforts",
+  notitie: "Tempo/SS blokken, <rest> min rust",
+};
+
+/** De Z2-basis-vloer. Onder deze waarde is een "lange rit met efforts" geen lange rit meer. */
+const EFFORTS_MIN_BASE_ = 30;
+
+/** De vorm van dit doel: de default, overschreven door `effortsVorm` op het profiel. */
+export function effortsVormVoorDoel_(doel: any): any {
+  return {
+    ...EFFORTS_VORM_DEFAULT_,
+    ...((profileForDoel_(doel) as any)?.effortsVorm ?? {}),
+  };
+}
+
+/** De gevraagde tijd zoals de bouwer hem leest — zelfde regel als `genericLongZ2`. */
+export function effortsRequested_(mins: any): number {
+  return Math.max(60, mins || 120);
+}
+
+/**
+ * DE KLEINSTE DAG DIE DEZE SESSIE DRAAGT: warmup plus werk plus intra-rust plus uitrijden, plus de
+ * Z2-basis-vloer. AFGELEID uit de vorm van het doel en nooit als literal geschreven — schuift
+ * `effortsVorm` ooit op, dan schuift deze grens vanzelf mee. Zie
+ * docs/PUNT15-FASE3C-BOUWDOC.md §8.
+ */
+export function effortsDagMinimum_(doel: any): number {
+  const v = effortsVormVoorDoel_(doel);
+  return 15 + v.reps * v.onMin + v.reps * v.rest + 15 + EFFORTS_MIN_BASE_;
+}
+
 export function genericCombo(
   type: any,
   mins: any,
@@ -2470,28 +2545,15 @@ export function genericCombo(
     // vóór deze fase — en dat pad moet byte-identiek blijven, want de weekend-tak in
     // `buildWorkout` levert dit type ook ZONDER `spreiding.effortsInLangeRit`, bij elk doel, zodra
     // `!dekking.high` en de fase niet Base is. Zie docs/PUNT15-FASE3B-BOUWDOC.md M6.
-    const vormDefault_ = {
-      reps: 3,
-      onMin: 10,
-      rest: 5,
-      pctLo: 85,
-      pctHi: 92,
-      bpmLo: 92,
-      bpmHi: 99,
-      as: "lengte",
-      label: "Efforts",
-      notitie: "Tempo/SS blokken, <rest> min rust",
-    };
-    const vorm: any = {
-      ...vormDefault_,
-      ...((profileForDoel_(doel) as any)?.effortsVorm ?? {}),
-    };
+    // De vorm, de gevraagde tijd en de basis-vloer komen uit de module-scope helpers hierboven,
+    // zodat de POORT in `assignWorkouts` op exact dezelfde waarden rekent als deze bouwer.
+    const vorm: any = effortsVormVoorDoel_(doel);
 
-    const requested = Math.max(60, mins || 120);
+    const requested = effortsRequested_(mins);
     const nominalWork = vorm.reps * vorm.onMin;
     const nominalRest = vorm.reps * vorm.rest;
     const fixedNominal = 15 + nominalWork + nominalRest + 15;
-    const minBase = 30;
+    const minBase = EFFORTS_MIN_BASE_;
     const fits = requested >= fixedNominal + minBase;
     const baseNominal = fits ? requested - fixedNominal : minBase;
     const totaalMin = fixedNominal + baseNominal;
