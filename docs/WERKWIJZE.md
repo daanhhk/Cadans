@@ -468,6 +468,38 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
 - Inhoud: **spec-gedreven by default** — architectuur, exact gedrag, sleutel-logica en de gate. CC schrijft de code, vindt de call-sites zelf en past aan de **échte** staat aan (geen letterlijke `str_replace`-blokken). Exacte code alleen als **anker** bij fragiele edits: byte-getrouwe GAS-mirrors, TZ-grens-logica, formules en zone-mappings. CC meldt in het rapport de kern-implementatiekeuzes (gekozen conditie, plaatsing), zodat review tegen de spec kan zonder de volledige diff. Verder: verificatiestappen, een harde gate en de commit message.
 - Vaste sluitregels waar van toepassing: training onaangeroerd op `3e8090a`; `git diff --stat` op `packages/engine` leeg; vloeren uit de suite lezen in plaats van hardcoden; CI via de publieke GitHub REST API.
 
+VIJF CONTROLES VOOR ELK CC-PROMPT, en ze worden MECHANISCH uit de prompttekst getrokken — nooit
+uit een handlijst. Dat is dezelfde grond als de anker-les hierboven: een handlijst dekte 48 van de
+70 ankers, en alle drie de fouten zaten in de 22 daarbuiten.
+
+1. Elke **VINDPLAATS** — bestand, regelnummer, inhoud — wordt gegrept vóór hij meegaat.
+2. Elke **BEHOUD- of VERWIJDER-instructie**: bestaat het ding, en staat het er in die vorm?
+3. Elke aangewezen **ASSERTIE-PLEK**: welke assen varieert die plek, en ligt het te dekken geval op
+   een as die hij VASTZET? Een lus die op de nominale vorm draait dekt niets van wat de modulatie
+   doet.
+4. Elke **ACCEPTATIE-EIS**: kan de ingreep hem mechanisch raken?
+5. Elk **GETAL**: uit een meting van deze sessie of uit een gepind document, nooit uit geheugen.
+
+De chat rapporteert de TREFKANS van die controles in de begeleidende proza — "vijf van vijf" —
+in plaats van te claimen dat het klopt.
+
+EN ELK BOUW-PROMPT OPENT MET EEN PREMISSEN-BLOK: de beweringen over de repo die de controle hebben
+overleefd, met als eerste stap voor CC dat hij ze toetst en bij afwijking STOPT. Dat stond in het
+recon-prompt van punt 20 wél en in het bouw-prompt niet, en precies daar landden beide fouten.
+Twee netten in plaats van één, en het eerste ligt vóór de CC-ronde.
+
+HET MAXIMUM IS VIJF. Groeit die lijst, dan wordt hij hetzelfde als de lessenlijst in *Recon en
+bewijslast*: te lang om te draaien, dus niet gedraaid. Daarom staat dit hier en niet daar —
+"raadpleeg de lessen" is geen handeling.
+
+AANLEIDING: twee fouten in één sessie, allebei in punt 20, en allebei al gedekt door een BESTAANDE
+les. Het gat zat in de UITVOERING, niet in de dekking. (a) Het bouw-prompt wees de twee
+`push-parse`-lussen aan als plek voor de nieuwe assertie, terwijl die op `mesoFactor` 1 draaien —
+daar bestaan 0 decimale herhalingscellen tegen 110 bij mesoWeek 3, dus edit B bleef ongedekt en de
+ronde eindigde op de stopregel. (b) Het close-out-prompt gaf een correctie-instructie op de zin
+"in dezelfde PowerShell-sessie", die in het hele document niet voorkwam. CC ving beide en meldde
+ze; ze kostten twee rondes.
+
 ## Vorm van een CC-rapport
 
 Platte tekst, **geen code-fences en geen tabellen** (breekt de mobiele kopie), ongeveer 200 woorden. Literals tellen niet mee en worden exact gegeven.
@@ -640,3 +672,4 @@ Volg de FOCUS uit het bovenste STAND-blok.
 - 2026-08-03 — les toegevoegd in *Recon en bewijslast*: een parser die bij foute invoer een ander getal teruggeeft in plaats van null, is met een niet-null-assertie niet te betrappen. Aanleiding: `dslBlockFromRow_` gaf op "24.7 min" een blok van 7 minuten, en vier asserties lieten dat staan.
 - 2026-08-03 — les toegevoegd in *Recon en bewijslast*: een test die via de route binnenkomt bereikt alleen de primaire tak. Aanleiding: `buildEventPayload` keert op `push.ts:87` terug zodra het ZWO lukt, dus de nieuwe api-fixture kon de DSL-terugval niet rood krijgen.
 - 2026-08-03 — correctie in *Vorm van een CC-prompt*: gesplitste blokken draaien in dezelfde CC-SESSIE. De regel zei "dezelfde sessie" zonder meer; PowerShell is de shell waarin CC zijn commando's uitvoert, geen omgeving waarin Daan zelf werkt, en die dubbelzinnigheid is nu weg.
+- 2026-08-03 — stap toegevoegd in *Vorm van een CC-prompt*: vijf controles die mechanisch uit de prompttekst worden getrokken, plus de eis dat elk bouw-prompt opent met een premissen-blok dat CC eerst toetst. Aanleiding: twee chat-fouten in punt 20 — het bouw-prompt wees twee lussen aan die op mesoFactor 1 draaien (0 decimale herhalingscellen tegen 110 bij mesoWeek 3), en het close-out-prompt corrigeerde een zin die nergens stond. Beide waren al door een bestaande les gedekt; wat ontbrak was een moment waarop die lessen wórden gedraaid.
