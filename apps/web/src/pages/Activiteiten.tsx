@@ -5,6 +5,7 @@ import { ZonePill } from "../components/schema/ZonePill";
 import { Num, Overline } from "../components/ui";
 import { type ActivityListRow, buildActivityList } from "../lib/activityList";
 import { getActivities } from "../lib/api";
+import { nlInt } from "../lib/format";
 
 // RITDETAILS fase 3 — tabblad Activiteiten: rittenlijst uit GET /api/activities (nieuwste eerst,
 // gegroepeerd per maand), tik op een rij → de bestaande RideDetailSheet. Client-only; hergebruikt
@@ -211,7 +212,7 @@ function ActivityRowItem({
               gap: 3,
             }}
           >
-            <Num>{row.tss}</Num>
+            <Num>{nlInt(row.tss)}</Num>
             <span
               style={{
                 fontFamily: "var(--font-sans)",

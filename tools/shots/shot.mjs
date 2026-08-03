@@ -68,14 +68,17 @@ const BEWIJSWEKEN = 2;
 const DAGEN = ["ma", "di", "wo", "do", "vr", "za", "zo"];
 const DAY_RE = /^(ma|di|wo|do|vr|za|zo)\s*\d{1,2}$/i;
 
-/** Elk getal met TWEE OF MEER decimalen, punt of komma als scheidingsteken.
+/** Elk getal met VIER OF MEER decimalen, punt of komma als scheidingsteken.
  *
- * DE DREMPEL STAAT BEWUST OP TWEE, NIET OP DRIE OF VIER. Dit is fase A van ROADMAP punt 18 en die
- * MEET de trefferverdeling; hij velt geen oordeel. Op twee decimalen vangt het net behalve de
- * float-ruis ("59.800000000000004 min") ook de LEGITIEME gevallen — een IF van 0,85, een
- * NL-duizendtalpunt in "1.234 kJ" — en juist die verdeling is wat fase B nodig heeft om de
- * definitieve drempel te kiezen. Het net FAALT hier dus nergens op: het rapporteert alleen. */
-const FLOAT_RE = /\d+[.,]\d{2,}/g;
+ * DE DREMPEL IS GEMETEN, NIET GEKOZEN. Fase A en B1 draaiden op twee decimalen om de VERDELING te
+ * zien, en die verdeling wijst de grens zelf aan: de float-ruis draagt VEERTIEN decimalen
+ * ("90.39999999999999"), terwijl elke legitieme treffer er hoogstens DRIE heeft — `3,77` W/kg en
+ * `0,12` sinds seizoenstart hebben er twee, en `1.167` W is de NL-DUIZENDTALPUNT en dus geen
+ * decimaal maar wel drie cijfers achter het scheidingsteken. Vier ligt daar precies tussen: geen
+ * enkele echte waarde in de app haalt hem, en geen enkele float-ruis ontkomt eraan.
+ *
+ * VANAF FASE B2 IS HET NET HARD. Een treffer laat de run FALEN; het rapporteert niet meer alleen. */
+const FLOAT_RE = /\d+[.,]\d{4,}/g;
 
 /** Unieke treffers van FLOAT_RE, elk mét DRIE contextregels: de regel ervoor, de regel zelf en de
  * regel erna.
@@ -569,6 +572,7 @@ async function capture(page, dir, name, url, probe) {
     capped,
     errors: probe.errors.length,
     noise: noise.length,
+    hits: noise,
     hiddenN: scan.hiddenN,
     inlineN: scan.inlineN,
     png,
@@ -799,6 +803,28 @@ async function main() {
     );
   }
   process.stdout.write(`${lines.join("\n")}\n`);
+
+  // HET NET IS HARD. Pas HIER, nadat elke shot geschoten is: de .txt's staan er dan compleet, dus
+  // een rode uitslag komt mét het volledige beeld in plaats van halverwege af te breken. De
+  // uitslag is niet te missen — een lijst met vindplaats, treffer en de drie contextregels.
+  const noisy = results.filter((r) => r.noise > 0);
+  if (noisy.length) {
+    const out = [
+      "",
+      `FLOAT-NET ROOD: ${noisy.reduce((n, r) => n + r.noise, 0)} treffer(s) met 4 of meer decimalen, over ${noisy.length} shot(s).`,
+    ];
+    for (const r of noisy) {
+      for (const h of r.hits) {
+        out.push(
+          `  ${r.scenario}/${r.name}: ${h.hit}`,
+          `      voor:  ${h.prev}`,
+          `      regel: ${h.line}`,
+          `      na:    ${h.next}`,
+        );
+      }
+    }
+    throw new Error(out.join("\n"));
+  }
 }
 
 main().catch((e) => {

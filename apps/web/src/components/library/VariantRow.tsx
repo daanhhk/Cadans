@@ -1,3 +1,4 @@
+import { nlInt, nlUpTo1 } from "../../lib/format";
 import type { SchemaSession } from "../../lib/schema";
 import { ZoneBar } from "../schema/ZoneBar";
 
@@ -74,7 +75,7 @@ export function VariantRow({
               whiteSpace: "nowrap",
             }}
           >
-            {session.totaalMin} min · TSS {session.tss}
+            {nlUpTo1(session.totaalMin)} min · TSS {nlInt(session.tss)}
           </span>
         )}
       </div>

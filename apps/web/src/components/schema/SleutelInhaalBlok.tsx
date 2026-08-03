@@ -1,3 +1,4 @@
+import { nlUpTo1 } from "../../lib/format";
 import type { OpenSleutelDag } from "../../lib/sleutelinhaal";
 
 // ROADMAP punt 5b — FEITENBLOK onder de dagkaart van een gemiste of te licht gereden
@@ -58,7 +59,7 @@ export function SleutelInhaalBlok({ dagen }: { dagen: OpenSleutelDag[] }) {
             {d.weekday} {d.dayNum}
           </span>
           <span>
-            {d.naam} · {d.minuten} min
+            {d.naam} · {nlUpTo1(d.minuten)} min
           </span>
         </div>
       ))}

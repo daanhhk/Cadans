@@ -6,6 +6,7 @@ import {
   verlengActieLabel,
   verlengBadgeLabel,
 } from "../../lib/coachNarrative";
+import { nlUpTo1 } from "../../lib/format";
 import { bumpPlannerVersion } from "../../lib/plannerSignal";
 import { CoachCallout } from "./CoachCallout";
 
@@ -113,7 +114,7 @@ export function VerlengCard({
             color: "var(--btn-secondary-text)",
           }}
         >
-          {`Nee, hou ${vanMin}`}
+          {`Nee, hou ${nlUpTo1(vanMin)}`}
         </button>
       </div>
     </div>

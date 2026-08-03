@@ -152,7 +152,7 @@ export function LevelCard({
             <div
               style={{
                 height: "100%",
-                width: `${tp.pct * 100}%`,
+                width: `${nlInt(tp.pct * 100)}%`,
                 borderRadius: "var(--r-pill)",
                 background: "var(--accent-grad)",
               }}

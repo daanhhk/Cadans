@@ -879,7 +879,7 @@ export function DoelProjectie({
                       }}
                     >
                       <Num size="var(--fs-num-sm)" color="var(--info)">
-                        {proj.band.lowW}
+                        {nlInt(proj.band.lowW)}
                       </Num>
                       {/* collapse "N–N W" → "N W" bij een puntschatting (low === high). */}
                       {proj.band.lowW !== proj.band.highW && (
@@ -894,7 +894,7 @@ export function DoelProjectie({
                             –
                           </span>
                           <Num size="var(--fs-num-sm)" color="var(--info)">
-                            {proj.band.highW}
+                            {nlInt(proj.band.highW)}
                           </Num>
                         </>
                       )}

@@ -1,4 +1,7 @@
 // Blok-lijst uit de engine-`structuur` (5-tuples [label, dur, watt-range, hr-range, note]).
+// De duurcel gaat door `nlBlokDuur`: de engine-string draagt float-ruis en blijft ONAANGEROERD
+// (dslBlockFromRow_ parseert hem voor intervals.icu/Garmin), dus opmaken gebeurt hier.
+import { nlBlokDuur } from "../../lib/format";
 export function BlockList({ structuur }: { structuur: string[][] }) {
   if (structuur.length === 0) return null;
   return (
@@ -7,7 +10,7 @@ export function BlockList({ structuur }: { structuur: string[][] }) {
     >
       {structuur.map((row, i) => {
         const label = row[0] ?? "";
-        const dur = row[1] ?? "";
+        const dur = nlBlokDuur(row[1] ?? "");
         const meta = [row[2], row[3], row[4]]
           .filter((x) => x && x !== "—")
           .join(" · ");

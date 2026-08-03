@@ -1,4 +1,5 @@
 import { useId, useState } from "react";
+import { nlInt, nlUpTo1 } from "../../lib/format";
 import type { SchemaSession } from "../../lib/schema";
 import { Num, Overline } from "../ui";
 import { BlockList } from "./BlockList";
@@ -54,7 +55,7 @@ export function WorkoutDetail({
       </div>
       <div style={{ display: "flex", gap: "var(--s-4)" }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: 3 }}>
-          <Num size="var(--fs-num-sm)">{session.totaalMin}</Num>
+          <Num size="var(--fs-num-sm)">{nlUpTo1(session.totaalMin)}</Num>
           <span
             style={{
               fontSize: "var(--fs-caption)",
@@ -65,7 +66,7 @@ export function WorkoutDetail({
           </span>
         </div>
         <div style={{ display: "flex", alignItems: "baseline", gap: 3 }}>
-          <Num size="var(--fs-num-sm)">{session.tss}</Num>
+          <Num size="var(--fs-num-sm)">{nlInt(session.tss)}</Num>
           <span
             style={{
               fontSize: "var(--fs-caption)",

@@ -1,6 +1,7 @@
 import type { BlokReview, BlokWeek } from "../../lib/blok";
 import { blokReviewNarrative } from "../../lib/coachNarrative";
 import { parseLocalDate } from "../../lib/dates";
+import { nlInt } from "../../lib/format";
 import type { Zone5Key } from "../../lib/zonemunt";
 import { Card, Overline } from "../ui";
 import { CoachCallout } from "./CoachCallout";
@@ -175,7 +176,7 @@ function Regel({ week }: { week: BlokWeek }) {
                 }}
               >
                 {z.naam} {Math.round(z.geleverd)}/
-                {z.norm == null ? "—" : z.norm}
+                {z.norm == null ? "—" : nlInt(z.norm)}
               </span>
             </span>
           ))}

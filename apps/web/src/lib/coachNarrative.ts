@@ -8,6 +8,7 @@
 
 import type { BlokReview } from "./blok";
 import type { MetingBron } from "./effect";
+import { nlUpTo1 } from "./format";
 import type { Zone5Key } from "./zonemunt";
 
 export type CoachPersona = "warm" | "disciplined" | "statistical";
@@ -267,22 +268,22 @@ export function verlichtBadgeLabel(band: VerlichtBand, toNaam: string): string {
 // langere duur via de bestaande override-keten. {vanMin} = huidige/gecapte duur, {naarMin} =
 // de voorgestelde langere duur.
 export function verlengAanbodRegel(vanMin: number, naarMin: number): string {
-  return `Opbouwweek — dit is dé week waarin extra duur het meest oplevert. Heb je dit weekend wat meer tijd? Ik kan je duurrit verlengen van ${vanMin} naar ${naarMin} min. Zo niet, dan blijft-ie op je ingestelde ${vanMin}.`;
+  return `Opbouwweek — dit is dé week waarin extra duur het meest oplevert. Heb je dit weekend wat meer tijd? Ik kan je duurrit verlengen van ${nlUpTo1(vanMin)} naar ${nlUpTo1(naarMin)} min. Zo niet, dan blijft-ie op je ingestelde ${nlUpTo1(vanMin)}.`;
 }
 
 /** Label van de accept-knop. */
 export function verlengActieLabel(naarMin: number): string {
-  return `Verleng naar ${naarMin} min`;
+  return `Verleng naar ${nlUpTo1(naarMin)} min`;
 }
 
 /** Resultaat-regel, ná akkoord (coachregel op de override-kaart). */
 export function verlengResultaatRegel(naarMin: number): string {
-  return `Verlengd naar ${naarMin} min — de volle opbouw-prikkel dit weekend.`;
+  return `Verlengd naar ${nlUpTo1(naarMin)} min — de volle opbouw-prikkel dit weekend.`;
 }
 
 /** Badge/label op de override-kaart ná akkoord — markeert tevens een verleng-override. */
 export function verlengBadgeLabel(naarMin: number): string {
-  return `Verlengd naar ${naarMin} min`;
+  return `Verlengd naar ${nlUpTo1(naarMin)} min`;
 }
 
 // ── 3d STAP 4 — fatigue-aware deload/dose (week-niveau) ───────────────────────

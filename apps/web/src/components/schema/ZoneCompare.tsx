@@ -1,3 +1,4 @@
+import { nlInt, nlUpTo1 } from "../../lib/format";
 import type { DoneCompareZone } from "../../lib/schema";
 
 // Per-zone gepland-vs-gedaan overlay-bars, design-geankerd op ZoneCompare/ZoneCompareRow
@@ -80,7 +81,7 @@ function CompareRow({ r, scale }: { r: DoneCompareZone; scale: number }) {
             left: 0,
             top: 0,
             bottom: 0,
-            width: `${planPct}%`,
+            width: `${nlInt(planPct)}%`,
             background: `color-mix(in srgb, ${zc} var(--zcompare-plan-strength), transparent)`,
             borderRadius: "var(--r-xs)",
           }}
@@ -92,7 +93,7 @@ function CompareRow({ r, scale }: { r: DoneCompareZone; scale: number }) {
             top: "50%",
             transform: "translateY(-50%)",
             height: "var(--zcompare-done-h)",
-            width: `${donePct}%`,
+            width: `${nlInt(donePct)}%`,
             minWidth: r.done > 0 ? 3 : 0,
             background: zc,
             borderRadius: "var(--r-pill)",
@@ -121,7 +122,7 @@ function CompareRow({ r, scale }: { r: DoneCompareZone; scale: number }) {
                   : zc,
             }}
           >
-            {r.done}
+            {nlUpTo1(r.done)}
           </span>
           <span
             style={{
@@ -155,7 +156,7 @@ function CompareRow({ r, scale }: { r: DoneCompareZone; scale: number }) {
               ? "niet gepland"
               : skipped
                 ? "niet gereden"
-                : `gepland ${r.plan}′`}
+                : `gepland ${nlUpTo1(r.plan)}′`}
         </div>
       </div>
     </div>
