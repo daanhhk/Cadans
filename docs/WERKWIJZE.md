@@ -367,6 +367,29 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   render-testinfrastructuur en de shot-harness laadt uitsluitend `/schema`. Daans oog was het enige
   instrument dat erbij kon. Zelfde familie als "het beeld blijft het controlemiddel op de tekst",
   nu op een scherm waar geen camera staat.
+- **Een tekort dat op ELKE trede blijft bestaan is geen DOSIS-vraag.** Draai een dosis-hendel tot
+  zijn eind en leg plan en norm er samen naast vóór je een dosis-ingreep specificeert. Sluit het
+  gat, dan was het dosis; blijft het staan of GROEIT het, dan zit het defect in het PAAR norm-en-plan
+  en bouwt een dosis-ingreep aan de verkeerde kant. Aanleiding: punt 15 fase 3c stond gespecificeerd
+  als "de dosis van de twee klim-doelen", terwijl de trede-sweep op weekvorm V1 in Build laat zien
+  dat FTP zijn norm op trede 0, 2 en 4 haalt (95 tegen 84, 108,2 tegen 96, 121,4 tegen 108) en Korte
+  beklimmingen van −9,5 naar −16,5 uit elkaar loopt. De norm stijgt 6 minuten per trede terwijl de
+  efforts-arm na één stap tegen zijn ruimte-rem loopt.
+- **Een trede-sweep vergelijkt plan en norm op DEZELFDE trede.** `blokDosisNorm` draagt de trede als
+  parameter, dus een sweep die het plan opvoert en de norm op 0 laat staan meet twee verschillende
+  meetlatten en leest een tekort als geleverd. Zelfde familie als "meet beide kanten in dezelfde
+  eenheid", nu op een PARAMETER in plaats van op een eenheid. Aanleiding: chat-zijde gaf een sweep
+  eerst "79,6 tegen 78, geleverd" terwijl de norm op die trede 90 is en de cel dus onder norm ligt.
+  Gevonden vóór het getal ergens landde, doordat de constante `DOSIS_TREDE_STAP_MIN` alsnog is
+  opgezocht in plaats van aangenomen.
+- **Een weekvorm uit de meetset is een VERGELIJKINGS-as, geen portret van de gebruiker.** Beantwoord
+  een vraag over wat DAAN merkt nooit met de weekvorm die toevallig het scherpst meet; vraag zijn
+  werkelijke beschikbaarheid. Aanleiding: "wat gebeurt er als ik dit doel nu instel" werd beantwoord
+  op V4 met een zaterdag van 240, terwijl zijn zaterdag 120 is. Dat verschil is niet cosmetisch: ma45
+  di60 do60 za120 is 4,75 uur en levert `urenPrikkels` 2 met norm 52, dus GELEVERD bij alle drie de
+  doelen, terwijl exact 5,0 uur `urenPrikkels` 3 met norm 78 geeft en hetzelfde plan van 68,5 onder
+  norm leest. Zelfde familie als "een fixture die leeg gevoed wordt voorspelt de app niet", nu op de
+  INVOER-vorm in plaats van op de invoer-inhoud.
 ## Vorm van een CC-prompt
 
 - **Eén plain code-blok**, zonder taal-tag — dat is de één-tap-kopie op mobiel. Nooit proza in het blok mengen; Claude's kader eromheen staat als gewone tekst.
@@ -533,3 +556,6 @@ Volg de FOCUS uit het bovenste STAND-blok.
 - 2026-08-02 — les toegevoegd in *Recon en bewijslast*: een schrijfpad controleer je aan beide uiteinden — een route-guard die een afwezige sleutel overslaat zegt niets over de laag erachter. Aanleiding: de doelDuur-tegenspraak, waar `writeSettings` full-replace bleek en de eerstvolgende opslag de kolom op NULL had gezet.
 - 2026-08-02 — les toegevoegd in *Recon en bewijslast*: een grep-eis toets je tegen de echte trefferverdeling vóór je hem verstuurt; "nul treffers" kan per constructie falen op treffers die er horen te staan.
 - 2026-08-02 — les toegevoegd in *Recon en bewijslast*: een render-conditie die op een browser-default leunt verliest van een inline stijl op hetzelfde element. 897 tests en 8 prod-shots lieten het staan; alleen Daans oog kon erbij.
+- 2026-08-02 — les toegevoegd in *Recon en bewijslast*: een tekort dat op elke trede blijft bestaan is geen dosis-vraag. Aanleiding: punt 15 fase 3c stond als dosis-ronde gespecificeerd terwijl norm en plan bij de klim-doelen uit elkaar lopen.
+- 2026-08-02 — les toegevoegd in *Recon en bewijslast*: een trede-sweep vergelijkt plan en norm op dezelfde trede. Aanleiding: een sweep las "79,6 tegen 78, geleverd" terwijl de norm op die trede 90 is.
+- 2026-08-02 — les toegevoegd in *Recon en bewijslast*: een weekvorm uit de meetset is een vergelijkings-as, geen portret van de gebruiker. Aanleiding: een vraag over wat Daan merkt werd op een zaterdag van 240 beantwoord terwijl zijn zaterdag 120 is, en dat verzet de norm van 78 naar 52.
