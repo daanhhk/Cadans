@@ -526,7 +526,32 @@ punten staat onder *Gesloten — vindplaats*.
     een eigenschap van de dag, de kalendernaam is dat niet. EERST METEN wat het verschil in de
     praktijk oplevert, dan pas bouwen: de takken zijn via `buildWeekProposal` grotendeels
     onbereikbaar, dus het kan zijn dat er niets aan hangt. Raakt `DOELEN-SPEC`.
-20. **De push-beschrijving draagt dezelfde ruis** — open · ENGINE, transport-nabij.
+20. **DE GEPUSHTE WORKOUT IS KORTER DAN HET PLAN** — open · ENGINE. Hoogste prioriteit van de
+    push-tak; punt 21 hoort in dezelfde ronde.
+    SYMPTOOM, LIVE WAARGENOMEN: een sessie van 65 minuten kwam op Garmin binnen als 27.
+    DE GROND ZIT OP TWEE PLEKKEN, en allebei zijn ze nagerekend. (1) `dslDurationSec_`
+    (`zones.ts:425`) zoekt met `/(\d+)\s*min/i`. Op `"24.7 min"` matcht `24` niet, want er volgt
+    een PUNT waar `\s*min` verwacht wordt; de scan schuift door en vindt `7 min`. De cel wordt 7
+    minuten. (2) `dslBlockFromRow_` (`zones.ts:354`) eist in zijn herhalings-regex
+    `/^\s*(\d+)\s*x\s*(\d+)\s*(min|sec|s)\b/i` twee HELE getallen. `"2x 9.7 min"` matcht daardoor
+    niet, valt door naar diezelfde scan, wordt óók 7 minuten EN VERLIEST ZIJN TWEE HERHALINGEN.
+    De waargenomen sessie rekent na: 8 plus 7 plus 7 plus 5 is 27.
+    `zwoStepFromRow_` (`zones.ts:448`) draagt LETTERLIJK dezelfde herhalings-regex. Ga ervan uit
+    dat de ZWO-tak hetzelfde mankeert, en TOETS DAT EXPLICIET — niet aannemen omdat de code er
+    hetzelfde uitziet.
+    OMVANG, GEMETEN over 2100 sessies en 9038 structuur-cellen: 19,7% van de cellen draagt een
+    decimaal, 19,0% wordt fout geparseerd, en 30,0% van de sessies heeft minstens één fout blok.
+    WAAROM DE SUITE DIT NIET VING, en dit is de eigenlijke les: `selftest.test.ts` asserteert bij
+    `arch <id> push-parse` alleen dat `dslBlockFromRow_` niet `null` teruggeeft — niet dat de duur
+    klopt. Een test die "parst" toetst en niet "parst GOED". VERTROUW DIE ASSERTIE NIET ALS
+    DEKKING; een nieuwe test legt de GEPARSEERDE duur naast de BEDOELDE duur.
+    NIET VEROORZAAKT DOOR PUNT 18. De push-tak leest de ENGINE-strings, en die zijn in die ronde
+    bewust onaangeroerd gebleven — juist omdat deze parser ze leest. Punt 18 maakte het defect
+    ZICHTBAAR, het maakte het niet waar.
+    OPEN BESLUIT, NIET NU NEMEN: repareer je de PARSE, de STRING aan de bron, of allebei — en moet
+    de push tijdelijk geblokkeerd worden zolang hij fout is. Dat laatste is een echte vraag: een
+    stille 27-minutenrit op de fietscomputer is erger dan geen push.
+21. **De push-beschrijving draagt dezelfde ruis** — open · ENGINE, transport-nabij.
     `buildWorkoutDescription_` (`zones.ts:569`) zet `totaalMin` RAUW in de beschrijving die naar
     intervals.icu gaat, en hergebruikt daarin dezelfde blokstrings die punt 18 client-zijde heeft
     opgemaakt. Wat Daan in de app ziet klopt dus, en wat in zijn agenda en op zijn fietscomputer
@@ -534,26 +559,26 @@ punten staat onder *Gesloten — vindplaats*.
     tekst wordt door `dslBlockFromRow_` geparseerd — een Nederlandse komma verminkt de laps. Eigen
     ronde, RECON-FIRST: eerst meten wie die string leest en schrijft, dan pas een vorm kiezen.
     Engine, dus stop-en-verifieer vóór enige wijziging.
-21. **De rit-sheet is voor geen enkele DOM-ingreep bereikbaar** — open · TOOLING.
+22. **De rit-sheet is voor geen enkele DOM-ingreep bereikbaar** — open · TOOLING.
     `RideDetailLink.tsx:30` rendert de sheet met `{open && ...}`: hij staat pas ná een klik in de
     DOM. De leespas van de harness opent `hidden` en inline `display`, maar wat er niet IS valt
     daar per constructie buiten. Dit is de DERDE manier waarop inhoud buiten het net valt, na die
     twee. Vandaag gedekt door de code-regel (geen kaal getal) en niet door de camera. Wil je hem
     onder het net brengen, dan moet de harness klikken — en dan hoort er ook een assertie bij dat
     de sheet daadwerkelijk open kwam.
-22. **Twee shots zijn niet byte-deterministisch** — open · TOOLING. `v7/09-vorm` en
+23. **Twee shots zijn niet byte-deterministisch** — open · TOOLING. `v7/09-vorm` en
     `v7/10-trainingen` verschillen tussen twee runs van ONGEWIJZIGDE code, met telkens identieke
     `innerText`; het verschil is dus puur pixel. VERMOEDEN: een animatie of overgang die `settle`
     niet uitzit — beide schermen dragen bewegende elementen die de andere zeven niet hebben.
     Zolang dit staat moet elke PNG-vergelijking die twee UITSLUITEN, en dat is een gat in het
     begrenzingsbewijs: juist op die twee schermen kan een regressie ongezien blijven.
-23. **De mount-flake, en zes routes zonder vangnet** — open · TOOLING. `settle` geeft op terwijl de
+24. **De mount-flake, en zes routes zonder vangnet** — open · TOOLING. `settle` geeft op terwijl de
     `innerText` nog "Laden…" is; de shot toont dan een ladende pagina. Treft BEIDE harness-versies,
     dus het is geen gevolg van een bouw. Op `/schema` wordt het opgevangen door de
     zeven-knoppen-assertie op de dagstrip — die faalt hard en de run stopt. De zeven nieuwe routes
     hebben zo'n mount-assertie NIET, dus daar zou een ladende pagina stil als geldige shot
     doorgaan. Elke route hoort een eigen goedkope aanwezigheids-assertie te krijgen.
-24. **`12-activiteiten` wordt afgesneden** — open · TOOLING. Die pagina heeft 5898 pixels nodig
+25. **`12-activiteiten` wordt afgesneden** — open · TOOLING. Die pagina heeft 5898 pixels nodig
     tegen `HEIGHT_CAP` 4000, dus de PNG is afgekapt en een VISUELE controle van dat scherm kan
     vandaag niet. De `innerText` in de `.txt` is wél compleet, dus tekstuele controle en het
     float-net werken er gewoon. Keuze: de cap verhogen, of het scherm in stukken schieten.
