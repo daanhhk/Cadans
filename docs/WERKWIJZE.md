@@ -78,6 +78,14 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   op de eigen commit-hash in plaats van kaal `per_page=1`: die laatste kan een run van een andere
   commit of branch teruggeven, en dan rapporteer je groen over werk dat je niet gedaan hebt. Kwam
   binnen als CC-afwijking bij de coach-model-commit en is strikt beter dan wat de prompt vroeg.
+  HET FILTER VRAAGT DE VOLLE 40-TEKEN-SHA. Een korte hash matcht niet en geeft `total_count` 0 —
+  geen foutmelding, gewoon een lege lijst. En die nul is NIET te onderscheiden van "de run is nog
+  niet gestart", dus je rapporteert "CI nog bezig" terwijl er een groene run staat en je hebt geen
+  enkel signaal dat je het mis hebt. Dat is dezelfde vorm als de regel zelf: een controle die per
+  constructie scheef kan lopen, controleert niets. Draai `git rev-parse HEAD` en filter daarop;
+  leest het antwoord 0, behandel dat dan als "nog niet vastgesteld" en nooit als een uitslag.
+  Aanleiding: de close-out van punt 15 fase 3c, waar de korte hash 0 gaf en de volle SHA één run.
+  Kwam binnen als CC-afwijking.
 - **Meet beide kanten in dezelfde eenheid, en bewaar de termen.** Een vergelijking die
   voorgeschreven grootheden van gemeten grootheden aftrekt oogt geldig en is het niet:
   `zoneDebt_` trekt voorgeschreven intent-minuten af van gemeten zonetijd, wat bij een volledig
