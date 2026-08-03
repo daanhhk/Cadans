@@ -437,6 +437,24 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   weekvormen die de harness niet draait. Generaliseer nooit van de scenario's naar de code: het net
   bewijst een treffer, het bewijst geen schoonheid. Wat de hele code afdekt is een test bij de
   PRODUCENT, niet een steekproef bij de camera.
+- **Een lus die op de NOMINALE vorm draait, mist elke as die die vorm MODULEERT.** Dit is scherper
+  dan "je toetst maar één parameterwaarde": het gaat om de as die de vorm van de UITVOER bepaalt.
+  Aanleiding: beide `push-parse`-lussen in de selftest draaien op `mesoFactor` 1, en daar bestaan
+  NUL herhalingscellen met een decimaal werkgetal — terwijl mesoWeek 3 er alleen al 110 levert,
+  want dáár rekt de kwaliteits-ramp de werktijd. Drie asserties bleven daardoor over 286 rijen
+  ongedekt terwijl beide lussen groen stonden, en de tests draaiden per constructie precies de ENE
+  week van de vier waarin het goed gaat. Verzamel bij de PRODUCENT en loop de modulatie-assen mee;
+  een as die je niet draait, is een as waarop je niets weet.
+- **Een parser die bij foute invoer een ANDER GETAL teruggeeft in plaats van `null`, is met een
+  niet-null-assertie per constructie niet te betrappen.** Vier asserties hebben dit jaren laten
+  staan: `dslBlockFromRow_` gaf op `"24.7 min"` keurig een blok terug — van 7 minuten. Toets de
+  WAARDE, niet het bestaan. Zelfde familie als "een controle die per constructie kan slagen,
+  controleert niets", nu op de UITKOMST in plaats van op de selectie.
+- **Een test die via de ROUTE binnenkomt, bereikt alleen de PRIMAIRE tak.** `buildEventPayload`
+  keert op `push.ts:87` terug zodra het ZWO lukt, dus een fixture die via die functie binnenkomt
+  raakt de DSL-terugval NOOIT — precies waarom de nieuwe api-fixture de DSL-edit niet rood kreeg
+  en die edit ongedekt de repo in ging. Toets een terugval bij zijn EIGEN functie, niet via de
+  aanroeper. En andersom: meet of die terugval überhaupt bereikbaar is voor je hem repareert.
 - **Een rood-meting van vóór een herformattering is ONTKRACHT.** Draait biome over het bestand
   tussen je rood-meting en je commit, herhaal die meting daarna. Zelfde familie als de bestaande les
   dat een biome-reformattering een red-patch ongemerkt kan opheffen, nu op de VOLGORDE in plaats van
@@ -444,7 +462,7 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
 ## Vorm van een CC-prompt
 
 - **Eén plain code-blok**, zonder taal-tag — dat is de één-tap-kopie op mobiel. Nooit proza in het blok mengen; Claude's kader eromheen staat als gewone tekst.
-- Te lang voor één blok → splits in **genummerde blokken** (Blok 1/2, 2/2) die CC na elkaar in dezelfde sessie draait. Een later blok mag leunen op wat een eerder blok zette.
+- Te lang voor één blok → splits in **genummerde blokken** (Blok 1/2, 2/2) die CC na elkaar in dezelfde **CC-sessie** draait. Een later blok mag leunen op wat een eerder blok zette. Het gaat om de CC-sessie, niet om een shell: PowerShell is de shell waarin CC zijn commando's uitvoert, geen omgeving waarin Daan zelf werkt.
 - De prompt is een **stap-instructie in het Nederlands, geen uitvoerbaar script**. PowerShell-idioom alleen in de kop: `cd` naar de repo, daarna `Get-Location` op een eigen regel. Verder kale, zelf-printende commandoregels (git, pnpm). **Geen** `Write-Host` of `echo`, **geen** here-strings, **geen** loops, **geen** .NET File API. Secties label je met `#`-commentaarregels.
 - In te voegen inhoud (een HANDOFF-blok, een doc) mag **verbatim** tussen eigen tekst-delimiters (`=== BEGIN … ===` / `=== EINDE … ===`) óf als strekking-bullets die CC in de huisstijl uitschrijft. Bij artefacten waar de exacte formulering telt: altijd verbatim.
 - Inhoud: **spec-gedreven by default** — architectuur, exact gedrag, sleutel-logica en de gate. CC schrijft de code, vindt de call-sites zelf en past aan de **échte** staat aan (geen letterlijke `str_replace`-blokken). Exacte code alleen als **anker** bij fragiele edits: byte-getrouwe GAS-mirrors, TZ-grens-logica, formules en zone-mappings. CC meldt in het rapport de kern-implementatiekeuzes (gekozen conditie, plaatsing), zodat review tegen de spec kan zonder de volledige diff. Verder: verificatiestappen, een harde gate en de commit message.
@@ -618,3 +636,7 @@ Volg de FOCUS uit het bovenste STAND-blok.
 - 2026-08-02 — les toegevoegd in *Recon en bewijslast*: een tekort dat op elke trede blijft bestaan is geen dosis-vraag. Aanleiding: punt 15 fase 3c stond als dosis-ronde gespecificeerd terwijl norm en plan bij de klim-doelen uit elkaar lopen.
 - 2026-08-02 — les toegevoegd in *Recon en bewijslast*: een trede-sweep vergelijkt plan en norm op dezelfde trede. Aanleiding: een sweep las "79,6 tegen 78, geleverd" terwijl de norm op die trede 90 is.
 - 2026-08-02 — les toegevoegd in *Recon en bewijslast*: een weekvorm uit de meetset is een vergelijkings-as, geen portret van de gebruiker. Aanleiding: een vraag over wat Daan merkt werd op een zaterdag van 240 beantwoord terwijl zijn zaterdag 120 is, en dat verzet de norm van 78 naar 52.
+- 2026-08-03 — les toegevoegd in *Recon en bewijslast*: een lus die op de nominale vorm draait mist elke as die die vorm moduleert. Aanleiding: beide push-parse-lussen draaien op mesoFactor 1, waar nul decimale herhalingscellen bestaan terwijl mesoWeek 3 er 110 levert; drie asserties bleven over 286 rijen ongedekt terwijl beide lussen groen stonden.
+- 2026-08-03 — les toegevoegd in *Recon en bewijslast*: een parser die bij foute invoer een ander getal teruggeeft in plaats van null, is met een niet-null-assertie niet te betrappen. Aanleiding: `dslBlockFromRow_` gaf op "24.7 min" een blok van 7 minuten, en vier asserties lieten dat staan.
+- 2026-08-03 — les toegevoegd in *Recon en bewijslast*: een test die via de route binnenkomt bereikt alleen de primaire tak. Aanleiding: `buildEventPayload` keert op `push.ts:87` terug zodra het ZWO lukt, dus de nieuwe api-fixture kon de DSL-terugval niet rood krijgen.
+- 2026-08-03 — correctie in *Vorm van een CC-prompt*: gesplitste blokken draaien in dezelfde CC-SESSIE. De regel zei "dezelfde sessie" zonder meer; PowerShell is de shell waarin CC zijn commando's uitvoert, geen omgeving waarin Daan zelf werkt, en die dubbelzinnigheid is nu weg.

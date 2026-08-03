@@ -526,8 +526,7 @@ punten staat onder *Gesloten — vindplaats*.
     een eigenschap van de dag, de kalendernaam is dat niet. EERST METEN wat het verschil in de
     praktijk oplevert, dan pas bouwen: de takken zijn via `buildWeekProposal` grotendeels
     onbereikbaar, dus het kan zijn dat er niets aan hangt. Raakt `DOELEN-SPEC`.
-20. **DE GEPUSHTE WORKOUT IS KORTER DAN HET PLAN** — open · ENGINE. Hoogste prioriteit van de
-    push-tak; punt 21 hoort in dezelfde ronde.
+20. **DE GEPUSHTE WORKOUT IS KORTER DAN HET PLAN** — af · ENGINE.
     SYMPTOOM, LIVE WAARGENOMEN: een sessie van 65 minuten kwam op Garmin binnen als 27.
     DE GROND ZIT OP TWEE PLEKKEN, en allebei zijn ze nagerekend. (1) `dslDurationSec_`
     (`zones.ts:425`) zoekt met `/(\d+)\s*min/i`. Op `"24.7 min"` matcht `24` niet, want er volgt
@@ -551,6 +550,30 @@ punten staat onder *Gesloten — vindplaats*.
     OPEN BESLUIT, NIET NU NEMEN: repareer je de PARSE, de STRING aan de bron, of allebei — en moet
     de push tijdelijk geblokkeerd worden zolang hij fout is. Dat laatste is een echte vraag: een
     stille 27-minutenrit op de fietscomputer is erger dan geen push.
+    AF per 03-08-2026 en LIVE op Worker Version `f623ed2a-99db-4861-962d-096849df310f`. Recon
+    `9f43299` (`docs/PUNT20-RECON.md`), fix `514389f`, dekking `a8fe7ba`.
+    HET BESLUIT IS GEWORDEN: de PARSE, niet de string. De engine-string blijft onaangeroerd omdat
+    `dslBlockFromRow_` hem leest voor de laps; blokkeren van de push was niet nodig omdat de fix
+    in dezelfde ronde landde. DRIE EDITS, alle drie in `zones.ts`, samen 64 regels:
+    `dslDurationSec_` leest een decimale breuk en mag niet MIDDEN in een getal beginnen (een
+    ankergroep op stringbegin of een niet-cijfer-niet-punt, geen lookbehind), en de twee
+    herhalings-regexen laten een decimaal werkgetal toe. `dslRestFromNote_` is BYTE-IDENTIEK
+    gebleven: nul decimale rustnoten bij 179 bestaande, dus daar zou geen rood-test bij kunnen.
+    DE OMVANG IS GECORRIGEERD. Op de echte pipeline via `buildWeekProposal` 37,9% van de cellen
+    en 66,0% van de sessies, tegen de 19,7% en 30,0% die hierboven stonden — ruwweg het dubbele.
+    HET DEFECT IS BIDIRECTIONEEL: van de 38302 foute cellen over 100327 waren er 17217 te KORT en
+    21085 te LANG, met `"6.9999999999999964 min"` als scherpste geval (`Duration` 599999999999997800).
+    De titel beschrijft de waargenomen sessie, niet het mechanisme.
+    HET BESTOND AL BIJ ELKE mesoWeek BOVEN 1 EN ELKE TREDE BOVEN 0. Gemeten over 5 doelen: bij
+    mesoWeek 1 met trede 0 draagt 0 van 7220 cellen een decimaal, bij mesoWeek 3 is het 51,2% en
+    bij trede 2 52,9%. In drie van de vier weken van een 3:1-blok stond dit fout; punt 18 maakte
+    het zichtbaar, niet waar.
+    DE VALSE DEKKING WAS VIJF PLEKKEN: `selftest.test.ts:1981`, `:2081` en `:3549` toetsten alleen
+    op niet-`null`; `W_ZWO` (`push.test.ts:24`) draagt uitsluitend hele minuten; en
+    `zwoStepFromRow_` werd door GEEN ENKELE test aangeroepen terwijl het het primaire push-pad is.
+    BEGRENZINGSBEWIJS: 2511 unieke cellen, waarvan 599 ZONDER decimaal en daarvan 0 bewogen —
+    byte-identiek in beide parsers; 1912 met decimaal en alle 1912 nu correct; nul cellen geven
+    `null`, voor en na.
 21. **De push-beschrijving draagt dezelfde ruis** — open · ENGINE, transport-nabij.
     `buildWorkoutDescription_` (`zones.ts:569`) zet `totaalMin` RAUW in de beschrijving die naar
     intervals.icu gaat, en hergebruikt daarin dezelfde blokstrings die punt 18 client-zijde heeft
@@ -558,6 +581,10 @@ punten staat onder *Gesloten — vindplaats*.
     belandt niet. DE FIX IS HIER NIET DEZELFDE: dit is geen renderrand maar TRANSPORT, en dezelfde
     tekst wordt door `dslBlockFromRow_` geparseerd — een Nederlandse komma verminkt de laps. Eigen
     ronde, RECON-FIRST: eerst meten wie die string leest en schrijft, dan pas een vorm kiezen.
+    LET OP, GEMETEN BIJ PUNT 20: `buildWorkoutDescription_` is na de `return` op `push.ts:87`
+    alleen bereikbaar als ZWO ÉN DSL allebei falen, en `zwoStepFromRow_` gaf over de hele
+    populatie 0 keer `null` — vóór én na de fix. Deze tak is dus vermoedelijk DOOD. Meet eerst de
+    BEREIKBAARHEID voor er iets gebouwd wordt; een fix in een tak die nooit vuurt is geen fix.
     Engine, dus stop-en-verifieer vóór enige wijziging.
 22. **De rit-sheet is voor geen enkele DOM-ingreep bereikbaar** — open · TOOLING.
     `RideDetailLink.tsx:30` rendert de sheet met `{open && ...}`: hij staat pas ná een klik in de
@@ -582,6 +609,21 @@ punten staat onder *Gesloten — vindplaats*.
     tegen `HEIGHT_CAP` 4000, dus de PNG is afgekapt en een VISUELE controle van dat scherm kan
     vandaag niet. De `innerText` in de `.txt` is wél compleet, dus tekstuele controle en het
     float-net werken er gewoon. Keuze: de cap verhogen, of het scherm in stukken schieten.
+26. **De vandaag-gereden dag verliest zijn plan** — open · CLIENT. `plannedForDone` wordt in
+    `apps/web/src/lib/proposal.ts` alleen gevuld als de dag STRIKT in het verleden ligt: `:656`
+    zet `const isPast = stripTime_(d.datum).getTime() < todayT`, en de toekenning op `:660` hangt
+    onder die tak. Een dag die VANDAAG gereden is heeft dus noch `sessions` — de allocator bouwt
+    die alleen voor nog te plannen dagen — noch `plannedForDone`. GEVOLG: de VOLTOOID-kaart toont
+    geen plan-vergelijking, en de dag valt uit alle drie de weeknoemers (TSS, minuten, dagen).
+    TWEE KEER OP DAANS EIGEN SCHERM GEZIEN, 3 augustus 2026 — dat is de reden dat dit voorgaat op
+    het numeriek eerdere punt 21, waarvan de drager gemeten vermoedelijk dood is.
+    HET ZELFHERSTEL BIJ HET VERSTRIJKEN VAN DE DAG IS NIET GEVERIFIEERD. Dat is de EERSTE meting,
+    en die gaat vóór elke bouw: pas als vaststaat of de bevroren entry de dag erna wel gelezen
+    wordt, is te kiezen tussen de tak verruimen en de entry eerder schrijven.
+    Neemt het parkeerlijst-item "DE GEPLAND-NOEMER ZAKT OP DE DAG ZELF" op, inclusief de meting
+    daar: op de v7-pendel-vorm ging de pendeldag van 446 TSS / 530 min / 5 dagen naar 375 / 450 /
+    4, en een gewone maandag van 60 minuten naar 391 / 470 / 4. Meting in `docs/PENDEL-RECON.md`
+    paragraaf 2.
 
 ## De tijdslijn
 
@@ -790,16 +832,6 @@ niet; hij verliest niet. Een punt gaat eruit zodra een STAP het opneemt — niet
 - HET LOKALE BEELD IS NIET HET PROD-BEELD. De shot-harness toont blok 29-06 t/m 26-07 als GELEVERD,
   terwijl datzelfde blok op prod 2/3, 1/3 en 2/3 haalde. De lokale D1 draagt andere historie. Geen
   regressie en geen herijk-aanleiding, wel iets om bij elke prod-verificatie te onthouden.
-- DE GEPLAND-NOEMER ZAKT OP DE DAG ZELF. Een dag die VANDAAG gereden is verliest zijn geplande
-  bijdrage aan alle drie de weekkaart-stats. `plannedForDone` wordt buiten het verleden alleen
-  gevuld als `d.voorgesteldType` gezet is, en die kolom staat in Cadans structureel op null —
-  `repo.ts:397` schrijft 'm bij elke PUT leeg. GEMETEN op de v7-pendel-vorm met gevoede blob: de
-  pendeldag gaat van 446 TSS / 530 min / 5 dagen naar 375 / 450 / 4, een gewone maandag van 60
-  minuten naar 391 / 470 / 4. Zodra de dag verstrijkt leest hij zijn bevroren entry en staat de
-  noemer weer goed. NIET pendel-specifiek: de pendel-fix van juli 2026 raakt dit niet en heeft het
-  bewust laten staan. Eerder genoteerd als "de gepland-noemer verschuift terwijl de week vordert"
-  (V24 bevriest een voorbije dag juist zodat watt-targets niet met terugwerkende kracht
-  meeschuiven). Meting in `docs/PENDEL-RECON.md` paragraaf 2.
 
 ### DATA
 
