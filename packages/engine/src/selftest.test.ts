@@ -6726,6 +6726,83 @@ describe("engine selftest", () => {
     );
   });
 
+  // ROADMAP punt 20 — DE DECIMALE HERHALINGSCEL, in BEIDE push-parsers.
+  //
+  // WAAROM EEN EIGEN it EN NIET DE BESTAANDE LUSSEN. De arch- en lib-lussen draaien elk
+  // archetype op ÉÉN doelMin (de lib-lus op `rec.duurRange[0] + 10`) en met mesoFactor 1. Op die
+  // ene lengte, zonder kwaliteits-ramp, produceert de bibliotheek GEEN herhalingscel met een
+  // decimaal werkgetal — GEMETEN: 0. Daardoor bleef de DSL-herhalingstak van de fix ongedekt: hem
+  // terugdraaien liet geen enkele assertie vallen, terwijl hij los gemeten 480 cellen verandert.
+  // Die cellen ontstaan pas bij mesoWeek > 1, want dáár rekt de kwaliteits-ramp de werktijd.
+  //
+  // De rijen komen bij de PRODUCENT vandaan, niet uit een fixture: een met de hand geschreven
+  // cel zou een vorm kunnen dragen die `expandArchetype_` nooit levert.
+  it("test20DecimaleHerhaling", () => {
+    const DEC_REP = /^\s*(\d+)\s*x\s*(\d+\.\d+)\s*(min|sec|s)\b/i;
+    const rijen: any[] = [];
+    ARCHETYPES.forEach((rec: any) => {
+      for (let dm = rec.duurRange[0]; dm <= rec.duurRange[1]; dm += 5) {
+        for (let mw = 1; mw <= 4; mw++) {
+          const wo = expandArchetype_(rec, {
+            ftp: 275,
+            lthr: 178,
+            doelMin: dm,
+            mesoWeek: mw,
+          });
+          if (!wo || !Array.isArray(wo.structuur)) continue;
+          wo.structuur.forEach((row: any) => {
+            if (DEC_REP.test(String(row[1] || ""))) rijen.push(row);
+          });
+        }
+      }
+    });
+
+    // (1) DE PASSAGE. Zonder deze assertie draait de test stil leeg zodra de bibliotheek zo'n
+    // cel niet meer produceert, en leest dat als groen.
+    assert_("20 decimale herhalingscellen gevonden", true, rijen.length > 0);
+
+    let kopOk = true,
+      werkOk = true,
+      rustOk = true,
+      zwoOk = true;
+    rijen.forEach((row: any) => {
+      const m = DEC_REP.exec(String(row[1] || "")) as RegExpExecArray;
+      const reps = parseInt(m[1] as string, 10);
+      const rest = dslRestFromNote_(String(row[4] || ""));
+      const rustSec = rest && rest.duration > 0 ? rest.duration : 0;
+      // De bedoelde WERKtijd volgt uit de gedeelde helper: die geeft reps × (werk + rust).
+      const bedoeldTotaal = _bedoeldeDuurSec_(row);
+      if (bedoeldTotaal == null) {
+        werkOk = false;
+        return;
+      }
+      const werkSec = bedoeldTotaal / reps - rustSec;
+
+      // (2) DE DSL-KANT — de tak die zonder de fix helemaal wegviel.
+      const dsl = dslBlockFromRow_(row, 275);
+      const regels = typeof dsl === "string" ? dsl.split("\n") : [];
+      if (regels[0] !== `${reps}x`) kopOk = false;
+      if (_dslDuurSec_(dsl) !== Math.round(bedoeldTotaal)) werkOk = false;
+      // De rustregel hoort te blijven staan zodra de noot er een levert.
+      if (rustSec > 0 && !/^- [\d.]+(m|s) \d+%$/.test(String(regels[2] ?? "")))
+        rustOk = false;
+
+      // (3) DE ZWO-KANT op dezelfde rijen — dit is het PRIMAIRE push-pad.
+      const zwo = String(zwoStepFromRow_(row, 275) ?? "");
+      const iv = /<IntervalsT Repeat="(\d+)" OnDuration="(\d+)"/.exec(zwo);
+      if (
+        !iv ||
+        parseInt(iv[1] as string, 10) !== reps ||
+        Math.abs(parseInt(iv[2] as string, 10) - werkSec) > 1
+      )
+        zwoOk = false;
+    });
+    assert_("20 dsl herhalings-kop", true, kopOk);
+    assert_("20 dsl werkduur", true, werkOk);
+    assert_("20 dsl rustregel behouden", true, rustOk);
+    assert_("20 zwo repeat en onduration", true, zwoOk);
+  });
+
   // stap 7 bouwitem 2 (de twee hekken): +15 in testStap7Hekken — 4× allocateQualityWeek_ zonder
   // pre-claim, 4× de efforts-arm die blijft en een slot consumeert, en 7× assignWorkouts voor de
   // demotie (allocator-dag blijft staan, niet-allocator-dag én cross-week worden nog gedemoteerd).
@@ -6754,7 +6831,7 @@ describe("engine selftest", () => {
   // herstel-gat voor B2, en de vijfweg-lus die de keten zonder bevestiging doel-gestuurd houdt.
   // 1435→1447. NALEVERING: +2 voor de Recovery-tak buiten de poort (afgewezen en weggelaten) en
   // de tegenproef dat Build op dezelfde afstand wél een bevestiging vraagt. 1447→1449.
-  it("exactly 1643 assertions", () => {
-    expect(assertCount).toBe(1643);
+  it("exactly 1648 assertions", () => {
+    expect(assertCount).toBe(1648);
   });
 });
