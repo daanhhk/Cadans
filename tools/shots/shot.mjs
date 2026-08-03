@@ -77,18 +77,32 @@ const DAY_RE = /^(ma|di|wo|do|vr|za|zo)\s*\d{1,2}$/i;
  * definitieve drempel te kiezen. Het net FAALT hier dus nergens op: het rapporteert alleen. */
 const FLOAT_RE = /\d+[.,]\d{2,}/g;
 
-/** Unieke treffers van FLOAT_RE, elk mét de innerText-regel waarop hij staat. Zonder die context
- * weet je wel DAT er ruis is maar niet bij welk label. Dedup op treffer plus regel. */
+/** Unieke treffers van FLOAT_RE, elk mét DRIE contextregels: de regel ervoor, de regel zelf en de
+ * regel erna.
+ *
+ * WAAROM DRIE EN NIET EEN. In fase A stond de echte ruis alleen op zijn eigen regel — "90.4..." met
+ * het label "min" op de VOLGENDE regel — dus de context herhaalde de treffer en wees niets aan.
+ * innerText knipt per blok-element, en een getal en zijn eenheid staan in de app standaard in twee
+ * losse elementen. Eén regel is daarmee per constructie te smal.
+ *
+ * Dedup blijft op treffer plus de EIGEN regel: de buren zijn context, geen identiteit. */
 function floatNoise(text) {
   const seen = new Set();
   const hits = [];
-  for (const line of text.split("\n")) {
-    for (const m of line.match(FLOAT_RE) ?? []) {
-      const context = line.trim().slice(0, 120);
-      const key = `${m} :: ${context}`;
+  const lines = text.split("\n");
+  const clip = (s) => (s ?? "").trim().slice(0, 120);
+  for (let i = 0; i < lines.length; i++) {
+    for (const m of lines[i].match(FLOAT_RE) ?? []) {
+      const line = clip(lines[i]);
+      const key = `${m} :: ${line}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      hits.push({ hit: m, context });
+      hits.push({
+        hit: m,
+        prev: clip(lines[i - 1]),
+        line,
+        next: clip(lines[i + 1]),
+      });
     }
   }
   return hits;
@@ -433,6 +447,67 @@ async function settle(page) {
   await page.waitForTimeout(800);
 }
 
+/**
+ * DE LEESPAS, LOS VAN DE SCHIETPAS. De PNG en het tekstblok in de .txt tonen het scherm ZOALS HET
+ * ERBIJ STAAT, met alles dicht — dat is wat Daan ziet en daar mag niets aan veranderen. Het net
+ * moet juist ACHTER de dichtgeklapte onderdelen kijken: een blokkenlijst die standaard dicht staat
+ * leest anders als "schoon" terwijl hij "blind" is.
+ *
+ * TWEE MECHANISMEN, ALLEBEI NODIG. `hidden` werkt via de browserregel `[hidden] { display: none }`,
+ * en een INLINE `display` verslaat die per specificiteit. De blokkenlijst in `WorkoutDetail.tsx:158`
+ * draagt alleen het attribuut; het aannames-paneel in `DoelProjectie.tsx:957` draagt `hidden` PLUS
+ * een inline display. Wie alleen het attribuut weghaalt krijgt op dat paneel NUL treffers en leest
+ * dat als schoon — precies de fout die deze pas moet uitsluiten.
+ *
+ * HERSTEL IS VERBATIM, ook als de waarde leeg of afwezig was. Het commentaar bij DoelProjectie
+ * waarschuwt expliciet dat die display nooit op een vaste "flex" terug mag; vandaar de opgeslagen
+ * waarde MET priority, en `removeProperty` als er niets stond. Alleen INLINE stijl wordt geraakt,
+ * nooit een stylesheet-regel.
+ *
+ * GEEN viewport-wijziging, GEEN screenshot en GEEN klik: de PNG is hier al geschoten en mag per
+ * constructie niet meer bewegen. De 79-PNG-vergelijking is daar de toets op.
+ */
+async function readWithDisclosuresOpen(page) {
+  return await page.evaluate(() => {
+    const root =
+      document.querySelector("main") ?? document.getElementById("root");
+    if (!root) {
+      return { text: "(no <main> and no #root)", hiddenN: 0, inlineN: 0 };
+    }
+
+    const undoHidden = [];
+    for (const el of root.querySelectorAll("[hidden]")) {
+      undoHidden.push([el, el.getAttribute("hidden")]);
+      el.removeAttribute("hidden");
+    }
+    const undoDisplay = [];
+    for (const el of root.querySelectorAll("*")) {
+      if (el.style.getPropertyValue("display") !== "none") continue;
+      undoDisplay.push([
+        el,
+        el.style.getPropertyValue("display"),
+        el.style.getPropertyPriority("display"),
+      ]);
+      el.style.removeProperty("display");
+    }
+
+    const text = root.innerText;
+
+    for (const [el, value, priority] of undoDisplay) {
+      if (value) el.style.setProperty("display", value, priority);
+      else el.style.removeProperty("display");
+    }
+    for (const [el, value] of undoHidden) {
+      el.setAttribute("hidden", value ?? "");
+    }
+    return {
+      text,
+      hiddenN: undoHidden.length,
+      inlineN: undoDisplay.length,
+    };
+  });
+}
+
 async function capture(page, dir, name, url, probe) {
   let height = VIEWPORT_H;
   const needed = await contentHeight(page);
@@ -455,7 +530,11 @@ async function capture(page, dir, name, url, probe) {
     if (r) return { text: r.innerText, root: "#root" };
     return { text: "(no <main> and no #root)", root: "none" };
   });
-  const noise = floatNoise(text);
+  // Pas HIERNA de leespas: het tekstblok hierboven blijft het scherm zoals het erbij staat, het
+  // net kijkt achter de dichtgeklapte onderdelen. De tellers scheiden "niets verborgen" van "de
+  // selector is verschoven" — zonder die twee getallen zijn die twee gevallen niet te onderscheiden.
+  const scan = await readWithDisclosuresOpen(page);
+  const noise = floatNoise(scan.text);
   const tally = [...probe.api.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1));
   writeFileSync(
     join(dir, `${name}.txt`),
@@ -467,8 +546,13 @@ async function capture(page, dir, name, url, probe) {
       ...probe.errors.map((e) => `  ${e}`),
       `api requests: ${tally.length ? "" : "none"}`,
       ...tally.map(([p, n]) => `  ${n}x ${p}`),
-      `float-net: ${noise.length ? noise.length : "none"}`,
-      ...noise.map((h) => `  ${h.hit}  |  ${h.context}`),
+      `float-net: ${noise.length ? noise.length : "none"} (opened: hidden=${scan.hiddenN} inline-display=${scan.inlineN})`,
+      ...noise.flatMap((h) => [
+        `  ${h.hit}`,
+        `      voor:  ${h.prev}`,
+        `      regel: ${h.line}`,
+        `      na:    ${h.next}`,
+      ]),
       "",
       // Het label noemt de bron die daadwerkelijk gelezen is; een .txt die "main" zegt terwijl er
       // geen <main> staat, liegt op precies het punt waar je hem vertrouwt.
@@ -485,6 +569,8 @@ async function capture(page, dir, name, url, probe) {
     capped,
     errors: probe.errors.length,
     noise: noise.length,
+    hiddenN: scan.hiddenN,
+    inlineN: scan.inlineN,
     png,
   };
 }
@@ -709,7 +795,7 @@ async function main() {
   for (const r of results) {
     const bytes = statSync(r.png).size;
     lines.push(
-      `${r.scenario}/${r.name}.png  used=${r.height} needed=${r.needed}${r.capped ? " CAPPED" : ""}  ${bytes} bytes  errors=${r.errors} noise=${r.noise}`,
+      `${r.scenario}/${r.name}.png  used=${r.height} needed=${r.needed}${r.capped ? " CAPPED" : ""}  ${bytes} bytes  errors=${r.errors} noise=${r.noise} hidden=${r.hiddenN} inline=${r.inlineN}`,
     );
   }
   process.stdout.write(`${lines.join("\n")}\n`);
