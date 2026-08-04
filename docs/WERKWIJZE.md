@@ -584,6 +584,25 @@ de NIEUWE bundel uit de deploy-uitvoer, de CSS en `/api/settings` — en pas als
 geven, draai je de run één keer opnieuw. Geven ze dat niet, dan is er wél iets stuk en is de
 uitval de melding.
 
+EEN DRAAIENDE DEV-SERVER IS EEN VERBORGEN VARIABELE IN DE SHOT-HARNESS. De sweep toetst nergens of
+de `wrangler dev` op 8787 bij de huidige repo hoort, dus een worker van vóór je commit schiet
+gewoon mee. Herstart hem na ELKE worker-wijziging, en vóór de VOOR-meting. Aanleiding: vier NA-runs
+op rij vielen om op `expected 7 day-strip buttons, found 0` terwijl er niets mis was met de bouw —
+de oude worker gaf 404 op een verse route en het weekscherm toonde `not found`.
+
+VERANDERT HET INSTRUMENT TUSSEN VOOR EN NA, DOE BEIDE METINGEN OPNIEUW op hetzelfde instrument. Een
+gemengde reeks is geen vergelijking, ook niet als het verschil klein lijkt: je weet dan niet welk
+deel van de diff de bouw is en welk deel de meetopstelling.
+
+NA EEN DEPLOY IS DE EDGE NIET METEEN BIJ. Een 404 op een verse route of een 7403 op een remote
+`wrangler`-commando is pas een UITSLAG na herhaling. Gemeten: `GET /api/doel-passend` gaf direct na
+de deploy 404 met body `{"error":"not found"}` en circa twintig seconden later 200; en een
+`d1 migrations list --remote` viel één keer om op "The given account is not valid or is not
+authorized to access this service [code: 7403]" en werkte daarna zonder wijziging.
+
+`pnpm deploy` IS EEN INGEBOUWD PNPM-COMMANDO en draait het script uit `package.json` NIET — het
+kopieert een workspace-package naar een map. Deploy met `npx wrangler deploy` vanuit `workers/api`.
+
 Secrets komen nooit in de chat of in een rapport; alleen de NAAM. Lokaal draaien via `.dev.vars` (staat in `.gitignore`).
 
 ## Communicatie

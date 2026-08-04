@@ -278,7 +278,7 @@ punten staat onder *Gesloten — vindplaats*.
     Draagt óók de effect-meter van het doel korte beklimmingen dat punt 7 aanmaakt:
     `DOELEN-SPEC` §3.3 en §3.5 wijzen daarvoor dezelfde maat aan. Niet te verwarren met punt
     8 — dat gaat over het goal-profiel in de Niveau-tab, niet over deze durability-maat.
-12. **Doel-passendheid** — open · CLIENT + DATA. (`DOELEN-SPEC` §6 stap 6.) De coach stelt een
+12. **Doel-passendheid** — af · CLIENT + DATA. (`DOELEN-SPEC` §6 stap 6.) De coach stelt een
     passend doel voor als het ingestelde doel niet binnen de uren past; afwijsbaar, hoogstens
     één keer per blok op een blokgrens. GEMETEN: er bestaat vandaag geen enkel mechanisme.
     Hangt aan punt 4 (af) en aan punt 7 — zonder herziene doel-lijst wijst een voorstel naar de
@@ -289,6 +289,16 @@ punten staat onder *Gesloten — vindplaats*.
     een migratie `0010` bij met `doel_passend_blok` en `doel_passend_doel` — spiegel van
     `dosisTredeBlok` en `dosisTredeDoel`. Alleen "nee" hoeft bewaard: na "ja" past het doel en
     kan de kaart per constructie niet meer vuren.
+    AF per 04-08-2026 en LIVE op Worker Version `96c5a356-7d90-481a-b77a-c0fe91c8ac19`. Drie
+    commits: `ed86ef9` het bouwdoc (`docs/PUNT12-BOUWDOC.md`, de spec), `6356221` data plus
+    worker, `293aa60` client plus harness. Migratie `0010_uneven_scarlet_spider.sql` lokaal én
+    remote toegepast — precies twee ALTER TABLE-statements op `sync_state`.
+    DE PURE MODULE IS `apps/web/src/lib/doelpassend.ts`: daar staan de vloeren (Korte
+    beklimmingen 5, Lange beklimmingen 6, Conditie 4; FTP en Onderhoud geen), de vijf losse
+    poorten, de FULL-REPLACE-veilige settings-patch en de kaart-precedentie. Die laatste twee
+    landen daar en niet in JSX, want `apps/web` heeft geen render-testinfrastructuur.
+    GEMETEN: zes rood-patches, elk precies één assertie; instrument geijkt op 93 van 93; VOOR
+    tegen NA 85 identiek en 8 verschillend, alle acht in het nieuwe scenario `doel-passend`.
 
 13. **Na het event volgt geen herstel** — open · ENGINE plus CLIENT. De maandag ná de raceweek
     levert de doel-cyclus weer een opbouwfase: de `Recovery`-tak van `eventFase_` kijkt alleen
@@ -710,6 +720,28 @@ punten staat onder *Gesloten — vindplaats*.
     stil terugzetten naar Base. Vraagt dus een eigen rood-test op precies dat geval.
     PUNT 12 LOST DIT VOOR ZIJN EIGEN JA-TIK AL OP en wacht hier niet op; dit punt dekt de
     HANDMATIGE doelwissel in Instellingen.
+29. **De shot-harness controleert de draaiende dev-worker niet** — open · TOOLING. De sweep
+    schiet blind: hij toetst nergens of de `wrangler dev` die op 8787 luistert bij de HUIDIGE
+    repo hoort.
+    GEMETEN bij punt 12 fase B: VIER NA-runs achter elkaar vielen om op
+    `expected 7 day-strip buttons, found 0`. Dat was GEEN flake — de draaiende worker dateerde
+    van vóór de worker-commit en gaf 404 op `/api/doel-passend`, waardoor het weekscherm
+    `not found` toonde. Na een herstart gaf dezelfde route 200 en liep de sweep schoon.
+    DE KOST IS NIET DE VIER RUNS MAAR DE MEETLAT: het instrument veranderde tussen VOOR en NA,
+    dus BEIDE metingen moesten opnieuw. Een gemengde reeks is geen vergelijking.
+    RICHTING: vóór de sweep een route- of versiesignaal van de draaiende worker lezen en
+    STOPPEN bij mismatch, in plaats van te schieten en de uitslag te moeten wantrouwen.
+30. **Eén uitvallende sub-request maakt het HELE weekscherm zwart** — open · CLIENT. Valt één
+    van de rijen weg die het view-model voedt, dan verdwijnt niet die één kaart maar de hele
+    week; er staat dan `not found` met een Opnieuw-knop.
+    GEMETEN, TWEE KEER en langs twee verschillende wegen: bij de verouderde dev-worker
+    hierboven, en in het PROPAGATIEVENSTER na de deploy — `GET /api/doel-passend` gaf eerst 404
+    met body `{"error":"not found"}` en circa twintig seconden later 200.
+    OORZAAK: de view-model-bouw haalt de rijen met één `Promise.all` op (rond
+    `apps/web/src/lib/schema.ts:1347`), dus één afwijzing laat de hele opbouw vallen.
+    WAAROM HET TELT: elke nieuwe route die aan die bouw wordt toegevoegd vergroot het oppervlak
+    waarop een deploy of een storing het weekscherm onbruikbaar maakt. Het defect groeit dus
+    mee met de app, en het venster waarin het zichtbaar is loopt over een deploy heen.
 
 ## De tijdslijn
 
