@@ -916,6 +916,19 @@ niet; hij verliest niet. Een punt gaat eruit zodra een STAP het opneemt — niet
 
 ### TOOLING
 
+- DE HARNESS EET ZIJN EIGEN VORIGE METING OP. Er is ÉÉN uitvoerpad voor een lokale én een
+  prod-run — `tools/shots/shot.mjs:19` zet `OUT` op `join(HERE, "out")`, en de prod-vlag op `:30`
+  kiest daar geen ander pad bij — terwijl `:758` dat pad bij ELKE run leegt met `rmSync`. Draai je
+  lokaal na een prod-run, dan is de prod-uitvoer weg.
+  GEVOLG, TWEE KEER GEZIEN: bij punt 26 en bij punt 27 bestond er geen prod-uitvoer van vóór de
+  deploy, dus kon de STERKSTE bewijsvorm — een byte-vergelijking voor en na op prod — beide keren
+  niet gedraaid worden. Het oordeel leunde toen op een positieve vaststelling ("het blok komt op
+  geen enkele shot voor"), en dat is zwakker: het toetst wat je bedacht hebt te zoeken in plaats
+  van alles wat bewoog.
+  DE FIX IS KLEIN: een prod-run schrijft naar een EIGEN pad, zodat de twee elkaar niet kunnen
+  wissen. Zet de eerstvolgende prod-run daarheen, dan is er vanaf de deploy DÁÁRNA een echte
+  voor-staat. Dit is TOOLING en geen app-defect, dus het staat hier en niet in de reeks.
+
 - DE SHOT-HARNESS LAADT UITSLUITEND `/schema`. Er is geen scenario voor de Niveau-tab en geen voor
   Instellingen, dus wat daar staat is per constructie niet te fotograferen. KOSTEN GEMETEN op
   2026-08-02: het aannames-paneel op de Niveau-tab kon niet dichtklappen — `hidden` naast een
@@ -923,9 +936,13 @@ niet; hij verliest niet. Een punt gaat eruit zodra een STAP het opneemt — niet
   render-testinfrastructuur, want `@testing-library` ontbreekt, dus er viel voor dat defect ook
   geen rood-test te schrijven. Daans oog was het enige instrument dat erbij kon.
 
-- DE SHOT-HARNESS IS BLIND VOOR DE KLIM-DOELEN. `tools/shots/shot.mjs:267` seedt doel `"FTP"`, en
-  `spreiding.effortsInLangeRit` staat uitsluitend op `klim_kort` en `klim_lang`. Er is geen enkel
-  scenario voor een van die twee, dus de hele klim-tak — de lange rit met efforts voorop — is
-  visueel ONVERIFIEERD; geen shot kan die sessie tonen. KORTE BEKLIMMINGEN WORDT HALF FEBRUARI 2027
-  HET ACTIEVE DOEL, dus dit gat sluit zichzelf niet. Kwam binnen bij punt 15 fase 1, waar de
-  zonebalk daardoor "niet toetsbaar" bleef.
+- DE SHOT-HARNESS IS BLIND VOOR FASE PEAK. De klim-doelen zijn dat NIET meer: `klim-kort` bestaat
+  sinds `a15bcbb` en `klim-weekstem` sinds `b57d464`, en die laatste is het EERSTE scenario dat een
+  klim-doel met een `dagOffset` combineert. Wat wel blind blijft is fase PEAK: geen enkel scenario
+  draagt een blokweek die daarop valt, dus alles wat in Peak anders loopt — het quotum, de
+  poortset, de taper-overlay — is visueel onverifieerd.
+  LET OP HOE DIT ITEM DREEF, want dat is de eigenlijke les. Er stond hier tot 04-08-2026:
+  "`tools/shots/shot.mjs:267` seedt doel `FTP`, en er is geen enkel scenario voor een klim-doel".
+  Die zin werd ONWAAR bij `a15bcbb` en is daarna nog twee dagen meegekopieerd in de
+  OPENSTAAND-lijsten van drie STAND-blokken, omdat een parkeerlijst-item bij het overzetten
+  wordt overgenomen en niet opnieuw getoetst. Een regel die je kopieert, hoort te worden gegrept.
