@@ -437,6 +437,21 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   weekvormen die de harness niet draait. Generaliseer nooit van de scenario's naar de code: het net
   bewijst een treffer, het bewijst geen schoonheid. Wat de hele code afdekt is een test bij de
   PRODUCENT, niet een steekproef bij de camera.
+- **Een klok-stub mag geen `Date`-SUBCLASS zijn.** Een subclass breekt `x instanceof Date` voor elk
+  Date-object dat BUITEN de stub gemaakt is, en dat is niet zichtbaar als fout: de meting draait
+  gewoon groen en meet iets anders. Aanleiding: bij punt 26 stubde de chat `Date` als subclass,
+  waarna `derivePlannerGedaan` (`apps/web/src/lib/activities.ts:87`, `ad instanceof Date`) geen
+  enkele rit meer herkende — geen dag werd `gedaan`, elke dag hield zijn sessies, en het te meten
+  defect kon per constructie niet verschijnen. Stub met een Proxy op de ECHTE constructor; dan
+  blijft `instanceof` werken. Zelfde familie als "een anomalie in je eigen meetuitvoer is een gat
+  in je INSTRUMENT".
+- **Een defect dat zichzelf herstelt, herstelt zich niet noodzakelijk naar DEZELFDE WAARDE.** Meet
+  niet alleen ÓF een mechanisme terugkomt, maar WAARNAAR. Aanleiding: bij punt 26 stond het plan
+  van een gereden dag er de volgende dag weer, maar via een reconstructie die de HELE week opnieuw
+  plant met lege activities — en die leverde in 4 van de 15 cellen een ANDER plan: `long_z2` naar
+  `sweet_spot`, TSS 42 naar 53, intent `high` 0 naar 26. "Hersteld" las als "in orde" terwijl het
+  plan-van-record stil herschreven werd, en de blok-terugblik leest juist die velden. Zelfde
+  familie als "citeer een meting met het predicaat dat gemeten is".
 - **Een lus die op de NOMINALE vorm draait, mist elke as die die vorm MODULEERT.** Dit is scherper
   dan "je toetst maar één parameterwaarde": het gaat om de as die de vorm van de UITVOER bepaalt.
   Aanleiding: beide `push-parse`-lussen in de selftest draaien op `mesoFactor` 1, en daar bestaan
@@ -673,3 +688,5 @@ Volg de FOCUS uit het bovenste STAND-blok.
 - 2026-08-03 — les toegevoegd in *Recon en bewijslast*: een test die via de route binnenkomt bereikt alleen de primaire tak. Aanleiding: `buildEventPayload` keert op `push.ts:87` terug zodra het ZWO lukt, dus de nieuwe api-fixture kon de DSL-terugval niet rood krijgen.
 - 2026-08-03 — correctie in *Vorm van een CC-prompt*: gesplitste blokken draaien in dezelfde CC-SESSIE. De regel zei "dezelfde sessie" zonder meer; PowerShell is de shell waarin CC zijn commando's uitvoert, geen omgeving waarin Daan zelf werkt, en die dubbelzinnigheid is nu weg.
 - 2026-08-03 — stap toegevoegd in *Vorm van een CC-prompt*: vijf controles die mechanisch uit de prompttekst worden getrokken, plus de eis dat elk bouw-prompt opent met een premissen-blok dat CC eerst toetst. Aanleiding: twee chat-fouten in punt 20 — het bouw-prompt wees twee lussen aan die op mesoFactor 1 draaien (0 decimale herhalingscellen tegen 110 bij mesoWeek 3), en het close-out-prompt corrigeerde een zin die nergens stond. Beide waren al door een bestaande les gedekt; wat ontbrak was een moment waarop die lessen wórden gedraaid.
+- 2026-08-04 — les toegevoegd in *Recon en bewijslast*: een klok-stub mag geen Date-subclass zijn. Aanleiding: bij punt 26 brak zo'n stub `ad instanceof Date` in `derivePlannerGedaan`, waardoor geen enkele dag `gedaan` werd en het te meten defect per constructie niet kon verschijnen — terwijl de meting groen draaide.
+- 2026-08-04 — les toegevoegd in *Recon en bewijslast*: een defect dat zichzelf herstelt, herstelt zich niet noodzakelijk naar dezelfde waarde. Aanleiding: bij punt 26 kwam het plan van een gereden dag de volgende dag terug via een reconstructie die in 4 van de 15 cellen een ander plan leverde (long_z2 naar sweet_spot, TSS 42 naar 53, intent high 0 naar 26).

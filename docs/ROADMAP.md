@@ -609,7 +609,7 @@ punten staat onder *Gesloten — vindplaats*.
     tegen `HEIGHT_CAP` 4000, dus de PNG is afgekapt en een VISUELE controle van dat scherm kan
     vandaag niet. De `innerText` in de `.txt` is wél compleet, dus tekstuele controle en het
     float-net werken er gewoon. Keuze: de cap verhogen, of het scherm in stukken schieten.
-26. **De vandaag-gereden dag verliest zijn plan** — open · CLIENT. `plannedForDone` wordt in
+26. **De vandaag-gereden dag verliest zijn plan** — af · CLIENT. `plannedForDone` wordt in
     `apps/web/src/lib/proposal.ts` alleen gevuld als de dag STRIKT in het verleden ligt: `:656`
     zet `const isPast = stripTime_(d.datum).getTime() < todayT`, en de toekenning op `:660` hangt
     onder die tak. Een dag die VANDAAG gereden is heeft dus noch `sessions` — de allocator bouwt
@@ -624,6 +624,21 @@ punten staat onder *Gesloten — vindplaats*.
     daar: op de v7-pendel-vorm ging de pendeldag van 446 TSS / 530 min / 5 dagen naar 375 / 450 /
     4, en een gewone maandag van 60 minuten naar 391 / 470 / 4. Meting in `docs/PENDEL-RECON.md`
     paragraaf 2.
+    AF per 04-08-2026 en LIVE op Worker Version `01dee48d-f756-48bd-bec1-a25f0e5813a9`. Bouwdoc
+    `2f363e1` (`docs/PUNT26-BOUWDOC.md`), bouw `b55f5b9`. TWEE TERMEN, allebei CLIENT.
+    A, DE LEESTAK: de bevroren-entry-tak in `proposal.ts` gaat van `isPast` naar
+    `isPast || d.gedaan`, met `gedaan` de uit de ACTIVITIES afgeleide vlag.
+    B, DE SCHRIJFKANT: `withDoneTodayEntries` in `weekplanBlob.ts`, call-site `schema.ts:1263` in
+    `persistWeekplan`, vóór zowel de recon-tak als de dedup-tak. Nodig omdat de bewaarde entry
+    anders VERNIETIGD wordt: `mergeFrozenWeekplan` bevriest alleen `datum < vandaag` en de verse
+    payload noemt de dag niet meer. De entry gaat VERBATIM mee — herbouwen uit `plannedForDone`
+    zou `variantId` en `archetypeId` verliezen, en juist die leest de recency-seed.
+    GEMETEN: 15 van de 15 op ALLE VIER de momenten (de dag zelf, de eerste en de tweede render
+    daarvan, en de dag erna). Term A ALLEEN geeft 15 van 15 op de eerste render maar 0 van 15 op
+    de tweede — dan is er niets meer om te lezen. Het RECONSTRUCTIE-GAT gaat van 15 van 15 naar
+    0 van 15, en dat telt: die reconstructie leverde in 4 van de 15 cellen een ANDER plan
+    (`long_z2` naar `sweet_spot`, TSS 42 naar 53, intent high 0 naar 26), en de blok-terugblik
+    leest precies die velden.
 
 ## De tijdslijn
 
@@ -817,6 +832,11 @@ niet; hij verliest niet. Een punt gaat eruit zodra een STAP het opneemt — niet
 ### CLIENT
 
 
+- DE ELSE-TAK IN DE `plannedForDone`-TOEKENNING VAN `proposal.ts` IS DOOD AAN ZIJN INVOER. Hij
+  eist `d.voorgesteldType`, en de worker schrijft `planner_days.voorgesteld_type` ALTIJD null
+  (`workers/api/src/db/repo.ts:397`) terwijl de route het veld ook van de client weigert. De tak
+  kan dus alleen vuren op data die de app nooit produceert. Opruimen is een GEDRAGSWIJZIGING voor
+  callers die de kolom wél vullen, dus eigen ronde. Gevonden naast de bouw van punt 26.
 - `GET /api/checkin/:datum` GEEFT 404 bij afwezigheid, terwijl de huisregel elders 200 met
   `null` of een lege lijst is (`/api/settings`, `/api/planner/:monday`). Cosmetisch — de client
   vangt het op — maar het is inconsistentie, en het vult de console bij elke `/schema`-load.
