@@ -83,6 +83,7 @@ import {
   type ProposalWorkout,
 } from "./proposal";
 import { deriveReadiness, type ReadinessResult } from "./readiness";
+import { laadGelabeld, retryLoad } from "./schemaLoad";
 import { presetHoursLabel } from "./settings";
 import { buildTestVoorstel, type TestVoorstel } from "./testvoorstel";
 import {
@@ -1338,23 +1339,54 @@ export async function loadSchemaWeek(): Promise<{
     powerZonesRow,
     eventOvernameRow,
     doelPassendRow,
-  ] = await Promise.all([
-    getSettings(),
-    getPlanner(monday),
-    getEvents(),
-    getActivities(),
-    getWeekplans(monday),
-    getWellness(),
-    getRpe(),
-    getDispositions(),
-    getOverrides(),
-    getCheckin(todayISO),
-    getFatigueShift(),
-    getDosisTrede(),
-    getPowerZones(),
-    getEventOvername(),
-    getDoelPassend(),
-  ]);
+  ] = await retryLoad(
+    // ROADMAP punt 30 — DE HELE BOUW WORDT HERHAALD, en de rijen dragen een NAAM.
+    //
+    // Twee dingen die dit NIET doet, en allebei bewust. Het degradeert niet: twaalf van deze
+    // vijftien rijen voeden `buildWeekProposal`, en de getoonde week gaat via `persistWeekplan`
+    // hieronder als plan-van-record de opslag in — een stil vervangen rij zou dus geen
+    // ontbrekende kaart opleveren maar een ANDER plan-van-record. En het dekt het
+    // propagatievenster na een deploy niet; zie docs/PUNT30-BOUWDOC.md §5.
+    //
+    // De labels zijn de hele winst van `laadGelabeld`: de melding zegt voortaan WÉLKE bron viel
+    // in plaats van de eerste de beste afwijzing door te geven.
+    () =>
+      laadGelabeld([
+        { label: "instellingen", laad: () => getSettings() },
+        { label: "weekplanner", laad: () => getPlanner(monday) },
+        { label: "events", laad: () => getEvents() },
+        { label: "activiteiten", laad: () => getActivities() },
+        { label: "weekplannen", laad: () => getWeekplans(monday) },
+        { label: "wellness", laad: () => getWellness() },
+        { label: "rpe", laad: () => getRpe() },
+        { label: "disposities", laad: () => getDispositions() },
+        { label: "overrides", laad: () => getOverrides() },
+        { label: "check-in", laad: () => getCheckin(todayISO) },
+        { label: "fatigue-shift", laad: () => getFatigueShift() },
+        { label: "dosis-trede", laad: () => getDosisTrede() },
+        { label: "power-zones", laad: () => getPowerZones() },
+        { label: "event-overname", laad: () => getEventOvername() },
+        { label: "doel-passendheid", laad: () => getDoelPassend() },
+      ]) as unknown as Promise<
+        [
+          Awaited<ReturnType<typeof getSettings>>,
+          Awaited<ReturnType<typeof getPlanner>>,
+          Awaited<ReturnType<typeof getEvents>>,
+          Awaited<ReturnType<typeof getActivities>>,
+          Awaited<ReturnType<typeof getWeekplans>>,
+          Awaited<ReturnType<typeof getWellness>>,
+          Awaited<ReturnType<typeof getRpe>>,
+          Awaited<ReturnType<typeof getDispositions>>,
+          Awaited<ReturnType<typeof getOverrides>>,
+          Awaited<ReturnType<typeof getCheckin>>,
+          Awaited<ReturnType<typeof getFatigueShift>>,
+          Awaited<ReturnType<typeof getDosisTrede>>,
+          Awaited<ReturnType<typeof getPowerZones>>,
+          Awaited<ReturnType<typeof getEventOvername>>,
+          Awaited<ReturnType<typeof getDoelPassend>>,
+        ]
+      >,
+  );
 
   const activities = parseActivityRows(activitiesRes);
   // deriveReadiness is puur → veilig vóór buildWeekProposal berekenen; de holistische band stuurt
