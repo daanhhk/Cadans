@@ -437,6 +437,21 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   weekvormen die de harness niet draait. Generaliseer nooit van de scenario's naar de code: het net
   bewijst een treffer, het bewijst geen schoonheid. Wat de hele code afdekt is een test bij de
   PRODUCENT, niet een steekproef bij de camera.
+- **Een AANBOD erft de toestandsruimte van de POORT waaraan het hangt; enumereer die ruimte vóór
+  je de actie ontwerpt.** Aanleiding: het aanbod "verschuif deze week de minuten naar Drempel" hing
+  aan een weekstem die JUIST eist dat er geen dag meer staat die de prikkel kan dragen. Gemeten
+  over 630 cellen: 75 van de 119 vuur-cellen hebben geen trainingsdag meer over, en in de andere
+  44 draagt de restdag de tekortzone al — nul cellen waarin het aanbod iets toevoegt. Zelfde
+  familie als "een acceptatie-eis toetst alleen wat de ingreep kán raken", nu op een heel
+  MECHANISME: het slot bepaalt wat er nog te vullen valt.
+- **Een classificatie met een SUBSTRING-terugval geeft ALTIJD een antwoord en meldt dus nooit dat
+  ze het niet weet.** Toets zo'n classifier tegen een ONAFHANKELIJKE eigenschap, over álle waarden
+  die de producent kan opleveren. Aanleiding: `intentFromType_` valt door naar `indexOf("long")` en
+  noemt `combo_long_with_efforts` "duur", terwijl die sessie 30,0 tot 32,4 werkminuten met het
+  nominale label `drempel` draagt — één treffer op zes types. EN HET SNIJDT BEIDE KANTEN OP: poort
+  1 en poort 2 lezen dezelfde classifier, dus één fout label levert tegelijk een onterecht "je hebt
+  niets gemist" en een onterecht "er staat niets meer". Zelfde familie als "een halve fix is een
+  vindpatroon", nu op een gedeelde CLASSIFIER in plaats van op een accumulatie.
 - **Een klok-stub mag geen `Date`-SUBCLASS zijn.** Een subclass breekt `x instanceof Date` voor elk
   Date-object dat BUITEN de stub gemaakt is, en dat is niet zichtbaar als fout: de meting draait
   gewoon groen en meet iets anders. Aanleiding: bij punt 26 stubde de chat `Date` als subclass,
@@ -690,3 +705,5 @@ Volg de FOCUS uit het bovenste STAND-blok.
 - 2026-08-03 — stap toegevoegd in *Vorm van een CC-prompt*: vijf controles die mechanisch uit de prompttekst worden getrokken, plus de eis dat elk bouw-prompt opent met een premissen-blok dat CC eerst toetst. Aanleiding: twee chat-fouten in punt 20 — het bouw-prompt wees twee lussen aan die op mesoFactor 1 draaien (0 decimale herhalingscellen tegen 110 bij mesoWeek 3), en het close-out-prompt corrigeerde een zin die nergens stond. Beide waren al door een bestaande les gedekt; wat ontbrak was een moment waarop die lessen wórden gedraaid.
 - 2026-08-04 — les toegevoegd in *Recon en bewijslast*: een klok-stub mag geen Date-subclass zijn. Aanleiding: bij punt 26 brak zo'n stub `ad instanceof Date` in `derivePlannerGedaan`, waardoor geen enkele dag `gedaan` werd en het te meten defect per constructie niet kon verschijnen — terwijl de meting groen draaide.
 - 2026-08-04 — les toegevoegd in *Recon en bewijslast*: een defect dat zichzelf herstelt, herstelt zich niet noodzakelijk naar dezelfde waarde. Aanleiding: bij punt 26 kwam het plan van een gereden dag de volgende dag terug via een reconstructie die in 4 van de 15 cellen een ander plan leverde (long_z2 naar sweet_spot, TSS 42 naar 53, intent high 0 naar 26).
+- 2026-08-04 — les toegevoegd in *Recon en bewijslast*: een aanbod erft de toestandsruimte van de poort waaraan het hangt. Aanleiding: het aanbod van punt 10 fase B deel 2 hing aan een weekstem die juist eist dat er geen dag meer staat; over 630 cellen bleek er in geen enkele van de 119 vuur-cellen iets toe te voegen, en het punt is zonder bouw gesloten.
+- 2026-08-04 — les toegevoegd in *Recon en bewijslast*: een classificatie met een substring-terugval geeft altijd een antwoord en meldt nooit dat ze het niet weet. Aanleiding: `intentFromType_` noemde `combo_long_with_efforts` "duur" op grond van `indexOf("long")`, waardoor poort 1 en poort 2 van de sleutel-machinerie tegelijk verkeerd stonden.

@@ -649,7 +649,7 @@ punten staat onder *Gesloten — vindplaats*.
     0 van 15, en dat telt: die reconstructie leverde in 4 van de 15 cellen een ANDER plan
     (`long_z2` naar `sweet_spot`, TSS 42 naar 53, intent high 0 naar 26), en de blok-terugblik
     leest precies die velden.
-27. **De lange rit met efforts telt niet als sleutelsessie** — open · CLIENT.
+27. **De lange rit met efforts telt niet als sleutelsessie** — af · CLIENT.
     `combo_long_with_efforts` staat niet in `COACH_TYPE_INTENT_` (`packages/engine/src/coach.ts:28`),
     dus `intentFromType_` valt door naar de terugval-scan, herkent daar "long" en levert "duur" —
     en "duur" staat niet in `COACH_KEY_INTENTS_` (`:75`). Poort 1 en poort 2 van de
@@ -670,6 +670,24 @@ punten staat onder *Gesloten — vindplaats*.
     `docs/PUNT10-FASE-B-DEEL2-VERDICT.md` §5 tot en met §8, inclusief de vier rood-getallen.
     HARDE DATUM: half februari 2027 wordt Korte beklimmingen het actieve doel, en dan is dit de
     dag waar de weekstem elke week overheen praat.
+    AF per 04-08-2026, bouw `b57d464`, LIVE op Worker Version
+    `76c80e90-cbf6-4587-804e-a97c5c8e6196`.
+    DRIE TERMEN, alle drie CLIENT. De optellende toets `planDraagtSleutelzone_` op `drempel` en
+    `anaeroob`, toegepast op poort 2 (`openSleutelDagen`) én op BEIDE takken van poort 1 — de
+    gemist-tak en de different-tak. De DONE-kant is ongemoeid gebleven: `doneIntent` is wat er
+    GEREDEN is en mag een openstaande prikkel niet dichtzetten.
+    De nieuwe `ProposalWeek`-parameter is VERPLICHT — een optioneel veld zou bij een aanroeper
+    stil terugvallen op niets en de term dood maken zonder dat er iets rood wordt. De lookup zit
+    in `blokkenVoor_`. Aanroepplekken: `weektekort.ts:79` en `:84`, `SchemaView.tsx:220` en `:222`.
+    `COACH_TYPE_INTENT_` IS NIET AANGERAAKT en de engine-diff is leeg: de rit duurt 120 tot 240
+    minuten waarvan 30 werkminuten, en hem "Drempel" noemen zou zijn karakter verkeerd weergeven.
+    ROOD PER TERM ÉN PER TAK. R1 laat `T1` en `T2` vallen; R2 laat `T3` vallen terwijl `T4` groen
+    blijft; R3 laat `T4` vallen terwijl `T3` groen blijft; R4 (tempo erbij) laat beide
+    tegenproeven vallen. R2 en R3 zijn ELKAARS TEGENPROEF, dus de twee takken maskeren elkaar niet.
+    DE DIFFERENT-TAK IS APART GEMETEN: 28 cellen met een te licht gereden efforts-rit, poort 1 zag
+    er 0 van 28 en met de term 28 van 28. Op de WEEKSTEM is die tak inert (24 blijft 24), op het
+    DAGBLOK niet (8 cellen). Dat is GEMETEN en geen gat — zoek er geen rood-test bij die niet
+    bestaat.
 
 ## De tijdslijn
 
