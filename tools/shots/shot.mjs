@@ -761,6 +761,73 @@ async function sweep(page, scenario, monday, results, seededSettings) {
   probe.off();
 }
 
+/**
+ * ROADMAP punt 29 — DE ROUTES DIE DE REPO VERWACHT.
+ *
+ * Getrokken uit `workers/api/src/routes/api.ts` zelf, niet uit een handlijst: een lijst die je
+ * bijhoudt loopt uit de pas met de routes die er staan, en dan bewaakt de controle iets anders dan
+ * ze belooft. Paden met een DUBBELE PUNT vallen af — die dragen een parameter, en een probe zou er
+ * een willekeurige waarde voor moeten verzinnen.
+ *
+ * LEEG IS EEN FOUT, GEEN UITKOMST: dan is het bestand verplaatst of hernoemd en meet de controle
+ * stil niets meer. Dat is precies het faalpatroon dat dit punt afdekt, dus hij gooit.
+ */
+function expectedApiRoutes() {
+  const bron = join(
+    HERE,
+    "..",
+    "..",
+    "workers",
+    "api",
+    "src",
+    "routes",
+    "api.ts",
+  );
+  const tekst = readFileSync(bron, "utf8");
+  const uit = new Set();
+  for (const m of tekst.matchAll(/api\.get\("(\/[^"]*)"/g)) {
+    const pad = m[1];
+    if (pad.indexOf(":") >= 0) continue; // parameter-route, niet te probben
+    uit.add(pad);
+  }
+  if (uit.size === 0) {
+    throw new Error(
+      `expectedApiRoutes: geen enkele route gevonden in ${bron} — is het bestand verplaatst? ` +
+        "Een lege lijst zou de controle stil uitzetten.",
+    );
+  }
+  return [...uit].sort();
+}
+
+/**
+ * Probeert elk pad met één GET en classificeert in drie bakken.
+ *
+ * ALLEEN 404 TELT ALS MISSING, en dat is de kern. Hono antwoordt 404 op een niet-geregistreerd
+ * `/api/`-pad (`workers/api/src/index.ts:61`), terwijl een BESTAANDE route die over een ontbrekende
+ * query klaagt 400 geeft (`/weekplans/recent`) en een integratiefout 502. Elke andere status is dus
+ * bewijs dat de route BESTAAT.
+ *
+ * EEN TIMEOUT TELT NIET ALS MISSING maar als `unknown`. Een vals STOP blokkeert legitiem werk; een
+ * gemiste detectie laat ons waar we vandaag al staan. De asymmetrie is opzet.
+ */
+async function probeRoutes(paths) {
+  const present = [];
+  const missing = [];
+  const unknown = [];
+  for (const pad of paths) {
+    try {
+      const r = await fetch(`${API}/api${pad}`, {
+        headers: AUTH_HEADERS,
+        signal: AbortSignal.timeout(5000),
+      });
+      (r.status === 404 ? missing : present).push(pad);
+    } catch {
+      unknown.push(pad);
+    }
+  }
+  return { present, missing, unknown };
+}
+
 async function main() {
   // Fail before touching the network, and name the two places to look — never a value.
   if (PROD && !AUTH_PASSWORD) {
@@ -779,6 +846,30 @@ async function main() {
   const apiUp = await waitFor(`${API}/api/settings`, 20, AUTH_HEADERS);
   if (!apiUp && !PROD) {
     throw new Error(`worker not answering on ${API} — seeding needs it`);
+  }
+
+  // ROADMAP punt 29 — HOORT DE DRAAIENDE WORKER BIJ DEZE REPO?
+  // STAAT BEWUST VÓÓR DE rmSync HIERONDER: stopt hij, dan blijft de uitvoer van de VORIGE run
+  // staan. De harness heeft één uitvoerpad voor lokaal en prod en leegt dat bij elke run, dus
+  // een STOP ná de wipe zou de vorige meting alsnog vernietigen.
+  const verwacht = expectedApiRoutes();
+  const probe = await probeRoutes(verwacht);
+  process.stdout.write(
+    `routes: ${verwacht.length} expected, ${probe.present.length} present, ` +
+      `${probe.missing.length} missing, ${probe.unknown.length} unknown` +
+      (probe.missing.length ? ` — missing: ${probe.missing.join(", ")}` : "") +
+      (probe.unknown.length ? ` — unknown: ${probe.unknown.join(", ")}` : "") +
+      "\n",
+  );
+  // PROD GOOIT NOOIT. Een VOOR-meting tegen prod van vóór een deploy is legitiem — dan HÓÓRT de
+  // repo routes te dragen die prod nog niet kent.
+  if (!PROD && probe.missing.length) {
+    throw new Error(
+      `de draaiende wrangler dev op ${API} is OUDER dan de repo: ` +
+        `${probe.missing.join(", ")} ${probe.missing.length === 1 ? "bestaat" : "bestaan"} ` +
+        "daar niet. Herstart hem voor je schiet — anders fotografeer je een app die op een " +
+        "404 valt, en leest dat als een defect van je bouw.",
+    );
   }
 
   // Never let a stale shot pass for a fresh one.
