@@ -661,14 +661,15 @@ Reden voor die vorm: een opener die de stand overschrijft laat dezelfde tekst op
 Dat leunt op twee eisen aan de close-out, en zonder die twee is de verwijzing loos: het nieuwste STAND-blok staat BOVENAAN in `HANDOFF.md`, en élk STAND-blok eindigt op een expliciete `FOCUS VOLGENDE CHAT`-regel. Zie *Close-out van een chat*.
 
 --- BEGIN OPENER ---
-Lees eerst deze drie via web_fetch (RAW, gepind op commit-hash — NIET de blob-URL, die is stale):
+Lees eerst deze vier via web_fetch (RAW, gepind op commit-hash — NIET de blob-URL, die is stale):
 https://raw.githubusercontent.com/daanhhk/Cadans/<hash>/docs/WERKWIJZE.md
 https://raw.githubusercontent.com/daanhhk/Cadans/<hash>/docs/TRAININGSMODEL.md
 https://raw.githubusercontent.com/daanhhk/Cadans/<hash>/HANDOFF.md
 https://raw.githubusercontent.com/daanhhk/Cadans/<hash>/docs/DOELEN-SPEC.md
 
-WERKWIJZE.md is canoniek voor hoe we werken en leidend bij tegenspraak; HANDOFF.md is de
-projectstand; DOELEN-SPEC.md draagt de VASTGESTELDE doel-besluiten en wordt niet heropend.
+WERKWIJZE.md is canoniek voor hoe we werken en leidend bij tegenspraak; TRAININGSMODEL.md is de
+NORM-laag voor de trainingskant en gaat vóór DOELEN-SPEC; HANDOFF.md is de projectstand;
+DOELEN-SPEC.md draagt de VASTGESTELDE doel-besluiten en wordt niet heropend.
 Cadans = Cloudflare-herbouw van de trainings-app: pnpm-monorepo, pure engine + Workers/D1 + React-PWA.
 Je kunt mijn uncommitte lokale staat (C:\Users\daan\Projects\cadans, Windows/PowerShell, via Remote
 Control) niet lezen; de gecommitte Cadans-code en de bevroren GAS-bron lees je wel gewoon zelf.
@@ -755,3 +756,4 @@ Volg de FOCUS uit het bovenste STAND-blok.
 - 2026-08-04 — `docs/TRAININGSMODEL.md` toegevoegd aan *Voorrang bij tegenspraak* als NORM-laag voor de trainingskant, boven `DOELEN-SPEC`. Aanleiding: `DOELEN-SPEC` zette dat document zelf al boven zichzelf, terwijl WERKWIJZE het niet noemde.
 - 2026-08-04 — regel toegevoegd in *Beslissen*: een besluit dat de trainingslaag raakt noemt zijn M-regel, of stelt vast dat de canon daar OPEN is. Aanleiding: bij punt 17 droeg M63 het antwoord over de uitvoerings-referent al, en het besluit werd toch met `DOELEN-SPEC` onderbouwd.
 - 2026-08-04 — *Opener-sjabloon* haalt voortaan VIER raw-URL's op; `docs/TRAININGSMODEL.md` is de vierde. Aanleiding: de norm-laag stond boven `DOELEN-SPEC` en werd door geen enkele opener opgehaald, dus elke chat reconstrueerde de coach-bril.
+- 2026-08-04 — correctie BINNEN het opener-blok: "deze drie" werd "deze vier", en `TRAININGSMODEL.md` kreeg zijn gezagsregel naast de andere drie documenten. Aanleiding: de alinea boven het blok stond al op vier, maar het telwoord IN het blok bleef op drie staan en de vierde URL kreeg daar geen gezag mee — een chat die alleen het blok leest, leest dus "drie" en weet niet wat het tweede document wil. Zelfde vindpatroon als het parkeerlijst-item dat twee dagen onwaar meereisde: een gekopieerd telwoord hoort geteld, niet overgenomen.
