@@ -452,6 +452,27 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   1 en poort 2 lezen dezelfde classifier, dus één fout label levert tegelijk een onterecht "je hebt
   niets gemist" en een onterecht "er staat niets meer". Zelfde familie als "een halve fix is een
   vindpatroon", nu op een gedeelde CLASSIFIER in plaats van op een accumulatie.
+- **Een uitslag noemt ALTIJD teller, noemer én uitsluiting met reden — en de noemer is het TOTAAL,
+  nooit wat er na uitsluiting overbleef.** Krimpt de noemer stilletjes mee, dan leest een
+  onvolledige meting als een volledige: "85 van 85" klinkt als dekkend terwijl er 93 vergelijkbare
+  eenheden waren. Aanleiding: bij punt 30 viel dezelfde denkfout op één middag TWEE kanten op.
+  Eerst werd een ijk-run als nulmeting gekozen omdat hij met een andere run overeenkwam — dat is
+  de meetlat op de uitkomst kiezen — en daarna werd de noemer 85 in plaats van 93. Beide keren
+  verdween precies het deel dat de meting onzeker maakte. Schrijf dus "85 van de 93 identiek, 8
+  uitgesloten omdat de ijking daar faalde", en trek een uitslag die op de gunstige helft leunt
+  expliciet IN.
+- **Een meting die door een SHELL-LAAG gaat, toets je eerst op een BEKENDE WAARDE.** Die laag kan
+  je invoer stil verbouwen, en dan meet je de laag in plaats van het systeem. Aanleiding: Git Bash
+  zette een `/assets/...`-argument om naar een Windows-pad, waardoor een fetch 90 seconden lang
+  `-1` gaf en dat las als een propagatievenster van anderhalve minuut; met `MSYS_NO_PATHCONV=1`
+  gaf dezelfde aanroep meteen 200. Zelfde soort val, twee keer voorgekomen: een python-heredoc die
+  een `\n`-escape tot een echte regelovergang verminkte, gevangen met `node --check`. Zelfde
+  familie als "een anomalie in je eigen meetuitvoer is een gat in je INSTRUMENT".
+- **Geen heredocs voor BESTANDSINHOUD, en na elke bewerking eerst een syntaxcontrole.** Schrijf een
+  patch als BESTAND weg en draai die, in plaats van de inhoud door een shell-heredoc te duwen. En
+  na elke bewerking van een `.mjs` of `.ts` volgt `node --check` of de typecheck VÓÓR de meting,
+  niet erna: een verminkt bestand dat pas bij het meten omvalt kost een hele meetronde, en een
+  verminkt bestand dat NIET omvalt kost er meer.
 - **Een klok-stub mag geen `Date`-SUBCLASS zijn.** Een subclass breekt `x instanceof Date` voor elk
   Date-object dat BUITEN de stub gemaakt is, en dat is niet zichtbaar als fout: de meting draait
   gewoon groen en meet iets anders. Aanleiding: bij punt 26 stubde de chat `Date` als subclass,
@@ -726,3 +747,4 @@ Volg de FOCUS uit het bovenste STAND-blok.
 - 2026-08-04 — les toegevoegd in *Recon en bewijslast*: een defect dat zichzelf herstelt, herstelt zich niet noodzakelijk naar dezelfde waarde. Aanleiding: bij punt 26 kwam het plan van een gereden dag de volgende dag terug via een reconstructie die in 4 van de 15 cellen een ander plan leverde (long_z2 naar sweet_spot, TSS 42 naar 53, intent high 0 naar 26).
 - 2026-08-04 — les toegevoegd in *Recon en bewijslast*: een aanbod erft de toestandsruimte van de poort waaraan het hangt. Aanleiding: het aanbod van punt 10 fase B deel 2 hing aan een weekstem die juist eist dat er geen dag meer staat; over 630 cellen bleek er in geen enkele van de 119 vuur-cellen iets toe te voegen, en het punt is zonder bouw gesloten.
 - 2026-08-04 — les toegevoegd in *Recon en bewijslast*: een classificatie met een substring-terugval geeft altijd een antwoord en meldt nooit dat ze het niet weet. Aanleiding: `intentFromType_` noemde `combo_long_with_efforts` "duur" op grond van `indexOf("long")`, waardoor poort 1 en poort 2 van de sleutel-machinerie tegelijk verkeerd stonden.
+- 2026-08-04 — drie lessen toegevoegd in *Recon en bewijslast*: een uitslag noemt teller, noemer en uitsluiting met reden en de noemer is het totaal; een meting die door een shell-laag gaat wordt eerst op een bekende waarde getoetst; en geen heredocs voor bestandsinhoud, met een syntaxcontrole vóór de meting. Aanleiding: bij punt 30 kromp de noemer van 93 naar 85 en werd een ijk-run op zijn uitkomst gekozen, Git Bash verbouwde een pad-argument tot een schijnbaar propagatievenster van 90 seconden, en een python-heredoc verminkte voor de tweede keer een escape.
