@@ -7,6 +7,7 @@ import {
   normalizeCoachPersona,
 } from "../../lib/coachNarrative";
 import { weekdagNaam } from "../../lib/dates";
+import type { DoelPassendVoorstel } from "../../lib/doelpassend";
 import type { EventOvernameVoorstel } from "../../lib/eventOvername";
 import { isDayPlannable } from "../../lib/library";
 import type { ProposalWeek } from "../../lib/proposal";
@@ -34,6 +35,7 @@ import { CoachCallout } from "./CoachCallout";
 import { CoachReadinessBanner } from "./CoachReadinessBanner";
 import { DayStrip } from "./DayStrip";
 import { DispositionAffordance } from "./DispositionAffordance";
+import { DoelPassendCard } from "./DoelPassendCard";
 import { DoneCompareCard } from "./DoneCompareCard";
 import { DoneDetail } from "./DoneDetail";
 import { DosisTredeCard } from "./DosisTredeCard";
@@ -126,6 +128,7 @@ export function SchemaView({
   blokReview = null,
   dosisTredeVoorstel = null,
   eventOvernameVoorstel = null,
+  doelPassendVoorstel = null,
   grenzen,
   testVoorstel = null,
   weekMonday,
@@ -143,6 +146,7 @@ export function SchemaView({
   blokReview?: BlokReview | null;
   dosisTredeVoorstel?: DosisTredeVoorstel | null;
   eventOvernameVoorstel?: EventOvernameVoorstel | null;
+  doelPassendVoorstel?: DoelPassendVoorstel | null;
   /** ROADMAP punt 6 fase 2 — de zone-grenzen. VERPLICHT: een default hier zou de
    * gesynchroniseerde zones stil kunnen maskeren. */
   grenzen: readonly number[];
@@ -311,6 +315,20 @@ export function SchemaView({
       {eventOvernameVoorstel && (
         <EventOvernameCard
           voorstel={eventOvernameVoorstel}
+          coachNaam={view.coachNaam}
+        />
+      )}
+
+      {/* ROADMAP punt 12 — DOEL-PASSENDHEID, direct ONDER de event-overname en VOOR de
+          blok-terugblik: het is een voorstel dat een actie vraagt, en die horen boven een
+          terugblik. Zelfbegrenzend: alle poorten zitten in `doelPassendVoorstel`, en de
+          PRECEDENTIE tegenover de andere twee kaarten is in schema.ts al toegepast. */}
+      {doelPassendVoorstel && (
+        <DoelPassendCard
+          voorstel={doelPassendVoorstel}
+          settings={
+            (settings ?? null) as unknown as Record<string, unknown> | null
+          }
           coachNaam={view.coachNaam}
         />
       )}

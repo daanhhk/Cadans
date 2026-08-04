@@ -259,6 +259,24 @@ const SCENARIOS = [
       5: { minuten: 180, dagtype: "weekend" },
     },
   },
+  // DOEL-PASSEND (ROADMAP punt 12): doel "Korte beklimmingen" met een vloer van 5 uur, maar
+  // slechts 4 GEDECLAREERDE weekuren — strikt eronder, dus de kaart hoort te staan. Blokweek 1,
+  // want de vraag valt alleen op een blokgrens.
+  //
+  // TWEE NEGATIEVE CONTROLES STAAN ER AL: `klim-kort` en `klim-weekstem` dragen hetzelfde doel
+  // met weekUren 5 en vallen allebei op blokweek 1. Vloer 5 tegen 5 uur betekent dat de kaart
+  // daar NIET hoort te verschijnen — bewegen die shots wel, dan staat de vloer verkeerd om.
+  {
+    name: "doel-passend",
+    doel: "Korte beklimmingen",
+    blokWeek: 1,
+    weekUren: 4,
+    spec: {
+      1: { minuten: 60, dagtype: "vrij" },
+      3: { minuten: 60, dagtype: "vrij" },
+      5: { minuten: 120, dagtype: "weekend" },
+    },
+  },
   // KLIM-WEEKSTEM (ROADMAP punt 27): het enige scenario dat een KLIM-doel combineert met een
   // dagOffset. Nodig omdat `combo_long_with_efforts` alleen bij een klim-doel vuurt én alleen in
   // Build en Peak — blokweek 1 is Base en kan de sessie dus niet tonen. Vrijdag als "vandaag":
@@ -623,7 +641,16 @@ async function sweep(page, scenario, monday, results, seededSettings) {
       // Zelfde mechaniek als `doelStart` hierboven: weggelaten → de gezaaide waarde blijft staan,
       // dus de bestaande scenario's zijn byte-identiek.
       const doel = scenario.doel ?? seededSettings.doel;
-      await apiPut("/api/settings", { ...seededSettings, doelStart, doel });
+      // DE WEEKUREN PER SCENARIO (ROADMAP punt 12). Zelfde mechaniek als `doel` hierboven:
+      // weggelaten → de gezaaide waarde (5) blijft staan, dus de bestaande scenario's zijn
+      // byte-identiek. Nodig omdat de doel-passendheid-kaart op de GEDECLAREERDE uren poort.
+      const weekUren = scenario.weekUren ?? seededSettings.weekUren;
+      await apiPut("/api/settings", {
+        ...seededSettings,
+        doelStart,
+        doel,
+        weekUren,
+      });
     }
     await apiPut(`/api/planner/${wkMonday}`, {
       days: plannerDays(wkMonday, scenario.spec),

@@ -272,6 +272,36 @@ export async function putEventOvername(
   }
 }
 
+// ROADMAP punt 12 — DOEL-PASSENDHEID. Zelfde vorm als de event-overname hierboven.
+export async function getDoelPassend(): Promise<{
+  blok: string | null;
+  doel: string | null;
+}> {
+  const r = await apiGet<{ blok: string | null; doel: string | null }>(
+    "/api/doel-passend",
+  );
+  return { blok: r?.blok ?? null, doel: r?.doel ?? null };
+}
+
+/** PUT /api/doel-passend: zet de twee samen. ALLEEN de nee-knop schrijft hier — na 'ja' past het
+ * doel bij de uren en kan de kaart per constructie niet meer vuren, dus er valt niets te
+ * onthouden. Het DOEL gaat mee zodat een wissel binnen hetzelfde blok naar een ander
+ * niet-passend doel als nieuw besluit telt. De route valideert strikt en normaliseert niet. */
+export async function putDoelPassend(
+  blok: string | null,
+  doel: string | null,
+): Promise<void> {
+  const resp = await fetch("/api/doel-passend", {
+    method: "PUT",
+    headers: { "content-type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ blok, doel }),
+  });
+  if (!resp.ok) {
+    const parsed = await parseBody(resp);
+    throw new Error(errMessage(parsed, resp.status));
+  }
+}
+
 /** Eén te-pushen dag: datum + type + de ACTIEVE sessies (SchemaSession-shape; los getypeerd
  * om een schema↔api-importcyclus te vermijden). */
 export interface PushDayInput {

@@ -24,6 +24,7 @@ import {
   getActivities,
   getCheckin,
   getDispositions,
+  getDoelPassend,
   getDosisTrede,
   getEventOvername,
   getEvents,
@@ -59,6 +60,11 @@ import {
   verlichtRustResultaatRegel,
 } from "./coachNarrative";
 import { parseLocalDate, todayIso, weekMondayIso } from "./dates";
+import {
+  type DoelPassendVoorstel,
+  doelPassendVoorstel,
+  kaartPrecedentie,
+} from "./doelpassend";
 import {
   type EventOvernameVoorstel,
   eventOvernameVoorstel,
@@ -1308,6 +1314,7 @@ export async function loadSchemaWeek(): Promise<{
   dosisTredeVoorstel: DosisTredeVoorstel | null;
   /** ROADMAP punt 9 fase B — de overname-vraag, of null als er niets te vragen valt. */
   eventOvernameVoorstel: EventOvernameVoorstel | null;
+  doelPassendVoorstel: DoelPassendVoorstel | null;
   /** De zone-grenzen waarop dit beeld is gerekend (ROADMAP punt 6 fase 2). */
   grenzen: readonly number[];
   /** De maandag van de getoonde week (de sleutel van de goedkeuring). */
@@ -1330,6 +1337,7 @@ export async function loadSchemaWeek(): Promise<{
     dosisTredeRow,
     powerZonesRow,
     eventOvernameRow,
+    doelPassendRow,
   ] = await Promise.all([
     getSettings(),
     getPlanner(monday),
@@ -1345,6 +1353,7 @@ export async function loadSchemaWeek(): Promise<{
     getDosisTrede(),
     getPowerZones(),
     getEventOvername(),
+    getDoelPassend(),
   ]);
 
   const activities = parseActivityRows(activitiesRes);
@@ -1530,6 +1539,18 @@ export async function loadSchemaWeek(): Promise<{
     antwoord: eventOvernameRow.antwoord,
   });
 
+  // ROADMAP punt 12 — het DOEL-PASSENDHEID-VOORSTEL. Alle poorten zitten in
+  // `doelPassendVoorstel`; hier alleen de invoer. De uren zijn de GEDECLAREERDE weekuren uit
+  // Instellingen, niet de som van de planner-dagminuten (DOELEN-SPEC §2A).
+  const doelPassendRuw = doelPassendVoorstel({
+    doel: settings?.doel ?? null,
+    weekUren: settings?.weekUren ?? null,
+    doelStart: settings?.doelStart ?? null,
+    weekMondayISO: monday,
+    beantwoordBlok: doelPassendRow.blok,
+    beantwoordDoel: doelPassendRow.doel,
+  });
+
   const dosisTredeKaart = bouwDosisTredeVoorstel({
     review: blokReview,
     doelStart: settings?.doelStart ?? null,
@@ -1542,6 +1563,14 @@ export async function loadSchemaWeek(): Promise<{
         ? (dosisTredeRow.blok ?? null)
         : null,
   });
+
+  // ROADMAP punt 12 — EEN VRAAG TEGELIJK. De precedentie landt HIER en niet in JSX: hier is ze
+  // toetsbaar, en `apps/web` heeft geen render-testinfrastructuur. Dit is de ENIGE call-site.
+  const kaarten = kaartPrecedentie(
+    eventOvernameKaart,
+    doelPassendRuw,
+    dosisTredeKaart,
+  );
 
   // 5b-ii — het TESTVOORSTEL voor de rustweek. Leest uitsluitend uit wat hierboven al opgehaald
   // is (plannerDays, overrides, events, activities, settings) — GEEN extra fetch.
@@ -1623,8 +1652,9 @@ export async function loadSchemaWeek(): Promise<{
     fatigue,
     blokReview,
     testVoorstel,
-    dosisTredeVoorstel: dosisTredeKaart,
-    eventOvernameVoorstel: eventOvernameKaart,
+    dosisTredeVoorstel: kaarten.dosisTrede,
+    eventOvernameVoorstel: kaarten.eventOvername,
+    doelPassendVoorstel: kaarten.doelPassend,
     // ROADMAP punt 10 fase B: de weekstem rekent per zone en heeft dus de GESYNCHRONISEERDE
     // grenzen nodig. Ze gaan mee in de payload in plaats van client-zijde opnieuw afgeleid te
     // worden — één bron, dezelfde die de blok-terugblik al gebruikt.

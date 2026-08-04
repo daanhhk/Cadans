@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { SchemaView } from "../components/schema/SchemaView";
 import { postSyncActivities, postSyncWellness } from "../lib/api";
 import type { BlokReview, DosisTredeVoorstel } from "../lib/blok";
+import type { DoelPassendVoorstel } from "../lib/doelpassend";
 import type { EventOvernameVoorstel } from "../lib/eventOvername";
 import { subscribePlannerVersion } from "../lib/plannerSignal";
 import type { ProposalWeek } from "../lib/proposal";
@@ -38,6 +39,7 @@ interface SchemaData {
   /** ROADMAP stap 2 — dosis-trede-voorstel, of null. */
   dosisTredeVoorstel: DosisTredeVoorstel | null;
   eventOvernameVoorstel: EventOvernameVoorstel | null;
+  doelPassendVoorstel: DoelPassendVoorstel | null;
   grenzen: readonly number[];
   weekMonday: string;
 }
@@ -190,6 +192,7 @@ export function Schema() {
       blokReview={data.blokReview}
       dosisTredeVoorstel={data.dosisTredeVoorstel}
       eventOvernameVoorstel={data.eventOvernameVoorstel}
+      doelPassendVoorstel={data.doelPassendVoorstel}
       grenzen={data.grenzen}
       testVoorstel={data.testVoorstel}
       weekMonday={data.weekMonday}
