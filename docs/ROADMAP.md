@@ -516,6 +516,50 @@ punten staat onder *Gesloten — vindplaats*.
     buigen is zichzelf meten, dezelfde val als het fase-quotum in punt 15 fase 2. Eerst meten wat
     een sessie van 60 minuten per zone EERLIJK kan dragen, dan pas kiezen tussen bibliotheek en
     norm. Raakt `DOELEN-SPEC`.
+    GEMETEN EN AFGEBAKEND per 04-08-2026, chat-zijde, docs-only.
+    DE PREMISSE IS GECORRIGEERD, en dat is de VIJFDE correctie in de punt-15/17-lijn: de norm is
+    NIET onbereikbaar in MINUTEN. De ENVELOPPE — de beste sjablonen die de bibliotheek op die
+    dagduren kan leveren, gemeten met de kandidaat-regel uit `goalWorkout_` zelf — geeft op Daans
+    eigen vorm ma45 di60 do60 za120 een 96 tegen een norm van 52, en op V1 (ma60 di60 do60 za120)
+    een 132 tegen 78, 90 en 102. Beperkt tot de LEIDENDE intent van het doel is het 40 en 60, en
+    DAAR is het onder norm op elke trede, in Build ÉN Peak.
+    WAT WEL ONBEREIKBAAR IS: de norm in het KARAKTER dat het doel voorschrijft. De meetlat telt
+    MINUTEN en is blind voor karakter, terwijl kort en hard werk per definitie weinig minuten
+    kost. Op een dag van 60 heeft de vo2-pool 6 kandidaten met maximum 20 en gemiddelde 14,3
+    werkminuten, tegen een eis van 26 per prikkel; drempel geeft daar 34,4 en sweetspot 36.
+    Nominale medianen over de bibliotheek: vo2 20, drempel 32, sweetspot 36. Plafonds: vo2 31,
+    drempel 42, sweetspot 60.
+    DE BIBLIOTHEEK-ROUTE IS GEMETEN EN AFGEWEZEN. Het enige vo2-sjabloon dat 31 haalt is
+    `vo2_sandwich`, en dat doet het met 8 WERKELIJKE vo2-minuten verpakt in 20 tempo-minuten
+    (gepind in `HANDOFF.md`). Vo2-sjablonen bijbouwen die 26 of meer dragen kan dus alleen door
+    de prikkel te VERDUNNEN, en dat gaat regelrecht tegen `DOELEN-SPEC` §3.3 in. Het antwoord op
+    de vraag die dit punt openzette is daarmee: de NORM, niet de bibliotheek.
+    DE ASYMMETRIE IN DE CODE. `bibliotheekSignatuur` leidt de VORM van de norm af uit de
+    bibliotheek (gemeten tempo 0,2821 · drempel 0,5625 · anaeroob 0,1554), terwijl de SCHAAL —
+    `KWALITEIT_MIN_PER_PRIKKEL` in `packages/engine/src/utils.ts`, FTP 28, Onderhoud 22, de rest
+    26 — geen afleiding én geen herkomst-label draagt. Dat schendt de eigen regel dat elk getal
+    PLAN, SIGNAAL of BELEID draagt.
+    WELK MECHANISME BIJT. NIET de per-zone-poort van punt 14 — die laat een vo2-week juist door.
+    Het is de TOTAAL-eis van punt 15 fase 2 (`werkTotaal >= gevraagd`,
+    `apps/web/src/lib/blok.ts:550`), die tempo, drempel en anaeroob OPTELT en tegen een
+    doel-breed getal legt. Punt 17 zit exact op die naad.
+    DE SCHADE, MET DATUM. `dosisTredeVoorstel` geeft `null` tenzij de check
+    `geleverd_gestegen` of `geleverd_niet_gestegen` leest. Vanaf 2027-02-22, wanneer Korte
+    beklimmingen het actieve doel wordt, leest het A-doel dus ELK BLOK "niet geleverd" terwijl
+    het plan exact is uitgevoerd — en de dosis-trede kan per constructie nooit stijgen.
+    HET ANKER IN DE COACH-CANON. M63 (NORM) in `docs/TRAININGSMODEL.md` stelt dat het tekort het
+    VERSCHIL is tussen wat bedoeld was en wat geleverd is, naar rato bij een half uitgevoerde
+    sessie; M64 (NORM) stelt dat alleen een gemiste SLEUTELSESSIE een ingreep rechtvaardigt. De
+    referent is daarmee canoniek PLAN-relatief. LET OP DE GRENS: beide regels zijn geschreven
+    voor de WEEK-laag; ze op de BLOK-check toepassen is een UITBREIDING en geen citaat, en hoort
+    als zodanig verantwoord te worden.
+    WAT DE VOLGENDE RONDE MEET, en pas daarna wordt er iets gespecificeerd: de wat-als waarin de
+    totaal-eis tegen het PLAN van die week meet in plaats van tegen het doel-getal. Twee vragen
+    erbij, want zonder die twee is de reparatie te ruim. (1) Haalt de per-zone-poort een GRIJS
+    gereden week dan nog om? (2) Loopt de dosis-trede daarmee in vier blokken naar het plafond,
+    en is dat de bedoelde uitkomst? PRECEDENT dat dezelfde kant op wees en al gemeten is: punt 10
+    fase B deel 1 meet de weekstem bewust tegen het BEVROREN plan, omdat het plan de blok-norm in
+    2 van de 105 cellen haalt en op de echte reeks in 3 van de 46 weken.
 18. **De afronding op het scherm** — af · CLIENT plus TOOLING. Een sessieduur wordt KAAL gerenderd en toont
     daardoor float-ruis: `WorkoutDetail.tsx:57` zet `session.totaalMin` zonder opmaak op het
     scherm en `expandArchetype_` (`planner.ts:1383`) telt `warm + cool + mainMin` op uit blokken
@@ -778,6 +822,18 @@ punten staat onder *Gesloten — vindplaats*.
     (`retryLoad` afwezig), en de `errors`-teller stond op zeven van de acht shots op `none` — de
     achtste droeg alleen de bekende `/api/checkin`-404, die door de fouttolerante `getCheckin`
     op `null` valt en niet gooit. `retryLoad` heeft dus nooit gevuurd.
+32. **De rit-beoordeling is geen pijler** — open · CLIENT plus norm. Een coach oordeelt over een
+    gereden sessie op twee dingen die de app NIET gebruikt: of het voorgeschreven werk HIELD
+    binnen de sessie, en wat de renner er zelf over zei.
+    DE CANON KENT DIT AL EN NOEMT HET ONAF. M30 (NORM) geeft subjectieve terugkoppeling de
+    status "informeert". M31 (OPEN) noemt TWEE gebouwde en niet-aangesloten sensoren: de reden
+    waarom een training niet doorging (agenda of benen) en het verschil tussen verwachte en
+    gerapporteerde RPE. M19 (OPEN) noemt de betere uitkomstmaat bij naam: vermogen bij gelijke
+    RPE, of afgemaakt-versus-voorgeschreven vermogen.
+    HOE HET BINNENKWAM: die drie regels stonden BUITEN de reeks en kwamen daardoor nooit aan de
+    beurt. Het punt is aangemaakt zodat de volgorde ze wél draagt.
+    GAAT NA PUNT 17 — zonder een eerlijk uitvoerings-oordeel heeft een rijkere rit-beoordeling
+    niets om op te landen.
 
 ## De tijdslijn
 

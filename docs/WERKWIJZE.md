@@ -6,6 +6,7 @@ Canoniek document voor hoe we werken. Wordt bij elke nieuwe chat gelezen via een
 
 - **Werkwijze** → dit document. Wint van `HANDOFF.md`, van `CLAUDE.md` en van elke opener.
 - **Projectstand** → `HANDOFF.md`.
+- **Norm-laag (hoe coaching werkt)** → `docs/TRAININGSMODEL.md`. Norm voor de TRAININGSKANT: wat een coach weegt, waarop hij ingrijpt en wat hij bewust laat liggen. `DOELEN-SPEC` draagt de invulling PER DOEL en staat daaronder — dat document zet `TRAININGSMODEL` zelf al boven zichzelf. Een M-regel met status NORM is vastgesteld; een met status OPEN is een erkend gat en mag niet als besluit gelezen worden.
 - **Doel-laag (wat elk doel moet leveren)** → `docs/DOELEN-SPEC.md`. Een besluit dat daar als VASTGESTELD staat wordt niet opnieuw ter discussie gesteld; wijzigen gebeurt door dat document te wijzigen, niet in een chat.
 - **Parity (wat de oude app doet)** → de bevroren GAS-bron `daanhhk/training` @ `3e8090a`. Die wint van élke samenvatting, inclusief dit document, `HANDOFF.md` en `docs/VORMGEVING-SPEC.md`.
 - `CLAUDE.md` is de CC-kant en is afgeleid van dit document.
@@ -33,6 +34,8 @@ gewone vraag in de chat, in gewone taal, niet als verwijzing naar een paragraaf.
 Grotere klussen in fases met een stop-en-verifieer-moment ertussen. Recon-first voor durable artefacten: read-only recon → proposal- of recon-doc → Daan reviewt → pas dan bouwen.
 
 ## Beslissen
+
+- **Een ontwerpbesluit dat de TRAININGSLAAG raakt noemt de M-regel uit `docs/TRAININGSMODEL.md` waarop het rust — of stelt expliciet vast dat de canon daar OPEN is.** Aanleiding: bij punt 17 werd het besluit over de uitvoerings-referent onderbouwd met `DOELEN-SPEC`, terwijl M63 het antwoord al droeg en ongelezen bleef; de coach-bril kwam uit de chat in plaats van uit de bron. DE VORM IS BEWUST GEEN ZESDE PROMPTCONTROLE: dat maximum staat op vijf met een reden — groeit die lijst, dan wordt hij te lang om te draaien. Dit hoort bij het BESLUIT, niet bij de prompt-hygiëne.
 
 Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans perspectief echt onduidelijk is.
 
@@ -651,7 +654,7 @@ ondoorzichtig: er is per ronde vooruitgang zichtbaar maar nooit de afstand tot d
 
 ## Opener-sjabloon
 
-**De afsluitende chat schrijft de opener uit** — verbatim uit dit sjabloon, in één code-blok, ná het close-out-rapport (dan pas is de hash bekend). Er valt nog maar ÉÉN ding in te vullen: `<hash>`, op alle drie de URL's dezelfde close-out-hash. STAND en FOCUS worden NIET overgenomen — de opener WIJST naar het bovenste STAND-blok in `HANDOFF.md` in plaats van het na te vertellen. Verder niets toevoegen: de werkwijze staat hier, niet in de opener. Daan hoeft niets samen te stellen; hij krijgt één kant-en-klaar blok.
+**De afsluitende chat schrijft de opener uit** — verbatim uit dit sjabloon, in één code-blok, ná het close-out-rapport (dan pas is de hash bekend). Er valt nog maar ÉÉN ding in te vullen: `<hash>`, op alle vier de URL's dezelfde close-out-hash. STAND en FOCUS worden NIET overgenomen — de opener WIJST naar het bovenste STAND-blok in `HANDOFF.md` in plaats van het na te vertellen. `docs/TRAININGSMODEL.md` staat er sinds 04-08-2026 bij: dat is de NORM-laag voor de trainingskant, en zonder die URL reconstrueert elke chat de coach-bril in plaats van hem te lezen. Verder niets toevoegen: de werkwijze staat hier, niet in de opener. Daan hoeft niets samen te stellen; hij krijgt één kant-en-klaar blok.
 
 Reden voor die vorm: een opener die de stand overschrijft laat dezelfde tekst op twee plekken leven die elk per chat muteren — precies de drift die dit document moest opheffen. Eén bron, en de opener verwijst ernaar.
 
@@ -660,6 +663,7 @@ Dat leunt op twee eisen aan de close-out, en zonder die twee is de verwijzing lo
 --- BEGIN OPENER ---
 Lees eerst deze drie via web_fetch (RAW, gepind op commit-hash — NIET de blob-URL, die is stale):
 https://raw.githubusercontent.com/daanhhk/Cadans/<hash>/docs/WERKWIJZE.md
+https://raw.githubusercontent.com/daanhhk/Cadans/<hash>/docs/TRAININGSMODEL.md
 https://raw.githubusercontent.com/daanhhk/Cadans/<hash>/HANDOFF.md
 https://raw.githubusercontent.com/daanhhk/Cadans/<hash>/docs/DOELEN-SPEC.md
 
@@ -748,3 +752,6 @@ Volg de FOCUS uit het bovenste STAND-blok.
 - 2026-08-04 — les toegevoegd in *Recon en bewijslast*: een aanbod erft de toestandsruimte van de poort waaraan het hangt. Aanleiding: het aanbod van punt 10 fase B deel 2 hing aan een weekstem die juist eist dat er geen dag meer staat; over 630 cellen bleek er in geen enkele van de 119 vuur-cellen iets toe te voegen, en het punt is zonder bouw gesloten.
 - 2026-08-04 — les toegevoegd in *Recon en bewijslast*: een classificatie met een substring-terugval geeft altijd een antwoord en meldt nooit dat ze het niet weet. Aanleiding: `intentFromType_` noemde `combo_long_with_efforts` "duur" op grond van `indexOf("long")`, waardoor poort 1 en poort 2 van de sleutel-machinerie tegelijk verkeerd stonden.
 - 2026-08-04 — drie lessen toegevoegd in *Recon en bewijslast*: een uitslag noemt teller, noemer en uitsluiting met reden en de noemer is het totaal; een meting die door een shell-laag gaat wordt eerst op een bekende waarde getoetst; en geen heredocs voor bestandsinhoud, met een syntaxcontrole vóór de meting. Aanleiding: bij punt 30 kromp de noemer van 93 naar 85 en werd een ijk-run op zijn uitkomst gekozen, Git Bash verbouwde een pad-argument tot een schijnbaar propagatievenster van 90 seconden, en een python-heredoc verminkte voor de tweede keer een escape.
+- 2026-08-04 — `docs/TRAININGSMODEL.md` toegevoegd aan *Voorrang bij tegenspraak* als NORM-laag voor de trainingskant, boven `DOELEN-SPEC`. Aanleiding: `DOELEN-SPEC` zette dat document zelf al boven zichzelf, terwijl WERKWIJZE het niet noemde.
+- 2026-08-04 — regel toegevoegd in *Beslissen*: een besluit dat de trainingslaag raakt noemt zijn M-regel, of stelt vast dat de canon daar OPEN is. Aanleiding: bij punt 17 droeg M63 het antwoord over de uitvoerings-referent al, en het besluit werd toch met `DOELEN-SPEC` onderbouwd.
+- 2026-08-04 — *Opener-sjabloon* haalt voortaan VIER raw-URL's op; `docs/TRAININGSMODEL.md` is de vierde. Aanleiding: de norm-laag stond boven `DOELEN-SPEC` en werd door geen enkele opener opgehaald, dus elke chat reconstrueerde de coach-bril.
