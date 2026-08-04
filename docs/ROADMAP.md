@@ -720,7 +720,7 @@ punten staat onder *Gesloten — vindplaats*.
     stil terugzetten naar Base. Vraagt dus een eigen rood-test op precies dat geval.
     PUNT 12 LOST DIT VOOR ZIJN EIGEN JA-TIK AL OP en wacht hier niet op; dit punt dekt de
     HANDMATIGE doelwissel in Instellingen.
-29. **De shot-harness controleert de draaiende dev-worker niet** — open · TOOLING. De sweep
+29. **De shot-harness controleert de draaiende dev-worker niet** — af · TOOLING. De sweep
     schiet blind: hij toetst nergens of de `wrangler dev` die op 8787 luistert bij de HUIDIGE
     repo hoort.
     GEMETEN bij punt 12 fase B: VIER NA-runs achter elkaar vielen om op
@@ -731,7 +731,15 @@ punten staat onder *Gesloten — vindplaats*.
     dus BEIDE metingen moesten opnieuw. Een gemengde reeks is geen vergelijking.
     RICHTING: vóór de sweep een route- of versiesignaal van de draaiende worker lezen en
     STOPPEN bij mismatch, in plaats van te schieten en de uitslag te moeten wantrouwen.
-30. **Eén uitvallende sub-request maakt het HELE weekscherm zwart** — open · CLIENT. Valt één
+    AF per 04-08-2026, bouw `b3a3686`. `expectedApiRoutes` leest de parameterloze GET-paden uit
+    `workers/api/src/routes/api.ts` ZELF — een handlijst zou uit de pas lopen — en GOOIT bij een
+    lege lijst, want dat zou de controle stil uitzetten. `probeRoutes` telt alleen een 404 als
+    missing (Hono geeft 404 op een onbekend pad, een bestaande route met een ontbrekende query
+    geeft 400) en een time-out als `unknown`: een vals STOP blokkeert legitiem werk. De controle
+    staat VÓÓR de `rmSync`, dus bij een STOP blijft de vorige meting staan. Prod gooit nooit.
+    GROEN 15 van 15; ROOD aangetoond met `/rood-toets-29`, waarna de 95 PNG's van de groene run
+    er nog stonden.
+30. **Eén uitvallende sub-request maakt het HELE weekscherm zwart** — af · CLIENT. Valt één
     van de rijen weg die het view-model voedt, dan verdwijnt niet die één kaart maar de hele
     week; er staat dan `not found` met een Opnieuw-knop.
     GEMETEN, TWEE KEER en langs twee verschillende wegen: bij de verouderde dev-worker
@@ -742,6 +750,34 @@ punten staat onder *Gesloten — vindplaats*.
     WAAROM HET TELT: elke nieuwe route die aan die bouw wordt toegevoegd vergroot het oppervlak
     waarop een deploy of een storing het weekscherm onbruikbaar maakt. Het defect groeit dus
     mee met de app, en het venster waarin het zichtbaar is loopt over een deploy heen.
+    AF per 04-08-2026, bouwdoc `c852217` (`docs/PUNT30-BOUWDOC.md`), bouw `5502238`.
+    HET VERDICT IS VERSCHOVEN, en dat is de kern van dit punt: NIET per-kaart-degradatie maar
+    HERHALEN-EN-BENOEMEN. Grond: twaalf van de vijftien rijen voeden `buildWeekProposal`, en de
+    getoonde week gaat via `persistWeekplan` (`schema.ts:1613`) als plan-van-record de opslag in.
+    Stil degraderen levert dus geen ontbrekende kaart maar een ANDER plan-van-record — zelfde
+    vorm als punt 26. En er blijft maar één rij over die je veilig kunt laten vallen
+    (`dispositions`); `powerZones` voedt een oordeel en `doelPassend` onderdrukt een kaart.
+    WAT ER WEL KWAM: `retryLoad` herhaalt de HELE bouw (3 pogingen, 600 en 1800 ms — BELEID, geen
+    ijking), en `laadGelabeld` noemt de gevallen rij bij NAAM. De sterkste grond staat niet in de
+    beschrijving hierboven: dit is een PWA met vijftien parallelle verzoeken, en één time-out op
+    een slechte verbinding kost het hele weekscherm. Het propagatievenster na een deploy wordt
+    BEWUST niet gedekt — zie het bouwdoc §5.
+31. **De harness besmet zijn eigen nulmeting** — open · TOOLING. Twee sweeps op ONGEWIJZIGDE
+    code leverden 8 verschillende shots op, allemaal `v7-midweek`. GEMETEN bij punt 30: run 1
+    tegen run 2 gaf die acht, run 1 tegen run 3 gaf 93 van 93 identiek. De wisseling is dus
+    INTERMITTEREND, en dat is een ander karakter dan punt 23 — daar gaat het om pixel-verschil
+    bij IDENTIEKE `innerText`, hier mogelijk om verschoven TOESTAND.
+    KANDIDAAT-MECHANISME, NIET VASTGESTELD: `persistWeekplan` (`apps/web/src/lib/schema.ts:1613`)
+    schrijft bij ELKE pageload naar D1, dus run 1 kan de nulmeting van run 2 besmetten.
+    `v7-midweek` is het scenario dat daar het gevoeligst voor is: het draagt `dagOffset` 2, dus
+    maandag en dinsdag zijn verstreken en de bevroren weekplan-entry doet er mee.
+    DE UITSLUITENDE TOETS: twee opeenvolgende sweeps met de weekplan-tabel ervoor én erna
+    gelezen. Beweegt die tabel tussen de runs, dan is het mechanisme bevestigd; beweegt hij niet,
+    dan valt deze kandidaat af en is het hetzelfde pixel-verschijnsel als punt 23.
+    LOSGEKOPPELD VAN DE PUNT 30-BOUW, en dat is gemeten: de ijk-runs stonden op de VÓÓR-staat
+    (`retryLoad` afwezig), en de `errors`-teller stond op zeven van de acht shots op `none` — de
+    achtste droeg alleen de bekende `/api/checkin`-404, die door de fouttolerante `getCheckin`
+    op `null` valt en niet gooit. `retryLoad` heeft dus nooit gevuurd.
 
 ## De tijdslijn
 
