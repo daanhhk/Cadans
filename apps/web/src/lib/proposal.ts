@@ -650,12 +650,20 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
     // terugwerkende kracht). In plaats daarvan leest hij zijn BEVROREN entry uit de blob
     // (de worker-freeze houdt die vast, snapshotDayAction_-semantiek, GAS Algorithm.gs:185).
     // Geen entry → null → gereduceerde kaart; expliciet GEEN reconstructie.
-    // VANDAAG (en een niet-te-plannen toekomstige dag) houdt het bestaande gedrag.
+    //
+    // ROADMAP punt 26 — DE BEVROREN-ENTRY-TAK DEKT OOK EEN DAG DIE VANDAAG GEREDEN IS.
+    // De poort stond op `isPast` alleen, dus strikt in het verleden. Een dag die VANDAAG gereden
+    // is heeft daardoor NOCH sessies — de allocator bouwt die alleen voor nog te plannen dagen —
+    // NOCH een `plannedForDone`, en verliest dus zijn plan-vergelijking én zijn bijdrage aan alle
+    // drie de weeknoemers. GEMETEN 15 van de 15 cellen; zie docs/PUNT26-BOUWDOC.md §1.
+    // `d.gedaan` is hier de uit de ACTIVITIES afgeleide vlag (`derivePlannerGedaan`), niet
+    // `pd.gedaan` van de planner-rij: de grid-map hierboven vouwt beide samen via `isGedaan`.
+    // Een niet-te-plannen TOEKOMSTIGE dag houdt het bestaande gedrag.
     let plannedForDone: ProposalWorkout | null = null;
     let frozenType: string | null = null;
     const isPast = stripTime_(d.datum).getTime() < todayT;
     if (!tePlannenSet.has(d.dagIdx)) {
-      if (isPast) {
+      if (isPast || d.gedaan) {
         const fe = frozenByDate.get(ovDISO);
         plannedForDone = workoutFromFrozenEntry(fe);
         // De bevroren entry draagt ook het TYPE; de dag-spiegel planner_days.voorgesteld_type

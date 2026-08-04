@@ -184,6 +184,47 @@ export function buildWeekplanEntries(
   return out;
 }
 
+/**
+ * ROADMAP punt 26 — HOUD DE ENTRY VAN EEN DAG DIE VANDAAG GEREDEN IS.
+ *
+ * HET VERLEDEN DOET DE WORKER-FREEZE: `mergeFrozenWeekplan` houdt een bewaarde entry vast zolang
+ * `d < todayISO` (`workers/api/src/weekplanFreeze.ts:59`, en de na-lus op `:68` draagt dezelfde
+ * grens). VANDAAG valt daar per constructie buiten — en de verse payload noemt de dag ook niet
+ * meer, want `entryFromDay` geeft `null` zodra een dag geen sessies heeft. Een dag die vandaag
+ * gereden is zou daarmee STIL uit de blob verdwijnen, en met hem de plan-vergelijking.
+ *
+ * Deze helper dekt dus uitsluitend VANDAAG en verder niets. Hij muteert `entries` noch `stored`
+ * en geeft een NIEUWE array terug.
+ *
+ * DE ENTRY GAAT VERBATIM MEE, niet herbouwd uit `plannedForDone`: die vorm mist `variantId` en
+ * `archetypeId`, en juist die velden leest de recency-seed. Een herbouwde entry zou de seed dus
+ * stil van bron veranderen.
+ */
+export function withDoneTodayEntries(
+  entries: WeekplanEntry[],
+  week: ProposalWeek,
+  stored: unknown[],
+  todayISO: string,
+): WeekplanEntry[] {
+  const heeftDatum = new Set(entries.map((e) => e.datum));
+  const storedByDate = new Map<string, WeekplanEntry>();
+  for (const e of stored || []) {
+    const d = (e as { datum?: unknown } | null)?.datum;
+    if (typeof d === "string" && d) storedByDate.set(d, e as WeekplanEntry);
+  }
+
+  const out = entries.slice();
+  for (const d of week.days || []) {
+    if (d.datum < todayISO) continue; // het verleden doet de freeze
+    if (heeftDatum.has(d.datum)) continue; // de verse payload dekt 'm al
+    if ((d.sessions || []).length !== 0) continue; // heeft sessies → geen gereden dag
+    if (d.plannedForDone == null) continue; // geen plan om te bewaren
+    const bewaard = storedByDate.get(d.datum);
+    if (bewaard !== undefined) out.push(bewaard);
+  }
+  return out;
+}
+
 /** De 7 ISO-datums van de week die op `mondayISO` begint (lokale kalender). */
 export function weekDatesFrom(mondayISO: string): string[] {
   const [y, m, d] = mondayISO.split("-").map(Number);

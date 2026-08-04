@@ -84,6 +84,7 @@ import {
   hasUnrecordedPastTrainingDay,
   mergeReconEntries,
   sameForwardEntries,
+  withDoneTodayEntries,
 } from "./weekplanBlob";
 // De 5-bucket-vouwing van de GEREDEN kant woont sinds fase 1a van de zone-munt in
 // `zonemunt.ts` (docs/ZONE-MUNT-ONTWERP.md §2): één bron voor beide kanten van de munt.
@@ -1256,7 +1257,15 @@ export function persistWeekplan(
   todayISO: string,
   reconWeek?: ProposalWeek | null,
 ): boolean {
-  const entries = buildWeekplanEntries(proposalWeek, doel);
+  // ROADMAP punt 26 — VÓÓR beide takken. Een dag die VANDAAG gereden is heeft geen sessies meer,
+  // dus `buildWeekplanEntries` levert er geen entry voor, en de worker-freeze dekt alleen het
+  // VERLEDEN — de bewaarde entry zou dus stil verdwijnen. Dit haalt hem terug, verbatim.
+  const entries = withDoneTodayEntries(
+    buildWeekplanEntries(proposalWeek, doel),
+    proposalWeek,
+    storedWeekplans,
+    todayISO,
+  );
   if (reconWeek) {
     // Aanpak A: er is een gat (een verstreken trainingsdag zonder opgeslagen entry). Vul het met
     // het schone weekmaandag-plan en schrijf ALTIJD — de dedup zou anders overslaan omdat de

@@ -188,3 +188,74 @@ describe("persistWeekplan MET reconWeek (aanpak A — plan-van-record-gat)", () 
     expect(putWeekplan).not.toHaveBeenCalled();
   });
 });
+
+// ROADMAP punt 26 — DE KETEN OVER TWEE OPEENVOLGENDE RENDERS.
+//
+// De eerste render schrijft de blob; de tweede leest die blob terug en schrijft opnieuw. Zonder
+// term B verdwijnt de entry van een VANDAAG gereden dag bij die tweede schrijfbeurt: de dag heeft
+// geen sessies meer, dus `buildWeekplanEntries` levert er geen entry voor, en de worker-freeze
+// dekt alleen `d < todayISO`. Deze test valt zonder term B om.
+describe("persistWeekplan — punt 26, twee renders op dezelfde dag", () => {
+  const DAG = "2026-03-11";
+  const actRow = (dt: Date, min: number, tss: number): unknown[] => {
+    const r: unknown[] = new Array(17).fill("");
+    r[0] = dt;
+    r[1] = "Ride";
+    r[3] = min;
+    r[7] = 0.72;
+    r[8] = tss;
+    return r;
+  };
+  const RIT = [actRow(new Date(2026, 2, 11, 9, 30, 0), 55, 48)];
+
+  const bouw = (weekplans: unknown[], activities: unknown[]) =>
+    buildWeekProposal({
+      settings: SETTINGS,
+      plannerDays: WEEK,
+      events: [],
+      activities,
+      weekplans,
+      wellness: [],
+      rpe: [],
+      todayISO: TODAY,
+    } as never);
+
+  beforeEach(() => putWeekplan.mockClear());
+
+  it("de entry van de vandaag-gereden dag OVERLEEFT de tweede render", () => {
+    // Render 1: nog geen rit geregistreerd → de dag heeft sessies en levert een entry.
+    const w1 = bouw([], []);
+    expect(persistWeekplan(w1, "FTP", [], TODAY)).toBe(true);
+    const [, entries1] = putWeekplan.mock.calls[0] as unknown as [
+      string,
+      { datum: string }[],
+      string,
+    ];
+    expect(entries1.map((e) => e.datum)).toContain(DAG);
+
+    // Render 2: de rit is binnen. De dag verliest zijn sessies.
+    putWeekplan.mockClear();
+    const w2 = bouw(entries1 as unknown[], RIT);
+    const dag2 = (
+      w2 as never as { days: { datum: string; sessions: unknown[] }[] }
+    ).days.find((d) => d.datum === DAG);
+    expect(dag2?.sessions.length).toBe(0);
+
+    persistWeekplan(w2, "FTP", entries1 as unknown[], TODAY);
+
+    // DE EIS IS DE UITKOMST, niet of er geschreven wordt. Met term B ziet de dedup geen
+    // wijziging en blijft de opslag staan; zonder term B mist de payload de dag en schrijft de
+    // PUT hem weg. Toets dus de blob die ER NA AFLOOP STAAT.
+    const naAfloop =
+      putWeekplan.mock.calls.length > 0
+        ? ((
+            putWeekplan.mock.calls[0] as unknown as [
+              string,
+              { datum: string }[],
+              string,
+            ]
+          )[1] as { datum: string }[])
+        : (entries1 as { datum: string }[]);
+    expect(naAfloop.map((e) => e.datum)).toContain(DAG);
+  });
+});
