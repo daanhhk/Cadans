@@ -270,6 +270,15 @@ export const syncState = sqliteTable("sync_state", {
   eventOvernameBlok: text("event_overname_blok"),
   /** 'ja' | 'nee' | null. Exact die twee waarden; de route valideert strikt en normaliseert niet. */
   eventOvernameAntwoord: text("event_overname_antwoord"),
+  /** ROADMAP punt 12 — de blokstart-MAANDAG (yyyy-MM-dd) waarvoor de doel-passendheid-vraag
+   * beantwoord is. ALLEEN "nee" hoeft bewaard: na "ja" past het doel bij de uren en kan de kaart
+   * per constructie niet meer vuren. Spiegelt `dosisTredeBlok`. Zie docs/PUNT12-BOUWDOC.md §5. */
+  doelPassendBlok: text("doel_passend_blok"),
+  /** Het GENORMALISEERDE doel waarvoor dat antwoord geldt. Het doel staat er expliciet bij zodat
+   * een wissel BINNEN hetzelfde blok naar een ander niet-passend doel als NIEUW besluit telt en
+   * de vraag terugkomt — anders zou één "nee" het hele blok dichtzetten. Spiegelt
+   * `dosisTredeDoel`. */
+  doelPassendDoel: text("doel_passend_doel"),
   /** ROADMAP punt 6 fase 2 — de RAUWE `icu_power_zones`-array als JSON-string, afgeleid uit de
    * NIEUWSTE fiets-rit die de activiteiten-sync ophaalt (de bovengrenzen in %FTP, bijvoorbeeld
    * `[55,75,90,105,120,150,999]`). Null = nog nooit een bruikbare rit gezien; de client valt dan

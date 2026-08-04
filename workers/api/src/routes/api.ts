@@ -8,7 +8,7 @@
  * User = CURRENT_USER_ID (vervalt in de auth-fase).
  */
 
-import { DOSIS_TREDE_MAX } from "@cadans/engine";
+import { DOEL_OPTIONS, DOSIS_TREDE_MAX } from "@cadans/engine";
 import {
   type DayOverride,
   type DispositionReason,
@@ -27,6 +27,7 @@ import {
   readActivityByExtId,
   readCheckin,
   readDispositions,
+  readDoelPassend,
   readDosisTrede,
   readEventOvername,
   readEvents,
@@ -42,6 +43,7 @@ import {
   type WellnessRecord,
   writeCheckin,
   writeDisposition,
+  writeDoelPassend,
   writeDosisTrede,
   writeEventOvername,
   writeEvents,
@@ -657,6 +659,50 @@ api.put("/event-overname", async (c) => {
     event as string | null,
     blok as string | null,
     antwoord as string | null,
+  );
+  return c.json({ ok: true });
+});
+
+// ROADMAP punt 12 — DOEL-PASSENDHEID (spiegelt /event-overname). GET geeft de blokstart en het
+// doel waarvoor geantwoord is (of twee nullen); PUT zet de twee samen. Alleen "nee" wordt
+// bewaard: na "ja" past het doel bij de uren en kan de kaart per constructie niet meer vuren.
+// Zie docs/PUNT12-BOUWDOC.md §5.
+api.get("/doel-passend", async (c) => {
+  const db = makeDb(c.env.DB);
+  const { blok, doel } = await readDoelPassend(db, CURRENT_USER_ID);
+  return c.json({ blok, doel });
+});
+
+api.put("/doel-passend", async (c) => {
+  const db = makeDb(c.env.DB);
+  const body = await readJsonObject(c);
+  const blok = body.blok;
+  const doel = body.doel;
+  // NIET normaliseren, NIET clampen, GEEN lege string accepteren. Elke afwijzing gebeurt VÓÓR de
+  // schrijfactie, zodat een 400 ook echt betekent dat er niets is weggeschreven.
+  if (blok !== null && (typeof blok !== "string" || !isIsoDate(blok))) {
+    throw new HTTPException(400, {
+      message: "invalid blok, expected yyyy-MM-dd or null",
+    });
+  }
+  // STRIKT OP DOEL_OPTIONS terwijl `settings.doel` vrije tekst is, en dat is opzet: hier wordt het
+  // GENORMALISEERDE doel bewaard, want de poort vergelijkt straks genormaliseerd met
+  // genormaliseerd. Een legacy-string hoort dus al door `normalizeDoel_` te zijn gegaan vóór hij
+  // hier aankomt.
+  if (
+    doel !== null &&
+    (typeof doel !== "string" ||
+      !(DOEL_OPTIONS as readonly string[]).includes(doel))
+  ) {
+    throw new HTTPException(400, {
+      message: "invalid doel, expected a DOEL_OPTIONS value or null",
+    });
+  }
+  await writeDoelPassend(
+    db,
+    CURRENT_USER_ID,
+    blok as string | null,
+    doel as string | null,
   );
   return c.json({ ok: true });
 });

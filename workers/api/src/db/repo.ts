@@ -707,6 +707,56 @@ export async function writeEventOvername(
     });
 }
 
+// ── doel-passendheid (sync_state.doel_passend_*) — ROADMAP punt 12 ────────
+// Het antwoord op de vraag of een ander doel beter bij de gedeclareerde uren past. De BLOKSTART
+// plus het GENORMALISEERDE doel vormen samen de identiteit: een wissel binnen hetzelfde blok naar
+// een ander niet-passend doel is een NIEUW besluit en hoort de vraag terug te brengen. Alleen
+// "nee" wordt bewaard — na "ja" past het doel en kan de kaart per constructie niet meer vuren.
+// Zie docs/PUNT12-BOUWDOC.md §5.
+
+export async function readDoelPassend(
+  db: Db,
+  userId: number,
+): Promise<{ blok: string | null; doel: string | null }> {
+  const rows = await db
+    .select({
+      blok: syncState.doelPassendBlok,
+      doel: syncState.doelPassendDoel,
+    })
+    .from(syncState)
+    .where(eq(syncState.userId, userId))
+    .limit(1);
+  return {
+    blok: rows[0]?.blok ?? null,
+    doel: rows[0]?.doel ?? null,
+  };
+}
+
+/** Zet de twee doel-passendheid-waarden samen. Upsert: raakt ALLEEN deze twee kolommen → de
+ * sync-velden, debt-opt-in, fatigue-shift, dosis-trede, event-overname en power-zones blijven
+ * intact. Zelfde vorm als `writeEventOvername`. */
+export async function writeDoelPassend(
+  db: Db,
+  userId: number,
+  blok: string | null,
+  doel: string | null,
+): Promise<void> {
+  await db
+    .insert(syncState)
+    .values({
+      userId,
+      doelPassendBlok: blok,
+      doelPassendDoel: doel,
+    })
+    .onConflictDoUpdate({
+      target: syncState.userId,
+      set: {
+        doelPassendBlok: blok,
+        doelPassendDoel: doel,
+      },
+    });
+}
+
 // ── power-zones (sync_state.power_zones_json) — ROADMAP punt 6 fase 2 ──────
 // De RAUWE icu_power_zones-array, afgeleid uit de nieuwste fiets-rit door `syncActivities`.
 // Zie docs/ZONE-SYNC-BOUWDOC.md §3 t/m §5.

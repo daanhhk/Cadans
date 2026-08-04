@@ -71,6 +71,13 @@
       "when": 1785515817459,
       "tag": "0009_amusing_mordo",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1785833967207,
+      "tag": "0010_uneven_scarlet_spider",
+      "breakpoints": true
     }
   ]
 }
