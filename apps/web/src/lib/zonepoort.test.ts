@@ -1,7 +1,12 @@
 import type { PlannerDay, SettingsInput } from "@cadans/shared";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { ActValuesRow } from "./activities";
-import { blokUitvoering, buildBlokReferent, buildBlokReview } from "./blok";
+import {
+  blokDosisNorm,
+  blokUitvoering,
+  buildBlokReferent,
+  buildBlokReview,
+} from "./blok";
 import { buildWeekProposal } from "./proposal";
 import { buildWeekplanEntries } from "./weekplanBlob";
 import { werkzoneLabelsVan_ } from "./zonelabels";
@@ -282,7 +287,13 @@ describe("punt 14 — de zone-poort, met de producent in de lus", () => {
 // shots van fase 1 lieten zien. De blokpoort is de vereniging over het blok; binnen één blok
 // liggen doel en fase vast, dus dat is bewijs uit dezelfde bron.
 describe("punt 14 fase 1b — de blokpoort", () => {
-  it("(F) een week ZONDER eigen plan erft de blokpoort, en op-plan gereden leest als geleverd", () => {
+  // HERIJKT bij ROADMAP punt 17. De TERUGVAL zelf is ongewijzigd: een week zonder eigen plan erft
+  // nog steeds de LABELS van de blokpoort, en dat is precies wat hier geasserteerd blijft. Wat
+  // punt 17 introk is dat zo'n week ook MEETELT in het oordeel: de referent meet sindsdien tegen
+  // het plan van die week, en een week zonder plan heeft plan-werktotaal 0 en zou dus TRIVIAAL
+  // geleverd lezen (docs/PUNT17-BOUWDOC.md §5). De erfelijke week telt daarom niet meer mee; de
+  // twee weken die wél een plan dragen doen dat onverminderd, en lezen op-plan gereden geleverd.
+  it("(F) een week ZONDER eigen plan erft de blokpoort-LABELS, maar telt niet mee", () => {
     // FASE 1d: de bron zijn TWEE opbouwweken. Vóór 1d droeg één bewaarde week het hele blok;
     // dat is nu juist wat test M verbiedt — zie §6 van het bouwdoc.
     const basis = blokMetPlan();
@@ -292,12 +303,16 @@ describe("punt 14 fase 1b — de blokpoort", () => {
     });
     if (!r) throw new Error("referent onverwacht null");
     const opbouw = r.weeks.filter((w) => w.blokWeek <= 3);
-    for (const w of opbouw) expect(w.telt).toBe(true);
     expect(opbouw[0]?.poortHerkomst).toBe("blok");
     expect(opbouw[1]?.poortHerkomst).toBe("week");
     expect(opbouw[2]?.poortHerkomst).toBe("week");
-    // En het oordeel staat: exact volgens plan gereden is geleverd.
-    for (const w of opbouw) expect(w.geleverdOk).toBe(true);
+    // De erfelijke week draagt WEL de labels — de terugval leeft nog.
+    expect(opbouw[0]?.zonesVoorgeschreven.length).toBeGreaterThan(0);
+    expect(opbouw.map((w) => w.telt)).toEqual([false, true, true]);
+    expect(opbouw[0]?.geleverdOk).toBeNull();
+    // En het oordeel staat waar er een plan is: exact volgens plan gereden is geleverd.
+    for (const w of opbouw.filter((w) => w.telt))
+      expect(w.geleverdOk).toBe(true);
   });
 
   it("(H) de EIGEN weekpoort wint van de blokpoort", () => {
@@ -437,10 +452,17 @@ describe("punt 14 fase 1d — waar het bewijs vandaan mag komen", () => {
 
     // De opzet klopt: tempo ruim boven norm, drempel eronder. Zonder deze twee zou groen ook
     // kunnen komen doordat er niets te poorten viel.
+    //
+    // HERIJKT bij ROADMAP punt 17. Deze check las `w1.gevraagdTempo`, en dat veld is sindsdien
+    // het PLAN van die week — hier nul, want de opbouwweken dragen geen plan. De opzet hoort dus
+    // tegen de DOEL-BREDE dosis-norm, en die is precies wat `blokDosisNorm` nog steeds levert. De
+    // strekking is onveranderd; alleen de bron van het vergelijkingsgetal klopt weer.
     const w1 = r.weeks[0];
     if (!w1) throw new Error("geen weken");
-    expect(w1.geleverdTempo).toBeGreaterThan(w1.gevraagdTempo);
-    expect(w1.geleverdDrempel).toBeLessThan(w1.gevraagdDrempel);
+    const dosis = blokDosisNorm("Onderhoud", 5, 0);
+    if (!dosis) throw new Error("dosis onverwacht null");
+    expect(w1.geleverdTempo).toBeGreaterThan(dosis.normTempo);
+    expect(w1.geleverdDrempel).toBeLessThan(dosis.normDrempel);
 
     // De deloadweek levert geen bewijs, dus de blokpoort is leeg.
     for (const w of r.weeks.filter((w) => w.blokWeek <= 3)) {
@@ -450,7 +472,10 @@ describe("punt 14 fase 1d — waar het bewijs vandaan mag komen", () => {
     }
   });
 
-  it("(L) twee opbouwweken met plan dragen het blok, de derde erft, en het oordeel VALT", () => {
+  // HERIJKT bij ROADMAP punt 17, zelfde grond als (F): de derde week erft de LABELS maar telt
+  // niet meer mee. Het blok spreekt op de twee weken die een eigen plan dragen — precies
+  // BLOK_MIN_BEOORDEELBARE_WEKEN — en het oordeel VALT daar, wat de kern van deze test is.
+  it("(L) twee opbouwweken met plan dragen het blok, de derde erft de labels, en het oordeel VALT", () => {
     const basis = blokMetPlan({ drempel: -35 });
     const r = referent({
       weekplans: alleenWeken_(basis.weekplans, [0, 1]),
@@ -461,12 +486,14 @@ describe("punt 14 fase 1d — waar het bewijs vandaan mag komen", () => {
     expect(opbouw[0]?.poortHerkomst).toBe("week");
     expect(opbouw[1]?.poortHerkomst).toBe("week");
     expect(opbouw[2]?.poortHerkomst).toBe("blok");
-    for (const w of opbouw) expect(w.telt).toBe(true);
-    // Drempel staat in de poort en komt tekort, dus de weken vallen.
-    for (const w of opbouw) {
-      expect(w.zonesVoorgeschreven).toContain("drempel");
+    expect(opbouw.map((w) => w.telt)).toEqual([true, true, false]);
+    // Drempel staat in de poort — bij ALLE DRIE, want de labels erven gewoon door.
+    for (const w of opbouw) expect(w.zonesVoorgeschreven).toContain("drempel");
+    // En drempel komt tekort, dus de weken die meetellen vallen.
+    for (const w of opbouw.filter((w) => w.telt))
       expect(w.geleverdOk).toBe(false);
-    }
+    expect(blokUitvoering(r).beoordeeldeWeken).toBe(2);
+    expect(blokUitvoering(r).geleverd).toBe(false);
   });
 
   it("(M) ÉÉN opbouwweek met plan is te dun bewijs → zwijgen", () => {
@@ -522,14 +549,22 @@ describe("punt 14 fase 1d — de deloadweek, geïsoleerd", () => {
 
     // De opzet klopt: tempo ONDER norm, drempel erboven. Telde de deloadweek als bewijs, dan trok
     // hij tempo de poort in en zou elke week vallen op een zone die geen opbouwweek voorschreef.
+    //
+    // HERIJKT bij ROADMAP punt 17, zelfde grond als in (K): `gevraagdTempo` is nu het plan van
+    // die week, en dat plan schrijft hier UITSLUITEND drempel voor — tempo staat er per
+    // constructie op nul. De opzet-check hoort dus tegen de doel-brede dosis-norm.
     const w1 = opbouw[0];
     if (!w1) throw new Error("geen weken");
-    expect(w1.geleverdTempo).toBeLessThan(w1.gevraagdTempo);
-    expect(w1.geleverdDrempel).toBeGreaterThanOrEqual(w1.gevraagdDrempel);
+    const dosis = blokDosisNorm("Onderhoud", 5, 0);
+    if (!dosis) throw new Error("dosis onverwacht null");
+    expect(w1.geleverdTempo).toBeLessThan(dosis.normTempo);
+    expect(w1.geleverdDrempel).toBeGreaterThanOrEqual(dosis.normDrempel);
 
+    // De derde opbouwweek draagt geen eigen plan en telt sinds punt 17 niet meer mee; de labels
+    // erft hij wél, en dat is wat deze test toetst — de deloadweek mag `tempo` niet inbrengen.
+    expect(opbouw.map((w) => w.telt)).toEqual([true, true, false]);
     for (const w of opbouw) {
       expect(w.zonesVoorgeschreven).toEqual(["drempel"]);
-      expect(w.telt).toBe(true);
       // HERIJKT bij punt 15 fase 2: `geleverdOk` is sindsdien de CONJUNCTIE van het per-zone-
       // oordeel en de nieuwe totaal-eis, en deze fixture rijdt 40 tempo-minuten te weinig, dus hij
       // zakt terecht op het TOTAAL. Wat deze test toetst is de POORT, en dat is de per-zone-kant:

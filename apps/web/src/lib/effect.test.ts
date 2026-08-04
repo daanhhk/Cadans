@@ -439,10 +439,14 @@ describe("buildBlokReview — de twee effect-poorten", () => {
       weekplans: ["2026-06-29", "2026-07-06", "2026-07-13", "2026-07-20"].map(
         (datum) => ({
           datum,
+          // ROADMAP punt 17 — MET BANDEN. `planZone5_` leest `pctLo`/`pctHi`, niet `zone`; zonder
+          // die twee velden vouwt dit plan naar NUL werkminuten en leest elke uitvoering
+          // triviaal geleverd. De labels alleen volstonden onder de doel-brede norm, niet meer
+          // onder een plan-relatieve referent.
           blokken: [
-            { minuten: 20, zone: "tempo" },
-            { minuten: 40, zone: "drempel" },
-            { minuten: 10, zone: "anaeroob" },
+            { minuten: 20, zone: "tempo", pctLo: 80, pctHi: 88 },
+            { minuten: 40, zone: "drempel", pctLo: 92, pctHi: 100 },
+            { minuten: 10, zone: "anaeroob", pctLo: 110, pctHi: 120 },
           ],
         }),
       ),

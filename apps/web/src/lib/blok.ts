@@ -17,7 +17,6 @@ import {
   DOSIS_TREDE_STAP_MIN,
   KWALITEIT_MIN_PER_PRIKKEL,
   KWALITEIT_MIN_PER_PRIKKEL_DEFAULT,
-  mesoFactor,
   profileForDoel_,
   zoneTimesFromCell_,
 } from "@cadans/engine";
@@ -35,6 +34,7 @@ import { werkzoneLabelsVan_ } from "./zonelabels";
 import {
   actualZone5_,
   bibliotheekSignatuur,
+  planZone5_,
   ZONE5_GRENZEN_DEFAULT,
   type Zone5Key,
 } from "./zonemunt";
@@ -315,6 +315,14 @@ export interface BlokWeek {
   geleverdTempo: number;
   geleverdDrempel: number;
   geleverdAnaeroob: number;
+  /** ROADMAP punt 17 — de ONAFGERONDE plan-zoneminuten van DEZE week, uit de eigen bewaarde
+   * entries. Dit zijn de waarden waarop het oordeel valt; `gevraagdTempo` c.s. hierboven zijn
+   * dezelfde grootheden, één keer afgerond voor het scherm. Ze staan er als DATA zodat een
+   * volgende ronde kan zien waartegen er gemeten is zonder het plan opnieuw te vouwen. */
+  planTempo: number;
+  planDrempel: number;
+  planAnaeroob: number;
+  planWerk: number;
   /** Rust en Duur dragen geen norm, maar wél de vraag "waar zaten die minuten dan wel". */
   geleverdRust: number;
   geleverdZ2: number;
@@ -385,6 +393,58 @@ function poortsetVoorWeek_(
   return WERKZONES.filter((z) => gezien.has(z));
 }
 
+/** ROADMAP punt 17 — DE TOLERANTIE IS DE MEETKORREL, niet een drijvende-komma-haar.
+ *
+ * AFWIJKING VAN docs/PUNT17-BOUWDOC.md §7, en wel GEMETEN. Die spec vroeg 1e-6 minuut. Dat is zes
+ * honderdduizendste seconde, en het is te fijn: de GELEVERDE kant komt binnen als HELE SECONDEN
+ * (`zoneTimesFromCell_` leest `secs`), terwijl het PLAN willekeurige fracties daarvan draagt — de
+ * eerste blokweek van Korte beklimmingen vraagt 4,043478… tempo-minuten, oftewel 242,6 seconden.
+ * Een rit die dat plan perfect uitvoert landt dus op 243 of 242 seconden en NOOIT op 242,6.
+ *
+ * GEMETEN op de FTP-fixture van punt15.test.ts: een exact volgens plan gereden week kwam 0,006522
+ * minuut tekort — 0,39 seconde, puur kwantisering — en las met de 1e-6-tolerantie als NIET
+ * GELEVERD. Dat is acceptatiecriterium 1 van het bouwdoc dat op zijn eigen tolerantie omvalt, en
+ * het zou in productie precies zo bijten: Intervals levert hele seconden.
+ *
+ * Eén seconde is dus de ONDERGRENS van wat een tolerantie mag zijn — fijner meet je de korrel van
+ * de bron en niet de renner. Het TOTAAL telt drie apart gekwantiseerde zones op en draagt daarom
+ * drie keer die korrel. Verwaarloosbaar tegen een plan van 68 minuten, en ruim binnen elk verschil
+ * dat de toetsen aantonen: grijs rijden zakt met tientallen minuten, niet met seconden. */
+const MEETKORREL_MIN = 1 / 60;
+const PLAN_TOLERANTIE_ZONE_MIN = MEETKORREL_MIN;
+const PLAN_TOLERANTIE_TOTAAL_MIN = WERKZONES.length * MEETKORREL_MIN;
+
+/** ROADMAP punt 17 — de PLAN-ZONEMINUTEN van één week, ONAFGEROND. Zelfde venster en zelfde bron
+ * als `poortsetVoorWeek_` hierboven: de BEWAARDE entries van maandag t/m zondag. Geen tweede
+ * leesroute, want twee routes naar hetzelfde plan lopen uit elkaar zodra er één verandert.
+ *
+ * Afronden gebeurt bij de AANROEPER en precies één keer per grootheid — `planZone5_` draagt die
+ * regel al in zijn eigen doc. Het OORDEEL leest de onafgeronde waarden; de afgeronde zijn voor
+ * het scherm. */
+function planZonesVoorWeek_(
+  weekplans: unknown[] | null | undefined,
+  weekMonday: string,
+  grenzen: readonly number[],
+): { tempo: number; drempel: number; anaeroob: number; werk: number } {
+  const leeg = { tempo: 0, drempel: 0, anaeroob: 0, werk: 0 };
+  if (!Array.isArray(weekplans)) return leeg;
+  const zondag = shiftIso_(weekMonday, 6);
+  const rauw: unknown[] = [];
+  for (const e of weekplans) {
+    const o = e as { datum?: unknown; blokken?: unknown };
+    if (typeof o?.datum !== "string") continue;
+    if (o.datum < weekMonday || o.datum > zondag) continue;
+    if (Array.isArray(o.blokken)) rauw.push(...o.blokken);
+  }
+  const zm = planZone5_(rauw, grenzen);
+  return {
+    tempo: zm.tempo,
+    drempel: zm.drempel,
+    anaeroob: zm.anaeroob,
+    werk: zm.tempo + zm.drempel + zm.anaeroob,
+  };
+}
+
 /**
  * De UITVOERINGS-REFERENT over één blok: per week GEVRAAGD en GELEVERD APART (recon §3 punt 3).
  * Norm ontbreekt → null (geen oordeel).
@@ -428,9 +488,10 @@ export function buildBlokReferent(input: {
     input.grenzen,
     faseVanWeek(input.startMonday),
   );
+  // `dosis` blijft de POORT (norm ontbreekt → geen oordeel) en levert `prikkelsPerWeek`. Sinds
+  // punt 17 draagt hij het oordeel niet meer: hij is DOSIS-DOEL en geen rechter. `blokDosisNorm`
+  // zelf blijft ongewijzigd, inclusief signatuur — `dosisTredeVoorstel` leest hem.
   if (!dosis) return null;
-  // Doel zonder mesocyclus → geen kalender-deload, dus ook blokweek 4 draagt de volle norm.
-  const heeftDeload = profileForDoel_(input.doel ?? "")?.mesoCyclus !== false;
 
   // FASE 1b/1d — DE BLOKPOORT: de VERENIGING van de labels over de bewaarde weekplannen van de
   // OPBOUWWEKEN. Nodig omdat de rijen er lang niet altijd staan; zonder terugval zwijgt de
@@ -467,19 +528,29 @@ export function buildBlokReferent(input: {
   for (let i = 0; i < BLOK_WEKEN; i++) {
     const weekMonday = shiftIso_(input.startMonday, i * 7);
     const blokWeek = i + 1;
-    // De opbouwweken krijgen een VLAKKE norm: de meso-ramp (1,08/1,15) beweegt zeven minuten over
-    // drie weken terwijl de uitvoering week op week 27 minuten varieert (recon §2.6) — meebewegen
-    // zou ruis bemonsteren. Blokweek 4 krijgt norm × mesoFactor(4): een INFORMATIEVE waarde uit
-    // dezelfde bron als de engine-ramp, die niet in het oordeel meetelt (telt = false).
-    const deload = blokWeek > BLOK_OPBOUWWEKEN && heeftDeload;
-    // Elk van de vier gevraagd-waarden schaalt APART en rondt ÉÉN keer af — nooit de afgeronde
-    // deelnormen optellen en die som schalen (WERKWIJZE, rond één keer af).
-    const schaal = (n: number) =>
-      deload ? Math.round(n * mesoFactor(BLOK_WEKEN)) : n;
-    const gevraagd = schaal(dosis.norm);
-    const gevraagdTempo = schaal(dosis.normTempo);
-    const gevraagdDrempel = schaal(dosis.normDrempel);
-    const gevraagdAnaeroob = schaal(dosis.normAnaeroob);
+    // ROADMAP punt 17 — DE REFERENT IS PLAN-RELATIEF. Wat gevraagd werd is wat het plan van DEZE
+    // week voorschreef, niet een doel-breed getal. GEMETEN waarom (docs/PUNT17-BOUWDOC.md §3): de
+    // doel-brede norm liet een blok waarin 25 procent van drempel plus anaeroob naar tempo was
+    // verschoven in 286 van de 405 cellen als GELEVERD lezen, en 50 procent nog in 88 — omdat
+    // `normTempo` een bibliotheek-gemiddelde is (dosis × 0,2821) terwijl het plan van V1 in Build
+    // bij Korte beklimmingen 4,0 tempo voorschrijft tegen een normTempo van 22. Die speling IS de
+    // ruimte waarin grijs rijden zich verstopt. Met het plan als referent leest grijs 25, 50 en
+    // 100 procent 0 van 405 en exact-volgens-plan 405 van 405.
+    //
+    // DE DELOAD-SCHAAL VERVALT HIER. Die bestond om een doel-brede norm naar blokweek 4 te buigen;
+    // het plan van blokweek 4 draagt zijn EIGEN mesoFactor al, dus schalen zou twee keer rekenen.
+    const plan = planZonesVoorWeek_(
+      input.weekplans,
+      weekMonday,
+      input.grenzen ?? ZONE5_GRENZEN_DEFAULT,
+    );
+    // Vier keer ÉÉN ronding, elk op zijn eigen onafgeronde plan-waarde — nooit een som van
+    // afgeronde delen (WERKWIJZE, rond één keer af). Deze vier zijn PRESENTATIE; het oordeel
+    // hieronder leest de onafgeronde waarden.
+    const gevraagd = Math.round(plan.werk);
+    const gevraagdTempo = Math.round(plan.tempo);
+    const gevraagdDrempel = Math.round(plan.drempel);
+    const gevraagdAnaeroob = Math.round(plan.anaeroob);
 
     // DE POORTSET van deze week: de nominale werkzone-labels uit de BEWAARDE entries van die
     // zeven dagen. Bewaard en niet herberekend — de entry draagt wat er destijds is gerenderd.
@@ -506,11 +577,21 @@ export function buildBlokReferent(input: {
     const telt =
       status === "compleet" &&
       blokWeek <= BLOK_OPBOUWWEKEN &&
-      // ROADMAP punt 14: zonder EFFECTIEVE poort is er geen oordeel. Sinds fase 1b betekent dat
-      // "nergens in dit blok staat een bewaard plan" — draagt het blok er ergens een, dan telt de
-      // week gewoon mee en blijft "niet gereden is een echte misser" onaangetast. Dezelfde lijn
-      // als de zonedekking-regel hierboven: een DATAGAT, geen misser.
-      zonesVoorgeschreven.length > 0 &&
+      // ROADMAP punt 17 — DEZE WEEK MOET EEN EIGEN BEWAARD PLAN DRAGEN. Sinds de referent
+      // plan-relatief is, is de blokpoort-terugval hier niet meer genoeg: een week zonder eigen
+      // plan heeft een plan-werktotaal van 0 en zou dus TRIVIAAL geleverd lezen — gemeten 405 van
+      // de 405 zulke weken (docs/PUNT17-BOUWDOC.md §5). Zonder plan geen bewering (M5).
+      //
+      // Deze eis is STERKER dan de punt-14-clausule `zonesVoorgeschreven.length > 0` die hier
+      // stond: die liet de blokpoort-terugval toe, en herkomst "week" impliceert per constructie
+      // een niet-lege poortset. Twee clausules laten staan zou de zwakste dood laten lijken.
+      //
+      // GEMETEN KOSTEN: nul. Met alleen de eerste twee opbouwweken bewaard blijven alle 405 cellen
+      // beoordeelbaar — precies `BLOK_MIN_BEOORDEELBARE_WEKEN`, dezelfde minimum-bewijslast die de
+      // blokpoort sinds punt 14 fase 1d al draagt. `blokPoort` en `zonesVoorgeschreven` blijven
+      // ONGEMOEID: die dragen de LABELS, en die terugval blijft geldig.
+      poortHerkomst === "week" &&
+      plan.werk > 0 &&
       (k.ritMinuten === 0 ||
         (zoneDekking != null && zoneDekking >= ZONEDATA_DEKKING_MIN));
     // GEEN tolerantiemarge: de ijk-reeks ligt bij vijf uur op 71 tot 121 kwaliteitsminuten met
@@ -527,10 +608,13 @@ export function buildBlokReferent(input: {
     // norm-vormen leveren alle vier 1 van de 35 cellen op norm, terwijl de poort er 22 van de 35
     // maakt. De poort weert BANDOVERLOOP, geen klein tekort — een voorgeschreven zone telt mee hoe
     // klein het tekort ook is.
+    //
+    // ROADMAP punt 17 — tegen de ONAFGERONDE plan-minuten, met `PLAN_TOLERANTIE_MIN` speling. Het
+    // getal op het scherm is `gevraagdTempo` c.s. en dat is dezelfde grootheid, één keer afgerond.
     const opNormPerZone = {
-      tempo: k.tempo >= gevraagdTempo,
-      drempel: k.drempel >= gevraagdDrempel,
-      anaeroob: k.anaeroob >= gevraagdAnaeroob,
+      tempo: k.tempo >= plan.tempo - PLAN_TOLERANTIE_ZONE_MIN,
+      drempel: k.drempel >= plan.drempel - PLAN_TOLERANTIE_ZONE_MIN,
+      anaeroob: k.anaeroob >= plan.anaeroob - PLAN_TOLERANTIE_ZONE_MIN,
     };
     const zonesOpNorm = zonesVoorgeschreven.filter(
       (z) => opNormPerZone[z as "tempo" | "drempel" | "anaeroob"],
@@ -542,12 +626,16 @@ export function buildBlokReferent(input: {
     // naar 46 geleverde cellen en trok Onderhoud van 27 van 27 naar 18 van 27 — het defect dat
     // punt 14 fase 1 net had weggenomen.
     //
-    // TEGEN `gevraagd`, NIET tegen een opnieuw berekende norm: `gevraagd` draagt de mesoFactor van
-    // blokweek 4 al. Twee keer rekenen zou twee grootheden opleveren die uit elkaar kunnen lopen.
-    // En de drie werkzone-waarden zijn EXACT dezelfde die het per-zone-oordeel hierboven leest —
-    // geen tweede vouwing.
+    // ROADMAP punt 17 — TEGEN DE PLAN-WERKTOTAAL van deze week, onafgerond en met dezelfde
+    // tolerantie. GEMETEN dat deze eis DRAGEND blijft naast de per-zone-eis: in een scenario waarin
+    // de voorgeschreven zones exact geleverd worden maar de bandoverloop-tempo niet, valt 615 van
+    // de 1215 weken op het TOTAAL ALLEEN (§4). Geen van beide eisen is redundant.
+    // De drie werkzone-waarden zijn EXACT dezelfde die het per-zone-oordeel hierboven leest — geen
+    // tweede vouwing.
     const werkTotaal = k.tempo + k.drempel + k.anaeroob;
-    const totaalOpNorm = telt ? werkTotaal >= gevraagd : null;
+    const totaalOpNorm = telt
+      ? werkTotaal >= plan.werk - PLAN_TOLERANTIE_TOTAAL_MIN
+      : null;
     const geleverdOk = telt
       ? zonesOpNorm === zonesVoorgeschreven.length && totaalOpNorm === true
       : null;
@@ -583,6 +671,10 @@ export function buildBlokReferent(input: {
       geleverdTempo: k.tempo,
       geleverdDrempel: k.drempel,
       geleverdAnaeroob: k.anaeroob,
+      planTempo: plan.tempo,
+      planDrempel: plan.drempel,
+      planAnaeroob: plan.anaeroob,
+      planWerk: plan.werk,
       geleverdRust: k.rust,
       geleverdZ2: k.z2,
       zonesOpNorm,
@@ -598,16 +690,31 @@ export function buildBlokReferent(input: {
     });
   }
 
+  // ROADMAP punt 17 — HET BLOKNIVEAU VOLGT DE WEKEN. De vier norm-velden zijn het GEMIDDELDE over
+  // de MEEGETELDE weken van de per-week plan-waarden, elk ÉÉN keer afgerond. Dat moet, want de
+  // coach noemt deze getallen in `blokReviewRegel` (coachNarrative.ts) en het getal dat hij noemt
+  // hoort het getal te zijn waarop het oordeel viel — met een doel-brede norm hier en een
+  // plan-referent per week zouden die twee uit elkaar lopen.
+  //
+  // Geen meegetelde week → 0. Dat is geen bewering maar een lege plek: bij minder dan
+  // BLOK_MIN_BEOORDEELBARE_WEKEN geeft `blokUitvoering` `geleverd` null, geeft `buildBlokReview`
+  // null terug en is `blokReviewRegel` per constructie onbereikbaar.
+  const geteld = weeks.filter((w) => w.telt);
+  const gemiddeld = (f: (w: BlokWeek) => number) =>
+    geteld.length === 0
+      ? 0
+      : Math.round(geteld.reduce((a, w) => a + f(w), 0) / geteld.length);
+
   return {
     startMonday: input.startMonday,
     weken: BLOK_WEKEN,
     doel: input.doel,
     weekUren: input.weekUren,
     prikkelsPerWeek: dosis.prikkels,
-    norm: dosis.norm,
-    normTempo: dosis.normTempo,
-    normDrempel: dosis.normDrempel,
-    normAnaeroob: dosis.normAnaeroob,
+    norm: gemiddeld((w) => w.planWerk),
+    normTempo: gemiddeld((w) => w.planTempo),
+    normDrempel: gemiddeld((w) => w.planDrempel),
+    normAnaeroob: gemiddeld((w) => w.planAnaeroob),
     weeks,
   };
 }
@@ -625,9 +732,15 @@ export interface BlokUitvoering {
   verschuiving: boolean;
 }
 
-/** Haalt deze week de norm van deze zone? Eén plek, zodat oordeel en diagnose niet uiteenlopen. */
+/** Haalt deze week de norm van deze zone? Eén plek, zodat oordeel en diagnose niet uiteenlopen.
+ *
+ * ROADMAP punt 17 — LEEST DE ONAFGERONDE PLAN-WAARDE, met dezelfde tolerantie als het oordeel in
+ * `buildBlokReferent`. Dat moet, en het is GEMETEN waarom: zolang deze functie de AFGERONDE
+ * `gevraagdTempo` c.s. las terwijl het oordeel tegen `planTempo` mat, liepen oordeel en diagnose
+ * uiteen — zonepoort-toets (E) meldde `tempo` als tekortzone in een week die het oordeel als
+ * geleverd had gelezen. De doc-regel hierboven stond er al; hij was alleen niet meer waar. */
 function zoneOpNorm_(w: BlokWeek, z: Zone5Key): boolean {
-  return zoneGeleverd_(w, z) >= zoneGevraagd_(w, z);
+  return zoneGeleverd_(w, z) >= zoneGevraagd_(w, z) - PLAN_TOLERANTIE_ZONE_MIN;
 }
 
 function zoneGeleverd_(w: BlokWeek, z: Zone5Key): number {
@@ -640,10 +753,10 @@ function zoneGeleverd_(w: BlokWeek, z: Zone5Key): number {
 
 function zoneGevraagd_(w: BlokWeek, z: Zone5Key): number {
   return z === "tempo"
-    ? w.gevraagdTempo
+    ? w.planTempo
     : z === "drempel"
-      ? w.gevraagdDrempel
-      : w.gevraagdAnaeroob;
+      ? w.planDrempel
+      : w.planAnaeroob;
 }
 
 /**

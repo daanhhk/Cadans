@@ -281,6 +281,12 @@ function reconRef(todayISO = "2026-07-27") {
 // breder, dus de bibliotheek-signatuur verschuift minuten van tempo naar drempel. PER PLEK
 // geasserteerd: een gedeelde as kan volledig via één tak lopen en de andere verbergen.
 const STRAKKER: readonly number[] = [55, 75, 85, 105];
+// ROADMAP punt 17 — DE GRENS DE ANDERE KANT OP. Sinds de referent plan-relatief is, vouwt de
+// Z3/Z4-grens BEIDE kanten van de vergelijking: `STRAKKER` verplaatst plan-minuten van tempo NAAR
+// drempel, en juist daar heeft het recon-blok overschot — het blok blijft dan geleverd. Deze
+// grens duwt plan-minuten de andere kant op, tempo IN, en daar komt het blok wél tekort.
+// GEMETEN op het recon-blok: plan 35,0 tempo tegen 31,0 geleverd, alle drie de weken vallen.
+const RUIMER_Z3: readonly number[] = [55, 75, 95, 105];
 
 describe("de zone-grenzen dragen door tot in de norm", () => {
   it("(a) blokDosisNorm: een lagere Z3/Z4-grens schuift tempo naar drempel", () => {
@@ -365,10 +371,15 @@ describe("de zone-grenzen dragen door tot in de norm", () => {
   });
 
   // DIT IS DE WEG WAARLANGS DE GRENZEN HET VOORSTEL BEREIKEN: niet via een eigen parameter, maar
-  // via de REVIEW. Met een strakkere Z3/Z4-grens stijgt de drempel-norm, haalt het recon-blok hem
-  // niet meer, leest de check niet-geleverd en vervalt het voorstel. Zonder deze test zou het
-  // weghalen van de parameter op `dosisTredeVoorstel` niets aantoonbaar achterlaten.
-  it("(b) strakkere grenzen laten het blok vallen en dus het voorstel vervallen", () => {
+  // via de REVIEW. Met een verzette Z3/Z4-grens verschuift het plan, haalt het recon-blok het niet
+  // meer, leest de check niet-geleverd en vervalt het voorstel. Zonder deze test zou het weghalen
+  // van de parameter op `dosisTredeVoorstel` niets aantoonbaar achterlaten.
+  //
+  // HERIJKT bij ROADMAP punt 17: de FIXTURE verzet de grens nu de andere kant op (zie `RUIMER_Z3`
+  // hierboven), want onder een plan-relatieve referent bewoog `STRAKKER` het oordeel niet meer.
+  // De ASSERTIES zijn onaangeroerd — de weg die getoetst wordt is dezelfde en is nog steeds af te
+  // sluiten door de parameter weg te halen.
+  it("(b) verzette grenzen laten het blok vallen en dus het voorstel vervallen", () => {
     const review = buildBlokReview({
       activities: RECON_ACTS,
       doel: "FTP",
@@ -378,7 +389,7 @@ describe("de zone-grenzen dragen door tot in de norm", () => {
       weekMondayISO: "2026-07-27",
       todayISO: "2026-07-27",
       ctlDelta: -5,
-      grenzen: STRAKKER,
+      grenzen: RUIMER_Z3,
     });
     expect(review?.check?.uitkomst).toBe("niet_geleverd");
     expect(
@@ -425,15 +436,21 @@ describe("de zone-grenzen dragen door tot in de norm", () => {
 });
 
 describe("buildBlokReferent — het gemeten blok 29-06 t/m 20-07", () => {
-  it("gevraagd is vlak over de opbouwweken en meso-geschaald in de deload", () => {
-    expect(reconRef().weeks.map((w) => w.gevraagd)).toEqual([84, 84, 84, 50]);
+  // HERIJKT bij ROADMAP punt 17. Deze twee toetsten de VLAKKE doel-brede norm (84/84/84) en de
+  // MESO-SCHAAL op blokweek 4 (50). Punt 17 heeft beide ingetrokken: `gevraagd` is sindsdien het
+  // PLAN van die week, en het plan van blokweek 4 draagt zijn eigen mesoFactor al — nog eens
+  // schalen zou twee keer rekenen. WP_RECON zet elke week dezelfde entry (tempo 20 · drempel 40 ·
+  // anaeroob 10), dus alle VIER de weken lezen nu 70. Dat de deloadweek hier niet lager uitkomt
+  // is een eigenschap van deze FIXTURE en geen uitspraak over de meso-ramp.
+  it("gevraagd volgt het plan van die week, ook in blokweek 4", () => {
+    expect(reconRef().weeks.map((w) => w.gevraagd)).toEqual([70, 70, 70, 70]);
   });
 
-  it("elke zone-norm schaalt apart mee in de deload: 24/47/13 wordt 14/28/8", () => {
+  it("elke zone-norm is de plan-waarde van die zone: 20/40/10", () => {
     const w = reconRef().weeks;
-    expect(w.map((x) => x.gevraagdTempo)).toEqual([24, 24, 24, 14]);
-    expect(w.map((x) => x.gevraagdDrempel)).toEqual([47, 47, 47, 28]);
-    expect(w.map((x) => x.gevraagdAnaeroob)).toEqual([13, 13, 13, 8]);
+    expect(w.map((x) => x.gevraagdTempo)).toEqual([20, 20, 20, 20]);
+    expect(w.map((x) => x.gevraagdDrempel)).toEqual([40, 40, 40, 40]);
+    expect(w.map((x) => x.gevraagdAnaeroob)).toEqual([10, 10, 10, 10]);
   });
 
   it("drie beoordeelde weken, alle drie geleverd; de deload telt niet mee", () => {
@@ -464,8 +481,12 @@ describe("buildBlokReferent — het gemeten blok 29-06 t/m 20-07", () => {
 });
 
 // ── ZONE-MUNT fase 1b — de poort per zone ────────────────────────────────────
-// De norm bij FTP/5 uur is 24 Tempo · 47 Drempel · 13 VO2max. Elk geval hieronder zet TWEE zones
-// ruim boven norm en laat er ÉÉN vallen: een poort die niet apart rood te krijgen is, is geen poort.
+// HERIJKT bij ROADMAP punt 17. De referent is het PLAN van die week, en WP_RECON schrijft
+// 20 Tempo · 40 Drempel · 10 VO2max voor — niet langer de doel-brede 24/47/13. De GETALLEN in de
+// fixtures hieronder zijn daarom opnieuw afgeleid; de ASSERTIES zijn onaangeroerd. Wat getoetst
+// wordt is ongewijzigd: elk geval zet TWEE zones ruim boven het plan en laat er ÉÉN onder vallen,
+// want een poort die niet apart rood te krijgen is, is geen poort. Elk geval blijft ook ruim
+// boven de TOTAAL-eis van 70, zodat de week aantoonbaar op de ZONE valt en niet op het totaal.
 
 function zoneRef(weken: ActValuesRow[]) {
   const r = buildBlokReferent({
@@ -484,27 +505,27 @@ function zoneRef(weken: ActValuesRow[]) {
 describe("het oordeel valt per zone — geen compensatie", () => {
   it("(b1) alleen TEMPO tekort laat de week vallen", () => {
     const w = zoneRef([
-      zoneWeek("2026-06-30", { tempo: 23, high: 80, anaer: 40 }),
+      zoneWeek("2026-06-30", { tempo: 19, high: 80, anaer: 40 }),
     ]).weeks[0];
-    expect(w?.geleverdTempo).toBe(23);
+    expect(w?.geleverdTempo).toBe(19);
     expect(w?.zonesOpNorm).toBe(2);
     expect(w?.geleverdOk).toBe(false);
   });
 
   it("(b2) alleen DREMPEL tekort laat de week vallen", () => {
     const w = zoneRef([
-      zoneWeek("2026-06-30", { tempo: 60, high: 46, anaer: 40 }),
+      zoneWeek("2026-06-30", { tempo: 60, high: 39, anaer: 40 }),
     ]).weeks[0];
-    expect(w?.geleverdDrempel).toBe(46);
+    expect(w?.geleverdDrempel).toBe(39);
     expect(w?.zonesOpNorm).toBe(2);
     expect(w?.geleverdOk).toBe(false);
   });
 
   it("(b3) alleen ANAEROOB tekort laat de week vallen", () => {
     const w = zoneRef([
-      zoneWeek("2026-06-30", { tempo: 60, high: 80, anaer: 12 }),
+      zoneWeek("2026-06-30", { tempo: 60, high: 80, anaer: 9 }),
     ]).weeks[0];
-    expect(w?.geleverdAnaeroob).toBe(12);
+    expect(w?.geleverdAnaeroob).toBe(9);
     expect(w?.zonesOpNorm).toBe(2);
     expect(w?.geleverdOk).toBe(false);
   });
@@ -527,7 +548,9 @@ describe("het oordeel valt per zone — geen compensatie", () => {
     expect(w.geleverdDrempel).toBe(20);
     expect(w.zonesOpNorm).toBe(2);
     expect(w.geleverdOk).toBe(false);
-    // De OUDE munt: tempo + drempel + anaeroob tegen één norm van 84 → 124 ≥ 84 → geleverd.
+    // De OUDE munt: tempo + drempel + anaeroob tegen ÉÉN getal → 124 ≥ 70 → geleverd. Sinds punt
+    // 17 is dat getal de plan-werktotaal (70) in plaats van de doel-brede norm (84); de strekking
+    // is onveranderd, want de week valt op de ZONE en niet op het totaal.
     expect(w.geleverd).toBe(124);
     expect(w.geleverd >= w.gevraagd).toBe(true);
   });
@@ -674,12 +697,16 @@ describe("dekkings-poort — te weinig zonedata is niet te beoordelen", () => {
   });
 });
 
+// HERIJKT bij ROADMAP punt 17. De ritten stonden op 70 kwaliteitsminuten, wat onder de oude
+// Onderhoud-norm (19/37/10) ruim genoeg was maar onder het PLAN van WP_RECON (20/40/10) net niet:
+// `signatuurSeconden(70)` geeft 19,7 tempo en 39,4 drempel. 72 zet alle drie de zones erboven en
+// laat verder alles staan. De fixture is herijkt, geen enkele assertie.
 describe("Onderhoud — uitvoering wél, effect niet (CTL hoort te dalen)", () => {
   const acts = [
-    weekRit("2026-06-30", 70),
-    weekRit("2026-07-07", 70),
-    weekRit("2026-07-14", 70),
-    weekRit("2026-07-21", 70),
+    weekRit("2026-06-30", 72),
+    weekRit("2026-07-07", 72),
+    weekRit("2026-07-14", 72),
+    weekRit("2026-07-21", 72),
   ];
   function ref() {
     const r = buildBlokReferent({
@@ -695,8 +722,13 @@ describe("Onderhoud — uitvoering wél, effect niet (CTL hoort te dalen)", () =
     return r;
   }
 
-  it("blokweek 4 krijgt de VOLLE norm (geen mesocyclus, dus geen deload)", () => {
-    expect(ref().weeks.map((w) => w.gevraagd)).toEqual([66, 66, 66, 66]);
+  // HERIJKT bij ROADMAP punt 17. Deze toetste dat een doel ZONDER mesocyclus in blokweek 4 de
+  // volle norm hield in plaats van de meso-geschaalde. Die schaal bestaat niet meer — `gevraagd`
+  // is het plan van die week, voor élk doel — dus het onderscheid tussen wel en geen mesocyclus
+  // leeft hier niet langer. Het leeft nog wél waar het thuishoort: `blokCheckEnabled` leest
+  // `mesoCyclus` en wordt hieronder geasserteerd ("Onderhoud → check null").
+  it("gevraagd volgt ook bij Onderhoud het plan van die week", () => {
+    expect(ref().weeks.map((w) => w.gevraagd)).toEqual([70, 70, 70, 70]);
   });
 
   it("blokUitvoering geeft wél een uitkomst, blokCheck is null", () => {
@@ -773,7 +805,9 @@ describe("buildBlokReview", () => {
     expect(r?.startMonday).toBe("2026-06-29");
     expect(r?.eindMonday).toBe("2026-07-20");
     expect(r?.fase).toBe("afgerond");
-    expect(r?.norm).toBe(84);
+    // HERIJKT bij punt 17: `norm` is sinds dat punt het GEMIDDELDE van de plan-werktotalen over de
+    // meegetelde weken, niet meer de doel-brede dosis-norm. WP_RECON geeft 70 in elke week.
+    expect(r?.norm).toBe(70);
     expect(r?.uitvoering.beoordeeldeWeken).toBe(3);
     // POORT-ASSERTIE: eerst dat de uitvoering GELEVERD is, dan pas de check-uitkomst.
     expect(r?.uitvoering.geleverd).toBe(true);
@@ -799,9 +833,9 @@ describe("buildBlokReview", () => {
   it("Onderhoud → check null, uitvoering gevuld", () => {
     const r = buildBlokReview({
       activities: [
-        weekRit("2026-06-30", 70),
-        weekRit("2026-07-07", 70),
-        weekRit("2026-07-14", 70),
+        weekRit("2026-06-30", 72),
+        weekRit("2026-07-07", 72),
+        weekRit("2026-07-14", 72),
       ],
       doel: "Onderhoud",
       weekUren: 3,

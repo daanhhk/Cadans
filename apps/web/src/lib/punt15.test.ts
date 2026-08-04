@@ -738,10 +738,15 @@ describe("punt 15 — het Peak-quotum", () => {
     );
   });
 
-  it("GEVOLG DAT DE SPEC NIET NOEMDE: het oordeel van FTP in Peak kantelt op V1", () => {
-    // De norm gaat van 56 naar 84 terwijl het plan van 70,0 naar 78,0 werkminuten groeit — de norm
-    // stijgt harder. Een exact volgens plan gereden Peak-week leest daardoor als NIET geleverd.
-    // Vastgelegd zodat het geen verrassing wordt, niet omdat het het besluit weerlegt.
+  // HERIJKT bij ROADMAP punt 17, en dit geval is de scherpste illustratie van dat punt. Deze test
+  // legde vast dat een EXACT volgens plan gereden Peak-week als NIET GELEVERD las: het quotum
+  // tilde de norm van 56 naar 84 terwijl het plan van 70,0 naar 78,0 werkminuten groeide, dus de
+  // norm steeg harder dan het plan en het oordeel kantelde. Punt 17 heeft die kanteling
+  // WEGGENOMEN door constructie: de referent meet tegen het plan van die week, dus een week die
+  // het plan uitvoert kan niet meer op de norm-schaal vallen. `gevraagd` is hier daarom 78 — de
+  // plan-werktotaal — en niet 84. Het QUOTUM zelf beweegt onverminderd en houdt zijn eigen
+  // dekking in de test hierboven, die `blokDosisNorm` rechtstreeks leest.
+  it("PUNT 17 NAM DE KANTELING WEG: FTP in Peak leest op V1 weer als geleverd", () => {
     const b = blokOpPlan_("FTP", FASE_OFFSET.Peak);
     const r = buildBlokReferent({
       doelStart: b.doelStart,
@@ -756,12 +761,15 @@ describe("punt 15 — het Peak-quotum", () => {
     if (!r) throw new Error("referent onverwacht null");
     const w = r.weeks[0];
     if (!w) throw new Error("geen weken");
-    expect(w.gevraagd).toBe(84);
+    // Het quotum tilt de DOSIS-norm nog steeds naar 84; die is alleen geen rechter meer.
+    expect(blokDosisNorm("FTP", 5, 0, undefined, "Peak")?.norm).toBe(84);
+    // Het oordeel valt tegen het PLAN, en dat is 78.
+    expect(w.gevraagd).toBe(78);
     expect(
       w.geleverdTempo + w.geleverdDrempel + w.geleverdAnaeroob,
     ).toBeCloseTo(78, 1);
-    expect(w.totaalOpNorm).toBe(false);
-    expect(w.geleverdOk).toBe(false);
+    expect(w.totaalOpNorm).toBe(true);
+    expect(w.geleverdOk).toBe(true);
   });
 });
 
