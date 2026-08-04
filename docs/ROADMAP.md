@@ -278,11 +278,17 @@ punten staat onder *Gesloten — vindplaats*.
     Draagt óók de effect-meter van het doel korte beklimmingen dat punt 7 aanmaakt:
     `DOELEN-SPEC` §3.3 en §3.5 wijzen daarvoor dezelfde maat aan. Niet te verwarren met punt
     8 — dat gaat over het goal-profiel in de Niveau-tab, niet over deze durability-maat.
-12. **Doel-passendheid** — open · CLIENT. (`DOELEN-SPEC` §6 stap 6.) De coach stelt een passend
-    doel voor als het ingestelde doel niet binnen de uren past; afwijsbaar, hoogstens één keer
-    per blok op een blokgrens. GEMETEN: er bestaat vandaag geen enkel mechanisme. Hangt aan
-    punt 4 (af) en aan punt 7 — zonder herziene doel-lijst wijst een voorstel naar de
+12. **Doel-passendheid** — open · CLIENT + DATA. (`DOELEN-SPEC` §6 stap 6.) De coach stelt een
+    passend doel voor als het ingestelde doel niet binnen de uren past; afwijsbaar, hoogstens
+    één keer per blok op een blokgrens. GEMETEN: er bestaat vandaag geen enkel mechanisme.
+    Hangt aan punt 4 (af) en aan punt 7 — zonder herziene doel-lijst wijst een voorstel naar de
     verkeerde doelen.
+    SPEC: `docs/PUNT12-BOUWDOC.md`, met de urenvloeren per doel, de vier trigger-voorwaarden,
+    de zeven rood-plekken en de acceptatie.
+    RAAKVLAK DATA erbij: het ANTWOORD op de kaart wordt bewaard op `sync_state`, dus er komt
+    een migratie `0010` bij met `doel_passend_blok` en `doel_passend_doel` — spiegel van
+    `dosisTredeBlok` en `dosisTredeDoel`. Alleen "nee" hoeft bewaard: na "ja" past het doel en
+    kan de kaart per constructie niet meer vuren.
 
 13. **Na het event volgt geen herstel** — open · ENGINE plus CLIENT. De maandag ná de raceweek
     levert de doel-cyclus weer een opbouwfase: de `Recovery`-tak van `eventFase_` kijkt alleen
@@ -688,6 +694,22 @@ punten staat onder *Gesloten — vindplaats*.
     er 0 van 28 en met de term 28 van 28. Op de WEEKSTEM is die tak inert (24 blijft 24), op het
     DAGBLOK niet (8 cellen). Dat is GEMETEN en geen gat — zoek er geen rood-test bij die niet
     bestaat.
+28. **Een doelwissel herstart de cyclus niet** — open · CLIENT. GELEZEN: `doel` en `doelStart`
+    zijn twee LOSSE velden in Instellingen (`apps/web/src/pages/Instellingen.tsx:713`), en
+    `doelStart` heeft precies één schrijver — `apps/web/src/lib/settings.ts:95`. Er is nergens
+    code die de een aan de ander koppelt.
+    GEVOLG: kies je een nieuw doel, dan blijft de blok-start op de datum van de VORIGE periode
+    staan, en lopen de 4-weekse mesocyclus en de 12-weekse blokcyclus daar gewoon op door. Een
+    verse doelkeuze landt dus midden in een blok dat bij een ander doel hoorde.
+    `DOELEN-SPEC` §3.2 KENT DIT AL, als handmatige gebruiksvoorwaarde: bij een doelwissel naar
+    Onderhoud moet `doelStart` mee, anders meet de behoud-vloer tegen de instapwaarde van de
+    vorige periode. Dat is precies de reden dat het hier een eigen punt wordt en geen voetnoot.
+    DE VALKUIL DIE DIT APART HOUDT VAN PUNT 12: `normalizeDoel_` mapt legacy-strings —
+    "Beklimmingen" wordt "Korte beklimmingen". Een naïeve koppeling ("doel gewijzigd, dus
+    doelStart verzetten") zou bij een onschuldige HER-OPSLAG van dezelfde instellingen het blok
+    stil terugzetten naar Base. Vraagt dus een eigen rood-test op precies dat geval.
+    PUNT 12 LOST DIT VOOR ZIJN EIGEN JA-TIK AL OP en wacht hier niet op; dit punt dekt de
+    HANDMATIGE doelwissel in Instellingen.
 
 ## De tijdslijn
 
