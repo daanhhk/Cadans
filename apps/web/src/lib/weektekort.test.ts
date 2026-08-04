@@ -221,7 +221,11 @@ describe("bouwWeekTekort — het rekenwerk", () => {
 
 describe("OPRUIM-ROOD: zonder de weekstem toont dit geval NERGENS een boodschap", () => {
   it("SleutelInhaalBlok rendert niets bij een lege lijst, dus dan is er geen tekst", () => {
-    const dagen = openSleutelDagen([dag(0, { sleutel: true }), dag(1)], iso(1));
+    const dagen = openSleutelDagen(
+      [dag(0, { sleutel: true }), dag(1)],
+      iso(1),
+      null,
+    );
     expect(dagen).toEqual([]);
     expect(SleutelInhaalBlok({ dagen })).toBeNull();
   });

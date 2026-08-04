@@ -259,6 +259,24 @@ const SCENARIOS = [
       5: { minuten: 180, dagtype: "weekend" },
     },
   },
+  // KLIM-WEEKSTEM (ROADMAP punt 27): het enige scenario dat een KLIM-doel combineert met een
+  // dagOffset. Nodig omdat `combo_long_with_efforts` alleen bij een klim-doel vuurt én alleen in
+  // Build en Peak — blokweek 1 is Base en kan de sessie dus niet tonen. Vrijdag als "vandaag":
+  // ma/di/do zijn verstreken en ONGEREDEN (de harness zaait geen activities), en de zaterdag ligt
+  // nog vooruit. Dat is precies de toestand waarin de weekstem sprak terwijl er nog een zaterdag
+  // met drempel-minuten stond.
+  {
+    name: "klim-weekstem",
+    doel: "Korte beklimmingen",
+    blokWeek: 5,
+    dagOffset: 4,
+    spec: {
+      0: { minuten: 60, dagtype: "vrij" },
+      1: { minuten: 60, dagtype: "vrij" },
+      3: { minuten: 60, dagtype: "vrij" },
+      5: { minuten: 120, dagtype: "weekend" },
+    },
+  },
   // OVERNAME: de acht-wekengrens vóór het A-event van 2027-04-17. Eigen absolute weekmaandag,
   // want de overname-kaart bestaat alleen binnen EVENT_OVERNAME_WEKEN van het hoofdevent en dat
   // ligt ver buiten de echte week. ROADMAP punt 9 fase B.

@@ -215,9 +215,11 @@ export function SchemaView({
   const canDispose = canDisposeDay(day, todayISO);
   // ROADMAP punt 5b — staat de sleutelprikkel van DEZE dag nog open (gemist, of lichter gereden),
   // en waar staat hij deze week dan nog? Beide poorten in de pure laag; hier alleen renderen.
-  const sleutelOpen = sleutelPrikkelOpen(day);
+  // ROADMAP punt 27: `proposalWeek` gaat mee naar beide poorten — daar staan de RAUWE blokken,
+  // en die dragen het zone-label dat `SchemaSession.blokken` al heeft weggevouwen.
+  const sleutelOpen = sleutelPrikkelOpen(day, proposalWeek);
   const openSleutelDagenLijst = sleutelOpen
-    ? openSleutelDagen(view.days, todayISO)
+    ? openSleutelDagen(view.days, todayISO, proposalWeek)
     : [];
 
   // 2b: per-dag coach-narrative (boven de training). Alleen op een dag mét een reden (plan-dagen;

@@ -71,15 +71,17 @@ export function bouwWeekTekort(input: WeekTekortInput): WeekTekort | null {
   const verstreken = lijst.filter((d) => d && d.datum < todayISO);
   if (verstreken.length === 0) return null;
 
-  // POORT 1 — staat er op een verstreken dag nog een sleutelprikkel open? `sleutelPrikkelOpen`
-  // komt ONGEWIJZIGD uit punt 5b; een tweede sleutel-lijst client-zijde zou uit de pas lopen met
-  // wat de coach zelf sleutel noemt.
-  if (!verstreken.some((d) => sleutelPrikkelOpen(d))) return null;
+  // POORT 1 — staat er op een verstreken dag nog een sleutelprikkel open? De sleutel-lijst komt
+  // uit de ENGINE; een tweede lijst client-zijde zou uit de pas lopen met wat de coach zelf
+  // sleutel noemt. ROADMAP punt 27: `proposalWeek` gaat mee, want sinds die bouw telt ook een
+  // plan dat drempel- of anaerobe minuten voorschrijft — de efforts-rit heet geen sleutel maar
+  // draagt er wel een.
+  if (!verstreken.some((d) => sleutelPrikkelOpen(d, proposalWeek))) return null;
 
   // POORT 2 — is er deze week nog een trainingsdag die de prikkel KAN dragen? Zo ja, dan zegt
   // het dagblok van punt 5b waar hij staat en heeft de weekstem niets toe te voegen. De stem
   // spreekt alleen als de prikkel WEG is.
-  if (openSleutelDagen(lijst, todayISO).length > 0) return null;
+  if (openSleutelDagen(lijst, todayISO, proposalWeek).length > 0) return null;
 
   // POORT 3 — DEKKING. Draagt een verstreken dag wel een rit maar geen zonedata, dan is er niets
   // te beoordelen en zwijgen we, in plaats van een tekort te melden dat we niet kunnen zien.
