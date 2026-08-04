@@ -560,6 +560,25 @@ punten staat onder *Gesloten — vindplaats*.
     en is dat de bedoelde uitkomst? PRECEDENT dat dezelfde kant op wees en al gemeten is: punt 10
     fase B deel 1 meet de weekstem bewust tegen het BEVROREN plan, omdat het plan de blok-norm in
     2 van de 105 cellen haalt en op de echte reeks in 3 van de 46 weken.
+    DE WAT-ALS IS GEDRAAID per 04-08-2026, chat-zijde, over 405 blok-cellen en 1215 beoordeelde
+    weken; spec in `docs/PUNT17-BOUWDOC.md`. DE PREMISSE HIERBOVEN IS WEERLEGD: niet de
+    totaal-eis bijt maar de per-zone-poort. Bij Korte beklimmingen valt in Build 37 van de 81
+    weken op BEIDE eisen en 15 op de ZONES ALLEEN, nul op het totaal alleen; de SMALLE wat-als
+    tilt het geheel van 261 naar 275 van 405 en laat dit doel op 36 van 81 staan, NUL
+    kantelingen. DE EIGENLIJKE VONDST STAAT LIVE EN WIJST DE ANDERE KANT OP: de huidige regel
+    leest een blok waarin 25 procent van drempel plus anaeroob naar tempo verschoven is in 286
+    van 405 cellen als GELEVERD, bij 50 procent nog in 88, en een blok dat op 0,7 maal het plan
+    gereden is in 96. Oorzaak is de SCHAAL van de zone-norm: `normTempo` is dosis maal 0,2821,
+    een bibliotheek-gemiddelde, terwijl V1 in Build bij dit doel 4,0 plan-tempo draagt tegen een
+    normTempo van 22. ANTWOORD OP VRAAG (1): met de BREDE regel — zones EN totaal tegen het plan
+    van die week — leest grijs 25, 50 en 100 procent 0 van 405, 0,7 maal 0 van 405, en exact
+    volgens plan 405 van 405. ANTWOORD OP VRAAG (2): het plan groeit in 45 van 45 gemeten cellen
+    mee met de trede, plus 10,7 tot plus 37,6 werkminuten van trede 0 naar 4, dus de hendel is
+    niet leeg; het plafond in vier blokken is zestien weken met vier aparte bevestigingen, zoals
+    `DOELEN-SPEC` paragraaf 2A vastlegt. HET GAT DAT MEE MOET: een week zonder eigen bewaard
+    plan heeft plan-totaal 0 en leest triviaal geleverd, 405 van 405; `telt` eist voortaan ook
+    het eigen plan, en dat kost gemeten nul beoordeelbare cellen. ANKER: M63 (NORM), met de
+    grens dat toepassing op de BLOK-laag een uitbreiding is van een WEEK-regel.
 18. **De afronding op het scherm** — af · CLIENT plus TOOLING. Een sessieduur wordt KAAL gerenderd en toont
     daardoor float-ruis: `WorkoutDetail.tsx:57` zet `session.totaalMin` zonder opmaak op het
     scherm en `expandArchetype_` (`planner.ts:1383`) telt `warm + cool + mainMin` op uit blokken
