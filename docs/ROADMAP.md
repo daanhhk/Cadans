@@ -227,8 +227,7 @@ punten staat onder *Gesloten — vindplaats*.
    `profileForDoel_(...).id === "onderhoud"`. Het TWEEDE — na het event volgt geen herstel — is
    VERPLAATST naar het nieuwe punt 13 en staat hier dus niet meer open. De gemeten bevindingen
    hierboven blijven staan als vindplaats.
-10. **Twee kaarten spreken los over hetzelfde blok** — open (FASE A en FASE B DEEL 1 af) · CLIENT, plus mogelijk
-    ENGINE voor fase B. (`DOELEN-SPEC` §6 stap
+10. **Twee kaarten spreken los over hetzelfde blok** — af · CLIENT. (`DOELEN-SPEC` §6 stap
     7.) De doortrain-kaart en de terugblik lezen hetzelfde ΔCTL-signaal en doen er elk een
     eigen uitspraak over. CRITERIUM: een blok krijgt ÉÉN uitspraak, niet twee. DIT PUNT DRAAGT
     SINDS 5c OOK DE WEEK-TEKORT-VRAAG: wat de coach zegt als een week zijn dosis niet levert.
@@ -242,9 +241,20 @@ punten staat onder *Gesloten — vindplaats*.
     verstreken sleutelprikkel én geen trainingsdag meer om hem op te pakken. Hij meet tegen het
     BEVROREN plan van de verstreken dagen, niet tegen de blok-norm — GEMETEN dat het plan die norm
     zelf in 2 van de 105 cellen haalt en op de echte reeks in 3 van de 46 weken, want norm en
-    weekplan gaan door dezelfde vouwing maar over een andere populatie. HET PUNT BLIJFT OPEN VOOR
-    DEEL 2: het aanbod "verschuif de minuten naar Drempel" raakt de allocator en is dus ENGINE,
-    met eigen autorisatie en eerst een wat-als-meting (de 5c-les).
+    weekplan gaan door dezelfde vouwing maar over een andere populatie.
+    DEEL 2 IS GESLOTEN ZONDER BOUW per 04-08-2026, verdict
+    `docs/PUNT10-FASE-B-DEEL2-VERDICT.md`. Het aanbod "verschuif deze week de minuten naar
+    Drempel" komt er NIET. GEMETEN over 630 cellen — 7 weekvormen maal 5 doelen maal 3
+    fase-ankers maal 6 dagoffsets: de weekstem vuurt in 119 cellen, en die splitsen zonder rest.
+    In 75 is er geen trainingsdag meer over, dus er valt per constructie niets te verschuiven.
+    In de andere 44 is de restdag ELKE KEER `combo_long_with_efforts`, en die schrijft de
+    gemelde tekortzone AL voor — nominaal label `drempel`, 30,0 tot 32,4 kwaliteitsminuten. Het
+    aanbod zou dus drempelwerk vervangen door drempelwerk: NUL van de 119 cellen waarin het
+    iets toevoegt. Zelfde vorm als punt 5c, en met dezelfde grond — niet "de tak is
+    onbereikbaar" maar "de uitkomst is geen verbetering".
+    DE ENGINE IS NIET GERAAKT en de autorisatie is niet gebruikt.
+    DE WAT-ALS HAALDE EEN LIVE DEFECT BOVEN: in precies die 44 cellen toont de app vandaag een
+    ONWARE zin. Dat staat als punt 27.
     FASE A IS AF PER 01-08-2026, gebouwd in `58e12aa`, spec `docs/PUNT10-FASE-A-BOUWDOC.md`. De
     doortrain-kaart doet geen eigen uitspraak meer over het blok: de TERUGBLIK is de enige stem en
     het aanbod hangt eronder als weekvraag. Het aanbod zelf — mesoweek 4 naar 1 — is ongewijzigd.
@@ -639,6 +649,27 @@ punten staat onder *Gesloten — vindplaats*.
     0 van 15, en dat telt: die reconstructie leverde in 4 van de 15 cellen een ANDER plan
     (`long_z2` naar `sweet_spot`, TSS 42 naar 53, intent high 0 naar 26), en de blok-terugblik
     leest precies die velden.
+27. **De lange rit met efforts telt niet als sleutelsessie** — open · CLIENT.
+    `combo_long_with_efforts` staat niet in `COACH_TYPE_INTENT_` (`packages/engine/src/coach.ts:28`),
+    dus `intentFromType_` valt door naar de terugval-scan, herkent daar "long" en levert "duur" —
+    en "duur" staat niet in `COACH_KEY_INTENTS_` (`:75`). Poort 1 en poort 2 van de
+    sleutel-machinerie zien de dag daardoor niet.
+    GEVOLG, GEMETEN. In 44 van de 119 vuur-cellen zegt de weekstem dat er geen trainingsdag meer
+    staat om de prikkel op te pakken, terwijl er een zaterdag staat met 30,0 tot 32,4
+    drempel-minuten. En het snijdt beide kanten op: een GEMISTE efforts-rit komt in 28 cellen
+    voor en telt in 0 van die 28 als open sleutelprikkel, want `plannedIntent` komt uit dezelfde
+    classificatie.
+    VINDPATROON, één treffer: van de zes types die de planner over de meetruimte produceert is
+    dit de ENIGE die een werkzone draagt en geen sleutelsessie heet. `combo_all_three` is een
+    latent tweede geval maar heeft nul producenten (punt 14 fase 2).
+    DE FIX IS EEN OPTELLENDE TERM op het nominale werkzone-label — een dag draagt een
+    sleutelprikkel als zijn TYPE dat zegt ÓF als zijn plan `drempel` of `anaeroob` minuten
+    voorschrijft. Strikt additief, dus sleutelstatus kan alleen bijkomen. `COACH_TYPE_INTENT_`
+    wordt NIET aangeraakt: de rit duurt 120 tot 240 minuten waarvan 30,0 tot 32,4 werkminuten, en
+    hem "Drempel" noemen zou zijn karakter op de dagkaart verkeerd weergeven. Spec in
+    `docs/PUNT10-FASE-B-DEEL2-VERDICT.md` §5 tot en met §8, inclusief de vier rood-getallen.
+    HARDE DATUM: half februari 2027 wordt Korte beklimmingen het actieve doel, en dan is dit de
+    dag waar de weekstem elke week overheen praat.
 
 ## De tijdslijn
 
