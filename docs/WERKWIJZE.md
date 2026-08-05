@@ -518,7 +518,10 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   Levert de bron hele seconden, dan levert je fixture hele seconden. Onafgerond voeden haalt
   precies de kwantisering weg die in productie wél bijt — en dan is groen een eigenschap van de
   fixture geworden in plaats van van het systeem.
-- **Geen heredocs voor BESTANDSINHOUD, en na elke bewerking eerst een syntaxcontrole.** Schrijf een
+- **Geen heredocs voor BESTANDSINHOUD, en na elke bewerking eerst een syntaxcontrole.** DE REMEDIE
+  IN DEZE REGEL IS PER 05-08-2026 ACHTERHAALD — zie de laatste bullet van deze sectie: ook een
+  patch-BESTAND is een verboden vorm, want de val zit in het idioom en niet in de shell. Wat blijft
+  staan is de DIAGNOSE en de syntaxcontrole. Oorspronkelijk luidde de remedie: schrijf een
   patch als BESTAND weg en draai die, in plaats van de inhoud door een shell-heredoc te duwen. En
   na elke bewerking van een `.mjs` of `.ts` volgt `node --check` of de typecheck VÓÓR de meting,
   niet erna: een verminkt bestand dat pas bij het meten omvalt kost een hele meetronde, en een
@@ -570,6 +573,30 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   dus het gestelde effect bestaat niet. Het advies is teruggenomen vóór er iets gebouwd was.
   Zelfde familie als "een gepind document bewijst zijn eigen GELDIGHEID niet", nu op een
   ADVIES in plaats van op een document.
+- **Een GREP-EIS toets je met dezelfde vlaggen als waarmee je hem hebt afgeleid.** Een
+  trefferaantal dat case-insensitive is gemeten en vervolgens als hoofdlettergevoelige
+  controle wordt verstuurd, is een andere eis dan de gemeten. Aanleiding: een premisse
+  beloofde 3 treffers op `copy` in `docs/ROADMAP.md`; hoofdlettergevoelig zijn het er 2,
+  want de derde regel draagt `COPY`. CC ving het verschil en de strekking hield stand,
+  maar de eis was aantoonbaar niet de gemeten eis. Noteer bij een trefferaantal dus altijd
+  de vlag waarmee het is verkregen.
+- **Een VOOR/NA-vergelijking vraagt dat de VOOR-meting is bewaard vóór de ingreep — dat is
+  een STAP in het prompt, geen eigenschap van de harness.** Aanleiding: bij de deploy van
+  punt 13 fase A bleek er geen prod-nulmeting te bestaan om tegen te vergelijken, omdat
+  `tools/shots/out` bij elke run wordt gewist en de vorige prod-run door latere lokale runs
+  was overschreven. CC meldde het gat in plaats van het te omzeilen, en dat is de juiste
+  uitkomst — maar de vergelijking was al onmogelijk op het moment dat het prompt erom
+  vroeg. Vraag een byte-vergelijking dus alleen als het prompt de nulmeting zelf eerst
+  wegschrijft naar een pad dat de volgende run NIET wist. Dit is punt 31 en punt 24 in
+  levenden lijve, en de reden dat die twee vóór punt 33 gaan.
+- **Een regel die drie keer wordt overtreden is geen naleefprobleem maar een
+  GEREEDSCHAPSprobleem.** Het verbod op heredocs voor bestandsinhoud staat er al en werd
+  bij punt 13 fase A voor de derde keer geraakt: een patch-script verminkte opnieuw een
+  `\n` tot een echte regelovergang. De val zit niet in de onoplettendheid maar in het
+  IDIOOM — zodra er een patch-script aan te pas komt, is de verminking een kwestie van
+  tijd. Bewerk bestaande bestanden daarom met de Edit-tool en schrijf nieuwe met de
+  Write-tool; een shell-script dat broncode genereert of bewerkt is geen toegestane vorm,
+  ook niet eenmalig, ook niet als het "even sneller" is.
 
 ## Vorm van een CC-prompt
 
@@ -819,3 +846,4 @@ Volg de FOCUS uit het bovenste STAND-blok.
 - 2026-08-05 — regel toegevoegd in *Recon en bewijslast*: een ijking toetst de GROOTHEID en niet de AS, dus zet er een identiteit naast die per constructie moet kloppen. Aanleiding: bij punt 11 gaf de arbeid-ijking 0,00% op twee verschillende tijd-assen, terwijl de eerste een t_ster van 152 minuten op een rit van 127 opleverde.
 - 2026-08-05 — regel toegevoegd in *Recon en bewijslast*: een drempel die op een nagenoeg constant tijdstip valt is een KLOK en geen gebeurtenis. Aanleiding: de 15 kJ/kg-drempel viel over 25 ritten tussen 90 en 125 minuten met mediaan 99, dus alles erachter mat de ritduur.
 - 2026-08-05 — regel toegevoegd in *Recon en bewijslast*: een goedkeurpoort in CC wordt vooraf in de chat aangekondigd met het antwoord erbij, en je toetst of hij nódig is. Aanleiding: de remote-D1-lezing van de punt-11-meetronde was overbodig — 0 van de 25 ritten viel terug op `icu_weight`.
+- 2026-08-05 — drie lessen toegevoegd in *Recon en bewijslast*: een grep-eis draagt de vlag waarmee hij gemeten is; een VOOR/NA-vergelijking vraagt dat het prompt de nulmeting zelf eerst wegschrijft naar een pad dat de volgende run niet wist; en een regel die drie keer wordt overtreden is een gereedschapsprobleem, dus bestaande bestanden gaan via de Edit-tool en nieuwe via de Write-tool. De remedie in de bestaande heredoc-regel is daarmee achterhaald en verwijst nu vooruit. Aanleiding: bij punt 13 fase A gaf `copy` 2 in plaats van 3 treffers, bestond er geen prod-nulmeting om tegen te vergelijken, en verminkte een patch-script voor de derde keer een escape.

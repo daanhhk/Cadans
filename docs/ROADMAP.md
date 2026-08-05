@@ -329,7 +329,7 @@ punten staat onder *Gesloten — vindplaats*.
     GEMETEN: zes rood-patches, elk precies één assertie; instrument geijkt op 93 van 93; VOOR
     tegen NA 85 identiek en 8 verschillend, alle acht in het nieuwe scenario `doel-passend`.
 
-13. **Na het event volgt geen herstel** — open · ENGINE plus CLIENT. De maandag ná de raceweek
+13. **Na het event volgt geen herstel** — fase A af · fase B geparkeerd · ENGINE plus CLIENT. De maandag ná de raceweek
     levert de doel-cyclus weer een opbouwfase: de `Recovery`-tak van `eventFase_` kijkt alleen
     binnen de HUIDIGE week, dus zodra de race in de vorige week ligt is er geen herstel meer.
     GEMETEN met AGR op 2027-04-17: op maandag 2027-04-19 geeft de keten "Build". Er staat een
@@ -358,6 +358,21 @@ punten staat onder *Gesloten — vindplaats*.
     event, op het patroon van `eventOvername.ts` en `doelpassend.ts` met een migratie `0011`;
     ONTWORPEN EN GEPARKEERD in `docs/PUNT13-RECON.md` §12 t/m §14, want zonder herstelvenster
     is er geen moment om de vraag aan op te hangen. Fase B raakt punt 28.
+    FASE A AF op `c6fc4f629dedb20d410eabeb8a1b2c762be7f066`, live op Worker Version
+    `03a3bc9e-7bad-4c1f-9576-729e9aad2f63`. `A_HERSTEL_DAGEN` staat op 7 in
+    `packages/engine/src/phase.ts`; de Recovery-tak meet nu een DAGEN-afstand met `Math.round`
+    in plaats van de weekgrens. GEMETEN EFFECT: de week van 2027-04-19 gaat van TSS 262 met
+    high 51 en anaeroob 14 naar TSS 79 met high 0 en anaeroob 0, en 2027-04-26 hervat normaal
+    op 265.
+    ER GING EEN POORT MEE DIE NIET IN DE OORSPRONKELIJKE DIAGNOSE ZAT: de overname-kaart
+    vuurde AL binnen het herstelvenster en vroeg "gaat je doel mee naar AGR" op de dag dat AGR
+    gereden was — `eventOvername.ts` poort (3b), conditie `eventMacroFase === "Recovery"`.
+    Zonder die poort had fase A dat defect VERBREED van 1 naar 3 van de 4 gemeten peildagen.
+    FASE B (de doelvraag na het event) is ONTWORPEN EN GEPARKEERD in `docs/PUNT13-RECON.md`
+    §12 t/m §14 en staat NIET meer in de reeks; hij raakt punt 28.
+    VALKUIL VOOR EEN VOLGENDE PREMISSE-GREP: een grep op `weekStartDate` in `phase.ts` geeft
+    nog ÉÉN treffer, maar dat is COMMENTAAR dat documenteert wat er stond — geen aanroep. De
+    import is vervallen. Toets dus op een aanroep en niet op het woord.
 14. **De anaeroob-term van de per-zone-norm** — af · CLIENT. De norm vraagt
     anaerobe minuten die het plan nauwelijks of niet programmeert, dus de blok-terugblik kan
     "niet geleverd" zeggen over een blok dat EXACT volgens plan is gereden. GEMETEN over 21 cellen
