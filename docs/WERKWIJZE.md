@@ -471,6 +471,30 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   gaf dezelfde aanroep meteen 200. Zelfde soort val, twee keer voorgekomen: een python-heredoc die
   een `\n`-escape tot een echte regelovergang verminkte, gevangen met `node --check`. Zelfde
   familie als "een anomalie in je eigen meetuitvoer is een gat in je INSTRUMENT".
+- **De GATE hoort bij de vaste sluitregels van ELKE CC-prompt, ook bij een docs-only ronde.** Een
+  commit zonder gate is een commit op ongemeten grond, ongeacht wat er in de diff staat. Een
+  prompt die de gate overslaat is dus een prompt met een fout, geen prompt met een vrijstelling.
+- **Een gepind getal over de HUIDIGE VORM van gereedschap is een uitspraak over het HEDEN, niet
+  over die commit.** Hoeveel schermen de harness schiet, hoeveel scenario's er zijn, welke
+  migratie de laatste is — zulke getallen leid je OPNIEUW af op het moment dat je ze gebruikt.
+  Citeren uit een gepind document is er precies naast: het document was waar toen het geschreven
+  werd, en dat is niet dezelfde vraag.
+- **DE MEETLAT MAG NIET FIJNER ONDERSCHEIDEN DAN DE KAART KAN TONEN.** Toont het scherm hele
+  minuten, dan valt het oordeel op hele minuten. Anders kan een zone als GEHAALD lezen en als
+  TEKORT tellen, en spreekt de kaart zichzelf tegen op één regel. Aanleiding: `VO2max 8/8` naast
+  een teller `0/2`, op het doel-passend-scherm.
+- **Een TOLERANTIE hoort net zo goed op een PLATEAU te liggen als een drempel.** De ondergrens
+  waaronder hij aantoonbaar fout is, is NIET het antwoord: meet het hele bereik en kies waar
+  niets beweegt. Zit de uitkomst over dat hele bereik stil, dan was de vraag welke tolerantie je
+  kiest leeg — en is de echte vraag een andere.
+- **Een ROOD-FIXTURE die BINNEN de marge valt die hij moet wegnemen, bewijst niets.** Beide
+  regels geven daar hetzelfde antwoord, dus de patch gaat er groen doorheen en het rood is een
+  illusie. De rood-grens moet BUITEN het mechanisme liggen dat je toetst. Aanleiding: een
+  totaal-grens van één seconde onder plan viel binnen een tolerantie van drie seconden.
+- **Een MEETOPSTELLING reproduceert de VORM van de productie-invoer, niet alleen de waarden.**
+  Levert de bron hele seconden, dan levert je fixture hele seconden. Onafgerond voeden haalt
+  precies de kwantisering weg die in productie wél bijt — en dan is groen een eigenschap van de
+  fixture geworden in plaats van van het systeem.
 - **Geen heredocs voor BESTANDSINHOUD, en na elke bewerking eerst een syntaxcontrole.** Schrijf een
   patch als BESTAND weg en draai die, in plaats van de inhoud door een shell-heredoc te duwen. En
   na elke bewerking van een `.mjs` of `.ts` volgt `node --check` of de typecheck VÓÓR de meting,
@@ -757,3 +781,4 @@ Volg de FOCUS uit het bovenste STAND-blok.
 - 2026-08-04 — regel toegevoegd in *Beslissen*: een besluit dat de trainingslaag raakt noemt zijn M-regel, of stelt vast dat de canon daar OPEN is. Aanleiding: bij punt 17 droeg M63 het antwoord over de uitvoerings-referent al, en het besluit werd toch met `DOELEN-SPEC` onderbouwd.
 - 2026-08-04 — *Opener-sjabloon* haalt voortaan VIER raw-URL's op; `docs/TRAININGSMODEL.md` is de vierde. Aanleiding: de norm-laag stond boven `DOELEN-SPEC` en werd door geen enkele opener opgehaald, dus elke chat reconstrueerde de coach-bril.
 - 2026-08-04 — correctie BINNEN het opener-blok: "deze drie" werd "deze vier", en `TRAININGSMODEL.md` kreeg zijn gezagsregel naast de andere drie documenten. Aanleiding: de alinea boven het blok stond al op vier, maar het telwoord IN het blok bleef op drie staan en de vierde URL kreeg daar geen gezag mee — een chat die alleen het blok leest, leest dus "drie" en weet niet wat het tweede document wil. Zelfde vindpatroon als het parkeerlijst-item dat twee dagen onwaar meereisde: een gekopieerd telwoord hoort geteld, niet overgenomen.
+- 2026-08-05 — zes regels toegevoegd in *Recon en bewijslast*, alle zes uit punt 17: de gate hoort bij élke prompt; een gepind gereedschapsgetal leid je opnieuw af; de meetlat mag niet fijner zijn dan de kaart; een tolerantie hoort op een plateau; een rood-fixture binnen de marge bewijst niets; een meetopstelling reproduceert de VORM van de productie-invoer.

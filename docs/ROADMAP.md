@@ -502,7 +502,7 @@ punten staat onder *Gesloten — vindplaats*.
     plan gereden week weer als niet geleverd. (iii) DE PLAATS — winter-Onderhoud of pas de opmaat
     naar korte beklimmingen, waar dezelfde prikkel hoe dan ook nodig is. GAAT NA PUNT 15: die draagt
     de harde datum en raakt dezelfde dosis-vraag. Raakt `DOELEN-SPEC`.
-17. **De norm is voor de klim-doelen onbereikbaar** — open · NORM plus BIBLIOTHEEK. GEMETEN op
+17. **De norm is voor de klim-doelen onbereikbaar** — af · NORM plus BIBLIOTHEEK. GEMETEN op
     weekvorm V1 in Build, norm én plan op DEZELFDE dosis-trede: FTP levert 95 tegen 84, 108,2 tegen
     96 en 121,4 tegen 108 en is overal GELEVERD; Korte beklimmingen levert 68,5 tegen 78, 79,6
     tegen 90 en 85,5 tegen 102, dus het gat GROEIT van -9,5 naar -16,5; Lange beklimmingen blijft
@@ -579,6 +579,24 @@ punten staat onder *Gesloten — vindplaats*.
     plan heeft plan-totaal 0 en leest triviaal geleverd, 405 van 405; `telt` eist voortaan ook
     het eigen plan, en dat kost gemeten nul beoordeelbare cellen. ANKER: M63 (NORM), met de
     grens dat toepassing op de BLOK-laag een uitbreiding is van een WEEK-regel.
+    AFGEROND per 05-08-2026 en LIVE. Het oordeel is PLAN-RELATIEF op BEIDE eisen: de per-zone-eis
+    legt de geleverde minuten van elke voorgeschreven zone langs de PLAN-minuten van die zone in
+    die week, en de totaal-eis legt de werktotaal langs de PLAN-werktotaal van die week. Het
+    doel-brede richtgetal is geen rechter meer; `blokDosisNorm` bestaat ongewijzigd voort als
+    DOSIS-DOEL voor het plan en de trede-kaart.
+    HET OORDEEL VALT OP DE GETOONDE HELE MINUTEN. De tolerantie-constanten — `MEETKORREL_MIN`,
+    `PLAN_TOLERANTIE_ZONE_MIN` en `PLAN_TOLERANTIE_TOTAAL_MIN` — zijn VERVALLEN. Grond: het scherm
+    toont hele minuten, dus een meetlat die fijner onderscheidt spreekt de kaart tegen. GEMETEN op
+    het doel-passend-scherm stond er `VO2max 8/8` naast een teller `0/2` en `VO2max 16/16` naast
+    `1/2`; na de wijziging lezen die 1/2 en 2/2 terwijl de getoonde cijfers geen haar bewogen. Het
+    totaal rondt ÉÉN keer af, op de SOM, nooit op de delen.
+    DE POORT OP `telt` DRAAGT TWEE EISEN: `poortHerkomst` gelijk aan "week" ÉN `plan.werk > 0`.
+    Allebei aantoonbaar LEVEND: draai er één weg en T5 in `punt17.test.ts` valt. Die tweede eis is
+    er op meting bijgekomen — de poortset komt uit de LABELS en het plan uit de BANDEN, dus een
+    entry met labels zonder banden gaf herkomst "week" bij een plan van nul en las TRIVIAAL
+    geleverd.
+    Commits `18cc242` (het plan als referent) en `1fd047f` (de getoonde minuut); bouwdoc
+    `docs/PUNT17-BOUWDOC.md` op `6a4d3ef`.
 18. **De afronding op het scherm** — af · CLIENT plus TOOLING. Een sessieduur wordt KAAL gerenderd en toont
     daardoor float-ruis: `WorkoutDetail.tsx:57` zet `session.totaalMin` zonder opmaak op het
     scherm en `expandArchetype_` (`planner.ts:1383`) telt `warm + cool + mainMin` op uit blokken
@@ -841,6 +859,14 @@ punten staat onder *Gesloten — vindplaats*.
     (`retryLoad` afwezig), en de `errors`-teller stond op zeven van de acht shots op `none` — de
     achtste droeg alleen de bekende `/api/checkin`-404, die door de fouttolerante `getCheckin`
     op `null` valt en niet gooit. `retryLoad` heeft dus nooit gevuurd.
+    DE BESMETTING IS NIET SCENARIO-GEBONDEN, en dat is per 05-08-2026 gemeten. De ronde van 04-08
+    wees `klim-weekstem` en `v7-blokweek4` aan: die twee verschilden tussen twee sweeps op
+    ONGEWIJZIGDE code. De ronde van 05-08 wees `v7-weekstem` aan, met 61 gewijzigde regels in het
+    WEEKPLAN zelf — TSS, sessietelling en uren — terwijl de wijziging van die ronde alleen het
+    blok-oordeel en één kleurconditie raakte en zulke getallen per constructie niet kan bewegen.
+    De toestand ZWERFT dus tussen scenario's. Een vaste uitsluitingslijst is daarmee GEEN
+    oplossing: hij dekt de vorige ronde en niet de volgende. Tot de uitsluitende toets gedraaid
+    is hoort elke sweep zijn EIGEN ijkrun te dragen in plaats van een geërfde lijst.
 32. **De rit-beoordeling is geen pijler** — open · CLIENT plus norm. Een coach oordeelt over een
     gereden sessie op twee dingen die de app NIET gebruikt: of het voorgeschreven werk HIELD
     binnen de sessie, en wat de renner er zelf over zei.
@@ -853,6 +879,25 @@ punten staat onder *Gesloten — vindplaats*.
     beurt. Het punt is aangemaakt zodat de volgorde ze wél draagt.
     GAAT NA PUNT 17 — zonder een eerlijk uitvoerings-oordeel heeft een rijkere rit-beoordeling
     niets om op te landen.
+
+33. **De norm-vergelijking staat op drie plekken en de derde heeft geen vangnet** — open ·
+    CLIENT plus TOOLING. Sinds punt 17 leest één en dezelfde regel — rond de geleverde minuten
+    af en leg ze langs de getoonde norm — op DRIE plekken: `opNormPerZone` en `zoneOpNorm_` in
+    `apps/web/src/lib/blok.ts`, plus TWEE inline kleurcondities in
+    `apps/web/src/components/schema/BlokReviewCard.tsx`.
+    DE EERSTE TWEE ZIJN GEDEKT en aantoonbaar rood te krijgen (R-D en R-E op T6 van
+    `punt17.test.ts`). DE DERDE NIET, en dat is GEMETEN: draai de kaart-vergelijking terug op de
+    onafgeronde waarde en de HELE suite van 958 blijft groen. `apps/web/vitest.config.ts` draait
+    op `environment: "node"`, er is geen enkel `.test.tsx`-bestand en geen jsdom of
+    testing-library, dus er is niets dat een render-uitspraak kan doen.
+    DAT IS PRECIES DE PLEK WAAR HET DEFECT ZAT dat punt 17 fase B moest repareren: de kaart die
+    zichzelf tegenspreekt. Hij is nu goed, en hij is het enige stuk van die reparatie dat
+    ongedaan gemaakt kan worden zonder dat er iets rood wordt.
+    TWEE TERMEN. (i) Trek de vergelijking naar ÉÉN gedeelde functie die zowel `blok.ts` als de
+    kaart aanroept, zodat er nog maar één plek is om fout te hebben. (ii) Zet render-dekking op
+    voor de client — een tweede vitest-project met jsdom — zodat kleurlogica überhaupt te
+    asserteren is. Term (ii) is breder dan dit punt en betaalt zich terug bij elke volgende
+    kaart-wijziging.
 
 ## De tijdslijn
 
@@ -1045,6 +1090,16 @@ niet; hij verliest niet. Een punt gaat eruit zodra een STAP het opneemt — niet
 
 ### CLIENT
 
+- `KWALITEIT_MIN_PER_PRIKKEL` (`packages/engine/src/utils.ts`, FTP 28 · Onderhoud 22 · de rest
+  26) draagt GEEN herkomst-label en geen afleiding, terwijl `bibliotheekSignatuur` de VORM van
+  de norm wél uit de bibliotheek afleidt (tempo 0,2821 · drempel 0,5625 · anaeroob 0,1554). Die
+  asymmetrie stond in punt 17 en is daar NIET opgelost: het oordeel leest die constante sinds
+  05-08-2026 niet meer, maar het PLAN en de dosis-trede nog wél. Elk getal hoort PLAN, SIGNAAL
+  of BELEID te dragen.
+- OP DOSIS-TREDE 4 staat bij Korte beklimmingen op weekvorm V3 in 3 van de 960 gemeten
+  dagcellen MEER gepland dan de gebruiker opgaf, maximaal 3,8 minuten. Gemeten chat-zijde bij
+  punt 17; klein, maar het plan hoort de opgegeven ruimte nooit te overschrijden.
+
 
 - DE ELSE-TAK IN DE `plannedForDone`-TOEKENNING VAN `proposal.ts` IS DOOD AAN ZIJN INVOER. Hij
   eist `d.voorgesteldType`, en de worker schrijft `planner_days.voorgesteld_type` ALTIJD null
@@ -1080,6 +1135,12 @@ niet; hij verliest niet. Een punt gaat eruit zodra een STAP het opneemt — niet
   herleiden. Ongewijzigd geparkeerd.
 
 ### TOOLING
+
+- DE HARNESS BELOOFT IN PROD-MODUS "geen enkele schrijf-aanroep" (`CLAUDE.md`), maar deed er per
+  05-08-2026 twee: `POST /api/sync/activities` en `POST /api/sync/wellness`. Het zijn de
+  sync-calls die de app bij ELKE pageload doet, dus dezelfde schrijfactie die het openen van de
+  app uitlokt — maar de belofte klopt zo niet. Of de prod-modus onderdrukt die twee, of de
+  belofte wordt bijgesteld naar wat hij werkelijk waarmaakt.
 
 - DE HARNESS EET ZIJN EIGEN VORIGE METING OP. Er is ÉÉN uitvoerpad voor een lokale én een
   prod-run — `tools/shots/shot.mjs:19` zet `OUT` op `join(HERE, "out")`, en de prod-vlag op `:30`
