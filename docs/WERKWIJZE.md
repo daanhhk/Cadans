@@ -596,7 +596,19 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   IDIOOM — zodra er een patch-script aan te pas komt, is de verminking een kwestie van
   tijd. Bewerk bestaande bestanden daarom met de Edit-tool en schrijf nieuwe met de
   Write-tool; een shell-script dat broncode genereert of bewerkt is geen toegestane vorm,
-  ook niet eenmalig, ook niet als het "even sneller" is.
+  ook niet eenmalig, ook niet als het "even sneller" is. Een `python -c`-append aan een
+  wijzigingslog valt hier OOK onder: append-versus-bewerking is geen geldige uitzondering,
+  want het idioom is hetzelfde en de verminking dus ook.
+- **Schrijf je een regel in een TERRITORIUM waar al een regel staat, lees dan de bestaande
+  treffers VOOR je schrijft.** Een trefferaantal bewijst dat er iets STAAT, niet dat het
+  VERENIGBAAR is met wat je toevoegt. Aanleiding: bij de close-out van punt 13 werd een
+  nieuwe heredoc-les toegevoegd die de REMEDIE van de bestaande regel ongeldig maakte — die
+  schreef voor een patch als BESTAND weg te schrijven en te draaien, en juist die vorm is
+  met de nieuwe regel verboden. Er was wel gegrept: 4 treffers, op de regels 471, 521, 522
+  en 813 van de TOENMALIGE tekst. Die grep bevestigde alleen DAT de regel bestond en las
+  niet WAT hij voorschreef. CC ving de tegenstrijdigheid en repareerde de oude bullet
+  ongevraagd. Zelfde familie als "een instructie om iets te BEHOUDEN veronderstelt dat het
+  er staat", nu op een regel die je VERVANGT in plaats van behoudt.
 
 ## Vorm van een CC-prompt
 
