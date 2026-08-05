@@ -288,4 +288,121 @@ describe("punt 17 — de referent meet tegen het PLAN van die week", () => {
     expect(w3?.telt).toBe(false);
     expect(w3?.geleverdOk).toBeNull();
   });
+
+  it("T6 — CONGRUENTIE: een zone telt op norm dan en slechts dan als de GETOONDE cijfers dat zeggen", () => {
+    // DE REGEL DIE HIER VASTLIGT: over elke meegetelde week en elke voorgeschreven zone geldt
+    // `zone op norm` <-> `Math.round(geleverd) >= norm`, met `norm` exact het getal dat de kaart
+    // rendert. Zonder die gelijkheid kan de terugblik `VO2max 8/8` tonen naast een teller `0/2`,
+    // en dat stond er ook echt (docs/PUNT17-BOUWDOC.md, shot doel-passend/01-week).
+    //
+    // DE FIXTURE MAG NIET EXACT VOLGENS PLAN RIJDEN. Bij geleverd gelijk aan plan geven de oude
+    // en de nieuwe regel hetzelfde antwoord in 2160 van de 2160 zone-cellen, dus zo'n fixture is
+    // per constructie groen onder beide regels en bewijst niets. De afwijking varieert daarom per
+    // week en per zone, en er zit een geval bij dat de twee regels UIT ELKAAR trekt: geleverd
+    // ONDER de onafgeronde plan-waarde terwijl beide op hetzelfde gehele getal afronden. Die
+    // waarde wordt AFGELEID uit het plan van de fixture, nooit als literal geschreven.
+    const { weekplans, planPerWeek } = blokPlan_();
+
+    const p0 = planPerWeek[0];
+    const p1 = planPerWeek[1];
+    const p2 = planPerWeek[2];
+    if (!p0 || !p1 || !p2) throw new Error("plan onverwacht leeg");
+
+    // Week 1 — DE ZONE-GRENS. Net onder de onafgeronde plan-drempel, zelfde afronding.
+    const grensDrempel = Math.round(p0.drempel ?? 0) - 0.5;
+    expect(
+      grensDrempel,
+      "de grenswaarde moet ONDER het plan liggen",
+    ).toBeLessThan(p0.drempel ?? 0);
+    expect(Math.round(grensDrempel)).toBe(Math.round(p0.drempel ?? 0));
+
+    // Week 2 — DE TOTAAL-GRENS. Het totaal moet RUIM onder de onafgeronde plan-werktotaal zakken
+    // en tóch op hetzelfde gehele getal afronden; een gat van één seconde volstaat niet, want dat
+    // valt binnen elke tolerantie die de oude regel zou dragen en dan scheidt de toets niets meer.
+    // Mikpunt is daarom vier tienden ONDER het afgeronde plan: dat rondt terug naar hetzelfde
+    // gehele getal en ligt tientallen seconden van het plan af.
+    const planWerk1 = (p1.tempo ?? 0) + (p1.drempel ?? 0) + (p1.anaeroob ?? 0);
+    const totaalDoel = Math.round(planWerk1) - 0.4;
+    expect(
+      totaalDoel,
+      "de totaal-grens moet ONDER het plan liggen",
+    ).toBeLessThan(planWerk1);
+    expect(Math.round(totaalDoel)).toBe(Math.round(planWerk1));
+    const totaalGat = planWerk1 - totaalDoel;
+
+    const gereden = [
+      {
+        ...p0,
+        tempo: (p0.tempo ?? 0) + 20,
+        drempel: grensDrempel,
+        anaeroob: (p0.anaeroob ?? 0) * 1.5,
+      },
+      { ...p1, anaeroob: (p1.anaeroob ?? 0) - totaalGat },
+      {
+        ...p2,
+        tempo: (p2.tempo ?? 0) * 0.9,
+        drempel: (p2.drempel ?? 0) * 1.2,
+        anaeroob: (p2.anaeroob ?? 0) * 0.5,
+      },
+      { ...(planPerWeek[3] ?? {}) },
+    ];
+    const activities = gereden.map((zm, i) =>
+      ritMet_(schuif_(BLOKSTART, i * 7 + 1), zm as Zones),
+    );
+
+    const r = referent_(weekplans, activities);
+    if (!r) throw new Error("referent onverwacht null");
+    const geteld = r.weeks.filter((w) => w.telt);
+    expect(geteld.length).toBeGreaterThan(0);
+
+    // (1) DE CONGRUENTIE, per zone. `zoneRegels` draagt exact wat de kaart rendert.
+    for (const w of geteld) {
+      let opNorm = 0;
+      for (const rij of w.zoneRegels) {
+        if (!w.zonesVoorgeschreven.includes(rij.zone)) continue;
+        if (rij.norm == null)
+          throw new Error("voorgeschreven zone zonder norm");
+        if (Math.round(rij.geleverd) >= rij.norm) opNorm++;
+      }
+      expect(w.zonesOpNorm, `${w.weekMonday} zones op norm`).toBe(opNorm);
+    }
+
+    // (2) DE CONGRUENTIE, op het totaal.
+    for (const w of geteld) {
+      const som = w.geleverdTempo + w.geleverdDrempel + w.geleverdAnaeroob;
+      expect(w.totaalOpNorm, `${w.weekMonday} totaal`).toBe(
+        Math.round(som) >= w.gevraagd,
+      );
+    }
+
+    // (3) DE FIXTURE IS DISCRIMINEREND, en dat is hier een assertie en geen aanname: zonder deze
+    // twee zou (1) en (2) ook groen zijn onder de oude tolerantie-regel.
+    const planVan = (w: (typeof geteld)[number], z: string) =>
+      z === "tempo"
+        ? w.planTempo
+        : z === "drempel"
+          ? w.planDrempel
+          : w.planAnaeroob;
+    const grensZones = geteld.flatMap((w) =>
+      w.zoneRegels.filter(
+        (rij) =>
+          w.zonesVoorgeschreven.includes(rij.zone) &&
+          rij.geleverd < planVan(w, rij.zone) &&
+          Math.round(rij.geleverd) === rij.norm,
+      ),
+    );
+    expect(
+      grensZones.length,
+      "geen enkele zone op de grens: deze toets scheidt de twee regels dan niet",
+    ).toBeGreaterThan(0);
+
+    const grensTotalen = geteld.filter((w) => {
+      const som = w.geleverdTempo + w.geleverdDrempel + w.geleverdAnaeroob;
+      return som < w.planWerk && Math.round(som) === w.gevraagd;
+    });
+    expect(
+      grensTotalen.length,
+      "geen enkel totaal op de grens: deze toets scheidt de twee regels dan niet",
+    ).toBeGreaterThan(0);
+  });
 });

@@ -393,26 +393,27 @@ function poortsetVoorWeek_(
   return WERKZONES.filter((z) => gezien.has(z));
 }
 
-/** ROADMAP punt 17 — DE TOLERANTIE IS DE MEETKORREL, niet een drijvende-komma-haar.
+/** ROADMAP punt 17 — HET OORDEEL VALT OP DE GETOONDE HELE MINUUT. Er is dus geen tolerantie
+ * meer: `Math.round` van de geleverde minuten tegen `gevraagd*`, en dat laatste draagt al de ENE
+ * afronding van zijn eigen onafgeronde plan-waarde.
  *
- * AFWIJKING VAN docs/PUNT17-BOUWDOC.md §7, en wel GEMETEN. Die spec vroeg 1e-6 minuut. Dat is zes
- * honderdduizendste seconde, en het is te fijn: de GELEVERDE kant komt binnen als HELE SECONDEN
- * (`zoneTimesFromCell_` leest `secs`), terwijl het PLAN willekeurige fracties daarvan draagt — de
- * eerste blokweek van Korte beklimmingen vraagt 4,043478… tempo-minuten, oftewel 242,6 seconden.
- * Een rit die dat plan perfect uitvoert landt dus op 243 of 242 seconden en NOOIT op 242,6.
+ * DE GROND IS DE KAART, niet de rekenkunde. De terugblik toont hele minuten. Een meetlat die
+ * fijner onderscheidt dan de kaart kan tonen produceert een zichtbare tegenspraak: GEMETEN op het
+ * doel-passend-scherm stond er `VO2max 8/8` naast een teller `0/2`, en `VO2max 16/16` naast `1/2`.
+ * Twee getallen die gelijk zijn en een teller die zegt van niet — op één regel, op één scherm.
+ * Ronden beide kanten op dezelfde korrel af, dan kan dat per constructie niet meer.
  *
- * GEMETEN op de FTP-fixture van punt15.test.ts: een exact volgens plan gereden week kwam 0,006522
- * minuut tekort — 0,39 seconde, puur kwantisering — en las met de 1e-6-tolerantie als NIET
- * GELEVERD. Dat is acceptatiecriterium 1 van het bouwdoc dat op zijn eigen tolerantie omvalt, en
- * het zou in productie precies zo bijten: Intervals levert hele seconden.
+ * DAT KOST GEEN GEVOELIGHEID, en dat is gemeten en niet aangenomen. De kwantisering van de bron
+ * ligt chat-zijde op ten hoogste 0,600 seconde per zone en 0,400 seconde op het totaal, over 3645
+ * zone-cellen — ruim binnen één minuut afronding. En over het HELE bereik van 0,6 tot 60 seconde
+ * tolerantie bewoog geen enkele cel: de vraag welke tolerantie je kiest was leeg, de vraag op
+ * welke KORREL je oordeelt niet. Wat de toetsen aantonen zakt met tientallen minuten, niet met
+ * seconden.
  *
- * Eén seconde is dus de ONDERGRENS van wat een tolerantie mag zijn — fijner meet je de korrel van
- * de bron en niet de renner. Het TOTAAL telt drie apart gekwantiseerde zones op en draagt daarom
- * drie keer die korrel. Verwaarloosbaar tegen een plan van 68 minuten, en ruim binnen elk verschil
- * dat de toetsen aantonen: grijs rijden zakt met tientallen minuten, niet met seconden. */
-const MEETKORREL_MIN = 1 / 60;
-const PLAN_TOLERANTIE_ZONE_MIN = MEETKORREL_MIN;
-const PLAN_TOLERANTIE_TOTAAL_MIN = WERKZONES.length * MEETKORREL_MIN;
+ * HET TOTAAL RONDT ÉÉN KEER AF, op de som: `werkTotaal` blijft de ONAFGERONDE optelling van de
+ * drie zones en gaat pas daarna door `Math.round`. Nooit een som van afgeronde delen
+ * (WERKWIJZE, rond één keer af) — anders loopt het totaal tot anderhalve minuut uit de pas met
+ * zijn eigen zones. */
 
 /** ROADMAP punt 17 — de PLAN-ZONEMINUTEN van één week, ONAFGEROND. Zelfde venster en zelfde bron
  * als `poortsetVoorWeek_` hierboven: de BEWAARDE entries van maandag t/m zondag. Geen tweede
@@ -609,12 +610,12 @@ export function buildBlokReferent(input: {
     // maakt. De poort weert BANDOVERLOOP, geen klein tekort — een voorgeschreven zone telt mee hoe
     // klein het tekort ook is.
     //
-    // ROADMAP punt 17 — tegen de ONAFGERONDE plan-minuten, met `PLAN_TOLERANTIE_MIN` speling. Het
-    // getal op het scherm is `gevraagdTempo` c.s. en dat is dezelfde grootheid, één keer afgerond.
+    // ROADMAP punt 17 — op de GETOONDE HELE MINUUT. `gevraagdTempo` c.s. is exact het getal dat de
+    // kaart naast de geleverde minuten zet, dus kleur, teller en oordeel kunnen niet uiteenlopen.
     const opNormPerZone = {
-      tempo: k.tempo >= plan.tempo - PLAN_TOLERANTIE_ZONE_MIN,
-      drempel: k.drempel >= plan.drempel - PLAN_TOLERANTIE_ZONE_MIN,
-      anaeroob: k.anaeroob >= plan.anaeroob - PLAN_TOLERANTIE_ZONE_MIN,
+      tempo: Math.round(k.tempo) >= gevraagdTempo,
+      drempel: Math.round(k.drempel) >= gevraagdDrempel,
+      anaeroob: Math.round(k.anaeroob) >= gevraagdAnaeroob,
     };
     const zonesOpNorm = zonesVoorgeschreven.filter(
       (z) => opNormPerZone[z as "tempo" | "drempel" | "anaeroob"],
@@ -626,16 +627,15 @@ export function buildBlokReferent(input: {
     // naar 46 geleverde cellen en trok Onderhoud van 27 van 27 naar 18 van 27 — het defect dat
     // punt 14 fase 1 net had weggenomen.
     //
-    // ROADMAP punt 17 — TEGEN DE PLAN-WERKTOTAAL van deze week, onafgerond en met dezelfde
-    // tolerantie. GEMETEN dat deze eis DRAGEND blijft naast de per-zone-eis: in een scenario waarin
+    // ROADMAP punt 17 — TEGEN DE PLAN-WERKTOTAAL van deze week, op dezelfde korrel. `werkTotaal`
+    // blijft ONAFGEROND optellen en rondt pas op de SOM af; `gevraagd` draagt de ene afronding van
+    // de plan-werktotaal. GEMETEN dat deze eis DRAGEND blijft naast de per-zone-eis: in een scenario waarin
     // de voorgeschreven zones exact geleverd worden maar de bandoverloop-tempo niet, valt 615 van
     // de 1215 weken op het TOTAAL ALLEEN (§4). Geen van beide eisen is redundant.
     // De drie werkzone-waarden zijn EXACT dezelfde die het per-zone-oordeel hierboven leest — geen
     // tweede vouwing.
     const werkTotaal = k.tempo + k.drempel + k.anaeroob;
-    const totaalOpNorm = telt
-      ? werkTotaal >= plan.werk - PLAN_TOLERANTIE_TOTAAL_MIN
-      : null;
+    const totaalOpNorm = telt ? Math.round(werkTotaal) >= gevraagd : null;
     const geleverdOk = telt
       ? zonesOpNorm === zonesVoorgeschreven.length && totaalOpNorm === true
       : null;
@@ -734,13 +734,13 @@ export interface BlokUitvoering {
 
 /** Haalt deze week de norm van deze zone? Eén plek, zodat oordeel en diagnose niet uiteenlopen.
  *
- * ROADMAP punt 17 — LEEST DE ONAFGERONDE PLAN-WAARDE, met dezelfde tolerantie als het oordeel in
- * `buildBlokReferent`. Dat moet, en het is GEMETEN waarom: zolang deze functie de AFGERONDE
- * `gevraagdTempo` c.s. las terwijl het oordeel tegen `planTempo` mat, liepen oordeel en diagnose
- * uiteen — zonepoort-toets (E) meldde `tempo` als tekortzone in een week die het oordeel als
- * geleverd had gelezen. De doc-regel hierboven stond er al; hij was alleen niet meer waar. */
+ * ROADMAP punt 17 — LEEST DE GETOONDE NORM en rondt de geleverde kant één keer af, exact zoals
+ * het oordeel in `buildBlokReferent`. Dat moet: zolang deze functie en het oordeel op
+ * VERSCHILLENDE grootheden stonden liepen ze uiteen — zonepoort-toets (E) meldde `tempo` als
+ * tekortzone in een week die het oordeel als geleverd had gelezen. De doc-regel hierboven stond
+ * er al; hij was alleen niet waar. Nu draagt één grootheid oordeel, diagnose én kaart. */
 function zoneOpNorm_(w: BlokWeek, z: Zone5Key): boolean {
-  return zoneGeleverd_(w, z) >= zoneGevraagd_(w, z) - PLAN_TOLERANTIE_ZONE_MIN;
+  return Math.round(zoneGeleverd_(w, z)) >= zoneGevraagd_(w, z);
 }
 
 function zoneGeleverd_(w: BlokWeek, z: Zone5Key): number {
@@ -753,10 +753,10 @@ function zoneGeleverd_(w: BlokWeek, z: Zone5Key): number {
 
 function zoneGevraagd_(w: BlokWeek, z: Zone5Key): number {
   return z === "tempo"
-    ? w.planTempo
+    ? w.gevraagdTempo
     : z === "drempel"
-      ? w.planDrempel
-      : w.planAnaeroob;
+      ? w.gevraagdDrempel
+      : w.gevraagdAnaeroob;
 }
 
 /**

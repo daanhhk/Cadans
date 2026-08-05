@@ -169,8 +169,14 @@ function Regel({ week }: { week: BlokWeek }) {
                 style={{
                   // Norm null = niet beoordeeld: streepje en NEUTRALE kleur. Exact de vorm die
                   // BlokTotaal hieronder al draagt — één regel, twee lezers.
+                  //
+                  // ROADMAP punt 17 — DEZELFDE AFRONDING ALS HET GERENDERDE GETAL hiernaast, en
+                  // dus dezelfde als het oordeel in `blok.ts`. Zonder die ronding kleurde een zone
+                  // die 8/8 TOONT als tekort, of andersom: het cijfer zei gehaald en de kleur niet.
                   color:
-                    !gedempt && z.norm != null && z.geleverd < z.norm
+                    !gedempt &&
+                    z.norm != null &&
+                    Math.round(z.geleverd) < z.norm
                       ? "var(--warn)"
                       : undefined,
                 }}
@@ -264,8 +270,10 @@ function BlokTotaal({ weeks }: { weeks: BlokWeek[] }) {
               fontFamily: "var(--font-num)",
               fontSize: "var(--fs-caption)",
               fontWeight: 600,
+              // ROADMAP punt 17 — zie de zone-regels hierboven: ronden vóór vergelijken, zodat de
+              // kleur nooit iets anders beweert dan het cijfer dat eronder staat.
               color:
-                rij.norm != null && rij.geleverd < rij.norm
+                rij.norm != null && Math.round(rij.geleverd) < rij.norm
                   ? "var(--warn)"
                   : "var(--text-secondary)",
             }}
