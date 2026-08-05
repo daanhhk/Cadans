@@ -560,6 +560,17 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   tussen je rood-meting en je commit, herhaal die meting daarna. Zelfde familie als de bestaande les
   dat een biome-reformattering een red-patch ongemerkt kan opheffen, nu op de VOLGORDE in plaats van
   op de inhoud: niet de patch verdwijnt, maar het bewijs eronder veroudert.
+- **Een VOLGORDE-argument dat op het EFFECT van een fix rust, toetst eerst de VORM van die
+  fix.** "Doe X eerst, want het maakt de rest eenvoudiger" is een uitspraak over wat X
+  oplevert, en die is pas geldig als vaststaat wat X werkelijk doet. Grep de fix vóór je de
+  volgorde adviseert. Aanleiding: punt 33 werd naar voren geadviseerd omdat het de andere
+  punten eenvoudiger zou maken door een testlaag te consolideren, terwijl
+  `apps/web/vitest.config.ts` `environment: "node"` draait met `include: ["src/**/*.test.ts"]`
+  en er NUL `.test.tsx`-bestanden en geen jsdom bestaan — er valt daar niets te consolideren,
+  dus het gestelde effect bestaat niet. Het advies is teruggenomen vóór er iets gebouwd was.
+  Zelfde familie als "een gepind document bewijst zijn eigen GELDIGHEID niet", nu op een
+  ADVIES in plaats van op een document.
+
 ## Vorm van een CC-prompt
 
 - **Eén plain code-blok**, zonder taal-tag — dat is de één-tap-kopie op mobiel. Nooit proza in het blok mengen; Claude's kader eromheen staat als gewone tekst.

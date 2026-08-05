@@ -338,6 +338,26 @@ punten staat onder *Gesloten — vindplaats*.
     gebruiker daarna zonder richting achter, en dat is hetzelfde gat — het herstel en de nieuwe
     doelvraag horen in één kaart en worden samen opgelost. Kwam binnen tijdens punt 9 fase B,
     waar de bevestigingspoort aanvankelijk óók over `Recovery` lag. Raakt `DOELEN-SPEC`.
+    GEMETEN 05-08-2026, chat-zijde, spec `docs/PUNT13-RECON.md`. Op Daans eigen weekvorm
+    (ma45 di60 do60 za120) met AGR op 2027-04-17: 17-04 Recovery TSS 21, 18-04 Recovery TSS 0,
+    en 19-04 een VOLLE Peak-week met TSS 262, high 51 en anaeroob 14 — VO2 Hill Repeats 9x90s
+    op dinsdag en een efforts-rit van 120 minuten op zaterdag, twee dagen na 240 km met 2960
+    hoogtemeters. BIJ EEN ZONDAGRACE IS HET HERSTEL EXACT NUL HELE DAGEN. Drie tegenwerpingen
+    zijn gemeten en vallen weg: de mesocyclus vangt het niet op (mesoWeek 4 op die maandag in
+    3 van de 12 doelStart-datums), het geldt bij alle vijf doelen (Onderhoud levert er met
+    high 84 de meeste), en een herstelweek alleen is niet genoeg — daarna volgen 26-04 Peak
+    265, 03-05 Peak 272 en 10-05 een Test-week voor een doel waarvan het event geweest is.
+    HET PUNT SPLITST IN TWEE FASES, EN DAT IS EEN NORM-KWESTIE. Herstel is een CONSTATERING
+    over een rit die al gereden is, dezelfde categorie als de taper-overlay, en hangt daarom
+    NIET aan een bevestiging — dezelfde fout lag bij punt 9 fase B al een keer over `Recovery`.
+    Het nieuwe doel is wel een KEUZE en valt onder M10, M11 en M51. Ze horen op een SCHERM,
+    nooit aan een KNOP. FASE A (ENGINE): het herstelvenster wordt ZEVEN DAGEN na de A-race,
+    herkomst BELEID — er staat geen A-race in de historie, dus er is geen reeks te
+    bemonsteren. Een DAGEN-venster maakt de duur onafhankelijk van de weekdag van de race; een
+    weekregel verplaatst die willekeur alleen. FASE B (CLIENT plus DATA): de doelvraag na het
+    event, op het patroon van `eventOvername.ts` en `doelpassend.ts` met een migratie `0011`;
+    ONTWORPEN EN GEPARKEERD in `docs/PUNT13-RECON.md` §12 t/m §14, want zonder herstelvenster
+    is er geen moment om de vraag aan op te hangen. Fase B raakt punt 28.
 14. **De anaeroob-term van de per-zone-norm** — af · CLIENT. De norm vraagt
     anaerobe minuten die het plan nauwelijks of niet programmeert, dus de blok-terugblik kan
     "niet geleverd" zeggen over een blok dat EXACT volgens plan is gereden. GEMETEN over 21 cellen
@@ -949,6 +969,17 @@ punten staat onder *Gesloten — vindplaats*.
     voorzichtige vorm, de COPY doel-specifiek maken de andere. Dat is een bouwbeslissing en
     hoort bij het punt zelf, niet hier.
 
+35. **Een event draagt geen duur** — open · DATA plus ENGINE. `EventItem`
+    (`packages/shared/src/weekgen.ts:38`) en de D1-tabel `events`
+    (`workers/api/src/db/schema.ts:147`) dragen precies EEN `datum`, geen einddatum en geen
+    duur. Voor de TAPER is dat juist — die meet naar de startdag toe. Voor HERSTEL is het
+    blokkerend: een venster van N dagen na het event meet bij een meerdaagse vanaf de
+    STARTdag, dus het verloopt voor de trip afgelopen is. GEVOLG: de herstelregel van punt 13
+    fase A geldt bewust alleen voor `type` race, en de Stelvio-week van zomer 2027
+    (`DOELEN-SPEC` §3.4) krijgt na afloop geen herstel. Vraagt een migratie, een DTO-veld, een
+    invoerveld in Events en een tweede grens in `eventFase_`. Kwam binnen bij de recon van
+    punt 13.
+
 ## De tijdslijn
 
 De seizoenskalender uit `DOELEN-SPEC.md` §5, naast de reeks gelegd.
@@ -1172,6 +1203,13 @@ niet; hij verliest niet. Een punt gaat eruit zodra een STAP het opneemt — niet
   terwijl datzelfde blok op prod 2/3, 1/3 en 2/3 haalde. De lokale D1 draagt andere historie. Geen
   regressie en geen herijk-aanleiding, wel iets om bij elke prod-verificatie te onthouden.
 
+- DE COACH-COPY-RONDE. De toon van de coach-teksten is nooit als geheel doorgelopen; losse
+  rondes hebben hem per kaart bijgesteld. STAAT HIER EN NIET IN DE REEKS, met reden: het is
+  een VOORNEMEN zonder diagnose en zonder vindplaats — er is geen gemeten defect en geen
+  bestand aangewezen. Hij reisde sinds 02-08-2026 mee in de OPENSTAAND-regels van de
+  STAND-blokken zonder ergens een bron te hebben; deze bullet IS die bron. Wordt hij een
+  punt in de reeks, dan pas nadat er een concrete klacht of meting onder ligt.
+
 ### DATA
 
 - GEMENGDE WEGING, één overgangsweek: bewaarde weekplannen van verstreken dagen houden hun oude
@@ -1183,6 +1221,13 @@ niet; hij verliest niet. Een punt gaat eruit zodra een STAP het opneemt — niet
 - DE HISTORISCHE GRENZEN. Elke activiteit draagt `icu_power_zones`, maar die wordt niet per rit
   bewaard: alleen de nieuwste wint. Een zone-wijziging midden in een blok is daarmee niet te
   herleiden. Ongewijzigd geparkeerd.
+
+- AFGEVOERD 05-08-2026 — `indoor_ftp` 260 TEGEN `ftp` 280. Intervals scoort een indoor-rit
+  tegen 260 terwijl het plan op 280 rekent (`docs/DOSIS-MUNT-RECON.md`,
+  `docs/ZONE-SYNC-BOUWDOC.md`, `docs/ZONE-MUNT-ONTWERP.md`). GEEN BOUW: Daan trekt de twee
+  waarden zelf gelijk in intervals.icu, dus het verschil verdwijnt bij de bron en er is niets
+  te compenseren. Dit item reisde sinds 29-07-2026 mee in de OPENSTAAND-regels zonder ooit een
+  plek in de reeks te hebben; het staat hier zodat een volgende chat het niet opnieuw opvist.
 
 ### TOOLING
 
