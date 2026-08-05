@@ -7,6 +7,7 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
+  renameSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -16,8 +17,7 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const OUT = join(HERE, "out");
-// OUTSIDE out/: that directory is wiped every run, so the pre-seed state would be lost.
+// OUTSIDE out/: that directory is rotated every run, so the pre-seed state would be lost.
 const SEED_BACKUP = join(HERE, "seed-backup.json");
 
 // Default: hard on loopback, and remote is NEVER touched.
@@ -31,6 +31,27 @@ const PROD = !!TARGET;
 const WEB = PROD ? TARGET : "http://127.0.0.1:5173";
 // One origin on a deployment: the Worker serves the assets AND /api.
 const API = PROD ? TARGET : "http://127.0.0.1:8787";
+
+// ROADMAP punt 31 — EIGEN UITVOERPAD PER MODUS, EN ROTATIE IN PLAATS VAN WISSEN.
+//
+// DEZE DECLARATIE STAAT HIER EN NIET BOVENAAN, en dat is dwingend: `PROD` wordt hierboven pas
+// gezet, dus een const van bovenaf zou een ReferenceError geven.
+//
+// TWEE DINGEN TEGELIJK. (1) Prod en lokaal schrijven niet langer in hetzelfde pad — een prod-run
+// overschreef tot nu toe de lokale uitvoer en andersom, wat precies één keer een prod-nulmeting
+// heeft gekost. (2) Een geslaagde run WIST zijn voorganger niet meer maar schuift hem op naar
+// `-vorige`, zodat er altijd een nulmeting ligt zonder dat een prompt eraan hoeft te denken.
+//
+// GROND VOOR (2): een VOOR/NA-vergelijking vroeg tot nu toe dat het PROMPT de nulmeting bewaarde,
+// en dat is DRIE keer misgegaan — punt 26, punt 27 en punt 13 fase A, waar de vergelijking al
+// onmogelijk was op het moment dat erom werd gevraagd.
+//
+// ALLEEN EEN COMPLETE RUN SCHUIFT OP, herkenbaar aan `MARKER`. Dat is geen theoretisch geval:
+// deze reeks viel twee keer midden in een sweep om (vite stierf stil), en een half gevulde map
+// mag een goede nulmeting niet verdringen.
+const OUT = join(HERE, PROD ? "out-prod" : "out");
+const VORIGE = `${OUT}-vorige`;
+const MARKER = "RUN-COMPLEET.json";
 
 // Prod sits behind a whole-origin Basic-auth gate (workers/api/src/index.ts). Local does not:
 // BASIC_AUTH_PASSWORD is a deploy-only secret and the gate is a no-op without it.
@@ -473,17 +494,43 @@ function attach(page) {
   };
 }
 
-async function settle(page) {
+/**
+ * ROADMAP punt 24 — EEN LADENDE PAGINA MAG GEEN GELDIGE SHOT WORDEN.
+ *
+ * De wacht hieronder bestond al, maar de time-out werd GESLIKT: liep hij af, dan schoot de
+ * harness gewoon door en leverde een foto van een half geladen scherm als bewijsmateriaal. Sinds
+ * deze wijziging valt het oordeel op de TOESTAND na de bezinktijd, niet op de time-out. De `catch`
+ * blijft dus staan en blijft slikken — een pagina die tijdens die 800 ms alsnog opklaart hoort
+ * niet om te vallen — maar staat de laadtekst er dan NOG, dan stopt de run.
+ *
+ * WAAROM ÉÉN STRING VOOR ALLE ROUTES MAG. Alle acht route-componenten renderen byte-identiek
+ * dezelfde laadtekst: `Schema.tsx:132`, `Vorm.tsx:93`, `Trainingen.tsx:123`, `Niveau.tsx:164`,
+ * `Activiteiten.tsx:58`, `Instellingen.tsx:535`, `Weekplanner.tsx:377` en `Events.tsx:542`. Er is
+ * dus een eigenschap die ÉLKE route draagt, en een per-route handlijst van selectors is niet
+ * nodig. Sterker: zo'n lijst DRIJFT AF — een nieuwe route wordt vergeten en valt stil buiten de
+ * controle, precies het patroon dat `EXTRA_ROUTES` vandaag al heeft (geen mount-assertie).
+ *
+ * DEZE CONTROLE STOPT GEEN ENKELE GOEDE RUN. GEMETEN op 05-08-2026 over drie volledige sweeps:
+ * nul van de 288 `.txt` bevatten de laadtekst (`docs/PUNT31-24-RECON.md` §5). Hij kost dus niets
+ * en vangt alleen het geval dat er nu stil doorheen glipt.
+ *
+ * `.first()` is DRAGEND en geen netheid: zonder dat breekt playwright's strict mode zodra de
+ * sub-loader op de Niveau-tab (`components/niveau/Rijdersprofiel.tsx:331`) meematcht.
+ */
+async function settle(page, label) {
   await page.waitForSelector("#root > *", { state: "visible", timeout: 60000 });
+  const loader = page.getByText("Laden…").first();
   try {
-    await page
-      .getByText("Laden…")
-      .first()
-      .waitFor({ state: "hidden", timeout: 15000 });
+    await loader.waitFor({ state: "hidden", timeout: 15000 });
   } catch {
     // No loader, or it never cleared — not fatal, the shot still tells us why.
   }
   await page.waitForTimeout(800);
+  if (await loader.isVisible()) {
+    throw new Error(
+      `${label}: still loading after settle — the page never finished; a shot here would be a photo of a spinner`,
+    );
+  }
 }
 
 /**
@@ -681,7 +728,7 @@ async function sweep(page, scenario, monday, results, seededSettings) {
       });
       await page.clock.setFixedTime(new Date(`${m}T08:00:00`));
       await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
-      await settle(page);
+      await settle(page, `${label} bewijsweek ${m}`);
     }
 
     // DE KLOK PER SCENARIO. Stond dit één keer in main() vóór de lus, dan lag ELK scenario
@@ -695,7 +742,7 @@ async function sweep(page, scenario, monday, results, seededSettings) {
       // ander defect dan je denkt. Dus eerst laden met de klok op de maandag, dán verzetten.
       await page.clock.setFixedTime(new Date(`${wkMonday}T08:00:00`));
       await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
-      await settle(page);
+      await settle(page, `${label} warmloop dagOffset ${offset}`);
     }
     await page.clock.setFixedTime(
       new Date(`${plusDays(wkMonday, offset)}T08:00:00`),
@@ -708,7 +755,7 @@ async function sweep(page, scenario, monday, results, seededSettings) {
   probe.reset();
   // NOT networkidle: vite keeps an HMR websocket open, so it never settles.
   await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
-  await settle(page);
+  await settle(page, `${label} weekscherm`);
   results.push({
     scenario: label,
     ...(await capture(page, dir, "01-week", url, probe)),
@@ -750,7 +797,7 @@ async function sweep(page, scenario, monday, results, seededSettings) {
       probe.reset();
       const u = `${WEB}${route}`;
       await page.goto(u, { waitUntil: "domcontentloaded", timeout: 60000 });
-      await settle(page);
+      await settle(page, `${label} route ${route}`);
       const name = `${String(i + 9).padStart(2, "0")}-${route.slice(1)}`;
       results.push({
         scenario: label,
@@ -872,8 +919,18 @@ async function main() {
     );
   }
 
-  // Never let a stale shot pass for a fresh one.
-  rmSync(OUT, { recursive: true, force: true });
+  // Never let a stale shot pass for a fresh one — maar WISSEN is niet meer de manier.
+  //
+  // ROADMAP punt 31 — ROTATIE. Droeg de vorige run de MARKER, dan was hij COMPLEET en schuift hij
+  // op naar `-vorige`; droeg hij hem niet, dan was hij afgebroken en gaat hij weg. Zo ligt er na
+  // elke geslaagde run vanzelf een nulmeting klaar, zonder dat een prompt eraan hoeft te denken,
+  // en verdringt een half gevulde map nooit een goede.
+  if (existsSync(join(OUT, MARKER))) {
+    rmSync(VORIGE, { recursive: true, force: true });
+    renameSync(OUT, VORIGE);
+  } else {
+    rmSync(OUT, { recursive: true, force: true });
+  }
   mkdirSync(OUT, { recursive: true });
 
   const monday = mondayISO();
@@ -928,6 +985,10 @@ async function main() {
   }
 
   const lines = [
+    // ROADMAP punt 31 — de paden bij NAAM, als eerste regel. Een vergelijking hoeft dan nooit te
+    // raden waar de vorige run staat, en het verschil tussen de lokale en de prod-map is meteen
+    // zichtbaar in plaats van af te leiden uit het argument.
+    `uitvoer: ${OUT}${existsSync(VORIGE) ? `  vorige COMPLETE run: ${VORIGE}` : "  vorige: (nog geen complete run)"}`,
     PROD
       ? `target: ${WEB}  READ-ONLY, clock ${PINNED}, basic-auth as "${AUTH_USER}" (password supplied, not shown)`
       : `monday: ${monday}  clock: ${PINNED}  events: ${eventsState}`,
@@ -939,6 +1000,27 @@ async function main() {
     );
   }
   process.stdout.write(`${lines.join("\n")}\n`);
+
+  // ROADMAP punt 31 — DE MARKER, als LAATSTE handeling van een geslaagde run.
+  //
+  // Hij staat VÓÓR de float-net-controle hieronder, en dat is een besluit: een run die op het net
+  // ROOD valt is wél COMPLEET — elke shot is geschoten en elke .txt staat er — dus hij mag als
+  // nulmeting opschuiven. Wat NIET mag opschuiven is een run die halverwege omviel, en die
+  // bereikt deze regel per constructie niet.
+  writeFileSync(
+    join(OUT, MARKER),
+    `${JSON.stringify(
+      {
+        modus: PROD ? "prod" : "lokaal",
+        doel: WEB,
+        klok: PINNED,
+        shots: results.length,
+        tijdstempel: new Date().toISOString(),
+      },
+      null,
+      1,
+    )}\n`,
+  );
 
   // HET NET IS HARD. Pas HIER, nadat elke shot geschoten is: de .txt's staan er dan compleet, dus
   // een rode uitslag komt mét het volledige beeld in plaats van halverwege af te breken. De

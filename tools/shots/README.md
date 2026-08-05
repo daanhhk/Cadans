@@ -16,8 +16,26 @@ Draai dan:
 
 De output staat in `out/`: per pagina een `NN-naam.png` en een `NN-naam.txt`
 met de URL, de gebruikte viewport, de console- en page-errors, en de
-`innerText` van `main`. `out/` is git-ignored en wordt bij elke run gewist —
-een stale shot mag nooit voor een verse doorgaan.
+`innerText` van `main`. Een stale shot mag nooit voor een verse doorgaan.
+
+## Uitvoerpaden
+
+Elke modus heeft zijn EIGEN pad, en de vorige complete run blijft staan:
+
+- lokaal schrijft naar `out/`, prod naar `out-prod/`;
+- de vorige COMPLETE run van diezelfde modus staat in `out-vorige/`
+  respectievelijk `out-prod-vorige/`.
+
+Bij de start ROTEERT de harness: droeg de vorige run het bestand
+`RUN-COMPLEET.json`, dan schuift hij op naar het `-vorige`-pad; droeg hij het
+niet, dan was hij afgebroken en gaat hij weg. Een omgevallen run verdringt dus
+nooit een goede nulmeting. De marker wordt als laatste handeling geschreven,
+nog vóór de float-net-controle — een run die op het net rood valt is namelijk
+wél compleet.
+
+Alle vier de paden zijn git-ignored, elk met een eigen regel in `.gitignore`.
+De eerste regel van de samenvatting noemt het huidige en het vorige pad bij
+naam, zodat een vergelijking nooit hoeft te raden waar de nulmeting staat.
 
 ## Grenzen
 

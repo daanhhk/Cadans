@@ -9,5 +9,8 @@ coverage
 .env*
 tools/audit/out/
 tools/shots/out/
+tools/shots/out-vorige/
+tools/shots/out-prod/
+tools/shots/out-prod-vorige/
 tools/shots/seed-backup.json
 tools/shots/.prod-auth
