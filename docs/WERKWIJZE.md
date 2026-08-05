@@ -471,6 +471,29 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   gaf dezelfde aanroep meteen 200. Zelfde soort val, twee keer voorgekomen: een python-heredoc die
   een `\n`-escape tot een echte regelovergang verminkte, gevangen met `node --check`. Zelfde
   familie als "een anomalie in je eigen meetuitvoer is een gat in je INSTRUMENT".
+- **Een IJKING toetst de GROOTHEID die je vergeleek, nooit de AS waarop de rest van je meting
+  rust.** Voeg daarom naast de ijking een IDENTITEIT toe die per constructie moet kloppen. Zelfde
+  familie als "een controle die per constructie kan slagen, controleert niets", nu op de
+  MEETOPSTELLING. Aanleiding: bij punt 11 gaf de arbeid-ijking tegen `icu_joules` 0,00% op de
+  VERSTREKEN-tijd-as én op de sample-as — beide keren groen — terwijl de eerste doorrekening op
+  de verkeerde as stond en een t_ster van 152 minuten op een rit van 127 opleverde. Wat het ving
+  was `t_ster + rest_min = duur_min`, die na correctie op 25 van de 25 klopt. De time-stream van
+  intervals.icu is VERSTREKEN tijd met dt-sprongen op de pauzes; het aantal samples is de
+  RIJTIJD. Kwam binnen als CC-afwijking en is strikt beter dan wat het prompt vroeg.
+- **Een drempel die op een nagenoeg CONSTANT tijdstip valt, is een KLOK en geen gebeurtenis.**
+  Meet de spreiding van het TRIGGER-moment vóór je er een oordeel op bouwt: ligt dat moment
+  telkens op dezelfde plek, dan draagt het geen informatie en meet alles erachter de VORM van de
+  invoer. Aanleiding: de 15 kJ/kg-drempel van de duurvermogen-maat viel over 25 kandidaat-ritten
+  tussen 90 en 125 minuten met mediaan 99, waardoor de resterende tijd niets anders was dan
+  ritduur min honderd — en het vermogen ná de drempel +0,70 correleerde met die resttijd.
+- **Een GOEDKEURPOORT in CC is een prompt-eigenschap en wordt VOORAF in de chat aangekondigd, met
+  het antwoord erbij.** Daan beoordeelt in CC niets inhoudelijks: hij herkent alleen of een
+  gevraagde goedkeuring aangekondigd was. Is ze dat niet, dan breekt hij af en is dat een fout
+  van de chat. Toets bovendien of de poort NODIG is — een overbodige poort kost dezelfde
+  onderbreking als een noodzakelijke. Aanleiding: het meet-prompt van punt 11 vroeg een
+  remote-D1-lezing voor gewicht en FTP, terwijl het intervals-object ze al draagt: 0 van de 25
+  ritten viel terug op `icu_weight`. De deploy blijft het ENE beslismoment waar een echte
+  afweging bij hoort.
 - **De GATE hoort bij de vaste sluitregels van ELKE CC-prompt, ook bij een docs-only ronde.** Een
   commit zonder gate is een commit op ongemeten grond, ongeacht wat er in de diff staat. Een
   prompt die de gate overslaat is dus een prompt met een fout, geen prompt met een vrijstelling.
@@ -782,3 +805,6 @@ Volg de FOCUS uit het bovenste STAND-blok.
 - 2026-08-04 — *Opener-sjabloon* haalt voortaan VIER raw-URL's op; `docs/TRAININGSMODEL.md` is de vierde. Aanleiding: de norm-laag stond boven `DOELEN-SPEC` en werd door geen enkele opener opgehaald, dus elke chat reconstrueerde de coach-bril.
 - 2026-08-04 — correctie BINNEN het opener-blok: "deze drie" werd "deze vier", en `TRAININGSMODEL.md` kreeg zijn gezagsregel naast de andere drie documenten. Aanleiding: de alinea boven het blok stond al op vier, maar het telwoord IN het blok bleef op drie staan en de vierde URL kreeg daar geen gezag mee — een chat die alleen het blok leest, leest dus "drie" en weet niet wat het tweede document wil. Zelfde vindpatroon als het parkeerlijst-item dat twee dagen onwaar meereisde: een gekopieerd telwoord hoort geteld, niet overgenomen.
 - 2026-08-05 — zes regels toegevoegd in *Recon en bewijslast*, alle zes uit punt 17: de gate hoort bij élke prompt; een gepind gereedschapsgetal leid je opnieuw af; de meetlat mag niet fijner zijn dan de kaart; een tolerantie hoort op een plateau; een rood-fixture binnen de marge bewijst niets; een meetopstelling reproduceert de VORM van de productie-invoer.
+- 2026-08-05 — regel toegevoegd in *Recon en bewijslast*: een ijking toetst de GROOTHEID en niet de AS, dus zet er een identiteit naast die per constructie moet kloppen. Aanleiding: bij punt 11 gaf de arbeid-ijking 0,00% op twee verschillende tijd-assen, terwijl de eerste een t_ster van 152 minuten op een rit van 127 opleverde.
+- 2026-08-05 — regel toegevoegd in *Recon en bewijslast*: een drempel die op een nagenoeg constant tijdstip valt is een KLOK en geen gebeurtenis. Aanleiding: de 15 kJ/kg-drempel viel over 25 ritten tussen 90 en 125 minuten met mediaan 99, dus alles erachter mat de ritduur.
+- 2026-08-05 — regel toegevoegd in *Recon en bewijslast*: een goedkeurpoort in CC wordt vooraf in de chat aangekondigd met het antwoord erbij, en je toetst of hij nódig is. Aanleiding: de remote-D1-lezing van de punt-11-meetronde was overbodig — 0 van de 25 ritten viel terug op `icu_weight`.

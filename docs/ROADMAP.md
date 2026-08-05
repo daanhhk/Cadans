@@ -270,14 +270,43 @@ punten staat onder *Gesloten — vindplaats*.
     ΔCTL-VENSTERS uiteen — anker weekmaandag tegenover maandag min zeven, op een golvende reeks
     tot 11,2 uit elkaar en van teken verschillend. De DOWN-tak vuurde op de gemeten reeks nul
     keer, dus het is genoteerd en niet gebouwd.
-11. **De duurvermogen-meetlat** — deels · DATA + CLIENT. (`DOELEN-SPEC` §6 stap 4.) De helft
-    die prikkel-in-de-rit heet is met punt 1 gedicht: een dag boven de bibliotheekband krijgt
-    een sjabloon, en `combo_long_with_efforts` vuurt in Build en Peak voor het klimprofiel. De
-    MEETLAT bestaat niet: 20-minutenvermogen na 15 kJ/kg als percentage van vers is nergens
-    afgeleid; `arbeidKj` bestaat uitsluitend als weergave per rit (`RideDetailSheet.tsx`).
-    Draagt óók de effect-meter van het doel korte beklimmingen dat punt 7 aanmaakt:
-    `DOELEN-SPEC` §3.3 en §3.5 wijzen daarvoor dezelfde maat aan. Niet te verwarren met punt
-    8 — dat gaat over het goal-profiel in de Niveau-tab, niet over deze durability-maat.
+11. **De duurvermogen-meetlat** — geparkeerd met datum · DATA + CLIENT. (`DOELEN-SPEC` §6
+    stap 4.) De helft die prikkel-in-de-rit heet is met punt 1 gedicht: een dag boven de
+    bibliotheekband krijgt een sjabloon, en `combo_long_with_efforts` vuurt in Build en Peak
+    voor het klimprofiel. De MEETLAT bestaat niet: 20-minutenvermogen na 15 kJ/kg als
+    percentage van vers is nergens afgeleid; `arbeidKj` bestaat uitsluitend als weergave per
+    rit (`RideDetailSheet.tsx`). Draagt óók de effect-meter van het doel korte beklimmingen dat
+    punt 7 aanmaakt: `DOELEN-SPEC` §3.3 en §3.5 wijzen daarvoor dezelfde maat aan. Niet te
+    verwarren met punt 8 — dat gaat over het goal-profiel in de Niveau-tab, niet over deze
+    durability-maat.
+    GEMETEN per 05-08-2026, ruwe uitvoer in `docs/PUNT11-MEETDATA.md` op commit `76f6747`.
+    Over 183 fietsritten vanaf 2025-09-01 halen er 25 beide kandidaatdrempels (duur vanaf 90
+    minuten én arbeid vanaf 15 kJ/kg) en dragen er 14 een 20-minutenvenster NÁ de drempel.
+    DE DREMPEL IS EEN KLOK, GEEN GEBEURTENIS. Over alle 25 kandidaten ligt `t_ster` tussen 90
+    en 125 minuten met mediaan 99. De resterende rijtijd is daarmee niets anders dan ritduur
+    min ongeveer honderd, en de maat bestaat pas vanaf een rit van circa twee uur. Een
+    trigger die telkens op dezelfde plek valt draagt geen informatie.
+    DE MAAT IS NIET TE ONDERSCHEIDEN VAN HET RITPROFIEL. `p20_na` gedeeld door `p20_voor`
+    correleert **+0,70** met `rest_min`; de mediaan van die verhouding is 0,830 bij een
+    resttijd onder 60 minuten tegen 1,095 bij 60 of meer; en het beste 20-minutenblok van de
+    HELE rit valt ná de drempel in 4 van de 7 lange ritten en in 0 van de 7 kortere. Die
+    richting is OMGEKEERD aan wat duurvermogen betekent: hoe langer er nog te rijden is, hoe
+    beter het late blok wordt — dat is de ritkeuze, niet de vermoeidheid.
+    BEWIJSKRACHT, eerlijk: 14 ritten, één renner, observationeel. Genoeg om NIET te bouwen,
+    niet genoeg om de maat af te schrijven.
+    DE GELEGENHEID ONTBREEKT, NIET DE MAAT. `DOELEN-SPEC` §3.5 bindt de meting al aan een
+    GEPLANDE maximale inspanning laat in de rit, en dat is `combo_long_with_efforts`. Die
+    vuurt alleen bij `klim_kort` en `klim_lang` in Build en Peak, dus zolang het actieve doel
+    daar niet staat is er niets te meten — en meet je de vakantierit in plaats van het plan.
+    HEROPEN-VOORWAARDE, expliciet: dit punt gaat weer OPEN zodra het actieve doel een
+    klim-doel is ÉN de lange rit structureel boven de twee uur ligt. Per `DOELEN-SPEC` §3.3
+    tussenstap (iii) is dat het specificiteitsblok van maart–april 2027, met **2027-02-22**
+    als vroegste moment.
+    GEEN VOORUIT-BEDRADING. Er komt NU geen `arbeid`-kolom in `activities` en geen afgeleide
+    zonder lezer. De regel van deze ROADMAP dat vooruit-bedrading dode code met een nettere
+    naam is, geldt hier onverkort: een kolom die pas over een half jaar een lezer krijgt, is
+    een half jaar lang een migratie die niets doet en toch onderhouden moet worden.
+    M39 blijft OPEN — nu met een REDEN en een DATUM in plaats van een open vraag.
 12. **Doel-passendheid** — af · CLIENT + DATA. (`DOELEN-SPEC` §6 stap 6.) De coach stelt een
     passend doel voor als het ingestelde doel niet binnen de uren past; afwijsbaar, hoogstens
     één keer per blok op een blokgrens. GEMETEN: er bestaat vandaag geen enkel mechanisme.
@@ -898,6 +927,27 @@ punten staat onder *Gesloten — vindplaats*.
     voor de client — een tweede vitest-project met jsdom — zodat kleurlogica überhaupt te
     asserteren is. Term (ii) is breder dan dit punt en betaalt zich terug bij elke volgende
     kaart-wijziging.
+
+34. **De effect-referent kent het doel niet** — open · CLIENT plus norm. GEGREPT:
+    `apps/web/src/lib/effect.ts` geeft op case-SENSITIVE "doel" 0 treffers en
+    case-insensitief precies 1, en dat is `DOELEN-SPEC` in de kopregel 4. De call-site in
+    `apps/web/src/lib/blok.ts` geeft `buildEffectReferent` geen doel mee. De referent is dus
+    doel-agnostisch, en dat is geen omissie in de uitvoering maar in de VRAAG die hij stelt.
+    GEVOLG: de meter is `rolling_ftp` voor ALLE VIJF doelen, terwijl `DOELEN-SPEC` §3.5 voor
+    Conditie en §3.3 voor Korte beklimmingen dezelfde durability-maat aanwijzen, en §3.4 voor
+    Lange beklimmingen het vermogen op dag twee van een back-to-back.
+    DE CLAIM IS DE EIGENLIJKE SCHENDING. `blokEffectRegel` in
+    `apps/web/src/lib/coachNarrative.ts` zegt op de tak "gestegen" dat de rolling FTP precies
+    de winst is waar het blok voor bedoeld was. Bij DRIE van de vijf doelen draagt de meter
+    die uitspraak niet. M5 verbiedt een bewering die de regel niet dekt; M33 en M39 zeggen dat
+    de app niet doet alsof.
+    BEREIKBAARHEID, eerlijk: bij doel FTP is dit per constructie INERT — de effect-referent
+    vuurt alleen bij fase "afgerond" én een GELEVERDE uitvoering, en daar is `rolling_ftp` de
+    juiste meter. Het wordt onwaar zodra het doel naar Korte beklimmingen gaat, vroegst
+    2027-02-22. Dat maakt het niet minder waar, wel minder dringend.
+    RICHTING NIET VASTGELEGD: ZWIJGEN bij een doel waarvan de meter ontbreekt is de
+    voorzichtige vorm, de COPY doel-specifiek maken de andere. Dat is een bouwbeslissing en
+    hoort bij het punt zelf, niet hier.
 
 ## De tijdslijn
 
