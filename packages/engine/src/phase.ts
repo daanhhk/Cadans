@@ -7,7 +7,7 @@
  * bepaalFaseVoorDatum_ / getAllEvents_ (Sheet/Settings-gekoppeld) blijven
  * in GAS — hier alleen de deterministische kern. Byte-identieke logica.
  */
-import { stripTime_, weekStartDate } from "./utils";
+import { stripTime_ } from "./utils";
 
 export const DOEL_OPTIONS = [
   "FTP",
@@ -45,6 +45,22 @@ export function normalizeDoel_(doel: any): string {
 //   C-event             → nooit taperen.
 export const A_TAPER_DAGEN = 7;
 export const B_TAPER_DAGEN = 3;
+// ROADMAP punt 13 fase A — HET AANTAL DAGEN NA EEN A-RACE WAARIN DE FASE OP RECOVERY STAAT.
+//
+// HERKOMST: BELEID, geen geijkte drempel. Er staat GEEN A-race in de Cadans-historie, dus er
+// bestaat geen reeks om dit op te bemonsteren en er hoort ook GEEN plateau-toets bij: een
+// tolerantie of drempel die je niet kunt bemonsteren, ijk je niet — je verantwoordt hem.
+//
+// Vier gronden staan in `docs/PUNT13-RECON.md` §10; de DRAGENDE is dat een DAGEN-venster de
+// herstelduur losmaakt van de WEEKDAG van de race. De oude weekregel gaf een zaterdagrace twee
+// dagen herstel en een zondagrace NUL. Een weekregel ("de week erna") verplaatst die willekeur
+// alleen: een maandagrace zou dan dertien dagen krijgen. Zeven dagen is één volle
+// trainingscyclus, dus elke weekdag komt precies één keer voorbij.
+//
+// DE CANON IS HIER OPEN: `docs/TRAININGSMODEL.md` kent geen regel over herstel NÁ een event.
+// M66 en M72 gaan over inhalen dat wijkt voor herstel, M51 over transities als voorstel, M52
+// over wanneer een event het plan overneemt. Dit besluit hoort een nieuwe M-regel te worden.
+export const A_HERSTEL_DAGEN = 7;
 
 /**
  * Macrocyclus schema: blokweek 1-4 Base, 5-8 Build, 9-11 Peak, 12 Test.
@@ -140,7 +156,8 @@ export function pickMainEvent_(events: any, fromDate: any): any {
  *
  * macroFase = de periodisering van het A/trip-hoofdevent (Base/Build/Peak),
  * LOS van een taper. taperEvent/taperVenster = de per-dag-taper-overlay:
- *   Recovery: A-RACE die deze week (maandag..refDate) al plaatsvond.
+ *   Recovery: A-RACE die 0..A_HERSTEL_DAGEN (7) DAGEN geleden plaatsvond — een DAGEN-venster,
+ *             NIET de kalenderweek (ROADMAP punt 13 fase A).
  *   Taper:    A/trip ≤ A_TAPER_DAGEN (7) d  → taperEvent = hoofd, venster 7;
  *             anders dichtstbijzijnde B met 0..B_TAPER_DAGEN (3) d → venster 3;
  *             C telt nooit. Een near-B drijft de taper maar NIET de macro.
@@ -155,16 +172,30 @@ export function pickMainEvent_(events: any, fromDate: any): any {
 export function eventFase_(events: any, refDate: any): any {
   var ref = stripTime_(refDate);
 
-  // Recovery: A-race die deze week (maandag..ref) al geweest is.
-  var wkMon = weekStartDate(ref);
+  // ROADMAP punt 13 fase A — RECOVERY IS EEN DAGEN-VENSTER, GEEN KALENDERWEEK.
+  //
+  // Hiervoor stond hier `ed >= weekStartDate(ref)`, en die ondergrens maakte de herstelduur een
+  // functie van de WEEKDAG van de race: GEMETEN gaf een zaterdagrace twee dagen herstel en een
+  // zondagrace NUL — op 2027-04-19, twee dagen na 240 km met 2960 hoogtemeters, stond er een
+  // volle Peak-week met TSS 262 en VO2 Hill Repeats 9x90s. Zie `docs/PUNT13-RECON.md` §2 en §4.
+  //
+  // `Math.round` en NIET `Math.floor` op het dagverschil. Dat is geen afrondsmaak maar de
+  // DST-CORRECTIE die `computeMacroPhase` en drie andere plekken in deze repo al dragen: beide
+  // datums zijn LOKALE MIDDERNACHT, dus hun verschil is n dagen plus of min een uur zodra het
+  // venster een zomer- of wintertijdgrens kruist. Met floor zou 6 dagen en 23 uur als 6 lezen.
+  //
+  // TYPE EN PRIORITEIT BINDEN ONVERANDERD. Een trip krijgt bewust GEEN herstel: een event draagt
+  // precies één datum, dus N dagen na een meerdaagse meet vanaf de STARTdag en het venster
+  // verloopt vóór de trip afgelopen is. Dat is ROADMAP punt 35.
   for (var i = 0; i < events.length; i++) {
     var e = events[i];
     var ed = stripTime_(e.datum);
+    var dagenSinds = Math.round((ref.getTime() - ed.getTime()) / 86400000);
     if (
       e.prioriteit === "A" &&
       e.type === "race" &&
-      ed.getTime() >= wkMon.getTime() &&
-      ed.getTime() <= ref.getTime()
+      dagenSinds >= 0 &&
+      dagenSinds <= A_HERSTEL_DAGEN
     ) {
       return {
         fase: "Recovery",

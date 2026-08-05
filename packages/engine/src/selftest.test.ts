@@ -1044,6 +1044,46 @@ describe("engine selftest", () => {
     );
     assert_("eventFase recovery fase", "Recovery", rec.fase);
 
+    // ROADMAP punt 13 fase A — RECOVERY IS EEN DAGEN-VENSTER, GEEN KALENDERWEEK.
+    // De fixture-datums liggen alle vier in juni 2026 en kruisen dus GEEN zomer- of
+    // wintertijdgrens: T1 toetst daarmee de GRENS en niet de DST-correctie in `Math.round`.
+    const refDo = new Date(2026, 5, 11); // do 11 jun 2026, week-maandag = ma 8 jun
+
+    // T1 — DE ROOD-TOETS. Een A-race precies A_HERSTEL_DAGEN (7) dagen terug valt op dezelfde
+    // WEEKDAG en dus per constructie in de VORIGE kalenderweek. Dit is exact het geval dat de
+    // oude weekregel MISTE: hij gaf daar de doel-fase, twee dagen na 240 km.
+    assert_(
+      "eventFase recovery 7 dagen terug",
+      "Recovery",
+      eventFase_([ev(2026, 5, 4, "A", "race")], refDo).fase,
+    );
+
+    // T2 — DE BOVENGRENS. 8 dagen terug valt erbuiten: geen Recovery, en ook geen hoofdevent
+    // meer, want `pickMainEvent_` slaat een datum in het verleden over.
+    // LET OP: DIT IS GEEN ROOD-TOETS. Zonder de fix geeft dit geval óók null — 8 dagen terug
+    // ligt eveneens buiten de oude weekregel. Hij legt de grens vast, meer niet.
+    assert_(
+      "eventFase geen recovery 8 dagen terug",
+      null,
+      eventFase_([ev(2026, 5, 3, "A", "race")], refDo),
+    );
+
+    // T3 — DE ONDERGRENS BLIJFT. Een A-race op de peildag zelf is 0 dagen terug.
+    assert_(
+      "eventFase recovery op de racedag zelf",
+      "Recovery",
+      eventFase_([ev(2026, 5, 11, "A", "race")], refDo).fase,
+    );
+
+    // T4 — TYPE EN PRIORITEIT BINDEN NOG. Een trip 3 dagen terug krijgt GEEN herstel, en dat is
+    // bewust: een event draagt precies één datum, dus N dagen na een meerdaagse meet vanaf de
+    // STARTdag en het venster verloopt vóór de trip afgelopen is. Dit pint ROADMAP punt 35 vast.
+    assert_(
+      "eventFase trip 3 dagen terug geen recovery",
+      null,
+      eventFase_([ev(2026, 5, 8, "A", "trip")], refDo),
+    );
+
     // Geen hoofd-event → null (val terug op vaste meso in bepaalFaseVoorDatum_).
     assert_("eventFase geen event", null, eventFase_([], woe));
 
@@ -6831,7 +6871,7 @@ describe("engine selftest", () => {
   // herstel-gat voor B2, en de vijfweg-lus die de keten zonder bevestiging doel-gestuurd houdt.
   // 1435→1447. NALEVERING: +2 voor de Recovery-tak buiten de poort (afgewezen en weggelaten) en
   // de tegenproef dat Build op dezelfde afstand wél een bevestiging vraagt. 1447→1449.
-  it("exactly 1648 assertions", () => {
-    expect(assertCount).toBe(1648);
+  it("exactly 1652 assertions", () => {
+    expect(assertCount).toBe(1652);
   });
 });

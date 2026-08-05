@@ -73,6 +73,19 @@ describe("eventOvernameVoorstel — elke gate-conditie apart", () => {
     expect(eventOvernameVoorstel({ ...BASIS, taperActief: true })).toBeNull();
   });
 
+  // ROADMAP punt 13 fase A — de andere kant van het event. GEMETEN dat dit een EIGEN poort moet
+  // zijn: de Recovery-return van `eventFase_` zet `wekenTot` 0 EN `taperEvent` null, dus poort (2)
+  // en poort (3) laten hem allebei door. Zonder deze poort vroeg de app "gaat je doel mee naar
+  // AGR" op de dag dat AGR gereden was.
+  it("(3b) fase Recovery → null; de race is al gereden, dus er valt niets te kiezen", () => {
+    const gereden = { ...BASIS, eventMacroFase: "Recovery", wekenTot: 0 };
+    // De opzet klopt: zonder de nieuwe poort zou deze invoer wél een kaart geven — taperActief
+    // staat false en wekenTot 0 ligt binnen de grens.
+    expect(gereden.taperActief).toBe(false);
+    expect(gereden.wekenTot).toBeLessThanOrEqual(8);
+    expect(eventOvernameVoorstel(gereden)).toBeNull();
+  });
+
   it("(4) 'ja' voor DIT event → null, en de vraag komt ook een blok later niet terug", () => {
     const ja = {
       ...BASIS,

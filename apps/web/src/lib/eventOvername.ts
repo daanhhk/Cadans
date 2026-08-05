@@ -74,6 +74,20 @@ export function eventOvernameVoorstel(
   //     de vraag zinloos. Mechanisch afgeleid uit `taperEvent`, geen eigen drempel.
   if (taperActief) return null;
 
+  // (3b) ROADMAP punt 13 fase A — IS DE RACE AL GEREDEN, DAN IS DE VRAAG ZINLOOS. Zelfde grond als
+  //      (3) hierboven, andere kant van het event: staat de fase op "Recovery", dan stuurt het
+  //      event het plan al en is er niets meer te kiezen.
+  //
+  //      GEMETEN dat dit een EIGEN poort moet zijn en niet meelift op (3): de Recovery-return van
+  //      `eventFase_` zet `wekenTot` 0 én `taperEvent` null, dus poort (2) en poort (3) laten hem
+  //      allebei door. Met antwoord "nee" op een eerder blok gaf dat op 2027-04-17 een kaart met
+  //      eventNaam "AGR Toerversie" en wekenTot 0 — de app vroeg "gaat je doel mee naar AGR" op de
+  //      dag dat AGR gereden was. Fase A verbreedt dat van 1 naar 3 van de 4 gemeten peildagen.
+  //
+  //      MECHANISCH AFGELEID uit de fase, geen eigen drempel en geen tweede datum-rekensom. Eigen
+  //      `if` zodat er een eigen rood-test op kan staan.
+  if (eventMacroFase === "Recovery") return null;
+
   const blokStart = blokStartVoorWeek(doelStart, weekMondayISO);
 
   // (4) 'ja' geldt tot het event voorbij is: eenmaal bevestigd komt de vraag niet terug.

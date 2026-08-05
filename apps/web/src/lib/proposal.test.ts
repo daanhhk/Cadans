@@ -562,13 +562,17 @@ describe("buildWeekProposal", () => {
       expect(r.fase).toBe("Recovery");
     });
 
-    // (d) HET GEPARKEERDE FASE-B2-GAT, BEWUST ONGEMOEID. De maandag ná de raceweek levert weer de
-    //     DOEL-fase en geen herstelweek: `eventFase_`'s Recovery-tak kijkt alleen binnen de
-    //     huidige week. Dat is geen bug van deze nalevering maar het al geparkeerde punt uit
-    //     docs/EVENT-OVERNAME-BOUWDOC.md §10. Deze assertie legt vast dát het open staat.
-    it("de maandag NA de raceweek geeft de doel-fase — fase B2, bewust open", () => {
+    // (d) HERIJKT bij ROADMAP punt 13 fase A. Deze assertie codeerde het GEPARKEERDE gat: de
+    //     maandag ná de raceweek leverde weer de DOEL-fase, want de Recovery-tak van `eventFase_`
+    //     keek alleen binnen de huidige kalenderweek. Dat gat is nu GESLOTEN — het venster is 0 tot
+    //     en met A_HERSTEL_DAGEN (7) DAGEN na de race — dus de assertie is omgedraaid en niet
+    //     verwijderd: hij bewaakt vanaf hier dat het gat dicht BLIJFT.
+    //     De race ligt op 2027-04-15 en de peildag is 2027-04-19, dus VIER dagen — ruim binnen het
+    //     venster, en in een andere kalenderweek dan de race. Precies het geval dat de oude regel
+    //     miste. Spec: `docs/PUNT13-RECON.md`.
+    it("de maandag NA de raceweek geeft nu WEL herstel — punt 13 fase A", () => {
       const r = run("2027-04-19", "2027-04-19", false);
-      expect(r.macroFase).not.toBe("Recovery");
+      expect(r.macroFase).toBe("Recovery");
       expect(r.fase).toBe(r.macroFase);
     });
   });
