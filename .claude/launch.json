@@ -5,13 +5,15 @@
       "name": "web",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "@cadans/web", "dev"],
-      "port": 5173
+      "port": 5173,
+      "autoPort": false
     },
     {
       "name": "api",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "@cadans/api", "dev"],
-      "port": 8787
+      "port": 8787,
+      "autoPort": false
     }
   ]
 }
