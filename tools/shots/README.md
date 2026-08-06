@@ -37,6 +37,25 @@ Alle vier de paden zijn git-ignored, elk met een eigen regel in `.gitignore`.
 De eerste regel van de samenvatting noemt het huidige en het vorige pad bij
 naam, zodat een vergelijking nooit hoeft te raden waar de nulmeting staat.
 
+## Scenario's zijn onafhankelijk van hun volgorde
+
+Elk scenario WIST eerst zijn eigen leesvenster: acht weken weekplan-rijen,
+geteld terug vanaf de blokstart, worden leeggezet vóór de harness gaat zaaien.
+Dat moet, want de scenario's deelden week-sleutels — 33 schrijfacties op 7
+unieke weken — en las het ene dus terug wat het andere had achtergelaten.
+
+Een guard dwingt dat per run af: na het wissen moet
+`/api/weekplans/recent` op zowel de weekmaandag als de blokstart een lege
+lijst geven, anders breekt de run af met het scenario en de maandag erbij.
+
+DE TOETS WAAROP DEZE EIGENSCHAP RUST is de VOLGORDE-toets: draai de
+scenario-lus om en eis dat geen enkele shot beweegt. De oude drie-cycli-toets
+discrimineert niet meer, want de gedeelde toestand convergeert naar een vast
+punt en het defect wordt daar onzichtbaar.
+
+De PLANNER-tabel wordt bewust niet gewist: die wordt alleen voor de bekeken
+week gelezen, niet over een venster.
+
 ## Grenzen
 
 Alles staat hard op loopback (`127.0.0.1`); remote wordt nooit geraakt. De

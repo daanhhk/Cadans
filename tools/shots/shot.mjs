@@ -86,6 +86,18 @@ const HEIGHT_CAP = 4000;
  * lib hem verhoogt. Loopt hij uiteen, dan zwijgt de kaart op de shots en zie je dat meteen. */
 const BEWIJSWEKEN = 2;
 
+/** ROADMAP punt 36 — HET LEESVENSTER DAT EEN SCENARIO TERUGKIJKT, in weken.
+ *
+ * TWEE BRONNEN, allebei 8, en allebei moeten ze gedekt worden:
+ *  - `RECENCY_HORIZON_WEEKS` in `packages/engine/src/planner.ts` — de recency-seed;
+ *  - de default `window = 8` van `readRecentWeekplans` in `workers/api/src/db/repo.ts`.
+ * Beide lezen `[maandag - 49 dagen .. maandag]`, dus één getal dekt ze allebei.
+ *
+ * Zelfde grond als bij `BEWIJSWEKEN` hierboven: bewust een LOSSE kopie. De harness is een los
+ * script zonder bundler en kan die constanten niet importeren; loopt de waarde uiteen met een van
+ * de twee bronnen, dan wist deze harness te weinig en valt de guard hieronder om. */
+const LEESVENSTER_WEKEN = 8;
+
 const DAGEN = ["ma", "di", "wo", "do", "vr", "za", "zo"];
 const DAY_RE = /^(ma|di|wo|do|vr|za|zo)\s*\d{1,2}$/i;
 
@@ -721,6 +733,56 @@ async function sweep(page, scenario, monday, results, seededSettings) {
     // blokweek 4 het LOPENDE (start -21). De deloadweek slaan we over: die levert sinds 1d geen
     // bewijs meer.
     const blokStart = plusDays(wkMonday, blokWeek === 4 ? -21 : -28);
+
+    // ── ROADMAP punt 36 — ELK SCENARIO WIST EERST ZIJN EIGEN LEESVENSTER ─────────────────────
+    //
+    // HET DEFECT. De elf scenario's doen samen 33 weekplan-schrijfacties op 7 UNIEKE
+    // week-sleutels; week 2026-07-13 wordt door 10 van de 11 geschreven, elk met een ander doel,
+    // andere plannerdagen of een andere blokweek. `weekplans` heeft `(user_id, week_monday)` als
+    // sleutel, dus elke schrijver overschrijft zijn voorganger — en het volgende scenario leest
+    // via de recency-seed en de blokpoort terug wat een ander achterliet. De shots hingen daarmee
+    // aan de VOLGORDE van de scenario-lus.
+    //
+    // WAAROM DE OUDE TOETS NIET MEER DISCRIMINEERT. De gedeelde toestand CONVERGEERT naar een
+    // vast punt: na genoeg sweeps schrijft elk scenario precies terug wat er al stond, en dan is
+    // het defect onzichtbaar. GEMETEN: de weekplan-tabel stond op n=9 en 40061 tekens en bewoog
+    // over vier sweeps geen byte, waarna de drie-cycli-toets uit ROADMAP punt 36 groen gaf op
+    // ONGEWIJZIGDE code. De VOLGORDE-toets neemt zijn plaats in en is wél scherp: alleen de
+    // lus-volgorde omdraaien liet 16 van de 93 vergeleken shots bewegen — heel `v2` en heel `v4`.
+    //
+    // WAAROM WISSEN EN NIET EIGEN WEEK-SLEUTELS. Acht weken leesvenster maal elf scenario's is
+    // tachtig weken spreiding. Die botst VOORUIT op de acht-wekengrens van het A-event — dan
+    // neemt de event-as de periodisering over en meet het scenario iets anders — en ACHTERUIT op
+    // Daans echte ritdata, terwijl de verstreken-dag-scenario's die weken juist ONGEREDEN nodig
+    // hebben. Wissen houdt elk scenario op zijn eigen maandag staan en kost die spreiding niet.
+    //
+    // DE PLANNER-TABEL WORDT BEWUST NIET GEWIST: die wordt alleen voor de BEKEKEN week gelezen,
+    // niet over een venster, dus daar bestaat de koppeling niet.
+    for (
+      let m = plusDays(blokStart, -7 * (LEESVENSTER_WEKEN - 1));
+      m <= wkMonday;
+      m = plusDays(m, 7)
+    ) {
+      // Kale full-replace: een LEGE entries-array draagt geen enkele entry, en is daarmee voor de
+      // recency-seed én voor de blokpoort gelijk aan een ONTBREKENDE rij. Geen `todayISO`, want
+      // dit is geen bevriezing maar een wis.
+      await apiPut(`/api/weekplan/${m}`, { entries: [] });
+    }
+
+    // DE GUARD. Zonder deze twee is de wis-lus een aanname: hij zou stil te weinig weken kunnen
+    // dekken zodra `LEESVENSTER_WEKEN` uit de pas loopt met een van zijn twee bronnen. Beide
+    // uiteinden van het venster worden getoetst, want het leest vanaf `blokStart` én vanaf
+    // `wkMonday`.
+    for (const anker of [wkMonday, blokStart]) {
+      const rest = await apiGet(`/api/weekplans/recent?monday=${anker}`);
+      const n = Array.isArray(rest) ? rest.length : -1;
+      if (n !== 0) {
+        throw new Error(
+          `${label}: leesvenster niet leeg na wissen — maandag ${anker} draagt ${n} entries`,
+        );
+      }
+    }
+
     for (let i = 0; i < BEWIJSWEKEN; i++) {
       const m = plusDays(blokStart, i * 7);
       await apiPut(`/api/planner/${m}`, {
