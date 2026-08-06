@@ -691,6 +691,7 @@ daar bestaan 0 decimale herhalingscellen tegen 110 bij mesoWeek 3, dus edit B bl
 ronde eindigde op de stopregel. (b) Het close-out-prompt gaf een correctie-instructie op de zin
 "in dezelfde PowerShell-sessie", die in het hele document niet voorkwam. CC ving beide en meldde
 ze; ze kostten twee rondes.
+- **De gate staat VÓÓR de commit in de stap-volgorde, en geen invulplek hangt af van een latere stap.** Een prompt die eerst laat committen en daarna de gate draait, dwingt CC tot herordenen of tot getallen uit het geheugen — en dat laatste is precies wat de vloer-regel verbiedt. Aanleiding: de close-out van punt 36 zette de commit op STAP 7 en de gate op STAP 8, terwijl het STAND-blok twee vloeren uit die gate moest halen. CC keerde de volgorde om en meldde het.
 
 ## Vorm van een CC-rapport
 
@@ -698,13 +699,15 @@ Platte tekst, **geen code-fences en geen tabellen** (breekt de mobiele kopie), o
 
 Bevat: commit-hash; de gepinde RAW HANDOFF-URL op die hash; gate-uitslag; CI-conclusie met run-URL; bij code een lege `git diff --stat` op `packages/engine`; bevestiging dat training onaangeroerd is (HEAD `3e8090a`); en elke afwijking van de prompt.
 
-EEN `git diff --stat <pad>` IS NÁ EEN COMMIT TRIVIAAL LEEG en bewijst dan niets: de wijziging zit in de commit, niet meer in de werkboom. Pin hem op `HEAD~1` (`git diff --stat HEAD~1 -- <pad>`) of op de fase-basis. Zelfde familie als de `head_sha`-regel bij CI: een controle die per constructie slaagt, is geen controle. Kwam binnen als CC-verbetering.
+EEN `git diff --stat <pad>` IS NÁ EEN COMMIT TRIVIAAL LEEG en bewijst dan niets: de wijziging zit in de commit, niet meer in de werkboom. Pin hem op `HEAD~1` of op de fase-basis, EN GEEF TWEE REFS: `git diff --stat HEAD~1 HEAD -- <pad>`. Met één ref (`git diff --stat HEAD~1 -- <pad>`) vergelijkt git de basis met de WERKBOOM in plaats van met de commit; bij een schone werkboom levert dat toevallig hetzelfde op, bij een vuile liegt het. Zelfde familie als de `head_sha`-regel bij CI: een controle die per constructie slaagt, is geen controle. Beide correcties kwamen binnen als CC-verbetering — de tweede op 6 augustus 2026, toen de één-ref-vorm `.claude/launch.json` toonde alsof die was meegecommit terwijl de commit uitsluitend docs bevatte.
 
 CC mag afwijken en moet dat melden. Een flag-en-stop legt het balletje via het rapport terug bij Claude.
 
 ## Gate
 
 Geen commit of merge op rood: `pnpm install --frozen-lockfile`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` — én CI groen. De vitest- en engine-selftest-vloeren staan in `HANDOFF.md` (STAND) en mogen niet regresseren; hardcode die getallen nooit in een prompt, lees ze uit de suite. Een bewuste daling (bijvoorbeeld verwijderde dode-code-tests) is geen regressie, maar wordt expliciet gemeld en in HANDOFF bijgewerkt.
+
+STOP DE DEV-SERVERS VÓÓR `pnpm test`. Een draaiende `wrangler dev` maakt de gate ROOD op RUNNER-niveau — `EBUSY` op de tijdelijke miniflare-mappen, want `@cloudflare/vitest-pool-workers` gebruikt diezelfde mappen. Dat leest als een kapotte suite terwijl er niets kapot is: op 6 augustus 2026 gaf hij 1 gefaalde test bij 49 van de 75 bestanden en 813 tests, en na het stoppen van de server twee keer achter elkaar 959 van de 959. Elke ronde die de shot-harness draait loopt hier tegenaan, want die eist juist dat beide servers draaien. Kwam binnen als CC-vondst.
 
 ## Prod en veiligheid
 
@@ -903,3 +906,4 @@ Volg de FOCUS uit het bovenste STAND-blok.
 - 2026-08-05 — regel toegevoegd in *Recon en bewijslast*: een ruisvloer is geen constante en hoort bij de sessie waarin je hem meet, dus een ijkpaar erf je niet. Aanleiding: vier paren op ongewijzigde code gaven 16, 8, 24 en 0 afwijkende shots van de 93 vergeleken, en sinds de rotatie van punt 31 kost een eigen ijkpaar bijna niets.
 - 2026-08-05 — regel toegevoegd in *Recon en bewijslast*: een premisse over de staat van de schijf kan binnen je eigen prompt verouderen, dus leid hem af op het moment van toetsen. Aanleiding: het bouw-prompt van punt 31 nam aan dat `tools/shots/out` de recon-uitvoer droeg, terwijl de rood-toets-runs uit het eerste blok van datzelfde prompt die map al twee keer hadden gewist.
 - 2026-08-06 — vier lessen toegevoegd in *Recon en bewijslast*, alle vier uit de punt-36-meetreeks: herhaal op de as waarop het verschijnsel leeft; een A/B-meting moet aan weerszijden van de race liggen; een wachtlus ankert op het venster ná zijn markering; en fixtures die een opslagsleutel delen meten elkaar. Aanleiding: twee chat-zijdige instrumentfouten (het schietmoment lag 1723 tot 2825 ms ná de sync, en de herhaling zette de scenario-as vast) plus de vondst dat 33 weekplan-schrijfacties op 7 unieke sleutels landen.
+- 2026-08-06 — drie correcties uit de close-out van punt 36: `git diff --stat` krijgt TWEE refs (`HEAD~1 HEAD`), want de één-ref-vorm vergelijkt met de werkboom en liegt zodra die vuil is; de dev-servers gaan UIT vóór `pnpm test` wegens `EBUSY` op de gedeelde miniflare-mappen; en de gate staat vóór de commit in de stap-volgorde, zonder invulplek die van een latere stap afhangt.
