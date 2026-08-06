@@ -609,6 +609,25 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   niet WAT hij voorschreef. CC ving de tegenstrijdigheid en repareerde de oude bullet
   ongevraagd. Zelfde familie als "een instructie om iets te BEHOUDEN veronderstelt dat het
   er staat", nu op een regel die je VERVANGT in plaats van behoudt.
+- **Een RUISVLOER is geen constante en hoort bij de SESSIE waarin je hem meet.** "X van de Y
+  byte-identiek" is pas leesbaar naast een ijkpaar uit diezelfde reeks, en zo'n ijkpaar is niet
+  overdraagbaar: op ONGEWIJZIGDE code gaven vier paren 16, 8, 24 en 0 afwijkende shots, telkens
+  93 vergeleken van 95 met 2 uitgesloten wegens punt 23. Een enkele schone uitslag bewijst dus
+  net zo min determinisme als een enkele vuile uitslag chaos bewijst. Zelfde familie als "een
+  harness die zelf schrijft verzadigt zijn eigen invoer", nu op de VARIANTIE in plaats van op
+  de richting: daar groeide de invoer aan, hier beweegt ze heen en weer. Sinds de rotatie van
+  punt 31 kost een eigen ijkpaar bijna niets — twee sweeps achter elkaar vóór de bouw — dus er
+  is geen grond meer om er een te erven.
+- **Een premisse over de STAAT VAN DE SCHIJF kan binnen je EIGEN prompt verouderen.** Een blok
+  dat draait verandert de grond waarop een later blok staat, en een aanname die bij het
+  schrijven klopte is dan al onwaar vóór ze getoetst wordt. Aanleiding: het bouw-prompt van
+  punt 31 stelde dat `tools/shots/out` nog de recon-uitvoer droeg, terwijl de rood-toets-runs
+  uit het EERSTE blok van datzelfde prompt die map twee keer geroteerd en gewist hadden. De
+  voorwaarde die ertoe deed — marker afwezig — hield, en de toets werd er zuiverder van, want
+  wat er lag was het restant van twee omgevallen runs en dat is precies het geval dat niet mag
+  opschuiven. Leid zo'n premisse dus af op het MOMENT van toetsen in plaats van hem te stellen.
+  Zelfde familie als "een gepind getal over de HUIDIGE VORM van gereedschap is een uitspraak
+  over het HEDEN", nu binnen één ronde.
 
 ## Vorm van een CC-prompt
 
@@ -859,3 +878,5 @@ Volg de FOCUS uit het bovenste STAND-blok.
 - 2026-08-05 — regel toegevoegd in *Recon en bewijslast*: een drempel die op een nagenoeg constant tijdstip valt is een KLOK en geen gebeurtenis. Aanleiding: de 15 kJ/kg-drempel viel over 25 ritten tussen 90 en 125 minuten met mediaan 99, dus alles erachter mat de ritduur.
 - 2026-08-05 — regel toegevoegd in *Recon en bewijslast*: een goedkeurpoort in CC wordt vooraf in de chat aangekondigd met het antwoord erbij, en je toetst of hij nódig is. Aanleiding: de remote-D1-lezing van de punt-11-meetronde was overbodig — 0 van de 25 ritten viel terug op `icu_weight`.
 - 2026-08-05 — drie lessen toegevoegd in *Recon en bewijslast*: een grep-eis draagt de vlag waarmee hij gemeten is; een VOOR/NA-vergelijking vraagt dat het prompt de nulmeting zelf eerst wegschrijft naar een pad dat de volgende run niet wist; en een regel die drie keer wordt overtreden is een gereedschapsprobleem, dus bestaande bestanden gaan via de Edit-tool en nieuwe via de Write-tool. De remedie in de bestaande heredoc-regel is daarmee achterhaald en verwijst nu vooruit. Aanleiding: bij punt 13 fase A gaf `copy` 2 in plaats van 3 treffers, bestond er geen prod-nulmeting om tegen te vergelijken, en verminkte een patch-script voor de derde keer een escape.
+- 2026-08-05 — regel toegevoegd in *Recon en bewijslast*: een ruisvloer is geen constante en hoort bij de sessie waarin je hem meet, dus een ijkpaar erf je niet. Aanleiding: vier paren op ongewijzigde code gaven 16, 8, 24 en 0 afwijkende shots van de 93 vergeleken, en sinds de rotatie van punt 31 kost een eigen ijkpaar bijna niets.
+- 2026-08-05 — regel toegevoegd in *Recon en bewijslast*: een premisse over de staat van de schijf kan binnen je eigen prompt verouderen, dus leid hem af op het moment van toetsen. Aanleiding: het bouw-prompt van punt 31 nam aan dat `tools/shots/out` de recon-uitvoer droeg, terwijl de rood-toets-runs uit het eerste blok van datzelfde prompt die map al twee keer hadden gewist.

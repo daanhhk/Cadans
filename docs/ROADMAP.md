@@ -770,12 +770,32 @@ punten staat onder *Gesloten — vindplaats*.
     niet uitzit — beide schermen dragen bewegende elementen die de andere zeven niet hebben.
     Zolang dit staat moet elke PNG-vergelijking die twee UITSLUITEN, en dat is een gat in het
     begrenzingsbewijs: juist op die twee schermen kan een regressie ongezien blijven.
-24. **De mount-flake, en zes routes zonder vangnet** — open · TOOLING. `settle` geeft op terwijl de
+24. **De mount-flake, en zes routes zonder vangnet** — af · TOOLING. `settle` geeft op terwijl de
     `innerText` nog "Laden…" is; de shot toont dan een ladende pagina. Treft BEIDE harness-versies,
     dus het is geen gevolg van een bouw. Op `/schema` wordt het opgevangen door de
     zeven-knoppen-assertie op de dagstrip — die faalt hard en de run stopt. De zeven nieuwe routes
     hebben zo'n mount-assertie NIET, dus daar zou een ladende pagina stil als geldige shot
     doorgaan. Elke route hoort een eigen goedkope aanwezigheids-assertie te krijgen.
+    AF op `6e62a650b365028e20303f1017aa8ef9e12b4396`. `settle` gooit sindsdien op een pagina die
+    NA afloop nog de laadtekst toont, en elke aanroeper geeft een LABEL mee zodat de fout de plek
+    noemt — de bewijsweek, de warmloop van een dagOffset, het weekscherm of de route uit
+    `EXTRA_ROUTES`. Het oordeel valt op de TOESTAND na `settle` en niet op de time-out: de
+    bestaande `catch` blijft slikken, zodat een pagina die tijdens de laatste 800 ms alsnog
+    opklaart niet omvalt.
+    AFWIJKING VAN WAT DIT PUNT ZELF VOORSCHREEF, met de grond. Er komt GEEN
+    aanwezigheids-assertie PER ROUTE. Dat zou een handlijst zijn, en handlijsten drijven af — een
+    nieuwe route wordt vergeten en valt stil buiten de controle, precies het patroon dat
+    `EXTRA_ROUTES` al had. Alle acht route-componenten renderen BYTE-IDENTIEK dezelfde laadtekst
+    (`Schema.tsx:132`, `Vorm.tsx:93`, `Trainingen.tsx:123`, `Niveau.tsx:164`,
+    `Activiteiten.tsx:58`, `Instellingen.tsx:535`, `Weekplanner.tsx:377`, `Events.tsx:542`), dus
+    er bestaat één eigenschap die ÉLKE kandidaat draagt. Eén poort volstaat.
+    ROOD PER KANT, beide meldingen letterlijk. Met de controle ACTIEF stopt de run op
+    `ROOD24 /vorm: still loading after settle — the page never finished; a shot here would be a
+    photo of a spinner`. Met uitsluitend die throw UIT loopt `settle` gewoon door en meldt de
+    tegenmeting `ROOD24-ZONDER-FIX: settle keerde terug op een ladende pagina; laadtekst
+    aanwezig=true`. Dat `aanwezig=true` is de bewijskant.
+    INERT OP EEN GOEDE RUN: 0 van de 288 `.txt` in de recon en 0 van de 192 in de bouwronde
+    dragen de laadtekst. Deze poort kost dus niets en vangt alleen wat er nu stil doorheen glipt.
 25. **`12-activiteiten` wordt afgesneden** — open · TOOLING. Die pagina heeft 5898 pixels nodig
     tegen `HEIGHT_CAP` 4000, dus de PNG is afgekapt en een VISUELE controle van dat scherm kan
     vandaag niet. De `innerText` in de `.txt` is wél compleet, dus tekstuele controle en het
@@ -907,7 +927,7 @@ punten staat onder *Gesloten — vindplaats*.
     beschrijving hierboven: dit is een PWA met vijftien parallelle verzoeken, en één time-out op
     een slechte verbinding kost het hele weekscherm. Het propagatievenster na een deploy wordt
     BEWUST niet gedekt — zie het bouwdoc §5.
-31. **De harness besmet zijn eigen nulmeting** — open · TOOLING. Twee sweeps op ONGEWIJZIGDE
+31. **De harness besmet zijn eigen nulmeting** — af · TOOLING. Twee sweeps op ONGEWIJZIGDE
     code leverden 8 verschillende shots op, allemaal `v7-midweek`. GEMETEN bij punt 30: run 1
     tegen run 2 gaf die acht, run 1 tegen run 3 gaf 93 van 93 identiek. De wisseling is dus
     INTERMITTEREND, en dat is een ander karakter dan punt 23 — daar gaat het om pixel-verschil
@@ -931,6 +951,26 @@ punten staat onder *Gesloten — vindplaats*.
     De toestand ZWERFT dus tussen scenario's. Een vaste uitsluitingslijst is daarmee GEEN
     oplossing: hij dekt de vorige ronde en niet de volgende. Tot de uitsluitende toets gedraaid
     is hoort elke sweep zijn EIGEN ijkrun te dragen in plaats van een geërfde lijst.
+    AF op `6e62a650b365028e20303f1017aa8ef9e12b4396`, in twee helften.
+    GEBOUWD: een EIGEN uitvoerpad per modus — lokaal `out/`, prod `out-prod/` — en ROTATIE in
+    plaats van wissen, op een MARKER (`RUN-COMPLEET.json`) die als LAATSTE handeling van een
+    geslaagde run wordt geschreven. Alleen een COMPLETE run verdringt de vorige. Dat is geen
+    detail: vite viel deze reeks TWEE keer stil om midden in een sweep, en de rood-toets-runs van
+    punt 24 leegden `out/` daarna nog twee keer. Een slot dat bij ELKE run opschuift verliest zijn
+    laatste goede meting aan de eerstvolgende mislukking. De marker staat bewust VÓÓR de
+    float-net-controle: een run die op het net rood valt is wél compleet — elke shot is
+    geschoten — en mag dus opschuiven.
+    GEVERIFIEERD, beide takken. NEGATIEF: na sweep A bestond `out-vorige` NIET, want de bestaande
+    map droeg geen marker; die map was het restant van twee omgevallen runs, precies het geval
+    dat niet mag opschuiven. POSITIEF: na sweep B bestond hij wél, met een bestandslijst IDENTIEK
+    aan die van sweep A — 192 bestanden en 95 PNG's aan beide kanten. PROD: `out-prod` met marker
+    en 15 PNG's, `out-prod-vorige` afwezig (eerste prod-run), en `out/` én `out-vorige`
+    ONAANGERAAKT. Een prod-run eet de lokale meting dus niet meer op.
+    HET KANDIDAAT-MECHANISME IS WEERLEGD, en dat is de eigenlijke uitkomst van dit punt.
+    `persistWeekplan` is het NIET: de weekplan-tabel bleef rond run 1 en rond run 2
+    BYTE-IDENTIEK op 31 rijen, terwijl diezelfde twee runs op 16 shots uiteenliepen. Bewegen deed
+    de tabel alleen rond de AFGEBROKEN run — 11 van de 34 verenigde sleutels. De variantie die dit
+    punt aanwees bestaat dus nog steeds en heeft een andere bron; die staat als punt 36.
 32. **De rit-beoordeling is geen pijler** — open · CLIENT plus norm. Een coach oordeelt over een
     gereden sessie op twee dingen die de app NIET gebruikt: of het voorgeschreven werk HIELD
     binnen de sessie, en wat de renner er zelf over zei.
@@ -994,6 +1034,30 @@ punten staat onder *Gesloten — vindplaats*.
     (`DOELEN-SPEC` §3.4) krijgt na afloop geen herstel. Vraagt een migratie, een DTO-veld, een
     invoerveld in Events en een tweede grens in `eventFase_`. Kwam binnen bij de recon van
     punt 13.
+36. **Het weekplan van een scenario verschuift tussen twee runs** — open · TOOLING of CLIENT, nog
+    NIET vastgesteld — en die onzekerheid IS het punt. Zolang niet vaststaat welke van de twee het
+    is, is elk ontwerp een gok.
+    GEMETEN op ONGEWIJZIGDE code over VIER paren: 16, 8, 24 en 0 afwijkende shots, telkens 93
+    vergeleken van de 95 met `v7/09-vorm.png` en `v7/10-trainingen.png` uitgesloten wegens punt
+    23. Het paar run1–run2 uit de recon is SCHOON en gaf 16; het paar sweep A tegen sweep B uit de
+    bouwronde is óók schoon en gaf 0. Het is dus GRILLIG en niet structureel — en juist daarom is
+    één schone uitslag geen bewijs van determinisme.
+    HET VALT PER SCENARIO UITEEN, telkens alle acht shots samen, en elk paar wijst ANDERE
+    scenario's aan: `v7-blokweek4`, `v7-weekstem`, `klim-weekstem`. Dat de eenheid het SCENARIO is
+    en niet de shot, betekent dat de oorzaak vóór het fotograferen ligt. En het is INHOUD, geen
+    tijdstempel: `"Haarlem Wegwielrennen"` wordt `"Sweet Spot"`, `"263% van plan"` wordt `"114%"`.
+    HYPOTHESE, MET MECHANISME EN TELLING, en verder niets. De app doet bij elke pageload
+    `POST /api/sync/activities` en `/api/sync/wellness` — gemeten 22 keer per sweep, op 11 van de
+    96 `.txt`, precies de elf `01-week`. Dat is de GELEVERDE kant. Beweegt die tussen runs, dan
+    verschuift de variantkeuze en beweegt het hele weekplan mee. Dit is een HYPOTHESE en geen
+    vaststelling.
+    WAAROM DIT MOGELIJK GEEN CAMERA-DEFECT IS: verschuift het plan werkelijk tussen twee loads bij
+    GELIJKE data, dan is dat dezelfde familie als punt 26 en ziet Daan het gewoon op zijn scherm —
+    een week die er bij twee keer openen anders uitziet. Eerst vaststellen WELKE van de twee het
+    is, dan pas ontwerpen.
+    DE UITSLUITENDE TOETS: twee sweeps achter elkaar met de `activities`-tabel ervóór en erná
+    gelezen, en een derde met de sync-aanroepen GEBLOKKEERD. Blijft het verschil bestaan met de
+    sync uit, dan zit het niet in de data.
 
 ## De tijdslijn
 
@@ -1252,18 +1316,14 @@ niet; hij verliest niet. Een punt gaat eruit zodra een STAP het opneemt — niet
   app uitlokt — maar de belofte klopt zo niet. Of de prod-modus onderdrukt die twee, of de
   belofte wordt bijgesteld naar wat hij werkelijk waarmaakt.
 
-- DE HARNESS EET ZIJN EIGEN VORIGE METING OP. Er is ÉÉN uitvoerpad voor een lokale én een
-  prod-run — `tools/shots/shot.mjs:19` zet `OUT` op `join(HERE, "out")`, en de prod-vlag op `:30`
-  kiest daar geen ander pad bij — terwijl `:758` dat pad bij ELKE run leegt met `rmSync`. Draai je
-  lokaal na een prod-run, dan is de prod-uitvoer weg.
-  GEVOLG, TWEE KEER GEZIEN: bij punt 26 en bij punt 27 bestond er geen prod-uitvoer van vóór de
-  deploy, dus kon de STERKSTE bewijsvorm — een byte-vergelijking voor en na op prod — beide keren
-  niet gedraaid worden. Het oordeel leunde toen op een positieve vaststelling ("het blok komt op
-  geen enkele shot voor"), en dat is zwakker: het toetst wat je bedacht hebt te zoeken in plaats
-  van alles wat bewoog.
-  DE FIX IS KLEIN: een prod-run schrijft naar een EIGEN pad, zodat de twee elkaar niet kunnen
-  wissen. Zet de eerstvolgende prod-run daarheen, dan is er vanaf de deploy DÁÁRNA een echte
-  voor-staat. Dit is TOOLING en geen app-defect, dus het staat hier en niet in de reeks.
+- AFGEHANDELD 05-08-2026 — DE HARNESS EET ZIJN EIGEN VORIGE METING OP. Er was ÉÉN uitvoerpad voor
+  een lokale én een prod-run, en dat pad werd bij elke run geleegd; draaide je lokaal na een
+  prod-run, dan was de prod-uitvoer weg. GEVOLG, DRIE KEER GEZIEN: bij punt 26, punt 27 en punt 13
+  fase A bestond er geen prod-uitvoer van vóór de deploy, dus kon de sterkste bewijsvorm — een
+  byte-vergelijking voor en na op prod — geen van die keren gedraaid worden.
+  GELAND IN PUNT 31, en ruimer dan hier stond: niet alleen een eigen pad per modus (`out/` en
+  `out-prod/`), maar ook ROTATIE op een marker, zodat de vorige COMPLETE run bewaard blijft
+  zonder dat een prompt eraan hoeft te denken. Zie punt 31 voor de verificatie.
 
 - DE SHOT-HARNESS LAADT UITSLUITEND `/schema`. Er is geen scenario voor de Niveau-tab en geen voor
   Instellingen, dus wat daar staat is per constructie niet te fotograferen. KOSTEN GEMETEN op
