@@ -628,6 +628,28 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   opschuiven. Leid zo'n premisse dus af op het MOMENT van toetsen in plaats van hem te stellen.
   Zelfde familie als "een gepind getal over de HUIDIGE VORM van gereedschap is een uitspraak
   over het HEDEN", nu binnen één ronde.
+- **Een herhaling die de as VASTZET waarop het verschijnsel leeft, meet niets — en "identiek" leest
+  dan als bewijs.** Stel eerst vast welke EENHEID varieert, en herhaal op díé as. Aanleiding: punt
+  36 valt per SCENARIO uiteen, en vier sweeps van hetzelfde scenario rug aan rug gaven 72 van de 72
+  byte-identiek, terwijl dezelfde drie scenario's mét de tien andere ertussen 24 van de 93 lieten
+  bewegen — dezelfde code, dezelfde sessie. Zelfde familie als "toets een per constructie
+  onbereikbaar op de ruimte waarin de app WERKT": daar was de meetruimte te smal, hier de
+  herhaling.
+- **Een A/B-meting rond een race moet aantoonbaar AAN WEERSZIJDEN van die race liggen.** Meet de
+  afstand tussen je meetmoment en de gebeurtenis die je wilt betrappen vóór je de opzet vertrouwt.
+  Aanleiding: `settle()` keert pas terug als de sync én de herbouw klaar zijn — gemeten 1723 tot
+  2825 ms ná de laatste sync-respons, in 22 van de 22 gevallen — dus A en B waren allebei
+  ná-lezingen en "A gelijk aan B" kon per constructie niet anders dan slagen.
+- **Een wachtlus die op de HELE tijdlijn matcht, vindt de gelijksoortige gebeurtenis van een EERDERE
+  stap.** Anker een wachtvoorwaarde op het venster ná de markering waar hij bij hoort; anders keert
+  hij onmiddellijk terug zonder ooit gepolld te hebben, en meet alles erachter iets anders dan je
+  denkt. Aanleiding: de punt-36-probe zocht de sync-responsen van de 01-week-load (+10719 en
+  +10829) en pakte die van de bewijsweken-lus (+1597 en +1727). Kwam binnen als CC-vondst.
+- **Fixtures die dezelfde OPSLAGSLEUTEL delen, meten elkaar.** Tel vóór een meetreeks hoeveel
+  schrijfacties op hoeveel unieke sleutels landen. Aanleiding: de elf harness-scenario's doen 33
+  weekplan-schrijfacties op 7 unieke week-sleutels, en week 2026-07-13 krijgt er tien — elk met een
+  ander doel, andere plannerdagen of een andere blokweek. Elk scenario leest via de recency-seed en
+  de blok-terugblik terug wat het vorige achterliet.
 
 ## Vorm van een CC-prompt
 
@@ -880,3 +902,4 @@ Volg de FOCUS uit het bovenste STAND-blok.
 - 2026-08-05 — drie lessen toegevoegd in *Recon en bewijslast*: een grep-eis draagt de vlag waarmee hij gemeten is; een VOOR/NA-vergelijking vraagt dat het prompt de nulmeting zelf eerst wegschrijft naar een pad dat de volgende run niet wist; en een regel die drie keer wordt overtreden is een gereedschapsprobleem, dus bestaande bestanden gaan via de Edit-tool en nieuwe via de Write-tool. De remedie in de bestaande heredoc-regel is daarmee achterhaald en verwijst nu vooruit. Aanleiding: bij punt 13 fase A gaf `copy` 2 in plaats van 3 treffers, bestond er geen prod-nulmeting om tegen te vergelijken, en verminkte een patch-script voor de derde keer een escape.
 - 2026-08-05 — regel toegevoegd in *Recon en bewijslast*: een ruisvloer is geen constante en hoort bij de sessie waarin je hem meet, dus een ijkpaar erf je niet. Aanleiding: vier paren op ongewijzigde code gaven 16, 8, 24 en 0 afwijkende shots van de 93 vergeleken, en sinds de rotatie van punt 31 kost een eigen ijkpaar bijna niets.
 - 2026-08-05 — regel toegevoegd in *Recon en bewijslast*: een premisse over de staat van de schijf kan binnen je eigen prompt verouderen, dus leid hem af op het moment van toetsen. Aanleiding: het bouw-prompt van punt 31 nam aan dat `tools/shots/out` de recon-uitvoer droeg, terwijl de rood-toets-runs uit het eerste blok van datzelfde prompt die map al twee keer hadden gewist.
+- 2026-08-06 — vier lessen toegevoegd in *Recon en bewijslast*, alle vier uit de punt-36-meetreeks: herhaal op de as waarop het verschijnsel leeft; een A/B-meting moet aan weerszijden van de race liggen; een wachtlus ankert op het venster ná zijn markering; en fixtures die een opslagsleutel delen meten elkaar. Aanleiding: twee chat-zijdige instrumentfouten (het schietmoment lag 1723 tot 2825 ms ná de sync, en de herhaling zette de scenario-as vast) plus de vondst dat 33 weekplan-schrijfacties op 7 unieke sleutels landen.

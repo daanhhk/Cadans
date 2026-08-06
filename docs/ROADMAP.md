@@ -1034,30 +1034,38 @@ punten staat onder *Gesloten — vindplaats*.
     (`DOELEN-SPEC` §3.4) krijgt na afloop geen herstel. Vraagt een migratie, een DTO-veld, een
     invoerveld in Events en een tweede grens in `eventFase_`. Kwam binnen bij de recon van
     punt 13.
-36. **Het weekplan van een scenario verschuift tussen twee runs** — open · TOOLING of CLIENT, nog
-    NIET vastgesteld — en die onzekerheid IS het punt. Zolang niet vaststaat welke van de twee het
-    is, is elk ontwerp een gok.
-    GEMETEN op ONGEWIJZIGDE code over VIER paren: 16, 8, 24 en 0 afwijkende shots, telkens 93
-    vergeleken van de 95 met `v7/09-vorm.png` en `v7/10-trainingen.png` uitgesloten wegens punt
-    23. Het paar run1–run2 uit de recon is SCHOON en gaf 16; het paar sweep A tegen sweep B uit de
-    bouwronde is óók schoon en gaf 0. Het is dus GRILLIG en niet structureel — en juist daarom is
-    één schone uitslag geen bewijs van determinisme.
-    HET VALT PER SCENARIO UITEEN, telkens alle acht shots samen, en elk paar wijst ANDERE
-    scenario's aan: `v7-blokweek4`, `v7-weekstem`, `klim-weekstem`. Dat de eenheid het SCENARIO is
-    en niet de shot, betekent dat de oorzaak vóór het fotograferen ligt. En het is INHOUD, geen
-    tijdstempel: `"Haarlem Wegwielrennen"` wordt `"Sweet Spot"`, `"263% van plan"` wordt `"114%"`.
-    HYPOTHESE, MET MECHANISME EN TELLING, en verder niets. De app doet bij elke pageload
-    `POST /api/sync/activities` en `/api/sync/wellness` — gemeten 22 keer per sweep, op 11 van de
-    96 `.txt`, precies de elf `01-week`. Dat is de GELEVERDE kant. Beweegt die tussen runs, dan
-    verschuift de variantkeuze en beweegt het hele weekplan mee. Dit is een HYPOTHESE en geen
-    vaststelling.
-    WAAROM DIT MOGELIJK GEEN CAMERA-DEFECT IS: verschuift het plan werkelijk tussen twee loads bij
-    GELIJKE data, dan is dat dezelfde familie als punt 26 en ziet Daan het gewoon op zijn scherm —
-    een week die er bij twee keer openen anders uitziet. Eerst vaststellen WELKE van de twee het
-    is, dan pas ontwerpen.
-    DE UITSLUITENDE TOETS: twee sweeps achter elkaar met de `activities`-tabel ervóór en erná
-    gelezen, en een derde met de sync-aanroepen GEBLOKKEERD. Blijft het verschil bestaan met de
-    sync uit, dan zit het niet in de data.
+36. **Het weekplan van een scenario verschuift tussen twee runs** — GEMETEN EN VERKLAARD, fix open ·
+    TOOLING. Het verdict is TOOLING en niet CLIENT: de harness laat elf scenario's met
+    verschillende settings naar DEZELFDE weekplan-sleutels schrijven, en elk scenario leest via de
+    recency-seed en de blok-terugblik terug wat het vorige achterliet.
+    AFGELEID uit de gecommitte bron: de elf scenario's doen samen 33 weekplan-schrijfacties op 7
+    unieke week-sleutels. Week 2026-07-13 wordt door 10 van de 11 geschreven, elk met een ander
+    doel, andere plannerdagen of een andere blokweek. `weekplans` heeft (user_id, week_monday) als
+    sleutel, dus elke schrijver overschrijft zijn voorganger.
+    DE METING DIE DE AS ISOLEERT. Vier sweeps van hetzelfde scenario RUG AAN RUG: 72 van de 72
+    byte-identiek. Dezelfde scenario's met de tien andere ertussen, drie volledige cycli in één
+    proces: c2 tegen c1 24 afwijkend, c3 tegen c2 16, c3 tegen c1 24 — telkens 93 vergeleken van de
+    95 met `v7/09-vorm.png` en `v7/10-trainingen.png` uitgesloten wegens punt 23. Zelfde code,
+    zelfde sessie, zelfde machine.
+    WAT BEWEEGT IS HET PLAN, NIET WELLNESS. Vier scenario's bewegen, telkens alle acht shots samen:
+    `klim-weekstem`, `v7-blokweek4`, `v7-midweek` en `v7-weekstem`; de andere zeven staan alle drie
+    de cycli stil. Scherpst is `v7-blokweek4`: `Tempo 24/51 · Drempel 2/85 · VO2max 1/—` wordt
+    `Tempo 24/0 · Drempel 2/0 · VO2max 1/0` met een teller van `0/2` naar `3/3` — sinds punt 17 IS
+    die rechterkant het bewaarde plan. Verder `/207` naar `/269` (gepland TSS, uren `/3:59` naar
+    `/4:59`), `/429` naar `/375`, en `/95` naar `/41`.
+    ER IS GEEN VAST PUNT NA DRIE CYCLI. Verzadiging geldt voor `klim-weekstem` en `v7-blokweek4`
+    (c1 ≠ c2 = c3), maar `v7-weekstem` is c1 = c2 ≠ c3 en `v7-midweek` OSCILLEERT (c1 = c3 ≠ c2).
+    De weekplan-rijen groeiden over de run met 1239 tekens bij een onveranderd rijaantal van 9. Een
+    nulmeting erven blijft dus waardeloos, ook binnen één sessie.
+    DE APP-KANT IS EEN ANDER PUNT. Het plan-van-record is INVOER van de volgende bouw
+    (recency-seed, gepland-noemer, plan-referent) en wordt 2 of 3 keer per pageload geschreven.
+    Eén configuratie raakt dat niet — Daans week stond de hele meetdag stil — maar een wissel van
+    doel, doelStart of plannerdagen wél. Dat raakt punt 28 en hoort daar, niet hier.
+    DE FIX, NIET GEBOUWD: geef elk scenario zijn EIGEN week-sleutels, zoals `overname` al doet met
+    `monday: "2027-02-22"`. KOSTEN: elke shot krijgt andere datums, dus de nulmeting verschuift
+    ÉÉN keer. DE UITSLUITENDE TOETS: herhaal daarna de drie-cycli-meting; blijven alle 93 dan over
+    alle drie de paren identiek, dan was de sleutel-botsing de hele oorzaak. Blijft er iets
+    bewegen, dan is er een tweede bron en is het punt niet af.
 
 ## De tijdslijn
 
