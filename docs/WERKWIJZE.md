@@ -650,6 +650,16 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   weekplan-schrijfacties op 7 unieke week-sleutels, en week 2026-07-13 krijgt er tien — elk met een
   ander doel, andere plannerdagen of een andere blokweek. Elk scenario leest via de recency-seed en
   de blok-terugblik terug wat het vorige achterliet.
+- **Een toets die op ONGEWIJZIGDE code groen staat, beslist niets.** Een gedeelde toestand kan naar
+  een VAST PUNT convergeren, en dan meet een herhaal-toets alleen nog dat vaste punt in plaats van
+  het verschijnsel. Toets daarom vóór je op zo'n meting stuurt of hij ZONDER ingreep rood is; is
+  hij dat niet, dan is er een andere AS nodig. Aanleiding: ROADMAP punt 36, waar de drie-cycli-
+  toets uit het punt zelf op ongewijzigde code 93 van de 95 identiek gaf, terwijl diezelfde toets
+  een dag eerder 24, 16 en 24 afwijkingen gaf — de weekplan-tabel was intussen op n=9 en 40061
+  tekens blijven staan. De as die het wél deed was de VOLGORDE van de scenario's in plaats van het
+  aantal herhalingen: omdraaien gaf 77 van de 95 met 16 bewegende shots. Zelfde familie als "een
+  nieuw vangnet moet aantoonbaar ROOD zijn zonder de fix", nu op een toets die uit een GEPIND
+  DOCUMENT komt in plaats van uit de eigen bouw — en juist daar wordt hij niet meer nagelopen.
 
 ## Vorm van een CC-prompt
 

@@ -1034,7 +1034,7 @@ punten staat onder *Gesloten — vindplaats*.
     (`DOELEN-SPEC` §3.4) krijgt na afloop geen herstel. Vraagt een migratie, een DTO-veld, een
     invoerveld in Events en een tweede grens in `eventFase_`. Kwam binnen bij de recon van
     punt 13.
-36. **Het weekplan van een scenario verschuift tussen twee runs** — GEMETEN EN VERKLAARD, fix open ·
+36. **Het weekplan van een scenario verschuift tussen twee runs** — GEBOUWD, PRAKTIJKBEVESTIGING OPEN ·
     TOOLING. Het verdict is TOOLING en niet CLIENT: de harness laat elf scenario's met
     verschillende settings naar DEZELFDE weekplan-sleutels schrijven, en elk scenario leest via de
     recency-seed en de blok-terugblik terug wat het vorige achterliet.
@@ -1066,6 +1066,40 @@ punten staat onder *Gesloten — vindplaats*.
     ÉÉN keer. DE UITSLUITENDE TOETS: herhaal daarna de drie-cycli-meting; blijven alle 93 dan over
     alle drie de paren identiek, dan was de sleutel-botsing de hele oorzaak. Blijft er iets
     bewegen, dan is er een tweede bron en is het punt niet af.
+    GEBOUWD op `1911a188dcdb738577df935c3ad3f61f4581a408`. Elk scenario WIST zijn hele leesvenster
+    voordat het zaait — acht weken weekplan-rijen, geteld terug vanaf de blokstart, leeggezet met
+    een kale full-replace — en TOETST daarna dat het leeg is, op zowel de weekmaandag als de
+    blokstart. De PLANNER-tabel wordt bewust NIET gewist: die wordt alleen voor de bekeken week
+    gelezen, niet over een venster, dus daar bestaat de koppeling niet.
+    WISSEN EN NIET EIGEN WEEK-SLEUTELS, met de grond. Het leesvenster is acht weken —
+    `RECENCY_HORIZON_WEEKS` in `packages/engine/src/planner.ts` én de default `window = 8` van
+    `readRecentWeekplans` in `workers/api/src/db/repo.ts`, allebei `[maandag - 49 dagen ..
+    maandag]`. Eigen sleutels vragen dus acht weken tussenruimte per scenario, en dat is voor elf
+    scenario's TACHTIG WEKEN spreiding. Die botst VOORUIT op de acht-wekengrens van het A-event —
+    dan neemt de event-as de periodisering over en meet het scenario iets anders — en ACHTERUIT op
+    de echte ritdata, terwijl de verstreken-dag-scenario's die weken juist ONGEREDEN nodig hebben.
+    DE TOETS UIT DIT PUNT IS VERVANGEN, en dat is zelf een bevinding. De drie-cycli-toets
+    hierboven gaf op ONGEWIJZIGDE code 93 van de 95 identiek en NUL afwijkende shots: de gedeelde
+    toestand was naar een VAST PUNT geconvergeerd — `weekplans` op n=9 en
+    `sum(length(entries_json))` 40061, onbewogen over vier sweeps — terwijl diezelfde tabel een dag
+    eerder nog met 1239 tekens groeide en de cycli 24, 16 en 24 afwijkingen gaven. Een toets die
+    groen staat zónder ingreep beslist niets. In de plaats komt de VOLGORDE-TOETS: draai de
+    scenario-lus om en er mag geen enkele shot bewegen. Zonder fix gaf die 77 van de 95 identiek
+    met 16 bewegende shots — heel `v2` en heel `v4` — dus de koppeling is aangetoond.
+    DE GUARD IS AANTOONBAAR ROOD: met alleen de wis-lus uit valt hij op het eerste scenario, en
+    letterlijk met `v7: leesvenster niet leeg na wissen — maandag 2026-08-03 draagt 19 entries`.
+    WAT ONTBREEKT, EN DAAROM STAAT DIT PUNT NIET OP AF. Met de fix erin haalde GEEN van de vier
+    runs het einde, telkens afgebroken op de punt-24-poort in de ZAAI-fase en nooit op een shot:
+    `v7-blokweek4 bewijsweek 2026-07-20`, `v2 bewijsweek 2026-07-13`, `v7-midweek warmloop
+    dagOffset 2` en `v7 bewijsweek 2026-07-06`. Beide poorten gaven na elke uitval 200, dus vite
+    was niet dood. DE VOOR DE HAND LIGGENDE VERKLARING IS GEMETEN EN WEERLEGD: over 43 laadbeurten
+    is de mediaan 1558 ms en de hoogste 8139 ms, met NUL boven 15000 ms en NUL die de loader binnen
+    120000 ms niet kwijtraakte; de wandkloktijd was 246 s tegen 294 s en 320 s, dus de machine is
+    ook uitgesloten. De uitval is daarmee INTERMITTENT en ONVERKLAARD. Het settle-budget verhogen
+    is expliciet AFGEWEZEN: een grens die nooit gehaald wordt, verhoog je niet.
+    DE OPENSTAANDE VRAAG IS ÉÉN REGEL: haalt de harness met deze fix erin een run af? Dat antwoord
+    komt GRATIS in de eerstvolgende bouwronde die de harness draait. Blijkt hij structureel om te
+    vallen, dan is de commit één revert.
 
 ## De tijdslijn
 
