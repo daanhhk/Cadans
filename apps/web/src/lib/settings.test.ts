@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  blokStartBijDoel,
   EMPTY_FORM,
   presetHoursLabel,
   type SettingsForm,
@@ -196,5 +197,79 @@ describe("weekUren (T28 gedeclareerde capaciteit)", () => {
     expect("weekUren" in settingsFormToBody(form({ weekUren: "" }))).toBe(
       false,
     );
+  });
+});
+
+// ── ROADMAP punt 28 — DE DOELWISSEL VERZET DE BLOKSTART ─────────────────────
+// Spec: docs/PUNT28-BOUWDOC.md §3 en §4.
+//
+// De weekdagen zijn nagerekend en niet aangenomen: 2026-08-03 is een MAANDAG, 2026-08-05
+// woensdag, 2026-08-06 donderdag, 2026-08-07 vrijdag en 2026-08-09 zondag. De grens ligt op
+// woensdag — t/m woensdag pakt de LOPENDE week, daarna de eerstvolgende maandag.
+describe("punt 28 — blokStartBijDoel", () => {
+  it("A1 — wissel op vrijdag geeft de EERSTVOLGENDE maandag", () => {
+    expect(
+      blokStartBijDoel("FTP", "2026-06-29", "Korte beklimmingen", "2026-08-07"),
+    ).toBe("2026-08-10");
+  });
+
+  it("A2 — wissel op woensdag pakt de LOPENDE week", () => {
+    expect(
+      blokStartBijDoel("FTP", "2026-06-29", "Onderhoud", "2026-08-05"),
+    ).toBe("2026-08-03");
+  });
+
+  // A3 en A4 zijn DE VALKUIL van dit punt: een legacy-string die op hetzelfde canonieke doel
+  // normaliseert is GEEN wissel en mag het blok dus niet terugzetten. Zonder normalisatie zou
+  // het laden van een oude instelling elke keer een vers blok openen.
+  it("A3 — legacy 'Beklimmingen' tegen 'Korte beklimmingen' is GEEN wissel", () => {
+    expect(
+      blokStartBijDoel(
+        "Beklimmingen",
+        "2026-06-29",
+        "Korte beklimmingen",
+        "2026-08-07",
+      ),
+    ).toBe("2026-06-29");
+  });
+
+  it("A4 — legacy 'VO2max' tegen 'FTP' is GEEN wissel", () => {
+    expect(blokStartBijDoel("VO2max", "2026-06-29", "FTP", "2026-08-07")).toBe(
+      "2026-06-29",
+    );
+  });
+
+  it("A5 — wissel op maandag geeft die maandag zelf", () => {
+    expect(
+      blokStartBijDoel("FTP", "2026-06-29", "Conditie", "2026-08-03"),
+    ).toBe("2026-08-03");
+  });
+
+  it("A6 — donderdag valt net buiten het venster", () => {
+    expect(
+      blokStartBijDoel("FTP", "2026-06-29", "Conditie", "2026-08-06"),
+    ).toBe("2026-08-10");
+  });
+
+  it("A7 — zondag telt als dag 7, niet als dag 0", () => {
+    expect(
+      blokStartBijDoel("FTP", "2026-06-29", "Conditie", "2026-08-09"),
+    ).toBe("2026-08-10");
+  });
+
+  it("A8 — IDEMPOTENT: de uitkomst opnieuw invoeren verandert niets", () => {
+    const een = blokStartBijDoel(
+      "FTP",
+      "2026-06-29",
+      "Korte beklimmingen",
+      "2026-08-07",
+    );
+    expect(een).toBe("2026-08-10");
+    // Zelfde geladen doel en dezelfde dag, maar nu met de UITKOMST als geladen blokstart. Het
+    // doel is nog steeds verschillend, dus de functie rekent opnieuw — en hoort op dezelfde
+    // maandag uit te komen. Dat is wat idempotent hier betekent.
+    expect(
+      blokStartBijDoel("FTP", een, "Korte beklimmingen", "2026-08-07"),
+    ).toBe(een);
   });
 });

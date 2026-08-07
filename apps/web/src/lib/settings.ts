@@ -1,3 +1,4 @@
+import { normalizeDoel_ } from "@cadans/engine";
 import type { SettingsInput } from "@cadans/shared";
 
 // Settings-form-laag: pre-fill (GET → form-state) + serialisatie (form-state →
@@ -112,6 +113,68 @@ export const DOEL_OPTIONS: { value: string; label: string }[] = [
   { value: "Lange beklimmingen", label: "Klim lang" },
   { value: "Onderhoud", label: "Onderhoud" },
 ];
+
+/** ROADMAP punt 28 — DE LAATSTE WEEKDAG WAAROP EEN DOELWISSEL DE LOPENDE WEEK NOG PAKT.
+ *
+ * 3 = woensdag (`Date.getDay()`: zo 0 … za 6). Wissel je op maandag, dinsdag of woensdag, dan
+ * begint het nieuwe blok op de maandag van DEZE week; wissel je later, dan op de eerstvolgende.
+ *
+ * HERKOMST: BELEID. Dit is een besluit van Daan, geen geijkte drempel — er staat geen enkele
+ * doelwissel in de Cadans-historie, dus er bestaat geen reeks om dit op te bemonsteren en er
+ * hoort ook GEEN plateau-toets bij. Een grens die je niet kunt bemonsteren, ijk je niet; je
+ * verantwoordt hem. De grond: na woensdag zou het verse blok openen met twee of drie dagen, en
+ * dat leest als een blok dat al mislukt is voor het begon.
+ */
+const WISSEL_LAATSTE_DAG = 3;
+
+/** ROADMAP punt 28 — DE BLOK-START DIE BIJ EEN DOELWISSEL HOORT.
+ *
+ * Puur en zonder ambient klok: `vandaagISO` komt binnen als parameter en er wordt lokaal
+ * gerekend, net als `todayIso` in `apps/web/src/lib/dates.ts`. Geen `Date.now`, geen
+ * `toISOString` — dat laatste zou 's avonds in NL naar morgen schuiven.
+ *
+ * BEIDE DOELEN GAAN EERST DOOR `normalizeDoel_`, en dat is dragend en geen netheid: een
+ * opgeslagen `"Beklimmingen"` en het canonieke `"Lange beklimmingen"` zijn HETZELFDE doel, dus
+ * zonder normalisatie zou het laden van een oude instelling als een WISSEL lezen en het blok
+ * ten onrechte herstarten. Dat is de valkuil die dit punt bij naam noemt.
+ *
+ * GELIJK → `geladenBlokStart` ONVERANDERD terug. Twee eigenschappen volgen daaruit en allebei
+ * zijn ze bedoeld: de functie is IDEMPOTENT, en terugwisselen naar het geladen doel HERSTELT de
+ * oude datum in plaats van een derde blok te openen.
+ *
+ * MAANDAG-UITGELIJND EN NIET DE WISSELDAG ZELF. GEMETEN met `doelStart` op vrijdag 2026-08-07:
+ * de weekmaandagen 2026-08-03 en 2026-08-10 lezen dan allebei blokweek 1 — de gewenste
+ * oprekking — maar `computeMacroPhase` kantelt MIDDEN in de week voor elke aanroeper die de DAG
+ * meegeeft (w1→w2 op 2026-08-13, w2→w3 op 2026-08-21), en `blokStartVoorWeek` geeft binnen ÉÉN
+ * blokweek twee verschillende blok-starts. Die datum is de SLEUTEL waaronder de
+ * blokgrens-kaarten hun antwoord wegschrijven, dus dezelfde vraag zou twee keer gesteld worden.
+ * Met een maandag levert de bestaande ondergrens-klem dezelfde oprekking zonder die gebreken.
+ *
+ * Zie `docs/PUNT28-BOUWDOC.md` §3 en §4.
+ */
+export function blokStartBijDoel(
+  geladenDoel: string | null | undefined,
+  geladenBlokStart: string,
+  nieuwDoel: string | null | undefined,
+  vandaagISO: string,
+): string {
+  if (normalizeDoel_(geladenDoel ?? "") === normalizeDoel_(nieuwDoel ?? "")) {
+    return geladenBlokStart;
+  }
+  const [y, m, d] = vandaagISO.split("-").map(Number);
+  const dag = new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1);
+  const dow = dag.getDay();
+  // Maandag van DEZE week: zo (0) telt als dag 7, dus −6; anders 1 − dow.
+  const naarMaandag = dow === 0 ? -6 : 1 - dow;
+  const binnenVenster = dow >= 1 && dow <= WISSEL_LAATSTE_DAG;
+  const doel = new Date(
+    dag.getFullYear(),
+    dag.getMonth(),
+    dag.getDate() + naarMaandag + (binnenVenster ? 0 : 7),
+  );
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${doel.getFullYear()}-${pad(doel.getMonth() + 1)}-${pad(doel.getDate())}`;
+}
 
 // profielPreset: NIET door de engine gelezen (geen match gevonden) → de waarden
 // volgen het design (settings.jsx VOLUMES-keys).

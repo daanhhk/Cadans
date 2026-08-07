@@ -3,8 +3,10 @@ import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getEvents, getSettings, putSettings } from "../lib/api";
+import { todayIso } from "../lib/dates";
 import { eventsSummary } from "../lib/events";
 import {
+  blokStartBijDoel,
   COACH_PERSONA_OPTIONS,
   DOEL_OPTIONS,
   EMPTY_FORM,
@@ -396,6 +398,16 @@ function BackChevron() {
 export function Instellingen() {
   const navigate = useNavigate();
   const [form, setForm] = useState<SettingsForm>(EMPTY_FORM);
+  // ROADMAP punt 28 — DE GELADEN SERVERWAARDEN, apart van de form-state.
+  //
+  // `blokStartBijDoel` moet weten wat er OP DE SERVER stond, niet wat er in het formulier staat:
+  // anders zou elke tussenstap in een reeks klikken als een nieuwe wissel lezen en de blokstart
+  // opnieuw verzetten. Met de geladen waarde als anker herstelt terugwisselen naar het
+  // oorspronkelijke doel vanzelf de oorspronkelijke datum.
+  const [geladen, setGeladen] = useState<{ doel: string; doelStart: string }>({
+    doel: "",
+    doelStart: "",
+  });
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [nonce, setNonce] = useState(0);
@@ -428,7 +440,11 @@ export function Instellingen() {
     getSettings()
       .then((s) => {
         if (!alive) return;
-        setForm(settingsToForm(s));
+        const f = settingsToForm(s);
+        setForm(f);
+        // ROADMAP punt 28 — het anker verschuift mee bij ELKE fetch, dus ook bij de re-fetch na
+        // opslaan (`nonce`). Zo is de zojuist bewaarde stand het nieuwe ijkpunt.
+        setGeladen({ doel: f.doel, doelStart: f.doelStart });
         setLoading(false);
       })
       .catch((e: unknown) => {
@@ -443,6 +459,33 @@ export function Instellingen() {
 
   const set = (k: keyof SettingsForm) => (v: string) => {
     setForm((f) => ({ ...f, [k]: v }));
+    setSaved(false);
+    setSaveError(null);
+  };
+
+  /** ROADMAP punt 28 — EEN DOELWISSEL VERZET DE BLOKSTART MEE.
+   *
+   * `doel` en `doelStart` waren twee losse velden, en daardoor landde een vers doel MIDDEN in
+   * het lopende blok: fase en mesoweek bleven van het oude doel. TRAININGSMODEL M49 zegt dat de
+   * fase het doel volgt, DOELEN-SPEC §2B dat een nieuw doel een nieuw blok begint.
+   *
+   * De rekenregel staat in `blokStartBijDoel` (settings.ts) en is puur; hier wordt alleen de
+   * GELADEN serverwaarde als anker meegegeven, plus `todayIso()` als de dag van vandaag.
+   *
+   * ER VERANDERT NIETS TOT DAAN OPSLAAT: dit zet alleen form-state. En de datum blijft
+   * bewerkbaar — het is een voorstel, geen dwang.
+   */
+  const kiesDoel = (v: string) => {
+    setForm((f) => ({
+      ...f,
+      doel: v,
+      doelStart: blokStartBijDoel(
+        geladen.doel,
+        geladen.doelStart,
+        v,
+        todayIso(),
+      ),
+    }));
     setSaved(false);
     setSaveError(null);
   };
@@ -704,7 +747,7 @@ export function Instellingen() {
                 <Segmented
                   value={form.doel}
                   options={DOEL_OPTIONS}
-                  onChange={set("doel")}
+                  onChange={kiesDoel}
                 />
               </div>
               <Row label="Blok-start" sub="yyyy-MM-dd">
@@ -715,6 +758,19 @@ export function Instellingen() {
                   style={{ ...fieldStyle, width: 160, colorScheme: "dark" }}
                 />
               </Row>
+              {form.doelStart !== geladen.doelStart && (
+                <div
+                  style={{
+                    fontSize: "var(--fs-caption)",
+                    color: "var(--text-secondary)",
+                    marginTop: "calc(var(--s-2) * -1)",
+                    paddingLeft: "var(--s-1)",
+                  }}
+                >
+                  Nieuw doel, dus een nieuw blok vanaf deze datum. Je kunt hem
+                  aanpassen. Er verandert niets tot je op Opslaan drukt.
+                </div>
+              )}
             </Section>
 
             <Section title="Doelen & events">

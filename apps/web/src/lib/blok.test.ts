@@ -778,6 +778,38 @@ describe("blokReviewVenster — wanneer mag de kaart, en welk blok", () => {
       expect(blokWeekVanWeek(DOEL_START, v.ctlAnker)).toBe(4);
     }
   });
+
+  // ── ROADMAP punt 28 — GEEN TERUGBLIK OP EEN BLOK VAN VÓÓR HET DOEL ────────
+  // Spec: docs/PUNT28-BOUWDOC.md §5. `dosisTredeVoorstel` hangt aan dit oordeel, dus zonder
+  // poort zet de vorige configuratie de dosis van de nieuwe.
+  it("B1 — het blok begint vóór doelStart → null", () => {
+    // Op de doelstart-maandag zelf staan we in blokweek 1, en het VORIGE blok begon dan op
+    // 2026-06-01 — drie weken voordat het doel bestond. Dit vuurt dus ZONDER dat er ooit
+    // gewisseld is, en dat is precies waarom deze poort los van term 1 te betrappen is.
+    expect(blokReviewVenster(DOEL_START, "2026-06-29")).toBeNull();
+  });
+
+  it("B2 — een blok dat ná doelStart begon blijft gewoon spreken", () => {
+    const v = blokReviewVenster(DOEL_START, "2026-07-27");
+    expect(v?.fase).toBe("afgerond");
+    expect(v?.startMonday).toBe("2026-06-29");
+  });
+
+  it("B3 — de LOPEND-tak is ongemoeid", () => {
+    const v = blokReviewVenster(DOEL_START, "2026-07-20");
+    expect(v?.fase).toBe("lopend");
+    expect(v?.startMonday).toBe("2026-06-29");
+  });
+
+  it("B4 — doelStart null → geen poort, gedrag ongewijzigd", () => {
+    // Zonder doelstart is er niets om vóór te liggen. blokWeekVanWeek valt dan fail-open naar
+    // blokweek 1, dus dit is de afgerond-tak — en die hoort te spreken zoals voorheen.
+    expect(blokReviewVenster(null, "2026-07-27")).toEqual({
+      startMonday: "2026-06-29",
+      ctlAnker: "2026-07-20",
+      fase: "afgerond",
+    });
+  });
 });
 
 describe("buildBlokReview", () => {

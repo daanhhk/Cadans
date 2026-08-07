@@ -130,6 +130,28 @@ export function vorigBlokStart(startMonday: string): string {
   return shiftIso_(startMonday, -BLOK_WEKEN * 7);
 }
 
+/** ROADMAP punt 28 — de MAANDAG van de week waarin deze datum valt.
+ *
+ * `doelStart` hoeft geen maandag te zijn: het is een vrij datumveld in Instellingen, en oudere
+ * waarden staan er nog op een willekeurige dag. De poort in `blokReviewVenster` vergelijkt
+ * blok-starts (altijd maandagen) met deze datum, dus zonder uitlijning zou een `doelStart` op
+ * woensdag een blok dat op de maandag ervoor begon ten onrechte laten passeren.
+ *
+ * Lokaal gerekend, net als `todayIso` in `dates.ts` — nooit `toISOString`, dat schuift 's avonds
+ * in NL naar de volgende dag. Zondag (0) telt als dag 7, dus −6; anders 1 − dow. */
+function weekMondayVan_(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  const dag = new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1);
+  const dow = dag.getDay();
+  const mon = new Date(
+    dag.getFullYear(),
+    dag.getMonth(),
+    dag.getDate() + (dow === 0 ? -6 : 1 - dow),
+  );
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${mon.getFullYear()}-${pad(mon.getMonth() + 1)}-${pad(mon.getDate())}`;
+}
+
 export interface BlokDosisNorm {
   prikkels: number;
   minPerPrikkel: number;
@@ -910,8 +932,26 @@ export function blokReviewVenster(
     };
   }
   if (bw === 1) {
+    const vorige = vorigBlokStart(huidigeStart);
+    // ROADMAP punt 28 — GEEN TERUGBLIK OP EEN BLOK VAN VÓÓR HET DOEL.
+    //
+    // Begint het beoordeelde blok VÓÓR de weekmaandag van `doelStart`, dan hoort het bij een
+    // VORIGE doel-periode. Dat is niet vrijblijvend: `dosisTredeVoorstel` hangt aan dit oordeel,
+    // dus zonder deze poort zet de vorige configuratie de dosis van de nieuwe.
+    //
+    // HIJ VUURT OOK ZONDER DOELWISSEL, en dat is gemeten: bij `doelStart` 2026-06-29 gaf deze
+    // tak op weekmaandag 2026-06-29 een afgerond-venster vanaf 2026-06-01 — drie weken voordat
+    // het doel bestond. De poort is dus te betrappen zonder dat er ooit gewisseld is.
+    //
+    // ISO-STRINGVERGELIJKING volstaat: `yyyy-MM-dd` is lexicografisch chronologisch, en beide
+    // kanten komen uit dezelfde vorm. `doelStartISO` null → GEEN poort: zonder doelstart is er
+    // niets om vóór te liggen, en het gedrag blijft dan byte-identiek aan voorheen.
+    //
+    // De LOPEND-tak hierboven blijft ONGEMOEID: die beoordeelt het blok waarin we NU zitten, en
+    // dat kan per constructie niet vóór `doelStart` liggen.
+    if (doelStartISO && vorige < weekMondayVan_(doelStartISO)) return null;
     return {
-      startMonday: vorigBlokStart(huidigeStart),
+      startMonday: vorige,
       ctlAnker: shiftIso_(weekMondayISO, -7),
       fase: "afgerond",
     };
