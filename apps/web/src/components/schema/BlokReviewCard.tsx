@@ -1,4 +1,4 @@
-import type { BlokReview, BlokWeek } from "../../lib/blok";
+import { type BlokReview, type BlokWeek, haaltNorm } from "../../lib/blok";
 import { blokReviewNarrative } from "../../lib/coachNarrative";
 import { parseLocalDate } from "../../lib/dates";
 import { nlInt } from "../../lib/format";
@@ -173,10 +173,9 @@ function Regel({ week }: { week: BlokWeek }) {
                   // ROADMAP punt 17 — DEZELFDE AFRONDING ALS HET GERENDERDE GETAL hiernaast, en
                   // dus dezelfde als het oordeel in `blok.ts`. Zonder die ronding kleurde een zone
                   // die 8/8 TOONT als tekort, of andersom: het cijfer zei gehaald en de kleur niet.
+                  // ROADMAP punt 33 — die vergelijking staat nu in `haaltNorm` en nergens anders.
                   color:
-                    !gedempt &&
-                    z.norm != null &&
-                    Math.round(z.geleverd) < z.norm
+                    !gedempt && z.norm != null && !haaltNorm(z.geleverd, z.norm)
                       ? "var(--warn)"
                       : undefined,
                 }}
@@ -272,8 +271,9 @@ function BlokTotaal({ weeks }: { weeks: BlokWeek[] }) {
               fontWeight: 600,
               // ROADMAP punt 17 — zie de zone-regels hierboven: ronden vóór vergelijken, zodat de
               // kleur nooit iets anders beweert dan het cijfer dat eronder staat.
+              // ROADMAP punt 33 — dezelfde `haaltNorm` als daar en als het oordeel in `blok.ts`.
               color:
-                rij.norm != null && Math.round(rij.geleverd) < rij.norm
+                rij.norm != null && !haaltNorm(rij.geleverd, rij.norm)
                   ? "var(--warn)"
                   : "var(--text-secondary)",
             }}

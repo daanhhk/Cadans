@@ -435,7 +435,16 @@ function poortsetVoorWeek_(
  * HET TOTAAL RONDT ÉÉN KEER AF, op de som: `werkTotaal` blijft de ONAFGERONDE optelling van de
  * drie zones en gaat pas daarna door `Math.round`. Nooit een som van afgeronde delen
  * (WERKWIJZE, rond één keer af) — anders loopt het totaal tot anderhalve minuut uit de pas met
- * zijn eigen zones. */
+ * zijn eigen zones.
+ *
+ * SINDS ROADMAP PUNT 33 IS DIT DE ENIGE PLEK WAAR DEZE VERGELIJKING VALT. Zowel het oordeel in
+ * dit bestand — de drie zones, het totaal en `zoneOpNorm_` — als de KLEUR op `BlokReviewCard`
+ * leest `haaltNorm`. Daarvóór stond dezelfde regel op zeven plekken in twee bestanden, en de
+ * kaart had geen vangnet: een van die zeven kon stil uit de pas lopen en dan beweerde de kleur
+ * iets anders dan het cijfer ernaast. */
+export function haaltNorm(geleverd: number, norm: number): boolean {
+  return Math.round(geleverd) >= norm;
+}
 
 /** ROADMAP punt 17 — de PLAN-ZONEMINUTEN van één week, ONAFGEROND. Zelfde venster en zelfde bron
  * als `poortsetVoorWeek_` hierboven: de BEWAARDE entries van maandag t/m zondag. Geen tweede
@@ -635,9 +644,9 @@ export function buildBlokReferent(input: {
     // ROADMAP punt 17 — op de GETOONDE HELE MINUUT. `gevraagdTempo` c.s. is exact het getal dat de
     // kaart naast de geleverde minuten zet, dus kleur, teller en oordeel kunnen niet uiteenlopen.
     const opNormPerZone = {
-      tempo: Math.round(k.tempo) >= gevraagdTempo,
-      drempel: Math.round(k.drempel) >= gevraagdDrempel,
-      anaeroob: Math.round(k.anaeroob) >= gevraagdAnaeroob,
+      tempo: haaltNorm(k.tempo, gevraagdTempo),
+      drempel: haaltNorm(k.drempel, gevraagdDrempel),
+      anaeroob: haaltNorm(k.anaeroob, gevraagdAnaeroob),
     };
     const zonesOpNorm = zonesVoorgeschreven.filter(
       (z) => opNormPerZone[z as "tempo" | "drempel" | "anaeroob"],
@@ -657,7 +666,7 @@ export function buildBlokReferent(input: {
     // De drie werkzone-waarden zijn EXACT dezelfde die het per-zone-oordeel hierboven leest — geen
     // tweede vouwing.
     const werkTotaal = k.tempo + k.drempel + k.anaeroob;
-    const totaalOpNorm = telt ? Math.round(werkTotaal) >= gevraagd : null;
+    const totaalOpNorm = telt ? haaltNorm(werkTotaal, gevraagd) : null;
     const geleverdOk = telt
       ? zonesOpNorm === zonesVoorgeschreven.length && totaalOpNorm === true
       : null;
@@ -762,7 +771,7 @@ export interface BlokUitvoering {
  * tekortzone in een week die het oordeel als geleverd had gelezen. De doc-regel hierboven stond
  * er al; hij was alleen niet waar. Nu draagt één grootheid oordeel, diagnose én kaart. */
 function zoneOpNorm_(w: BlokWeek, z: Zone5Key): boolean {
-  return Math.round(zoneGeleverd_(w, z)) >= zoneGevraagd_(w, z);
+  return haaltNorm(zoneGeleverd_(w, z), zoneGevraagd_(w, z));
 }
 
 function zoneGeleverd_(w: BlokWeek, z: Zone5Key): number {
