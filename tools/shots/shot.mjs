@@ -937,6 +937,63 @@ async function probeRoutes(paths) {
   return { present, missing, unknown };
 }
 
+/**
+ * ROADMAP punt 37 — LEEFT DIT ORIGIN NOG?
+ *
+ * EEN fetch, geen lus: dit is geen preflight die op iets wacht, maar een POSTMORTEM op een
+ * origin dat al zou moeten draaien. `waitFor` hierboven pollt juist wél, en dat is precies het
+ * verschil — hier is wachten misleidend, want een server die pas na tien seconden antwoordt was
+ * op het moment van de fout dood.
+ *
+ * ELK antwoord telt als LEVEND, ook 401, 404 en 500: dan staat er een proces dat praat. Alleen
+ * een gegooide of afgelopen fetch is "geen antwoord". Zelfde asymmetrie als in `waitFor`, waar
+ * een 401 op een gated origin geen uitval is.
+ *
+ * Gooit zelf nooit — een diagnose die zelf omvalt maakt de oorspronkelijke fout onleesbaar.
+ */
+async function originAnswers(url, headers) {
+  try {
+    const r = await fetch(url, { signal: AbortSignal.timeout(3000), headers });
+    return `HTTP ${r.status}`;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * ROADMAP punt 37 — HET ETIKET, NIET DE GRONDOORZAAK.
+ *
+ * Geeft een Error TERUG en gooit niet: de aanroeper doet de throw, zodat de stack op de plek van
+ * het defect blijft staan.
+ *
+ * Antwoorden BEIDE origins, dan is de fout inhoudelijk en gaat `err` ONGEWIJZIGD terug — dezelfde
+ * Error, dezelfde message. Een diagnose die ook bij een echte app-fout een eigen tekst plakt zou
+ * hetzelfde defect maken dat dit punt repareert, alleen andersom.
+ */
+async function classifyFailure(err) {
+  const webUrl = WEB;
+  const apiUrl = `${API}/api/settings`;
+  const [web, api] = await Promise.all([
+    originAnswers(webUrl, AUTH_HEADERS),
+    originAnswers(apiUrl, AUTH_HEADERS),
+  ]);
+  if (web && api) return err;
+
+  const oorspronkelijk = err?.message ? err.message : String(err);
+  const slot = PROD
+    ? `De tot hier geschoten shots bewijzen NIETS over de bouw. Toets eerst of ${TARGET} antwoordt en herhaal daarna de hele run; er is hier geen dev-server om te herstarten.`
+    : "De tot hier geschoten shots bewijzen NIETS over de bouw. Herstart de dev-servers en herhaal de hele run.";
+
+  return new Error(
+    "INFRASTRUCTUUR-UITVAL — de harness is gestopt omdat een origin niet meer antwoordt, " +
+      "niet omdat de app iets fout doet. Dit is GEEN app-defect.\n" +
+      `  web ${webUrl}: ${web ?? "geen antwoord"}\n` +
+      `  api ${apiUrl}: ${api ?? "geen antwoord"}\n` +
+      `oorspronkelijke melding: ${oorspronkelijk}\n` +
+      slot,
+  );
+}
+
 async function main() {
   // Fail before touching the network, and name the two places to look — never a value.
   if (PROD && !AUTH_PASSWORD) {
@@ -1042,6 +1099,22 @@ async function main() {
         await sweep(page, scenario, monday, results, seededSettings);
       }
     }
+    // ROADMAP punt 37 — DE POORT. Het defect is het ETIKET, niet de uitval zelf: sterft de vite
+    // dev-server halverwege een sweep, dan valt de eerstvolgende `goto` om op een timeout of komt
+    // `settle` nooit voorbij `Laden…`, en de harness meldt dat als een INHOUDELIJK defect. Vijf
+    // keer gebeurd, en één keer op een shot-label — dan leest een infrastructuur-uitval als een
+    // regressie in de bouw. De grondoorzaak blijft open; het liegen niet.
+    //
+    // HIER EN NIET IN settle(): dit is het smalste punt waar ALLE vijf de netwerk-rakende stappen
+    // van een sweep onderdoor gaan — de `goto`, de `settle`, de dagstrip-telling, de
+    // leesvenster-guard en de eigen `apiPut`-aanroepen. Een poort in `settle` zou de andere vier
+    // missen, en vijf poorten zouden vijf plekken zijn om te vergeten.
+    //
+    // DE ZAAI IN main() BLIJFT ERBUITEN, en dat is geen slordigheid: die praat uitsluitend met
+    // 8787 en raakt vite nooit, dus voor dit defect is hij per constructie onbereikbaar. Valt de
+    // worker daar weg, dan meldt `apiPut` dat al met status en pad.
+  } catch (e) {
+    throw await classifyFailure(e);
   } finally {
     await browser.close();
   }

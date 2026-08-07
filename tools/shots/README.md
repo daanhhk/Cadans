@@ -60,6 +60,16 @@ week gelezen, niet over een venster.
 
 Alles staat hard op loopback (`127.0.0.1`); remote wordt nooit geraakt. De
 Worker op 8787 is optioneel: `/preview` rendert ook zonder, en het script
-noteert alleen of de API bereikbaar was. Eerste keer draaien vraagt de browser:
+noteert alleen of de API bereikbaar was.
+
+Valt een dev-server weg tijdens een sweep, dan stopt de harness met een eigen
+melding die beide origins meet en het woord `INFRASTRUCTUUR-UITVAL` draagt — in
+plaats van dat een dode server als een eeuwig ladende pagina leest en de uitval
+als een defect van je bouw wordt gemeld. Die melding vervangt de oorspronkelijke
+fout ALLEEN als er aantoonbaar een origin niet antwoordt; antwoorden ze allebei,
+dan gaat de fout ongewijzigd door. Elk antwoord telt daarbij als levend, ook een
+401 of een 500 — alleen een fetch die gooit of afloopt is "geen antwoord".
+
+Eerste keer draaien vraagt de browser:
 
     pnpm exec playwright install chromium
