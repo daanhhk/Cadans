@@ -8,6 +8,9 @@ import { defineConfig } from "vitest/config";
  *    @cloudflare/vitest-pool-workers — zie workers/api/vitest.config.ts.
  *  - web        : apps/web pure helpers (parseActivityRows) — node-pool; zie
  *    apps/web/vitest.config.ts.
+ *  - web-render : apps/web render-tests op een echte DOM — jsdom-env; zie
+ *    apps/web/vitest.render.config.ts. Gescheiden van `web` op de EXTENSIE:
+ *    dit project pakt *.test.tsx, `web` pakt *.test.ts, dus geen dubbele run.
  *
  * De node-pools erven de TZ=Europe/Amsterdam-pin (root `pnpm test` = cross-env).
  * De workers-pool-tests zijn TZ-veilig (readiness-oracle = datumvrij;
@@ -32,6 +35,7 @@ export default defineConfig({
       },
       "./workers/api/vitest.config.ts",
       "./apps/web/vitest.config.ts",
+      "./apps/web/vitest.render.config.ts",
     ],
   },
 });
