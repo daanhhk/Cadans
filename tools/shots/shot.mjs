@@ -78,7 +78,23 @@ const AUTH_HEADERS =
 
 const VIEWPORT_W = 390;
 const VIEWPORT_H = 1800;
-const HEIGHT_CAP = 4000;
+/**
+ * ROADMAP punt 25 — DE CAP IS EEN GRENS, GEEN DOEL.
+ *
+ * Stond op 4000 en kapte `v7/12-activiteiten` stil af. GEMETEN in de sessie van 07-08-2026: de
+ * hoogste `needed` over alle 95 shots is 5882 (dat scherm), de op één na hoogste 2317. Op 8000
+ * valt het enige scherm dat in de buurt komt er dus ruim onder, terwijl een pagina die op hol
+ * slaat nog steeds tegen een grens loopt. HERKOMST BELEID — er is geen reeks om op te ijken.
+ *
+ * Sinds punt 25 is overschrijding bovendien een HARDE STOP en geen stille afkapping; zie
+ * `capture()`.
+ */
+const HEIGHT_CAP = 8000;
+/** Uit `newContext` getild, zodat de IHDR-controle in `capture()` tegen DEZELFDE schaal toetst
+ * als waarmee geschoten wordt. Twee losse 2'en zouden stil uiteen kunnen lopen. */
+const DEVICE_SCALE = 2;
+/** ROADMAP punt 23 — bovengrens voor de animatie-wacht in `capture()`; grond staat daar. */
+const ANIM_TIMEOUT_MS = 5000;
 
 /** BLOK_MIN_BEOORDEELBARE_WEKEN uit apps/web/src/lib/blok.ts — het minimum aantal opbouwweken
  * met een bewaard plan waarop de blok-terugblik nog een uitspraak doet. Hier bewust een LOSSE
@@ -606,18 +622,96 @@ async function readWithDisclosuresOpen(page) {
   });
 }
 
+/**
+ * ROADMAP punt 23 — WACHT DE ANIMATIES UIT, VLAK VOOR DE SLUITER.
+ *
+ * Geeft het aantal animaties terug dat op dat moment LIEP, en wacht tot er nul over zijn.
+ *
+ * HIER EN NIET IN settle(): een viewport-wijziging kan zelf een transitie opnieuw aanzetten, dus
+ * een wacht die daarvóór valt meet de verkeerde toestand. En dit is het smalste punt waar ELKE
+ * shot onderdoor gaat — de zeven dagshots roepen `settle` niet aan.
+ *
+ * DE BOVENGRENS IS BELEID EN GEEN GEIJKTE DREMPEL: er valt niets te bemonsteren. De app draagt 0
+ * `@keyframes` en 0 `infinite`, en de langst bekende transitie is 1,1 s met 250 ms aanloop
+ * (`ProgressRing.tsx`), dus 5000 ms laat die er ruim onder vallen.
+ *
+ * LOOPT DE GRENS AF, DAN GOOIT HIJ. Een wacht die stil doorloopt levert precies het artefact dat
+ * dit punt moest wegnemen: een shot die er goed uitziet en toch per run verschilt.
+ */
+async function waitForAnimations(page, label) {
+  const lopend = () =>
+    page.evaluate(
+      () =>
+        document
+          .getAnimations()
+          .filter((a) => a.playState === "running" || a.playState === "pending")
+          .length,
+    );
+
+  const gemeten = await lopend();
+  if (gemeten === 0) return 0;
+
+  const deadline = Date.now() + ANIM_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    if ((await lopend()) === 0) return gemeten;
+    await page.waitForTimeout(50);
+  }
+
+  const rest = await page.evaluate(() =>
+    document
+      .getAnimations()
+      .filter((a) => a.playState === "running" || a.playState === "pending")
+      .map((a) => a.transitionProperty ?? a.animationName ?? "(onbekend)"),
+  );
+  throw new Error(
+    `${label}: ${rest.length} animatie(s) lopen na ${ANIM_TIMEOUT_MS} ms nog — ` +
+      `getroffen eigenschap(pen): ${rest.join(", ")}. Een shot hier verschilt per run.`,
+  );
+}
+
+/**
+ * ROADMAP punt 25 — LEES DE IHDR VAN DE GESCHREVEN PNG TERUG.
+ *
+ * Een PNG opent met 8 handtekening-bytes, dan de chunk-lengte en het type `IHDR` (byte 8 tot en
+ * met 15), en dán pas de afmetingen: breedte op 16 tot en met 19, hoogte op 20 tot en met 23,
+ * big-endian. Zo komt een afkapping door de BROWSER er ook niet doorheen — de harness-kant
+ * bewaakt `HEIGHT_CAP` al, maar niets bewaakte tot nu toe wat er werkelijk op schijf kwam.
+ */
+function assertPngSize(png, label, verwachtB, verwachtH) {
+  const kop = readFileSync(png).subarray(0, 24);
+  const breedte = kop.readUInt32BE(16);
+  const hoogte = kop.readUInt32BE(20);
+  if (breedte !== verwachtB || hoogte !== verwachtH) {
+    throw new Error(
+      `${label}: de geschreven PNG meet ${breedte}x${hoogte} terwijl ` +
+        `${verwachtB}x${verwachtH} verwacht was. De shot liegt over het scherm.`,
+    );
+  }
+}
+
 async function capture(page, dir, name, url, probe) {
   let height = VIEWPORT_H;
   const needed = await contentHeight(page);
-  const capped = needed > HEIGHT_CAP;
+  // ROADMAP punt 25 — EEN GEKAPTE SHOT IS EEN HARDE STOP. Stil afkappen was het eigenlijke
+  // defect: de PNG liegt dan over het scherm en leest bij een vergelijking als "ongewijzigd".
+  if (needed > HEIGHT_CAP) {
+    throw new Error(
+      `${name}: de pagina vraagt ${needed} px en HEIGHT_CAP staat op ${HEIGHT_CAP} px. ` +
+        "Een gekapte shot toont niet het scherm; verhoog de cap of splits het scherm.",
+    );
+  }
   if (needed > VIEWPORT_H) {
-    height = Math.min(needed, HEIGHT_CAP);
+    // Geen `Math.min` meer: de poort hierboven garandeert al dat `needed` onder de cap ligt.
+    height = needed;
     await page.setViewportSize({ width: VIEWPORT_W, height });
     await page.waitForTimeout(200);
   }
 
+  const anim = await waitForAnimations(page, name);
+
   const png = join(dir, `${name}.png`);
   await page.screenshot({ path: png });
+  assertPngSize(png, name, VIEWPORT_W * DEVICE_SCALE, height * DEVICE_SCALE);
 
   // Dezelfde val-terug als in contentHeight: zonder <main> zou dit "(no <main>)" opleveren en
   // scande het float-net juist op Instellingen — het scherm met de meeste getallen — niets.
@@ -639,7 +733,7 @@ async function capture(page, dir, name, url, probe) {
     [
       `url: ${url}`,
       `clock pinned to: ${PINNED}`,
-      `viewport: ${VIEWPORT_W}x${height} (needed ${needed}${capped ? ", CAPPED" : ""})`,
+      `viewport: ${VIEWPORT_W}x${height} (needed ${needed})`,
       `errors: ${probe.errors.length ? "" : "none"}`,
       ...probe.errors.map((e) => `  ${e}`),
       `api requests: ${tally.length ? "" : "none"}`,
@@ -664,7 +758,7 @@ async function capture(page, dir, name, url, probe) {
     name,
     height,
     needed,
-    capped,
+    anim,
     errors: probe.errors.length,
     noise: noise.length,
     hits: noise,
@@ -866,6 +960,82 @@ async function sweep(page, scenario, monday, results, seededSettings) {
         ...(await capture(page, dir, name, u, probe)),
       });
     }
+
+    // ROADMAP punt 22 — DE RIT-SHEET WAS VOOR GEEN ENKELE DOM-INGREEP BEREIKBAAR.
+    //
+    // Hij opent alleen na een KLIK op een activiteitenrij, dus geen enkele shot toonde hem ooit.
+    // Staat NA de EXTRA_ROUTES-lus en nooit ervoor: alle bestaande shots moeten geschoten zijn
+    // voordat er weg genavigeerd wordt, anders is de byte-vergelijking tegen een vorige run
+    // waardeloos.
+    await page.setViewportSize({ width: VIEWPORT_W, height: VIEWPORT_H });
+    probe.reset();
+    const ritUrl = `${WEB}/activiteiten`;
+    await page.goto(ritUrl, { waitUntil: "domcontentloaded", timeout: 60000 });
+    await settle(page, `${label} ritdetail (voor de klik)`);
+
+    // VOORAF: de sheet mag er nog NIET staan, anders bewijst de klik erna niets.
+    const sluitenVoor = await page.locator('[aria-label="Sluiten"]').count();
+    if (sluitenVoor !== 0) {
+      throw new Error(
+        `${label} ritdetail: vóór de klik staan er al ${sluitenVoor} element(en) met ` +
+          'aria-label "Sluiten" — de sheet is dan niet door DEZE klik geopend.',
+      );
+    }
+
+    // DE SELECTOR. Elke tikbare rij is een `<button>` met de inline `cardStyle` uit
+    // `Activiteiten.tsx:179`, en `flex-direction: column` staat daar wél en op "Meer laden"
+    // (`RETRY_BTN`) en op de app-navigatie niet. GEMETEN op 07-08-2026: 50 treffers tegenover
+    // 51 buttons in het document — precies "Meer laden" valt af.
+    const rijen = page.locator('main button[style*="flex-direction: column"]');
+    const nRijen = await rijen.count();
+    if (nRijen < 2) {
+      throw new Error(
+        `${label} ritdetail: ${nRijen} tikbare rij(en) gevonden op ${ritUrl}; ` +
+          "er horen er tientallen te staan, dus de selector of de zaai klopt niet.",
+      );
+    }
+    await rijen.first().click();
+    // De sheet toont eerst "Ritdetails laden…", en die tekst matcht de laad-poort van punt 24 —
+    // `settle` wacht hem dus uit.
+    await settle(page, `${label} ritdetail (na de klik)`);
+
+    // NA, DEEL a: de sheet staat op het scherm. Het EXACTE aantal is bewust GEEN eis — dat is
+    // decoratie. `RideDetailSheet` draagt er vandaag twee (de scrim op regel 104 en de sluitknop
+    // op 143) en dat mag veranderen zonder dat deze shot iets anders bewijst. Het label is uniek
+    // op PAGINA-niveau en niet op element-niveau: `WorkoutPickerSheet` en `CheckinSheet` dragen
+    // het ook, maar staan niet op /activiteiten.
+    const sluitenNa = await page.locator('[aria-label="Sluiten"]').count();
+    if (sluitenNa === 0) {
+      throw new Error(
+        `${label} ritdetail: na de klik staat er GEEN element met aria-label "Sluiten" — ` +
+          "de klik heeft de sheet niet geopend.",
+      );
+    }
+
+    // NA, DEEL b: hij staat op de READY-tak en niet op laden of fout. `fase.s` kent precies drie
+    // uitputtende en elkaar uitsluitende takken — loading op `RideDetailSheet.tsx:163`, error op
+    // `:177`, ready op `:194`. Staat de sheet aantoonbaar op het scherm via deel a, en zijn deze
+    // twee teksten weg, dan is hij per constructie ready. ZONDER DEZE HELFT haalt een sheet die
+    // opent maar waarvan de fetch faalt de assertie even goed, en fotografeer je een FOUTKAART
+    // als bewijs.
+    const zichtbaar = await page.evaluate(() => document.body.innerText);
+    for (const verboden of [
+      "Ritdetails laden…",
+      "Ritdetails konden niet geladen worden.",
+    ]) {
+      if (zichtbaar.includes(verboden)) {
+        throw new Error(
+          `${label} ritdetail: de sheet toont "${verboden}" — dat is de laad- of de fouttak, ` +
+            `niet de ready-tak. Aangetroffen ${sluitenNa} sluitknop(pen).`,
+        );
+      }
+    }
+
+    results.push({
+      scenario: label,
+      ...(await capture(page, dir, "16-ritdetail", ritUrl, probe)),
+    });
+    // De sheet blijft open; het volgende scenario begint met een verse `goto`.
   }
   probe.off();
 }
@@ -1082,7 +1252,7 @@ async function main() {
       timezoneId: "Europe/Amsterdam", // the engine leans on ambient Amsterdam
       colorScheme: "dark",
       reducedMotion: "reduce",
-      deviceScaleFactor: 2,
+      deviceScaleFactor: DEVICE_SCALE,
       viewport: { width: VIEWPORT_W, height: VIEWPORT_H },
       // Prod is behind a whole-origin Basic-auth gate; without this every navigation 401s.
       ...(PROD
@@ -1131,7 +1301,7 @@ async function main() {
   for (const r of results) {
     const bytes = statSync(r.png).size;
     lines.push(
-      `${r.scenario}/${r.name}.png  used=${r.height} needed=${r.needed}${r.capped ? " CAPPED" : ""}  ${bytes} bytes  errors=${r.errors} noise=${r.noise} hidden=${r.hiddenN} inline=${r.inlineN}`,
+      `${r.scenario}/${r.name}.png  used=${r.height} needed=${r.needed} anim=${r.anim}  ${bytes} bytes  errors=${r.errors} noise=${r.noise} hidden=${r.hiddenN} inline=${r.inlineN}`,
     );
   }
   process.stdout.write(`${lines.join("\n")}\n`);
