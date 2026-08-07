@@ -579,7 +579,13 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   beloofde 3 treffers op `copy` in `docs/ROADMAP.md`; hoofdlettergevoelig zijn het er 2,
   want de derde regel draagt `COPY`. CC ving het verschil en de strekking hield stand,
   maar de eis was aantoonbaar niet de gemeten eis. Noteer bij een trefferaantal dus altijd
-  de vlag waarmee het is verkregen.
+  de vlag waarmee het is verkregen. TWEEDE AANLEIDING, en die kostte bijna een tegenspraak
+  in het document zelf: de chat leidde een BEHOUD-instructie af uit een hoofdlettergevoelige
+  grep op "de nummering is de bouwvolgorde" en vond 1 treffer; hoofdletterongevoelig zijn
+  het er 2, want een tweede regel draagt "De nummering IS de bouwvolgorde". Het prompt
+  droeg daardoor maar één omzetting op, en `docs/ROADMAP.md` zou zichzelf op twee plekken
+  hebben tegengesproken. CC ving het en zette ze allebei om. Een grep die bepaalt WAT er
+  wordt aangepast is dus even gevoelig voor zijn vlaggen als een grep die iets telt.
 - **Een VOOR/NA-vergelijking vraagt dat de VOOR-meting is bewaard vóór de ingreep — dat is
   een STAP in het prompt, geen eigenschap van de harness.** Aanleiding: bij de deploy van
   punt 13 fase A bleek er geen prod-nulmeting te bestaan om tegen te vergelijken, omdat
@@ -675,6 +681,29 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   blok-terugblik-blok per constructie niet tonen en dus terecht stilstaan. De eis was wél gehaald;
   de noemer was fout. Zelfde familie als "een uitslag noemt teller, noemer en uitsluiting met
   reden", nu op de EIS in plaats van op de uitslag.
+- **INERT BIJ HET INGESTELDE DOEL IS GEEN GROND OM EEN BOUW UIT TE STELLEN.** Datzelfde staat al
+  onder *Prod en veiligheid* voor de DEPLOY, en het geldt net zo goed voor de BOUWVOLGORDE. De
+  canon maakt het model doel-onafhankelijk — M9 (geen aparte modus), M21 en M22 (de doelgroep is
+  de amateurfietser), M33 (een doel bestaat alleen als het model het kan meten en bedienen) — dus
+  "bij doel X gebeurt er niets" is een grens op het BEWIJS en nooit op de bouw. EN DE TWEEDE HELFT
+  IS DE VAL WAARIN DE CHAT LIEP: het verbod op vooruit-bedrading pleit ervoor een guard SAMEN met
+  wat hij bewaakt te bouwen, niet ervoor beide uit te stellen. Aanleiding: punt 16 werd op
+  07-08-2026 tot februari 2027 geparkeerd op precies die twee gronden, terwijl de meting van
+  diezelfde ronde de bouw juist volledig specificeerde. Het was de DERDE keer — punt 11 en punt 13
+  fase B gingen voor. Daan wees het patroon af; de bouwvolgorde staat sindsdien in
+  `docs/ROADMAP.md` onder *De volgorde*, en de FOCUS-regel van een close-out wijst daarnaar.
+- **EEN GENUMMERD BLOK ZEGT ZELF OF HET EEN COMMIT-PUNT IS.** Een prompt dat in Blok 1/2 en 2/2
+  wordt gesplitst laat de uitvoerder anders raden of het eerste blok af is, en de canon duwt hem
+  dan naar committen — de gate hoort immers vóór elke commit. Elk blok draagt daarom een
+  expliciete slotregel: committen, of juist niet en waarom. EN DE TWEEDE HELFT STAAT AAN DE
+  CHAT-KANT: leid de uitvoeringsstand nooit af uit een ARTEFACT. Aanleiding: Blok 1 van de
+  punt-16-close-out eindigde op `git diff --stat` zonder te zeggen dat het geen commit-punt was;
+  CC draaide de gate en committe, wat juist was. De chat las daarna de bestandslijst van die
+  commit, zag twee opgedragen bestanden ontbreken en concludeerde dat CC ze had overgeslagen —
+  terwijl Blok 2 eenvoudigweg nog niet gedraaid was. Er is toen een reparatie-prompt geschreven
+  op een aanleiding die niet bestond; Daan ving het. Zelfde familie als "een premisse over de
+  staat van de schijf kan binnen je EIGEN prompt verouderen", nu op de VOLGORDE van de blokken
+  in plaats van op de tijd.
 
 ## Vorm van een CC-prompt
 
@@ -934,3 +963,4 @@ Volg de FOCUS uit het bovenste STAND-blok.
 - 2026-08-06 — drie correcties uit de close-out van punt 36: `git diff --stat` krijgt TWEE refs (`HEAD~1 HEAD`), want de één-ref-vorm vergelijkt met de werkboom en liegt zodra die vuil is; de dev-servers gaan UIT vóór `pnpm test` wegens `EBUSY` op de gedeelde miniflare-mappen; en de gate staat vóór de commit in de stap-volgorde, zonder invulplek die van een latere stap afhangt.
 - 2026-08-07 — regel toegevoegd in *Recon en bewijslast*: een premisse over wat een eerdere bouw achterlaat toetst de VOLGORDE van de lussen en niet alleen hun bestaan. Aanleiding: de wis-lus van punt 36 draait vóór de bewijsweken-lus, dus de verwachting "nul terugblik-blokken" gaf 88 van de 96 — hij stond gelukkig als verwachting met stop-conditie en niet als acceptatie-eis.
 - 2026-08-07 — regel toegevoegd in *Recon en bewijslast*: de noemer van een per-plek-eis is het aantal plekken dat de eis KAN raken. Aanleiding: `v7` las als "bewogen 8 van 13" en dus niet-gehaald, terwijl vijf van die shots extra routes zijn die het blok-terugblik-blok niet tonen.
+- 2026-08-07 — twee lessen toegevoegd in *Recon en bewijslast* en één bestaande aangevuld, alle drie uit de punt-16-ronde. (1) Inert bij het ingestelde doel is geen grond om een BOUW uit te stellen: dat stond al onder *Prod en veiligheid* voor de deploy en geldt net zo goed voor de volgorde, en het verbod op vooruit-bedrading pleit ervoor een guard SAMEN met wat hij bewaakt te bouwen — niet ervoor beide uit te stellen. Aanleiding: punt 16 werd tot februari 2027 geparkeerd op precies die twee gronden, de derde keer na punt 11 en punt 13 fase B; Daan wees het patroon af. De bouwvolgorde is daarom vastgelegd in `docs/ROADMAP.md` onder *De volgorde*, LOS van de nummering, met een ronde per punt en een verdict-met-getal als een punt niet sluit; de FOCUS-regel van een close-out wijst daarnaar. (2) Een genummerd blok zegt zelf of het een commit-punt is, en de chat leidt de uitvoeringsstand nooit af uit een ARTEFACT. Aanleiding: Blok 1 van deze close-out eindigde zonder die slotregel, CC committe terecht, en de chat concludeerde uit de bestandslijst dat er bestanden waren overgeslagen terwijl Blok 2 nog niet gedraaid was. (3) De grep-vlaggen-regel geldt óók voor een grep die bepaalt WAT er wordt aangepast: hoofdlettergevoelig gaf "de nummering is de bouwvolgorde" 1 treffer, hoofdletterongevoelig 2, en het prompt droeg daardoor maar één omzetting op.
