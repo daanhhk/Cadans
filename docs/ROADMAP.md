@@ -1139,7 +1139,7 @@ punten staat onder *Gesloten — vindplaats*.
     (`DOELEN-SPEC` §3.4) krijgt na afloop geen herstel. Vraagt een migratie, een DTO-veld, een
     invoerveld in Events en een tweede grens in `eventFase_`. Kwam binnen bij de recon van
     punt 13.
-36. **Het weekplan van een scenario verschuift tussen twee runs** — GEBOUWD, PRAKTIJKBEVESTIGING OPEN ·
+36. **Het weekplan van een scenario verschuift tussen twee runs** — af, BEGRENSD UITGESLOTEN ·
     TOOLING. Het verdict is TOOLING en niet CLIENT: de harness laat elf scenario's met
     verschillende settings naar DEZELFDE weekplan-sleutels schrijven, en elk scenario leest via de
     recency-seed en de blok-terugblik terug wat het vorige achterliet.
@@ -1230,6 +1230,41 @@ punten staat onder *Gesloten — vindplaats*.
     deze ronde zonder rest: ACHT met verschillende `innerText` (dit punt) en DRIE met gelijke
     `innerText` (punt 23 en de opgeheven cap). Het verdict van dit punt is daarmee leesbaar
     zonder oordeel per shot met de hand.
+    VERDICT PER 07-08-2026, RONDE 3. BEGRENSD UITGESLOTEN, met de getallen erbij.
+    HET IJKPAAR VAN DEZE SESSIE IS SCHOON: 96 van de 96 identiek, 96 vergeleken, NUL
+    uitgesloten, nul bewegende shots. De vergelijker is eerst in twee richtingen geijkt —
+    `out` tegen zichzelf 96 van de 96, `out/v2` tegen `out-vorige/v4` 0 van de 8 met alle
+    acht op verschillende innerText. Opzet: warmloop weggegooid, daarna twee sweeps, alle
+    drie exit 0.
+    DE RACE-HYPOTHESE IS GEMETEN EN WEERLEGD. Het vermoeden was dat `persistWeekplan`
+    fire-and-forget schrijft (`apps/web/src/lib/schema.ts:1283` en `:1289`) terwijl `settle`
+    na 800 ms wegnavigeert, zodat een schrijfactie die de volgende zaai-load moet lezen door
+    de navigatie sneuvelt. Een passief instrument telde per settle-marker elke
+    `/api/`-request die NA de terugkeer en VOOR de eerstvolgende navigatie startte. UITKOMST
+    over 25 zaai-loads maal twee runs: NUL. Nul na-settle-requests, nul `PUT
+    /api/weekplan/`, nul afgebroken. De identiteit sluit aan beide kanten — run A 1906
+    requests, 1906 finished, 0 failed, 0 openstaand; run B 1903, 1903, 0, 0 — en beide runs
+    dragen 45 settle-markers, exact de verwachting van 25 zaai plus 11 weekscherm plus 9 in
+    `v7`. Het venster is dus per constructie leeg, en de ingrediënten van een race zijn niet
+    hetzelfde als een race.
+    WAT NIET IS UITGESLOTEN, EN HET GETAL LAG VOOR HET OPRAPEN: de twee runs verschillen in
+    TOTAAL aantal `/api/`-requests, 1906 tegen 1903, terwijl élke shot byte-identiek is. De
+    app doet drie requests meer in de ene run dan in de andere zonder dat het beeld beweegt.
+    WELKE drie, in welke load, en of er een `PUT /api/weekplan/` bij zit is NIET gemeten —
+    het instrument telde alleen het na-settle-venster, en dat is een gat in het ontwerp van
+    de meting. Kandidaat, niet vastgesteld: de post-sync herbouw op `Schema.tsx:116`, die
+    `setNonce` zet zodra een sync upserts meldt; of die herbouw BINNEN de settle-tijd
+    afrondt is timing.
+    DE VLOER IS EEN SESSIE-EIGENSCHAP, NU OVER VIER SESSIES MET DEZELFDE OPZET: acht
+    bewegende shots in `klim-weekstem`, nul, acht in `v7-midweek`, nul. Twee van de vier
+    vuren. Vuurt het, dan is het telkens EEN scenario, alle acht shots samen, en met
+    VERSCHILLENDE innerText — het plan beweegt, niet de camera. Een schoon ijkpaar bewijst
+    het verschijnsel dus niet weg; deze ronde vuurde het simpelweg niet.
+    DE WERKREGEL WAARMEE DE HARNESS BRUIKBAAR BLIJFT, en er valt niets bij te bouwen: elke
+    ronde meet zijn EIGEN ijkpaar, erft er nooit een, en sluit een bewegend scenario uit met
+    reden en aantal terwijl de noemer het TOTAAL blijft. `tools/shots/vergelijk.mjs` maakt
+    die toewijzing mechanisch via de innerText-kolom. Staat al in `tools/shots/README.md`.
+    GEEN DERDE POGING. Dit punt gaat van de lijst af.
 37. **De vite-dev-server sterft stil tijdens een sweep** — af · TOOLING. GEMETEN: VIJF keer in
     deze reeks valt de harness om terwijl poort 5173 daarna DOWN is en 8787 gewoon 200 geeft. Het
     logboek eindigt op de startbanner zonder foutregel; de exitcode is 127 of 1.
@@ -1402,9 +1437,13 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
    07-08-2026 op `6798f16`; alle drie gerepareerd, en 23 zonder uitsluiting — het ijkpaar mét de
    fix gaf 96 van de 96. De uitgezette animaties waren overigens een dood spoor: `reducedMotion`
    stond al aan en is per constructie inert.
-3. **36** — verdict. De ijkparen komen gratis uit ronde 1 en 2. Gerepareerd, of het scenario
-   begrensd uitgesloten. Dit punt staat ACHTERAAN in het tooling-blok omdat het als enige al
-   een bouw achter zich heeft die het verschijnsel niet wegnam.
+3. **36** — af · verdict. De ijkparen komen gratis uit ronde 1 en 2. Gerepareerd, of het
+   scenario begrensd uitgesloten. Dit punt staat ACHTERAAN in het tooling-blok omdat het als
+   enige al een bouw achter zich heeft die het verschijnsel niet wegnam. BEGRENSD UITGESLOTEN
+   per 07-08-2026: het ijkpaar van die ronde was schoon (96 van de 96, nul uitgesloten), de
+   post-settle race is uitgesloten op 0 na-settle-requests over 50 zaai-loads, en de
+   restvariantie vuurt in twee van vier sessies — telkens één scenario, alle acht shots, met
+   verschillende innerText. Geen derde poging.
 4. **33** — de norm-vergelijking naar EEN gedeelde functie, plus een render-testlaag. Die
    laag BESTAAT NIET: `apps/web/vitest.config.ts` draait op `environment: "node"`, er is geen
    `.test.tsx` en geen jsdom. Dit is toevoegen, niet consolideren. Betaalt zich terug bij elke

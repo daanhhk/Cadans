@@ -759,12 +759,21 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   VERSCHILLENDE innerText (punt 36, het plan beweegt) en DRIE met GELIJKE innerText (punt 23 en
   de opgeheven cap, dus puur pixel). Zonder die kolom is een uitslag op zo'n as niet toe te
   wijzen, en werd ze per shot met de hand geveld.
+- **DE INGREDIËNTEN VAN EEN VERSCHIJNSEL ZIJN NIET HET VERSCHIJNSEL.** Een mechanisme waarvan
+  alle onderdelen aanwijsbaar aanwezig zijn is juist daarom overtuigend, en dat is precies de
+  val: aanwezigheid van de onderdelen bewijst niet dat ze ook samenvallen. Meet het VENSTER
+  leeg of vol vóór je er een verklaring op bouwt. Aanleiding: bij punt 36 vond LEZEN een
+  fire-and-forget schrijfactie (`schema.ts:1283` en `:1289`) met een navigatie erachter, en de
+  conclusie "race" lag voor de hand. METEN gaf 0 na-settle-requests over 25 zaai-loads maal twee
+  runs, 0 `PUT /api/weekplan/`, 0 afgebroken, met een sluitende identiteit aan beide kanten. Het
+  venster is per constructie leeg; de race bestond niet. Zelfde familie als "draai het", nu op
+  een mechanisme dat plausibel is juist ómdat alle onderdelen er zijn.
 
 ## Vorm van een CC-prompt
 
 - **Eén plain code-blok**, zonder taal-tag — dat is de één-tap-kopie op mobiel. Nooit proza in het blok mengen; Claude's kader eromheen staat als gewone tekst.
 - Te lang voor één blok → splits in **genummerde blokken** (Blok 1/2, 2/2) die CC na elkaar in dezelfde **CC-sessie** draait. Een later blok mag leunen op wat een eerder blok zette. Het gaat om de CC-sessie, niet om een shell: PowerShell is de shell waarin CC zijn commando's uitvoert, geen omgeving waarin Daan zelf werkt.
-- **EEN BLOK MET EEN STOP-CONDITIE IS EEN BESLISMOMENT, GEEN LENGTE-SPLIT.** Draagt een blok een STOP-conditie en vraagt het om een rapport, dan hangt alles erna aan de UITKOMST — dus schrijf de latere blokken pas als dat rapport binnen is. Dat is iets anders dan de lengte-split hierboven, waar een later blok alleen leunt op wat een eerder blok ZETTE en niet op wat het VOND. Aanleiding: in de punt-37-ronde zijn blok 2 en 3 vooruit geschreven terwijl blok 1 drie uitkomsten kon dragen die ze allebei zouden omgooien — een afwijkende premisse, een ijkrun die het eind niet haalt, en een grote ruisvloer. Daan wees het aan; de twee blokken zijn ingetrokken en opnieuw geschreven. Zie ook *een genummerd blok zegt zelf of het een commit-punt is* onder *Recon en bewijslast*: die regel gaat over de VRAAG of er gecommit wordt, deze over de vraag of het blok er al mag zijn.
+- **EEN BLOK MET EEN STOP-CONDITIE IS EEN BESLISMOMENT, GEEN LENGTE-SPLIT.** Draagt een blok een STOP-conditie en vraagt het om een rapport, dan hangt alles erna aan de UITKOMST — dus schrijf de latere blokken pas als dat rapport binnen is. Dat is iets anders dan de lengte-split hierboven, waar een later blok alleen leunt op wat een eerder blok ZETTE en niet op wat het VOND. Aanleiding: in de punt-37-ronde zijn blok 2 en 3 vooruit geschreven terwijl blok 1 drie uitkomsten kon dragen die ze allebei zouden omgooien — een afwijkende premisse, een ijkrun die het eind niet haalt, en een grote ruisvloer. Daan wees het aan; de twee blokken zijn ingetrokken en opnieuw geschreven. Zie ook *een genummerd blok zegt zelf of het een commit-punt is* onder *Recon en bewijslast*: die regel gaat over de VRAAG of er gecommit wordt, deze over de vraag of het blok er al mag zijn. TWEEDE AANLEIDING, 07-08-2026, en de regel bestond toen al: bij punt 36 ronde 3 is blok 2 opnieuw vooruit geschreven terwijl blok 1 een premissen-STOP droeg. Daan wees het aan vóór hij het plakte; het blok is ingetrokken en pas na het rapport herschreven — en dat rapport veranderde het op drie plekken, waarvan één (de warmloop vóór het ijkpaar) de meting zonder meer had verpest. Twee overtredingen binnen twee rondes betekent dat deze regel niet HERINNERD moet worden maar GEDRAAID: staat er een STOP in een blok, dan bestaat het volgende blok nog niet.
 - De prompt is een **stap-instructie in het Nederlands, geen uitvoerbaar script**. PowerShell-idioom alleen in de kop: `cd` naar de repo, daarna `Get-Location` op een eigen regel. Verder kale, zelf-printende commandoregels (git, pnpm). **Geen** `Write-Host` of `echo`, **geen** here-strings, **geen** loops, **geen** .NET File API. Secties label je met `#`-commentaarregels.
 - In te voegen inhoud (een HANDOFF-blok, een doc) mag **verbatim** tussen eigen tekst-delimiters (`=== BEGIN … ===` / `=== EINDE … ===`) óf als strekking-bullets die CC in de huisstijl uitschrijft. Bij artefacten waar de exacte formulering telt: altijd verbatim.
 - Inhoud: **spec-gedreven by default** — architectuur, exact gedrag, sleutel-logica en de gate. CC schrijft de code, vindt de call-sites zelf en past aan de **échte** staat aan (geen letterlijke `str_replace`-blokken). Exacte code alleen als **anker** bij fragiele edits: byte-getrouwe GAS-mirrors, TZ-grens-logica, formules en zone-mappings. CC meldt in het rapport de kern-implementatiekeuzes (gekozen conditie, plaatsing), zodat review tegen de spec kan zonder de volledige diff. Verder: verificatiestappen, een harde gate en de commit message.
@@ -782,8 +791,11 @@ uit een handlijst. Dat is dezelfde grond als de anker-les hierboven: een handlij
 4. Elke **ACCEPTATIE-EIS**: kan de ingreep hem mechanisch raken?
 5. Elk **GETAL**: uit een meting van deze sessie of uit een gepind document, nooit uit geheugen.
 
-De chat rapporteert de TREFKANS van die controles in de begeleidende proza — "vijf van vijf" —
-in plaats van te claimen dat het klopt.
+De chat noemt in de begeleidende proza WELKE controles hij werkelijk gedraaid heeft en
+waarop — niet een score. Een score is claimbaar zonder gedraaid te zijn, en dat is precies
+wat er op 07-08-2026 gebeurde: er stond "vijf van vijf" terwijl controle 1 voor één
+vindplaats-claim niet gedraaid was. Dan is niet alleen het prompt onbetrouwbaar maar ook de
+rapportage erover, en dat is de duurdere van de twee.
 
 EN ELK BOUW-PROMPT OPENT MET EEN PREMISSEN-BLOK: de beweringen over de repo die de controle hebben
 overleefd, met als eerste stap voor CC dat hij ze toetst en bij afwijking STOPT. Dat stond in het
@@ -802,6 +814,7 @@ ronde eindigde op de stopregel. (b) Het close-out-prompt gaf een correctie-instr
 "in dezelfde PowerShell-sessie", die in het hele document niet voorkwam. CC ving beide en meldde
 ze; ze kostten twee rondes.
 - **De gate staat VÓÓR de commit in de stap-volgorde, en geen invulplek hangt af van een latere stap.** Een prompt die eerst laat committen en daarna de gate draait, dwingt CC tot herordenen of tot getallen uit het geheugen — en dat laatste is precies wat de vloer-regel verbiedt. Aanleiding: de close-out van punt 36 zette de commit op STAP 7 en de gate op STAP 8, terwijl het STAND-blok twee vloeren uit die gate moest halen. CC keerde de volgorde om en meldde het.
+- **DE BRON-UITLEZING HOORT IN DE EERSTE VERSIE VAN EEN PROMPT, NIET IN DE OVERTYPRONDE.** Een prompt dat GROEIT bij het overtypen is een prompt dat te vroeg geschreven is: de correcties die er dan bij komen zijn geen aanscherping maar reparatie van wat er nooit in had mogen ontbreken. Aanleiding: het meet-prompt van punt 36 ronde 3 kreeg pas bij het overtypen drie correcties — de venster-splitsing tussen zaai-markers en de rest, het aantal settle-markers als instrumentcontrole, en de warmloop vóór het ijkpaar — en GÉÉN ervan kwam uit het CC-rapport. Ze kwamen alle drie uit een herlezing van `tools/shots/shot.mjs` die vóór de eerste versie had moeten gebeuren, en die laatste (de warmloop) had de meting zonder meer verpest. Lees de bron dus vóór je schrijft, niet vóór je verstuurt.
 
 ## Vorm van een CC-rapport
 
@@ -1036,3 +1049,7 @@ Volg de FOCUS uit het bovenste STAND-blok.
 - 2026-08-07 — regel toegevoegd in *Recon en bewijslast*: wie een tak van MELDEN naar STOPPEN tilt, ruimt de meld-machinerie op. Aanleiding: met de harde stop op een gekapte shot werden het `capped`-veld, de `, CAPPED` in de `.txt`-kop en de ` CAPPED` in de samenvattingsregel dode code; CC haalde ze weg zonder dat de gerenderde uitvoer bewoog.
 - 2026-08-07 — regel toegevoegd in *Recon en bewijslast*: bewegen twee bekende verschijnselen op dezelfde meetas, laat de VERGELIJKER het onderscheid dragen. Aanleiding: het ijkpaar gaf elf bewegende shots, en pas de innerText-kolom in `tools/shots/vergelijk.mjs` splitste ze zonder rest in acht met verschillende innerText (punt 36) en drie met gelijke innerText (punt 23 plus de opgeheven cap).
 - 2026-08-07 — bestaande regel over de ruisvloer aangevuld: hij hoort ook niet bij het SCENARIO. Aanleiding: over drie sessies met dezelfde opzet zwierf de vloer van acht bewegende shots in `klim-weekstem` naar nul naar acht in `v7-midweek`, waarmee de warmloop-kandidaat uit het punt-37-STAND-blok is weerlegd.
+- 2026-08-07 — bestaande regel *een blok met een STOP-conditie is een BESLISMOMENT* aangevuld met een TWEEDE aanleiding: bij punt 36 ronde 3 is blok 2 opnieuw vooruit geschreven terwijl blok 1 een premissen-STOP droeg. Daan ving het vóór het plakken; het herschreven blok verschilde op drie plekken, waarvan de warmloop vóór het ijkpaar de meting zonder meer had verpest. Twee overtredingen in twee rondes: de regel moet gedraaid worden, niet herinnerd.
+- 2026-08-07 — de TREFKANS-zin onder *Vorm van een CC-prompt* vervangen: de chat noemt voortaan WELKE controles hij gedraaid heeft en waarop, niet een score. Aanleiding: er stond "vijf van vijf" terwijl controle 1 voor één vindplaats-claim niet gedraaid was — dan is ook de rapportage over het prompt onbetrouwbaar, en dat is de duurdere van de twee.
+- 2026-08-07 — regel toegevoegd in *Vorm van een CC-prompt*: de bron-uitlezing hoort in de EERSTE versie van een prompt en niet in de overtypronde. Aanleiding: het meet-prompt van punt 36 ronde 3 kreeg pas bij het overtypen drie correcties, geen ervan uit het CC-rapport en alle drie uit een herlezing van `tools/shots/shot.mjs` die vooraf had moeten gebeuren.
+- 2026-08-07 — regel toegevoegd in *Recon en bewijslast*: de ingrediënten van een verschijnsel zijn niet het verschijnsel. Aanleiding: bij punt 36 vond lezen een fire-and-forget schrijfactie met een navigatie erachter en concludeerde "race", terwijl meten 0 na-settle-requests gaf over 25 zaai-loads maal twee runs, met sluitende identiteit.
