@@ -775,8 +775,8 @@ punten staat onder *Gesloten — vindplaats*.
     BEGRENZINGSBEWIJS: 2511 unieke cellen, waarvan 599 ZONDER decimaal en daarvan 0 bewogen —
     byte-identiek in beide parsers; 1912 met decimaal en alle 1912 nu correct; nul cellen geven
     `null`, voor en na.
-21. **De push-beschrijving draagt dezelfde ruis** — open · ENGINE, transport-nabij.
-    `buildWorkoutDescription_` (`zones.ts:569`) zet `totaalMin` RAUW in de beschrijving die naar
+21. **De push-beschrijving draagt dezelfde ruis** — af, GESLOTEN ZONDER BOUW · ENGINE, transport-nabij.
+    `buildWorkoutDescription_` (`zones.ts:613`) zet `totaalMin` RAUW in de beschrijving die naar
     intervals.icu gaat, en hergebruikt daarin dezelfde blokstrings die punt 18 client-zijde heeft
     opgemaakt. Wat Daan in de app ziet klopt dus, en wat in zijn agenda en op zijn fietscomputer
     belandt niet. DE FIX IS HIER NIET DEZELFDE: dit is geen renderrand maar TRANSPORT, en dezelfde
@@ -786,7 +786,24 @@ punten staat onder *Gesloten — vindplaats*.
     alleen bereikbaar als ZWO ÉN DSL allebei falen, en `zwoStepFromRow_` gaf over de hele
     populatie 0 keer `null` — vóór én na de fix. Deze tak is dus vermoedelijk DOOD. Meet eerst de
     BEREIKBAARHEID voor er iets gebouwd wordt; een fix in een tak die nooit vuurt is geen fix.
-    Engine, dus stop-en-verifieer vóór enige wijziging.
+    VERDICT 07-08-2026: GESLOTEN ZONDER BOUW. Gemeten over 5 doelen maal 11 weekvormen maal 13
+    doelStart-offsets maal 5 dosis-treden — 3575 weken, 15275 sessies, 64951 structuur-rijen,
+    dekking Base 1815 / Build 880 / Peak 660 / Test 220 en mesoweek 1 t/m 4 alle vier bezet.
+    ZWO gelukt 15275 van de 15275; DSL-terugval 0; description-tak 0; lege `structuur` 0. Op
+    rij-niveau `zwoStepFromRow_` null 0 van 64951 en `dslBlockFromRow_` null 0 van 64951, en met
+    `buildEventPayload` zelf gedraaid over de JSON-grens die de client passeert: description-
+    fallback in 0 van de 15275 payloads. DE PREMISSE VAN DIT PUNT WAS TE SMAL: punt 20 mat de
+    RIJ-poort, terwijl beide bouwers óók uitvallen op een LEGE `structuur` zonder ooit een
+    rij-parser aan te roepen — die tweede poort was nooit gemeten en geeft eveneens nul.
+    EN DE NOEMER IS NIET 15275 MAAR ZEVEN: de parser krijgt 7 distincte duur-vormen binnen
+    (`N min`, `N.N min`, `Nx N.N min`, `Nx N min`, `Nx N sec`, `Nx Nmin`, `Nx N.Nmin`) en 1
+    vermogensvorm (`N-NW`, 64951 van de 64951), en `planner.ts` kan er per constructie geen
+    achtste maken — de duurcel loopt via `+ " min"`, `+ " sec"`, `+ "min"` en het
+    herhalings-voorvoegsel, de vermogenscel heeft één producent (`wattsRange`). Een andere
+    variant levert dezelfde zeven vormen met andere getallen, dus de lege-`activities`-beperking
+    van de as kan dit niet omgooien. DE TAK BLIJFT STAAN: hij is aangeroepen (`push.ts:92`) en
+    getest, hij vuurt alleen nooit — opruimen zou de laatste terugval weghalen bij een
+    parser-wijziging die hem juist nodig kan maken.
 22. **De rit-sheet is voor geen enkele DOM-ingreep bereikbaar** — af · TOOLING.
     `RideDetailLink.tsx:30` rendert de sheet met `{open && ...}`: hij staat pas ná een klik in de
     DOM. De leespas van de harness opent `hidden` en inline `display`, maar wat er niet IS valt
@@ -1321,6 +1338,35 @@ punten staat onder *Gesloten — vindplaats*.
     foutvormen, en een poort BINNEN `settle()` — de voor de hand liggende plek — had er twee van
     de drie gemist. LET OP BIJ HET CITEREN: die reproductie gebruikte een NETTE stop, dus ze
     reproduceert de CONDITIE en niet de OORZAAK.
+38. **De opener-fetch kapt af, en hij meldt het niet** — open · TOOLING plus norm.
+    GEMETEN, twee keer en op twee bestanden: de RAW-fetch van de opener stopt rond **121200
+    bytes**. Op 07-08-2026 haalde een chat `HANDOFF.md` binnen tot **121196 van de 610760
+    bytes** — **19,8 procent**; 2599 van de 2954 regels kwamen niet aan en het document eindigde
+    mid-zin, zonder enig signaal. Dezelfde cap gaf de vorige ronde circa 121000 op
+    `docs/WERKWIJZE.md`.
+    DE URGENTIE ZIT OP `WERKWIJZE.md`, NIET OP `HANDOFF.md`. Dat tweede is grotendeels ontworpen
+    weg: het nieuwste STAND-blok staat bovenaan en de opener wijst daarnaar, en er passen 24 van
+    de 143 blokken onder de cap. `WERKWIJZE.md` niet — die staat na de punt-21-ronde op **118399
+    bytes**, dus circa **2,8 kB** onder de cap, terwijl die ronde alleen al 1561 bytes toevoegde.
+    Wat als EERSTE afvalt is de STAART: *Vorm van een CC-prompt* met de vijf promptcontroles,
+    *Gate*, *Prod en veiligheid*, *Close-out van een chat* en het *Opener-sjabloon*. Dat is exact
+    het scenario dat het STAND-blok van de log-verhuizing al benoemde; die ronde repareerde het
+    log en niet de lessen.
+    DE INGREEP, byte-voor-byte verliesloos: verhuis *Recon en bewijslast* VERBATIM naar
+    `docs/WERKWIJZE-LESSEN.md` en zet die als VIJFDE URL in het opener-sjabloon. Gemeten op
+    `e08763c8`: die sectie is 88553 bytes van 116838 — **75,8 procent**, 121 bullets van
+    gemiddeld 731 bytes — dus de norm zakt naar ongeveer 28 kB en beide helften krijgen ruime
+    marge. HERMEET DIE GETALLEN BIJ DE BOUW; het zijn uitspraken over toen, niet over dan.
+    Zelfde operatie als de log-verhuizing, dus bewezen.
+    ROTEER DAARNAAST `HANDOFF.md` op circa TWAALF STAND-blokken — cumulatief 54050 bytes, ruim
+    onder de halve cap — naar `docs/HANDOFF-ARCHIEF.md`, dat de opener bewust niet ophaalt. Er
+    verdwijnt niets; git houdt alles.
+    HET EIGENLIJKE VANGNET IS GOEDKOPER DAN BEIDE: elke close-out rapporteert de bytes van de
+    bestanden die de opener ophaalt. De fout is niet de omvang maar dat een afgekapte fetch
+    zichzelf niet meldt.
+    NIET DOEN: de aanleidingen uit de lessen strippen. Dat scheelt 43009 bytes — 48,6 procent van
+    de sectie — maar het zijn 89 losse knipbeslissingen, en de aanleiding draagt vaak juist het
+    getal waarop de regel rust. Dat is wél iets inleveren.
 
 ## De tijdslijn
 
@@ -1476,8 +1522,14 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
    `.test.tsx` en geen jsdom. Dit is toevoegen, niet consolideren. Betaalt zich terug bij elke
    kaart-ronde hierna. Gebouwd 07-08-2026 op `e55637a` en `8288d2b`, in OMGEKEERDE volgorde —
    eerst het vangnet, dan de consolidatie, want per plek rood meten kan daarna niet meer.
-5. **21** — eerst de BEREIKBAARHEID meten. `buildWorkoutDescription_` wordt alleen bereikt als
-   zowel de ZWO- als de DSL-tak faalt. Sluit vermoedelijk zonder bouw.
+5. **21** — af, GESLOTEN ZONDER BOUW · de bereikbaarheid is gemeten en de tak vuurt nooit:
+   0 van de 15275 sessies bereikt `buildWorkoutDescription_`, en de invoerruimte van de
+   parsers telt 7 duur-vormen en 1 vermogensvorm die alle acht parsen. Verdict 07-08-2026.
+5b. **38** — de opener-fetch kapt af en meldt het niet. NAAR VOREN, met reden: de marge op
+    `docs/WERKWIJZE.md` is circa 2,8 kB en één ronde kostte er 1561, dus binnen één à twee
+    rondes verliest de opener stilzwijgend de vijf promptcontroles, de gate en het
+    opener-sjabloon. De ingreep is een verbatim verhuizing zonder verlies, plus een
+    byte-rapportage in elke close-out.
 6. **19** — het dagtype weekend is een kalendernaam. Botst met `DOELEN-SPEC` §2A en raakt elk
    doel.
 7. **16** — de materialiteitsvloer en de prikkel, in EEN bouw. Zie `docs/PUNT16-RECON.md` §5.

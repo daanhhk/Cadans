@@ -285,6 +285,24 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   ongelijke dagduren binnen één week levert Onderhoud in Peak wél drempel, sweetspot en vo2 — het
   haalbaarheidsfilter weert vo2 van de lange dag en de coverage-boost wisselt van kant zodra high
   gedekt is.
+  TWEEDE AANLEIDING, en die ligt op een POORT in plaats van op een as: punt 21 erfde uit punt 20
+  de premisse dat `buildWorkoutDescription_` alleen bereikbaar is als de rij-parser faalt, en
+  0 keer null op rij-niveau las daarmee als onbereikbaar. Er ligt een POORT VÓÓR die rij-lus —
+  beide bouwers vallen uit op een lege `structuur` zonder ooit een rij aan te raken — en die was
+  nooit gemeten. De uitkomst hield (ook die poort geeft nul), maar de meting dekte hem niet.
+  Een bereikbaarheids-premisse noemt dus élke poort op het pad, niet de poort waarop hij is
+  gemeten.
+- **De noemer van een dekkingsclaim is het aantal distincte INVOERVORMEN, niet de
+  steekproefomvang.** Een groot N over een kleine invoerruimte is geen bewijs van dekking maar
+  dezelfde meting vele malen herhaald — en het leest juist overtuigend ómdat het getal groot is.
+  Normaliseer de invoer tot vormen, tel die, en toets bij de PRODUCENT of er een achtste vorm
+  kán bestaan. Pas dan is een nul een uitputting in plaats van een steekproef. Aanleiding: punt
+  21 gaf 0 van de 15275 sessies op de description-tak, en de chat wilde daarop een tweede
+  meetronde draaien tegen een gevulde D1 omdat de recency-seed andere varianten kiest. Daan wees
+  dat af, en terecht: die 64951 rijen dragen 7 duur-vormen en 1 vermogensvorm, en `planner.ts`
+  kan er geen achtste maken — een andere variant levert dezelfde vormen met andere getallen.
+  Zelfde familie als "een uitslag noemt teller, noemer én uitsluiting met reden", nu op de as
+  waarop de noemer hoort te staan.
 - **Een VLOER is geen DOEL — kies de plek van een test nooit om een getal stabiel te houden.** De
   vloeren in `HANDOFF.md` mogen meestijgen; dat staat al in de gate-paragraaf, en ze zijn er om
   REGRESSIE te betrappen, niet om nagestreefd te worden. Kies de plek van een assertie op wat ze
