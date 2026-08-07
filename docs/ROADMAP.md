@@ -787,19 +787,51 @@ punten staat onder *Gesloten — vindplaats*.
     populatie 0 keer `null` — vóór én na de fix. Deze tak is dus vermoedelijk DOOD. Meet eerst de
     BEREIKBAARHEID voor er iets gebouwd wordt; een fix in een tak die nooit vuurt is geen fix.
     Engine, dus stop-en-verifieer vóór enige wijziging.
-22. **De rit-sheet is voor geen enkele DOM-ingreep bereikbaar** — open · TOOLING.
+22. **De rit-sheet is voor geen enkele DOM-ingreep bereikbaar** — af · TOOLING.
     `RideDetailLink.tsx:30` rendert de sheet met `{open && ...}`: hij staat pas ná een klik in de
     DOM. De leespas van de harness opent `hidden` en inline `display`, maar wat er niet IS valt
     daar per constructie buiten. Dit is de DERDE manier waarop inhoud buiten het net valt, na die
     twee. Vandaag gedekt door de code-regel (geen kaal getal) en niet door de camera. Wil je hem
     onder het net brengen, dan moet de harness klikken — en dan hoort er ook een assertie bij dat
     de sheet daadwerkelijk open kwam.
-23. **Twee shots zijn niet byte-deterministisch** — open · TOOLING. `v7/09-vorm` en
+    AF op `6798f16`. De harness klikt nu. Shot `16-ritdetail` in `tools/shots/shot.mjs`, in
+    `sweep()` NA de `EXTRA_ROUTES`-lus zodat alle bestaande shots geschoten zijn voordat er weg
+    genavigeerd wordt — hij draait op `v7` en in prod-modus.
+    DE SELECTOR IS GEMETEN EN NIET GERADEN: `main button[style*="flex-direction: column"]` geeft
+    **50 treffers tegenover 51 buttons** in het document; alleen "Meer laden" valt af, want die
+    draagt `RETRY_BTN` en niet de `cardStyle` van `Activiteiten.tsx:179`.
+    DE ASSERTIE BEWIJST DE TOESTANDSOVERGANG EN TELT GEEN INCIDENTEEL AANTAL: **nul** elementen
+    met `aria-label="Sluiten"` vóór de klik, **twee** erna, en beide andere takken uitgesloten
+    doordat "Ritdetails laden…" en "Ritdetails konden niet geladen worden." afwezig zijn. Omdat
+    `fase.s` precies drie uitputtende, elkaar uitsluitende takken kent — `loading` op
+    `RideDetailSheet.tsx:163`, `error` op `:177`, `ready` op `:194` — staat de sheet daarmee per
+    constructie op READY. Het label is uniek op PAGINA-niveau en niet op element-niveau: de sheet
+    draagt er zelf twee (`:104` de scrim, `:143` de sluitknop).
+    OP PROD EVENEENS DE READY-TAK, met echte inhoud: `INTERVALLEN`, `FTP 280 W`, `Z2`,
+    `75:06 · 146 bpm · 66% FTP`, plus de vermogen- en HR-grafiek.
+23. **Twee shots zijn niet byte-deterministisch** — af · TOOLING. `v7/09-vorm` en
     `v7/10-trainingen` verschillen tussen twee runs van ONGEWIJZIGDE code, met telkens identieke
     `innerText`; het verschil is dus puur pixel. VERMOEDEN: een animatie of overgang die `settle`
     niet uitzit — beide schermen dragen bewegende elementen die de andere zeven niet hebben.
     Zolang dit staat moet elke PNG-vergelijking die twee UITSLUITEN, en dat is een gat in het
     begrenzingsbewijs: juist op die twee schermen kan een regressie ongezien blijven.
+    AF op `6798f16`. DE OORZAAK IS GEMETEN EN HET WAS NIET WAT DIT PUNT VERMOEDDE.
+    `reducedMotion: "reduce"` stond al op `shot.mjs:1084` en is per constructie INERT: de app
+    draagt 0 `prefers-reduced-motion`-regels en 0 `@keyframes` in heel `apps/web/src`, dus er is
+    niets voor die vlag om uit te zetten. De drager is `ProgressRing.tsx:63` — een
+    `stroke-dashoffset`-transitie van 1,1 s met 250 ms aanloop (`:13`), samen 1350 ms tegen de
+    800 ms die `settle` afwacht. Hij hangt via `ReadinessCard` aan precies `/vorm` en
+    `/trainingen`, en verandert geen letter `innerText`. Dat verklaart alle drie de eigenschappen
+    van het verschijnsel: welke twee schermen, waarom puur pixel, en waarom `settle` het miste.
+    GEREPAREERD met een wacht op `document.getAnimations()` (`running` of `pending`) vlak vóór
+    `page.screenshot`, met een bovengrens van 5000 ms die GOOIT in plaats van stil doorloopt. De
+    plaatsing is `capture()` en niet `settle()`: een viewport-wijziging kan zelf een transitie
+    opnieuw aanzetten, en de zeven dagshots roepen `settle` helemaal niet aan.
+    ROOD-TOETS: `anim=1` op precies `v7/09-vorm` en `v7/10-trainingen`, `anim=0` op de andere 94
+    — 2 van de 96. De wacht is dus niet inert, en de twee schermen die dit punt aanwees zijn
+    exact de twee die een lopende animatie dragen.
+    UITSLAG: het ijkpaar MÉT de fix gaf **96 van de 96 identiek, nul uitsluitingen**. DE
+    UITSLUITING VAN `v7/09-vorm` EN `v7/10-trainingen` VERVALT en de noemer is voortaan compleet.
 24. **De mount-flake, en zes routes zonder vangnet** — af · TOOLING. `settle` geeft op terwijl de
     `innerText` nog "Laden…" is; de shot toont dan een ladende pagina. Treft BEIDE harness-versies,
     dus het is geen gevolg van een bouw. Op `/schema` wordt het opgevangen door de
@@ -826,10 +858,24 @@ punten staat onder *Gesloten — vindplaats*.
     aanwezig=true`. Dat `aanwezig=true` is de bewijskant.
     INERT OP EEN GOEDE RUN: 0 van de 288 `.txt` in de recon en 0 van de 192 in de bouwronde
     dragen de laadtekst. Deze poort kost dus niets en vangt alleen wat er nu stil doorheen glipt.
-25. **`12-activiteiten` wordt afgesneden** — open · TOOLING. Die pagina heeft 5898 pixels nodig
+25. **`12-activiteiten` wordt afgesneden** — af · TOOLING. Die pagina heeft 5898 pixels nodig
     tegen `HEIGHT_CAP` 4000, dus de PNG is afgekapt en een VISUELE controle van dat scherm kan
     vandaag niet. De `innerText` in de `.txt` is wél compleet, dus tekstuele controle en het
     float-net werken er gewoon. Keuze: de cap verhogen, of het scherm in stukken schieten.
+    AF op `6798f16`. De cap gaat van 4000 naar **8000**, HERKOMST BELEID met de gemeten grond
+    erbij: de hoogste `needed` over alle 95 shots is 5882 (dat scherm) en de op één na hoogste
+    2317, dus het enige scherm dat in de buurt komt valt er ruim onder terwijl een pagina die op
+    hol slaat nog steeds tegen een grens loopt. Het is een GRENS, geen doel.
+    STIL AFKAPPEN WAS HET EIGENLIJKE DEFECT, niet de hoogte: een gekapte PNG liegt over het
+    scherm en leest bij een byte-vergelijking als "ongewijzigd". Overschrijding is daarom nu een
+    HARDE STOP met het shot-label, `needed` en de cap. Rood getoetst op een tijdelijke cap van
+    1000: `01-week: de pagina vraagt 1800 px en HEIGHT_CAP staat op 1000 px. Een gekapte shot
+    toont niet het scherm; verhoog de cap of splits het scherm.`, exitcode 1.
+    EN DE BROWSER-KANT IS OOK GEDICHT: `assertPngSize` leest ná `page.screenshot` de eerste 24
+    bytes van de geschreven PNG terug en toetst de IHDR — breedte op 16 tot en met 19, hoogte op
+    20 tot en met 23, big-endian — tegen viewport maal `DEVICE_SCALE`. Die constante is uit
+    `newContext` getild zodat er niet twee losse 2'en uiteen kunnen lopen.
+    `v7/12-activiteiten` staat sindsdien op `used=5882 needed=5882`.
 26. **De vandaag-gereden dag verliest zijn plan** — af · CLIENT. `plannedForDone` wordt in
     `apps/web/src/lib/proposal.ts` alleen gevuld als de dag STRIKT in het verleden ligt: `:656`
     zet `const isPast = stripTime_(d.datum).getTime() < todayT`, en de toekenning op `:660` hangt
@@ -1167,6 +1213,23 @@ punten staat onder *Gesloten — vindplaats*.
     ACHT afwijkende shots — alle acht in `klim-weekstem`. De fix-richting van dit punt is daarmee
     NIET bevestigd als afdoende: het wissen van het leesvenster nam de kruisbesmetting weg die we
     konden aanwijzen, maar er beweegt nog iets anders.
+    WAT DE PUNT-25/22/23-RONDE ERAAN TOEVOEGT, 07-08-2026. BLIJFT OPEN.
+    EEN DERDE SCENARIO: het ijkpaar van die ronde gaf ACHT bewegende shots in `v7-midweek` —
+    `01-week` tot en met `08-zo`, dus alle acht — met bij alle acht een VERSCHILLENDE
+    `innerText`. Nagelegd in de `.txt`: week-TSS 417 tegen 322, 8:29 tegen 6:30 uur, 5 tegen 3
+    kwaliteitsdagen, en hele trainingen ("Sweet Spot 2×20", "Z2 + hoge cadans") die in de ene run
+    staan en in de andere niet. Het PLAN beweegt dus, niet de camera. Daarmee staan er nu DRIE
+    uitkomsten op dezelfde opzet: `klim-weekstem`, `v7-midweek`, en één sessie zonder enige
+    beweging.
+    DE WARMLOOP-KANDIDAAT IS WEERLEGD. Het punt-37-STAND-blok noemde de weggegooide warmloop als
+    het enige verschil in de opzet toen een ijkpaar nul bewegende shots gaf. Deze ronde draaide
+    EXACT dezelfde opzet — warmloop weggegooid, daarna twee sweeps — en gaf er acht. Dezelfde
+    opzet, twee uitkomsten: de warmloop verklaart het verschil niet.
+    HET INSTRUMENT IS ER WÉL, en dat is de winst. `tools/shots/vergelijk.mjs` classificeert sinds
+    `6798f16` elke bewegende shot op het `innerText`-blok, en splitste de elf bewegende shots van
+    deze ronde zonder rest: ACHT met verschillende `innerText` (dit punt) en DRIE met gelijke
+    `innerText` (punt 23 en de opgeheven cap). Het verdict van dit punt is daarmee leesbaar
+    zonder oordeel per shot met de hand.
 37. **De vite-dev-server sterft stil tijdens een sweep** — af · TOOLING. GEMETEN: VIJF keer in
     deze reeks valt de harness om terwijl poort 5173 daarna DOWN is en 8787 gewoon 200 geeft. Het
     logboek eindigt op de startbanner zonder foutregel; de exitcode is 127 of 1.
@@ -1334,8 +1397,11 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
    harness leest een infrastructuur-uitval als een inhoudelijke. De grondoorzaak mag onopgelost
    blijven zolang hij niet meer liegt. Gebouwd 07-08-2026 op `526ce4ea`; de grondoorzaak is
    bewust blijven staan.
-2. **25 + 22 + 23** — de drie blinde vlekken van de camera, in EEN ronde. Lukt 23 niet met
-   uitgezette animaties, dan blijven die twee shots uitgesloten met reden en aantal.
+2. **25 + 22 + 23** — af · de drie blinde vlekken van de camera, in EEN ronde. Lukt 23 niet met
+   uitgezette animaties, dan blijven die twee shots uitgesloten met reden en aantal. Gebouwd
+   07-08-2026 op `6798f16`; alle drie gerepareerd, en 23 zonder uitsluiting — het ijkpaar mét de
+   fix gaf 96 van de 96. De uitgezette animaties waren overigens een dood spoor: `reducedMotion`
+   stond al aan en is per constructie inert.
 3. **36** — verdict. De ijkparen komen gratis uit ronde 1 en 2. Gerepareerd, of het scenario
    begrensd uitgesloten. Dit punt staat ACHTERAAN in het tooling-blok omdat het als enige al
    een bouw achter zich heeft die het verschijnsel niet wegnam.
@@ -1492,6 +1558,25 @@ niet; hij verliest niet. Een punt gaat eruit zodra een STAP het opneemt — niet
   plek in de reeks te hebben; het staat hier zodat een volgende chat het niet opnieuw opvist.
 
 ### TOOLING
+
+- DE SHOT `16-ritdetail` ASSERTEERT ZIJN TWEE GETALLEN MAAR PRINT ZE NIET. Het trefferaantal van
+  de rij-selector en het aantal `aria-label="Sluiten"`-elementen na de klik staan nergens in de
+  `.txt`, dus op een PROD-run zijn ze niet te noemen — daar is alleen "hij gooide niet" af te
+  lezen. De eis staat bovendien op MINSTENS TWEE rijen terwijl er vandaag vijftig zijn: dat
+  aantal kan stil naar twee eroderen zonder dat er iets rood wordt. Fix: beide getallen in de
+  `.txt` van die shot schrijven, zodat de assertie een AFLEESBAAR getal achterlaat in plaats van
+  alleen een stilte. Gevonden bij de prod-rookproef van 07-08-2026.
+
+- KANDIDAAT, NIET VASTGESTELD: VIER SCHERMEN WAREN BYTE-IDENTIEK tussen de lokale run en de
+  prod-run van 07-08-2026 — `09-vorm`, `10-trainingen`, `12-activiteiten` en `16-ritdetail` —
+  ondanks verschillende klokken (lokaal gepind op 2026-08-03, prod op de echte 2026-08-07) en
+  verschillende `.txt` (prod draagt vier 404's op `/api/checkin/2026-08-07`, lokaal niet).
+  Nagegaan met sha256 én met het `innerText`-blok, dat voor `09-vorm` en `16-ritdetail`
+  letterlijk gelijk is. GROND: die vier hangen aan GESYNCHRONISEERDE Intervals-data en niet aan
+  de gezaaide plan-kant, en beide runs trokken binnen minuten van hetzelfde account. Dit is een
+  AFBAKENING van het CLIENT-item "het lokale beeld is niet het prod-beeld" en geen weerlegging
+  ervan: dat item gaat over de blok-terugblik, die wél aan de gezaaide historie hangt.
+  FALSIFIER: rijd tussen twee runs, of draai op een dag waarop de wellness verschilt.
 
 - DE HARNESS BELOOFT IN PROD-MODUS "geen enkele schrijf-aanroep" (`CLAUDE.md`), maar deed er per
   05-08-2026 twee: `POST /api/sync/activities` en `POST /api/sync/wellness`. Het zijn de

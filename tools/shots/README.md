@@ -56,6 +56,61 @@ punt en het defect wordt daar onzichtbaar.
 De PLANNER-tabel wordt bewust niet gewist: die wordt alleen voor de bekeken
 week gelezen, niet over een venster.
 
+## Wat elke shot afwacht en bewaakt
+
+VÓÓR DE SLUITER WACHT DE HARNESS DE ANIMATIES UIT. Vlak voor `page.screenshot`
+telt hij `document.getAnimations()` op `running` en `pending` en wacht tot dat
+nul is, met een bovengrens van 5000 ms die GOOIT in plaats van stil door te
+lopen. Dat moet, want `settle` wacht 800 ms af terwijl de ring-transitie op de
+Vorm-kaart 1350 ms duurt (1,1 s plus 250 ms aanloop) — precies daardoor
+verschilden `09-vorm` en `10-trainingen` tussen twee runs van ongewijzigde code,
+bij letterlijk gelijke `innerText`. Het gemeten aantal staat als `anim=` in de
+samenvattingsregel; op een normale run is dat overal nul.
+
+EEN GEKAPTE SHOT STOPT DE RUN. Vraagt een pagina meer dan `HEIGHT_CAP` (8000),
+dan gooit de harness met het shot-label, de gevraagde hoogte en de cap. Stil
+afkappen was het eigenlijke defect: zo'n PNG liegt over het scherm en leest bij
+een byte-vergelijking als "ongewijzigd". Direct ná `page.screenshot` leest
+`assertPngSize` bovendien de IHDR van het geschreven bestand terug — de eerste
+24 bytes — en toetst breedte en hoogte tegen de viewport maal `DEVICE_SCALE`,
+zodat een afkapping door de BROWSER er ook niet doorheen komt.
+
+DE RIT-SHEET WORDT GEFOTOGRAFEERD, shot `16-ritdetail`. Hij staat pas ná een
+klik in de DOM, dus geen enkele shot toonde hem ooit. De harness navigeert na de
+overige schermen naar `/activiteiten`, klikt de eerste activiteitenrij aan en
+schiet de open sheet. Wat hij bewijst is de TOESTANDSOVERGANG, niet een aantal:
+nul elementen met `aria-label="Sluiten"` vóór de klik, meer dan nul erna, en
+géén van de teksten "Ritdetails laden…" of "Ritdetails konden niet geladen
+worden." — en omdat die drie takken uitputtend zijn en elkaar uitsluiten, staat
+de sheet daarmee per constructie op ready. Zonder die laatste helft zou een
+sheet die opent maar waarvan de fetch faalt de controle halen, en fotografeerde
+je een foutkaart als bewijs.
+
+## Twee runs vergelijken
+
+    node tools/shots/vergelijk.mjs <linksPad> <rechtsPad>
+
+Vergelijkt UITSLUITEND de `.png`, recursief en op het pad relatief aan elke
+wortel, op bytes. De `.txt` blijft er bewust buiten: die draagt het
+synctijdstempel en de request-telling, en zou drift melden die er niet is.
+
+DE NOEMER IS HET TOTAAL van wat in beide bomen voorkomt, en de vergelijker
+sluit NIETS uit zichzelf uit — een instrument dat vooraf besluit wat het niet
+ziet, kan een uitsluiting nooit meer weerleggen. Bestanden die maar aan één kant
+staan worden bij naam genoemd in plaats van stil uit de telling te vallen. De
+exitcode is altijd 0: dit is een meetinstrument, geen poort.
+
+Per bewegende shot staat er een INNERTEXT-KOLOM, en die draagt het onderscheid
+tussen twee verschillende defecten. Pixelverschil bij GELIJKE `innerText` is de
+punt-23-familie: hetzelfde scherm, andere bytes. Een VERSCHILLENDE `innerText`
+is de punt-36-familie: het plan bewoog, niet de camera. Zonder die kolom is een
+uitslag op zo'n as niet toe te wijzen.
+
+MEET JE EIGEN IJKPAAR vóór je een bouw begrenst — twee sweeps achter elkaar op
+ongewijzigde code — en erf er nooit een uit een eerdere sessie. De ruisvloer
+hoort bij de sessie waarin je hem meet, en zelfs het scenario dat hem draagt
+wisselt.
+
 ## Grenzen
 
 Alles staat hard op loopback (`127.0.0.1`); remote wordt nooit geraakt. De

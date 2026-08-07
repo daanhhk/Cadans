@@ -624,6 +624,13 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   de richting: daar groeide de invoer aan, hier beweegt ze heen en weer. Sinds de rotatie van
   punt 31 kost een eigen ijkpaar bijna niets — twee sweeps achter elkaar vóór de bouw — dus er
   is geen grond meer om er een te erven.
+  EN HIJ HOORT OOK NIET BIJ HET SCENARIO. Gemeten over DRIE sessies met exact dezelfde opzet —
+  warmloop weggegooid, daarna twee sweeps — zwierf de vloer van ACHT bewegende shots in
+  `klim-weekstem` (7 augustus) naar NUL (de punt-37-ronde) naar ACHT in `v7-midweek`. Niet
+  alleen het aantal beweegt dus, ook wélk scenario het draagt. DAARMEE IS DE
+  WARMLOOP-KANDIDAAT UIT HET PUNT-37-STAND-BLOK WEERLEGD: dezelfde opzet gaf twee verschillende
+  uitkomsten, dus de weggegooide warmloop verklaart het verschil niet. Erf een vloer niet, en
+  erf al helemaal geen verwachting over wélk scenario zal bewegen.
 - **Een premisse over de STAAT VAN DE SCHIJF kan binnen je EIGEN prompt verouderen.** Een blok
   dat draait verandert de grond waarop een later blok staat, en een aanname die bij het
   schrijven klopte is dan al onwaar vóór ze getoetst wordt. Aanleiding: het bouw-prompt van
@@ -721,6 +728,37 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   reproduceert de CONDITIE, niet de OORZAAK. `preview_stop` sluit de poort keurig af; het stille
   sterven in het veld doet dat niet. Citeer zo'n meting dus nooit als bewijs OVER de oorzaak —
   ze zegt wat de harness doet als een origin wegvalt, niet waaróm hij wegviel.
+- **Een uniciteits-claim noemt het NIVEAU waarop hij geldt.** Uniek op PAGINA-niveau is niet
+  uniek op ELEMENT-niveau, en een eis die op het verkeerde niveau telt is per constructie
+  onhaalbaar. Aanleiding: `aria-label="Sluiten"` staat VIER keer in `apps/web/src`, waarvan TWEE
+  in `RideDetailSheet.tsx` zelf — de scrim op `:104` en de sluitknop op `:143`, die altijd samen
+  renderen zodra de sheet open is. Het prompt noemde alleen `:104` en eiste "precies één
+  element", terwijl een correct geopende sheet er twee levert; de shot zou dus altijd gooien op
+  precies het geval dat hij moest bewijzen. De grep die dat had moeten vangen WAS gedraaid en gaf
+  beide treffers — de kwalificatie viel weg tússen meting en prompt. Zelfde familie als "een
+  grep-EIS toets je tegen de echte trefferverdeling vóór je hem verstuurt", nu op het NIVEAU van
+  de telling. EN DE VERVANGING IS DE EIGENLIJKE LES: tel geen INCIDENTEEL aantal, bewijs de
+  TOESTANDSOVERGANG. "Precies twee" zou de scrim-knop dragend bewijs maken; wat het wél doet is
+  nul vóór de klik en meer dan nul erna, plus een uitsluiting van de twee andere takken
+  (`loading` `:163`, `error` `:177`, `ready` `:194` zijn uitputtend en sluiten elkaar uit).
+  Dat sloot meteen een gat dat de oorspronkelijke assertie liet staan: een sheet die opent maar
+  waarvan de fetch faalt, haalde die assertie en had een foutkaart als bewijs gefotografeerd.
+  Kwam binnen als CC-stop.
+- **Wie een tak van MELDEN naar STOPPEN tilt, ruimt de meld-machinerie op.** Een administratie
+  die achter een conditie staat die voortaan per constructie onwaar is, is dode code — en ze
+  leest als een levende mogelijkheid. Aanleiding: met de harde stop op een gekapte shot werden
+  drie resten dood: het `capped`-veld in het return-object, de `, CAPPED` in de `.txt`-kop en de
+  ` CAPPED` in de samenvattingsregel. Ze zijn weg, en de gerenderde uitvoer bewoog er niet door,
+  want de `.txt` wordt na de throw nooit meer geschreven. Zelfde familie als "vooruit-bedrading
+  is dode code met een nettere naam", nu ACHTERAF in plaats van vooruit. Kwam binnen als
+  CC-afwijking.
+- **Bewegen twee bekende verschijnselen op dezelfde meetas, laat de VERGELIJKER het onderscheid
+  dragen.** Met de hand is dat een oordeel per shot en dus een handlijst; mechanisch is het een
+  kolom. Aanleiding: het ijkpaar van deze ronde gaf ELF bewegende shots, en pas de
+  innerText-classificatie in `tools/shots/vergelijk.mjs` splitste ze zonder rest — ACHT met
+  VERSCHILLENDE innerText (punt 36, het plan beweegt) en DRIE met GELIJKE innerText (punt 23 en
+  de opgeheven cap, dus puur pixel). Zonder die kolom is een uitslag op zo'n as niet toe te
+  wijzen, en werd ze per shot met de hand geveld.
 
 ## Vorm van een CC-prompt
 
@@ -994,3 +1032,7 @@ Volg de FOCUS uit het bovenste STAND-blok.
 - 2026-08-07 — regel toegevoegd in *Recon en bewijslast*: een vergelijker die nooit is aangetoond een verschil te KUNNEN melden, certificeert geen gelijkheid — ijk hem in twee richtingen, met hetzelfde script dat de uitslag levert. Aanleiding: "nul bewegende shots" werd pas een uitspraak nadat `out/v2` tegen `out-vorige/v4` 0 van de 8 identiek gaf en `out/v2` tegen zichzelf 8 van de 8. Ligt als laag bovenop de bestaande regel dat een zelf-schrijvende harness op twee gelijke runs wordt geijkt: die ijkt de HARNESS, deze de VERGELIJKER.
 - 2026-08-07 — regel toegevoegd in *Recon en bewijslast*: één conditie kan meerdere foutvormen dragen, dus een poort hoort op de plek die ze allemaal ziet en niet op de vorm die je toevallig in het veld zag. Aanleiding: punt 37 noemde `still loading after settle`, terwijl dezelfde conditie gereproduceerd `page.goto: net::ERR_CONNECTION_REFUSED` en `page.waitForSelector: Timeout 60000ms exceeded` gaf — een poort binnen `settle()` had er twee van de drie gemist. Tweede helft: een NETTE stop reproduceert de CONDITIE en niet de OORZAAK, dus zo'n meting is geen bewijs over het stille sterven zelf.
 - 2026-08-07 — regel toegevoegd in *Gate*: het aantal lint-waarschuwingen is ook een vloer en hoort in het STAND-blok. `pnpm lint` geeft exit 0 zolang het bij waarschuwingen blijft, dus een stijging passeert de gate ongezien en moet met de hand tegen de vorige ronde gelegd. Aanleiding: een eerste bouwversie van punt 37 gaf een 21e waarschuwing (`useOptionalChain`) op een vloer van 20, bij een groene gate; CC ving het en werkte hem weg vóór de meting.
+- 2026-08-07 — regel toegevoegd in *Recon en bewijslast*: een uniciteits-claim noemt het NIVEAU waarop hij geldt, en een eis telt geen incidenteel aantal maar bewijst de TOESTANDSOVERGANG. Aanleiding: `aria-label="Sluiten"` staat vier keer in `apps/web/src`, waarvan twee in `RideDetailSheet.tsx` zelf, dus de geëiste "precies één element" was per constructie onhaalbaar; CC stopte erop, en de vervanging (nul vóór de klik, meer dan nul erna, plus uitsluiting van de laad- en de fouttak) sloot meteen het gat dat een foutkaart als bewijs liet passeren.
+- 2026-08-07 — regel toegevoegd in *Recon en bewijslast*: wie een tak van MELDEN naar STOPPEN tilt, ruimt de meld-machinerie op. Aanleiding: met de harde stop op een gekapte shot werden het `capped`-veld, de `, CAPPED` in de `.txt`-kop en de ` CAPPED` in de samenvattingsregel dode code; CC haalde ze weg zonder dat de gerenderde uitvoer bewoog.
+- 2026-08-07 — regel toegevoegd in *Recon en bewijslast*: bewegen twee bekende verschijnselen op dezelfde meetas, laat de VERGELIJKER het onderscheid dragen. Aanleiding: het ijkpaar gaf elf bewegende shots, en pas de innerText-kolom in `tools/shots/vergelijk.mjs` splitste ze zonder rest in acht met verschillende innerText (punt 36) en drie met gelijke innerText (punt 23 plus de opgeheven cap).
+- 2026-08-07 — bestaande regel over de ruisvloer aangevuld: hij hoort ook niet bij het SCENARIO. Aanleiding: over drie sessies met dezelfde opzet zwierf de vloer van acht bewegende shots in `klim-weekstem` naar nul naar acht in `v7-midweek`, waarmee de warmloop-kandidaat uit het punt-37-STAND-blok is weerlegd.
