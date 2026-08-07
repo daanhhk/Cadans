@@ -25,12 +25,13 @@ plaats van vijf losse drempels — een weeklus op het blok en een daglus op vand
 
 DE REEKS HIERONDER IS DE AFVINKLIJST. Hij voegt de stappen uit dit document samen met de
 bouwvolgorde in `DOELEN-SPEC.md` §6; die paragraaf blijft de inhoudelijke onderbouwing per
-doel, deze reeks draagt de volgorde en de stand. De nummering IS de bouwvolgorde. Een punt
-wordt HIER gesloten, in dezelfde close-out waarin het af is.
+doel, deze reeks draagt de stand. DE NUMMERING IS DE VONDSTVOLGORDE; de bouwvolgorde staat
+onder *De volgorde*. Een punt wordt HIER gesloten, in dezelfde close-out waarin het af is.
 
 ## De reeks
 
-Eén genummerde, afvinkbare volgorde; de nummering is de bouwvolgorde. Elke STATUS is getoetst
+Eén genummerde, afvinkbare lijst; de nummering is de volgorde waarin de punten zijn GEVONDEN,
+niet de volgorde waarin ze worden gebouwd — die staat onder *De volgorde*. Elke STATUS is getoetst
 tegen de CODE op `4f7736f5`, niet tegen een STAND-blok in `HANDOFF.md`. Legenda: STATUS af /
 deels / open · RAAKVLAK ENGINE / DATA / CLIENT. De uitgebreide onderbouwing van de gesloten
 punten staat onder *Gesloten — vindplaats*.
@@ -566,6 +567,35 @@ punten staat onder *Gesloten — vindplaats*.
     plan gereden week weer als niet geleverd. (iii) DE PLAATS — winter-Onderhoud of pas de opmaat
     naar korte beklimmingen, waar dezelfde prikkel hoe dan ook nodig is. GAAT NA PUNT 15: die draagt
     de harde datum en raakt dezelfde dosis-vraag. Raakt `DOELEN-SPEC`.
+    GEMETEN EN GECORRIGEERD per 07-08-2026, chat-zijde, docs-only. De volledige meting staat in
+    `docs/PUNT16-RECON.md`; alles hieronder is gedraaid, niet gelezen.
+    DRIE PREMISSEN HIERBOVEN ZIJN WEERLEGD. De bouwer van `combo_ss_sprints` is NIET volledig: van
+    de drie wees-combo's dragen er 0 van de 3 `blokken`, 0 van de 3 `intent`, en alle drie zetten
+    hun TSS als `mins` maal een factor in plaats van uit de blokken — exact de drie defecten die
+    punt 15 elders heeft gerepareerd. Het regelnummer is `planner.ts:2777`, niet 2583. En de
+    norm-vraag onder (ii) is ACHTERHAALD door punt 17: er bestaat geen doel-brede norm meer, de
+    referent is plan-relatief. NUL producenten klopt wel.
+    DE ROUTE IS DE VULDAG, NIET DE DUURDAG. De duurdag is bij Onderhoud niet alleen 's winters
+    dicht maar per constructie: `effectiveMacroFase_` geeft voor profiel-id `onderhoud` ALTIJD
+    "Base", gemeten 120 van 120 cellen. De tussenruimte-regel maakt zelf een Z2-dag zonder
+    `archetypeId` en zonder werkzone-label: 70 van 120 Onderhoud-cellen dragen er minstens één,
+    duur 45 / 59 / 60 (min / mediaan / max). Dat is de aanhechtingsplek — en tegelijk de dag die
+    `DOELEN-SPEC` §3.2 als herstel beschermt.
+    HET BLOKKERENDE GETAL. Een sprintblok van 6x15s is 1,5 anaerobe werkminuut; `Math.round`
+    maakt daar een eis van 2 van, dus de meetlat vraagt 33 procent MEER dan het plan voorschrijft.
+    Een tekort van 4,5 seconde kantelt het blok van 3 van 3 geleverd naar 0 van 3, en dan geeft
+    `dosisTredeVoorstel` null en kan de trede niet stijgen.
+    DE PLATEAU-TOETS FAALT. Getolereerd uitvoeringstekort naar prikkelomvang: 60 procent bij 1,25
+    minuut, 0 procent bij 1,5 én bij 2,5, monotoon en nooit nul vanaf 3. Alles onder circa 3
+    minuten bemonstert afrondingsruis.
+    DE BOUW DRAAGT TWEE TERMEN IN ÉÉN RONDE. (i) Een materialiteitsvloer op de poortset — een
+    werkzone telt pas mee vanaf N plan-minuten — met anker M64 (NORM), uitgebreid naar de
+    blok-laag zoals punt 17 dat voor M63 en M64 al verantwoordde. (ii) De prikkel zelf, in de
+    generieke vuldag-bouwer, MET `blokken`, MET `intent` en met TSS uit `tssFromBlokken_`; de
+    wees-combo's worden niet gereanimeerd. De vloer ALLEEN is vandaag inert — 0 van 1095
+    beoordeelde zone-cellen draagt een plan onder 3 minuten — en dus vooruit-bedrading; de prikkel
+    alleen zet het blok-oordeel op een muntworp. N wordt in de bouwronde geijkt op de as "hoeveel
+    blok-cellen kantelen bij welke N", en NOOIT hier gekozen.
 17. **De norm is voor de klim-doelen onbereikbaar** — af · NORM plus BIBLIOTHEEK. GEMETEN op
     weekvorm V1 in Build, norm én plan op DEZELFDE dosis-trede: FTP levert 95 tegen 84, 108,2 tegen
     96 en 121,4 tegen 108 en is overal GELEVERD; Korte beklimmingen levert 68,5 tegen 78, 79,6
@@ -1261,23 +1291,56 @@ toegepast.
   vraag opnieuw. Een trede van een ander doel leest als 0.
 - Raakt: ENGINE, DATA (migratie `0007`), CLIENT. LIVE.
 
-## Waarom deze volgorde
+## De volgorde
 
-Punt 5 gaat voorop omdat het het enige openstaande punt is dat de app VANDAAG functioneel
-slechter maakt: er is een concreet geval waarin de coach een gemiste sleutelsessie niet als
-sleutelsessie telt. Punt 6 maakt daarna de munt af waarin élk blok-oordeel rekent; hij is bij
-Daan gedragsneutraal, maar half gebouwd, en de fixtures eronder zijn nu al kwetsbaar.
+De bouwvolgorde staat HIER en niet in de nummering. De FOCUS-regel van een close-out wijst
+naar het eerstvolgende open punt uit deze lijst en noemt het bij naam; wijkt een chat ervan
+af, dan staat de reden in hetzelfde STAND-blok.
 
-Daarna komt het februari-blok. Punt 7, 8 en 9 horen bij elkaar: de doel-lijst levert de doelen,
-de meetlat levert het profiel waartegen ze gemeten worden, en de fase-sturing bepaalt wanneer
-de overname gebeurt. Los gebouwd leveren ze drie halve antwoorden.
+VASTGELEGD 07-08-2026, op Daans instructie. De aanleiding is een patroon: punt 11, punt 13
+fase B en punt 16 zijn elk geparkeerd met als grond dat ze bij het HUIDIGE doel inert zijn.
+Die grond vervalt. `WERKWIJZE` draagt hem al voor de deploy — "de gebruiker merkt er niets
+van is expliciet geen grond om te wachten" — en de canon maakt het model doel-onafhankelijk:
+M9 (geen aparte modus), M21 en M22 (de doelgroep is de amateurfietser), M33 (een doel bestaat
+alleen als het model het kan meten en bedienen). Inert bij het ingestelde doel is een grens op
+het BEWIJS, nooit op de bouw.
 
-Punt 10, 11 en 12 zijn niet deadline-gebonden. Punt 12 hangt aan punt 7: een
-passendheids-voorstel zonder herziene doel-lijst wijst naar de verkeerde doelen.
+HET PRINCIPE, in rangorde. (1) Eerst het meetgereedschap: elk begrenzingsbewijs leunt erop.
+(2) Dan het ontbrekende vangnet, zodat elke ronde daarna goedkoper is. (3) Dan de goedkope
+metingen die een punt kunnen SLUITEN zonder bouw. (4) Dan wat de app onwaars laat zeggen of
+doen, ongeacht het ingestelde doel. (5) Dan de afhankelijkheidsketens. (6) Als laatste wat
+een ontwerpronde is in plaats van een bouwronde.
 
-De oude verantwoording blijft gelden en staat hierboven onder *Gesloten — vindplaats*: punt 2
-en 3 zijn regelkringen bovenop punt 1, en een trede bovenop een te lage basis landt nog steeds
-onder de norm. Daarom ging de basis eerst.
+EEN RONDE PER PUNT. Sluit een punt niet binnen zijn ronde, dan volgt een VERDICT met een
+getal — gerepareerd, of begrensd uitgesloten met reden en aantal — en geen tweede poging.
+Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 10 fase B.
+
+1. **37** — de vite-dev-server sterft stil. Het te repareren defect is het ETIKET: de harness
+   leest een infrastructuur-uitval als een inhoudelijke. De grondoorzaak mag onopgelost
+   blijven zolang hij niet meer liegt.
+2. **25 + 22 + 23** — de drie blinde vlekken van de camera, in EEN ronde. Lukt 23 niet met
+   uitgezette animaties, dan blijven die twee shots uitgesloten met reden en aantal.
+3. **36** — verdict. De ijkparen komen gratis uit ronde 1 en 2. Gerepareerd, of het scenario
+   begrensd uitgesloten. Dit punt staat ACHTERAAN in het tooling-blok omdat het als enige al
+   een bouw achter zich heeft die het verschijnsel niet wegnam.
+4. **33** — de norm-vergelijking naar EEN gedeelde functie, plus een render-testlaag. Die
+   laag BESTAAT NIET: `apps/web/vitest.config.ts` draait op `environment: "node"`, er is geen
+   `.test.tsx` en geen jsdom. Dit is toevoegen, niet consolideren. Betaalt zich terug bij elke
+   kaart-ronde hierna.
+5. **21** — eerst de BEREIKBAARHEID meten. `buildWorkoutDescription_` wordt alleen bereikt als
+   zowel de ZWO- als de DSL-tak faalt. Sluit vermoedelijk zonder bouw.
+6. **19** — het dagtype weekend is een kalendernaam. Botst met `DOELEN-SPEC` §2A en raakt elk
+   doel.
+7. **16** — de materialiteitsvloer en de prikkel, in EEN bouw. Zie `docs/PUNT16-RECON.md` §5.
+8. **34** — de effect-referent kent het doel niet. M5-schending bij drie van de vijf doelen.
+9. **35** — een event draagt geen duur. Deblokkeert punt 13 fase B.
+10. **13 fase B** — de doelvraag na het event.
+11. **32** — de rit-beoordeling. M31 noemt het bedrading en geen nieuwe bouw.
+12. **11** — de duurvermogen-maat OPNIEUW ontwerpen. Achteraan met de juiste reden: de
+    gemeten maat mat de RITKEUZE en niet het duurvermogen, dus dit is een afgekeurd ontwerp
+    en geen wachtende bouw. Tot dan blijft Conditie ongedekt (M33, M39).
+
+De oude verantwoording van de gesloten punten 1 t/m 12 staat onder *Gesloten — vindplaats*.
 
 ## Meetlat
 
@@ -1374,6 +1437,11 @@ niet; hij verliest niet. Een punt gaat eruit zodra een STAP het opneemt — niet
 - HET LOKALE BEELD IS NIET HET PROD-BEELD. De shot-harness toont blok 29-06 t/m 26-07 als GELEVERD,
   terwijl datzelfde blok op prod 2/3, 1/3 en 2/3 haalde. De lokale D1 draagt andere historie. Geen
   regressie en geen herijk-aanleiding, wel iets om bij elke prod-verificatie te onthouden.
+- DE PUNT-17-MEETLAT VERDRAAGT HOOGSTENS EEN HALVE MINUUT TEKORT PER ZONE, en in 101 van de 1095
+  beoordeelde zone-cellen (9,2 procent) minder dan 0,05 minuut. Op Daans eigen weekvorm ma45 di60
+  do60 za120 bij doel FTP staat Base week 2 op een marge van 0,07 — drempel plan 74,57 tegen een
+  eis van 75. Dit is een eigenschap van het BEWUSTE nul-tolerantiebesluit van punt 17, niet iets
+  dat punt 16 introduceert: waarneming met getal, GEEN heropening. Bron: `docs/PUNT16-RECON.md` §7.
 
 - DE COACH-COPY-RONDE. De toon van de coach-teksten is nooit als geheel doorgelopen; losse
   rondes hebben hem per kaart bijgesteld. STAAT HIER EN NIET IN DE REEKS, met reden: het is
