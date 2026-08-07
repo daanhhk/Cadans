@@ -1167,7 +1167,7 @@ punten staat onder *Gesloten — vindplaats*.
     ACHT afwijkende shots — alle acht in `klim-weekstem`. De fix-richting van dit punt is daarmee
     NIET bevestigd als afdoende: het wissen van het leesvenster nam de kruisbesmetting weg die we
     konden aanwijzen, maar er beweegt nog iets anders.
-37. **De vite-dev-server sterft stil tijdens een sweep** — open · TOOLING. GEMETEN: VIJF keer in
+37. **De vite-dev-server sterft stil tijdens een sweep** — af · TOOLING. GEMETEN: VIJF keer in
     deze reeks valt de harness om terwijl poort 5173 daarna DOWN is en 8787 gewoon 200 geeft. Het
     logboek eindigt op de startbanner zonder foutregel; de exitcode is 127 of 1.
     DE HARNESS LEEST DAT ALS EEN INHOUDELIJKE UITVAL, EN DAT IS HET NIET. De punt-24-poort meldt
@@ -1181,6 +1181,21 @@ punten staat onder *Gesloten — vindplaats*.
     RICHTING, niet vastgelegd: de harness kan vóór elke sweep — en eventueel per scenario — de
     vite-poort proberen en met een EIGEN melding stoppen, zodat een dode dev-server niet als een
     ladende pagina leest. De oorzaak van het sterven zelf is daarmee niet weggenomen.
+    GEBOUWD per 07-08-2026 op commit `526ce4ea5e4fe3fd0863c57e2e145b363fe767d9`, TOOLING-only.
+    DE BOUW IS ÉÉN POORT OP ÉÉN PLEK: de bestaande `try … finally` om de scenario-lus in `main()`
+    krijgt een `catch` die `classifyFailure` aanroept. Die meet met één fetch per origin of
+    `http://127.0.0.1:5173` en `http://127.0.0.1:8787/api/settings` nog antwoorden; antwoorden ze
+    allebei, dan gaat de oorspronkelijke fout ONGEWIJZIGD door, en anders stopt de run met
+    `INFRASTRUCTUUR-UITVAL`, beide gemeten statussen en de oorspronkelijke melding.
+    DE GRONDOORZAAK IS BEWUST NIET WEGGENOMEN. Het te repareren defect was het ETIKET, niet het
+    sterven: de harness liegt niet meer, en waaróm vite omvalt blijft open.
+    DE PREMISSE HIERBOVEN WAS TE SMAL, en dat is de dragende uitkomst. Dit punt noemde ÉÉN
+    foutvorm — `still loading after settle`. Gereproduceerd gaf dezelfde conditie er TWEE ANDERE:
+    `page.goto: net::ERR_CONNECTION_REFUSED` en `page.waitForSelector: Timeout 60000ms exceeded`
+    op `#root > *`. Geen van beide is de punt-24-melding. Eén conditie draagt dus minstens DRIE
+    foutvormen, en een poort BINNEN `settle()` — de voor de hand liggende plek — had er twee van
+    de drie gemist. LET OP BIJ HET CITEREN: die reproductie gebruikte een NETTE stop, dus ze
+    reproduceert de CONDITIE en niet de OORZAAK.
 
 ## De tijdslijn
 
@@ -1315,9 +1330,10 @@ EEN RONDE PER PUNT. Sluit een punt niet binnen zijn ronde, dan volgt een VERDICT
 getal — gerepareerd, of begrensd uitgesloten met reden en aantal — en geen tweede poging.
 Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 10 fase B.
 
-1. **37** — de vite-dev-server sterft stil. Het te repareren defect is het ETIKET: de harness
-   leest een infrastructuur-uitval als een inhoudelijke. De grondoorzaak mag onopgelost
-   blijven zolang hij niet meer liegt.
+1. **37** — af · de vite-dev-server sterft stil. Het te repareren defect is het ETIKET: de
+   harness leest een infrastructuur-uitval als een inhoudelijke. De grondoorzaak mag onopgelost
+   blijven zolang hij niet meer liegt. Gebouwd 07-08-2026 op `526ce4ea`; de grondoorzaak is
+   bewust blijven staan.
 2. **25 + 22 + 23** — de drie blinde vlekken van de camera, in EEN ronde. Lukt 23 niet met
    uitgezette animaties, dan blijven die twee shots uitgesloten met reden en aantal.
 3. **36** — verdict. De ijkparen komen gratis uit ronde 1 en 2. Gerepareerd, of het scenario

@@ -704,11 +704,29 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   op een aanleiding die niet bestond; Daan ving het. Zelfde familie als "een premisse over de
   staat van de schijf kan binnen je EIGEN prompt verouderen", nu op de VOLGORDE van de blokken
   in plaats van op de tijd.
+- **EEN VERGELIJKER DIE NOOIT IS AANGETOOND EEN VERSCHIL TE KUNNEN MELDEN, CERTIFICEERT GEEN
+  GELIJKHEID.** IJk hem in TWEE richtingen, en met HETZELFDE script dat de uitslag levert — een
+  ijking op een ander script bewijst niets over de vergelijking die telt. Aanleiding: "nul
+  bewegende shots" werd pas een uitspraak nadat `out/v2` tegen `out-vorige/v4` 0 van de 8
+  identiek gaf en `out/v2` tegen zichzelf 8 van de 8. Zelfde familie als "een controle die per
+  constructie kan slagen, controleert niets", nu op het INSTRUMENT in plaats van op de eis. Dit
+  is een LAAG BOVENOP "een harness die zelf schrijft, verzadigt zijn eigen invoer": die regel
+  ijkt de HARNESS op twee gelijke runs, deze ijkt de VERGELIJKER die dat oordeel velt.
+- **ÉÉN CONDITIE KAN MEERDERE FOUTVORMEN DRAGEN.** Plaats een poort op de plek die ze allemaal
+  ziet, nooit op de vorm die je toevallig in het veld zag. Aanleiding: punt 37 noemde één
+  foutvorm, `still loading after settle`; gereproduceerd gaf dezelfde conditie
+  `page.goto: net::ERR_CONNECTION_REFUSED` en `page.waitForSelector: Timeout 60000ms exceeded`
+  op `#root > *`, en géén van beide was de punt-24-melding. Een poort binnen `settle()` — de voor
+  de hand liggende plek — had er twee van de drie gemist. EN DE TWEEDE HELFT: een NETTE stop
+  reproduceert de CONDITIE, niet de OORZAAK. `preview_stop` sluit de poort keurig af; het stille
+  sterven in het veld doet dat niet. Citeer zo'n meting dus nooit als bewijs OVER de oorzaak —
+  ze zegt wat de harness doet als een origin wegvalt, niet waaróm hij wegviel.
 
 ## Vorm van een CC-prompt
 
 - **Eén plain code-blok**, zonder taal-tag — dat is de één-tap-kopie op mobiel. Nooit proza in het blok mengen; Claude's kader eromheen staat als gewone tekst.
 - Te lang voor één blok → splits in **genummerde blokken** (Blok 1/2, 2/2) die CC na elkaar in dezelfde **CC-sessie** draait. Een later blok mag leunen op wat een eerder blok zette. Het gaat om de CC-sessie, niet om een shell: PowerShell is de shell waarin CC zijn commando's uitvoert, geen omgeving waarin Daan zelf werkt.
+- **EEN BLOK MET EEN STOP-CONDITIE IS EEN BESLISMOMENT, GEEN LENGTE-SPLIT.** Draagt een blok een STOP-conditie en vraagt het om een rapport, dan hangt alles erna aan de UITKOMST — dus schrijf de latere blokken pas als dat rapport binnen is. Dat is iets anders dan de lengte-split hierboven, waar een later blok alleen leunt op wat een eerder blok ZETTE en niet op wat het VOND. Aanleiding: in de punt-37-ronde zijn blok 2 en 3 vooruit geschreven terwijl blok 1 drie uitkomsten kon dragen die ze allebei zouden omgooien — een afwijkende premisse, een ijkrun die het eind niet haalt, en een grote ruisvloer. Daan wees het aan; de twee blokken zijn ingetrokken en opnieuw geschreven. Zie ook *een genummerd blok zegt zelf of het een commit-punt is* onder *Recon en bewijslast*: die regel gaat over de VRAAG of er gecommit wordt, deze over de vraag of het blok er al mag zijn.
 - De prompt is een **stap-instructie in het Nederlands, geen uitvoerbaar script**. PowerShell-idioom alleen in de kop: `cd` naar de repo, daarna `Get-Location` op een eigen regel. Verder kale, zelf-printende commandoregels (git, pnpm). **Geen** `Write-Host` of `echo`, **geen** here-strings, **geen** loops, **geen** .NET File API. Secties label je met `#`-commentaarregels.
 - In te voegen inhoud (een HANDOFF-blok, een doc) mag **verbatim** tussen eigen tekst-delimiters (`=== BEGIN … ===` / `=== EINDE … ===`) óf als strekking-bullets die CC in de huisstijl uitschrijft. Bij artefacten waar de exacte formulering telt: altijd verbatim.
 - Inhoud: **spec-gedreven by default** — architectuur, exact gedrag, sleutel-logica en de gate. CC schrijft de code, vindt de call-sites zelf en past aan de **échte** staat aan (geen letterlijke `str_replace`-blokken). Exacte code alleen als **anker** bij fragiele edits: byte-getrouwe GAS-mirrors, TZ-grens-logica, formules en zone-mappings. CC meldt in het rapport de kern-implementatiekeuzes (gekozen conditie, plaatsing), zodat review tegen de spec kan zonder de volledige diff. Verder: verificatiestappen, een harde gate en de commit message.
@@ -760,6 +778,14 @@ CC mag afwijken en moet dat melden. Een flag-en-stop legt het balletje via het r
 ## Gate
 
 Geen commit of merge op rood: `pnpm install --frozen-lockfile`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` — én CI groen. De vitest- en engine-selftest-vloeren staan in `HANDOFF.md` (STAND) en mogen niet regresseren; hardcode die getallen nooit in een prompt, lees ze uit de suite. Een bewuste daling (bijvoorbeeld verwijderde dode-code-tests) is geen regressie, maar wordt expliciet gemeld en in HANDOFF bijgewerkt.
+
+HET AANTAL LINT-WAARSCHUWINGEN IS OOK EEN VLOER, en hoort dus in het STAND-blok naast de twee
+andere. `pnpm lint` geeft exit 0 zolang er alleen waarschuwingen zijn, dus de gate ziet een
+stijging niet — het getal moet met de hand tegen de vorige ronde gelegd. Aanleiding: een eerste
+bouwversie van punt 37 gaf een 21e waarschuwing (`useOptionalChain`) terwijl de vloer er 20
+draagt en de gate groen was; CC ving het en werkte hem weg vóór de meting. Kwam binnen als
+CC-afwijking en is strikt beter dan wat het prompt vroeg. Lees het aantal uit de uitvoer van de
+eigen run, nooit uit een rapport of uit een STAND-blok.
 
 STOP DE DEV-SERVERS VÓÓR `pnpm test`. Een draaiende `wrangler dev` maakt de gate ROOD op RUNNER-niveau — `EBUSY` op de tijdelijke miniflare-mappen, want `@cloudflare/vitest-pool-workers` gebruikt diezelfde mappen. Dat leest als een kapotte suite terwijl er niets kapot is: op 6 augustus 2026 gaf hij 1 gefaalde test bij 49 van de 75 bestanden en 813 tests, en na het stoppen van de server twee keer achter elkaar 959 van de 959. Elke ronde die de shot-harness draait loopt hier tegenaan, want die eist juist dat beide servers draaien. Kwam binnen als CC-vondst.
 
@@ -964,3 +990,7 @@ Volg de FOCUS uit het bovenste STAND-blok.
 - 2026-08-07 — regel toegevoegd in *Recon en bewijslast*: een premisse over wat een eerdere bouw achterlaat toetst de VOLGORDE van de lussen en niet alleen hun bestaan. Aanleiding: de wis-lus van punt 36 draait vóór de bewijsweken-lus, dus de verwachting "nul terugblik-blokken" gaf 88 van de 96 — hij stond gelukkig als verwachting met stop-conditie en niet als acceptatie-eis.
 - 2026-08-07 — regel toegevoegd in *Recon en bewijslast*: de noemer van een per-plek-eis is het aantal plekken dat de eis KAN raken. Aanleiding: `v7` las als "bewogen 8 van 13" en dus niet-gehaald, terwijl vijf van die shots extra routes zijn die het blok-terugblik-blok niet tonen.
 - 2026-08-07 — twee lessen toegevoegd in *Recon en bewijslast* en één bestaande aangevuld, alle drie uit de punt-16-ronde. (1) Inert bij het ingestelde doel is geen grond om een BOUW uit te stellen: dat stond al onder *Prod en veiligheid* voor de deploy en geldt net zo goed voor de volgorde, en het verbod op vooruit-bedrading pleit ervoor een guard SAMEN met wat hij bewaakt te bouwen — niet ervoor beide uit te stellen. Aanleiding: punt 16 werd tot februari 2027 geparkeerd op precies die twee gronden, de derde keer na punt 11 en punt 13 fase B; Daan wees het patroon af. De bouwvolgorde is daarom vastgelegd in `docs/ROADMAP.md` onder *De volgorde*, LOS van de nummering, met een ronde per punt en een verdict-met-getal als een punt niet sluit; de FOCUS-regel van een close-out wijst daarnaar. (2) Een genummerd blok zegt zelf of het een commit-punt is, en de chat leidt de uitvoeringsstand nooit af uit een ARTEFACT. Aanleiding: Blok 1 van deze close-out eindigde zonder die slotregel, CC committe terecht, en de chat concludeerde uit de bestandslijst dat er bestanden waren overgeslagen terwijl Blok 2 nog niet gedraaid was. (3) De grep-vlaggen-regel geldt óók voor een grep die bepaalt WAT er wordt aangepast: hoofdlettergevoelig gaf "de nummering is de bouwvolgorde" 1 treffer, hoofdletterongevoelig 2, en het prompt droeg daardoor maar één omzetting op.
+- 2026-08-07 — regel toegevoegd in *Vorm van een CC-prompt*: een blok met een STOP-conditie is een BESLISMOMENT en geen lengte-split, dus de latere blokken worden pas geschreven als het rapport binnen is. Het verschil met de bestaande split-regel zit erin dat een later blok daar leunt op wat een eerder blok ZETTE, en hier op wat het VOND. Aanleiding: in de punt-37-ronde zijn blok 2 en 3 vooruit geschreven terwijl blok 1 drie uitkomsten kon dragen die ze zouden omgooien — een afwijkende premisse, een ijkrun die het eind niet haalt, en een grote ruisvloer; Daan wees het aan en de twee blokken zijn ingetrokken.
+- 2026-08-07 — regel toegevoegd in *Recon en bewijslast*: een vergelijker die nooit is aangetoond een verschil te KUNNEN melden, certificeert geen gelijkheid — ijk hem in twee richtingen, met hetzelfde script dat de uitslag levert. Aanleiding: "nul bewegende shots" werd pas een uitspraak nadat `out/v2` tegen `out-vorige/v4` 0 van de 8 identiek gaf en `out/v2` tegen zichzelf 8 van de 8. Ligt als laag bovenop de bestaande regel dat een zelf-schrijvende harness op twee gelijke runs wordt geijkt: die ijkt de HARNESS, deze de VERGELIJKER.
+- 2026-08-07 — regel toegevoegd in *Recon en bewijslast*: één conditie kan meerdere foutvormen dragen, dus een poort hoort op de plek die ze allemaal ziet en niet op de vorm die je toevallig in het veld zag. Aanleiding: punt 37 noemde `still loading after settle`, terwijl dezelfde conditie gereproduceerd `page.goto: net::ERR_CONNECTION_REFUSED` en `page.waitForSelector: Timeout 60000ms exceeded` gaf — een poort binnen `settle()` had er twee van de drie gemist. Tweede helft: een NETTE stop reproduceert de CONDITIE en niet de OORZAAK, dus zo'n meting is geen bewijs over het stille sterven zelf.
+- 2026-08-07 — regel toegevoegd in *Gate*: het aantal lint-waarschuwingen is ook een vloer en hoort in het STAND-blok. `pnpm lint` geeft exit 0 zolang het bij waarschuwingen blijft, dus een stijging passeert de gate ongezien en moet met de hand tegen de vorige ronde gelegd. Aanleiding: een eerste bouwversie van punt 37 gaf een 21e waarschuwing (`useOptionalChain`) op een vloer van 20, bij een groene gate; CC ving het en werkte hem weg vóór de meting.
