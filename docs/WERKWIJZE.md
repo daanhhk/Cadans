@@ -660,6 +660,21 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   aantal herhalingen: omdraaien gaf 77 van de 95 met 16 bewegende shots. Zelfde familie als "een
   nieuw vangnet moet aantoonbaar ROOD zijn zonder de fix", nu op een toets die uit een GEPIND
   DOCUMENT komt in plaats van uit de eigen bouw — en juist daar wordt hij niet meer nagelopen.
+- **Een premisse over wat een eerdere bouw ACHTERLAAT, toetst de VOLGORDE van de lussen en niet
+  alleen hun bestaan.** Aanleiding: de wis-lus van punt 36 draait VÓÓR de bewijsweken-lus, dus die
+  laatste schrijft de weekplan-rijen daarna gewoon terug. De verwachting "nul terugblik-blokken in
+  de shots" gaf 88 van de 96. Zelfde familie als "een premisse over de staat van de schijf kan
+  binnen je EIGEN prompt verouderen", nu op de volgorde binnen één bestand in plaats van op de
+  tijd. EN DE TWEEDE HELFT IS DE REDDING: die verwachting stond als VERWACHTING met een
+  stop-conditie en niet als acceptatie-eis, dus een foute voorspelling leverde een MEETING op in
+  plaats van een gate op iets dat nooit fout was. Schrijf een voorspelling dus als verwachting,
+  niet als eis, zolang je hem niet hebt gemeten.
+- **De noemer van een PER-PLEK-eis is het aantal plekken dat de eis KAN raken.** Aanleiding: het
+  scenario `v7` las als "bewogen 8 van 13" en dus niet-gehaald, terwijl vijf van die dertien shots
+  extra routes zijn — Niveau, Activiteiten, Instellingen, Weekplanner en Events — die het
+  blok-terugblik-blok per constructie niet tonen en dus terecht stilstaan. De eis was wél gehaald;
+  de noemer was fout. Zelfde familie als "een uitslag noemt teller, noemer en uitsluiting met
+  reden", nu op de EIS in plaats van op de uitslag.
 
 ## Vorm van een CC-prompt
 
@@ -917,3 +932,5 @@ Volg de FOCUS uit het bovenste STAND-blok.
 - 2026-08-05 — regel toegevoegd in *Recon en bewijslast*: een premisse over de staat van de schijf kan binnen je eigen prompt verouderen, dus leid hem af op het moment van toetsen. Aanleiding: het bouw-prompt van punt 31 nam aan dat `tools/shots/out` de recon-uitvoer droeg, terwijl de rood-toets-runs uit het eerste blok van datzelfde prompt die map al twee keer hadden gewist.
 - 2026-08-06 — vier lessen toegevoegd in *Recon en bewijslast*, alle vier uit de punt-36-meetreeks: herhaal op de as waarop het verschijnsel leeft; een A/B-meting moet aan weerszijden van de race liggen; een wachtlus ankert op het venster ná zijn markering; en fixtures die een opslagsleutel delen meten elkaar. Aanleiding: twee chat-zijdige instrumentfouten (het schietmoment lag 1723 tot 2825 ms ná de sync, en de herhaling zette de scenario-as vast) plus de vondst dat 33 weekplan-schrijfacties op 7 unieke sleutels landen.
 - 2026-08-06 — drie correcties uit de close-out van punt 36: `git diff --stat` krijgt TWEE refs (`HEAD~1 HEAD`), want de één-ref-vorm vergelijkt met de werkboom en liegt zodra die vuil is; de dev-servers gaan UIT vóór `pnpm test` wegens `EBUSY` op de gedeelde miniflare-mappen; en de gate staat vóór de commit in de stap-volgorde, zonder invulplek die van een latere stap afhangt.
+- 2026-08-07 — regel toegevoegd in *Recon en bewijslast*: een premisse over wat een eerdere bouw achterlaat toetst de VOLGORDE van de lussen en niet alleen hun bestaan. Aanleiding: de wis-lus van punt 36 draait vóór de bewijsweken-lus, dus de verwachting "nul terugblik-blokken" gaf 88 van de 96 — hij stond gelukkig als verwachting met stop-conditie en niet als acceptatie-eis.
+- 2026-08-07 — regel toegevoegd in *Recon en bewijslast*: de noemer van een per-plek-eis is het aantal plekken dat de eis KAN raken. Aanleiding: `v7` las als "bewogen 8 van 13" en dus niet-gehaald, terwijl vijf van die shots extra routes zijn die het blok-terugblik-blok niet tonen.

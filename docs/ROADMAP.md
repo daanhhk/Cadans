@@ -869,7 +869,7 @@ punten staat onder *Gesloten — vindplaats*.
     er 0 van 28 en met de term 28 van 28. Op de WEEKSTEM is die tak inert (24 blijft 24), op het
     DAGBLOK niet (8 cellen). Dat is GEMETEN en geen gat — zoek er geen rood-test bij die niet
     bestaat.
-28. **Een doelwissel herstart de cyclus niet** — open · CLIENT. GELEZEN: `doel` en `doelStart`
+28. **Een doelwissel herstart de cyclus niet** — af · CLIENT. GELEZEN: `doel` en `doelStart`
     zijn twee LOSSE velden in Instellingen (`apps/web/src/pages/Instellingen.tsx:713`), en
     `doelStart` heeft precies één schrijver — `apps/web/src/lib/settings.ts:95`. Er is nergens
     code die de een aan de ander koppelt.
@@ -885,6 +885,35 @@ punten staat onder *Gesloten — vindplaats*.
     stil terugzetten naar Base. Vraagt dus een eigen rood-test op precies dat geval.
     PUNT 12 LOST DIT VOOR ZIJN EIGEN JA-TIK AL OP en wacht hier niet op; dit punt dekt de
     HANDMATIGE doelwissel in Instellingen.
+    AF op `6197d4bc7b45da0bb109038deb9afbfeb44b301c`, met het bouwdoc op `91e6597`
+    (`docs/PUNT28-BOUWDOC.md`), en LIVE. Twee termen, allebei CLIENT.
+    TERM 1 — DE KOPPELING. `blokStartBijDoel` in `apps/web/src/lib/settings.ts` is puur en zonder
+    ambient klok: bij een wissel op maandag, dinsdag of woensdag wordt de blok-start de maandag
+    van DIE week, anders de eerstvolgende maandag. Beide doelen gaan eerst door `normalizeDoel_`,
+    zodat een legacy-waarde die op hetzelfde canonieke doel normaliseert GEEN wissel is. Gelijk
+    doel geeft de geladen datum onveranderd terug, dus terugwisselen herstelt de oude datum. De
+    weekdag-grens draagt HERKOMST BELEID en geen geijkte drempel: er staat geen doelwissel in de
+    historie, dus er is geen reeks om op te bemonsteren.
+    TERM 2 — DE POORT. `blokReviewVenster` geeft in de afgerond-tak `null` zodra het beoordeelde
+    blok begint vóór de weekmaandag van `doelStart`. Zonder die poort zet de vorige configuratie
+    via `dosisTredeVoorstel` de dosis van de nieuwe. De lopend-tak is ONGEMOEID.
+    DE LETTERLIJKE OPREKKING IS GEMETEN EN AFGEWEZEN. Met `doelStart` op de wisseldag zelf lezen
+    twee opeenvolgende weekmaandagen allebei blokweek 1 — de gewenste oprekking — maar kantelt
+    `computeMacroPhase` MIDDEN in de week voor elke aanroeper die de DAG meegeeft, en draagt één
+    blokweek dan twee verschillende blok-starts; die datum is de sleutel waaronder de
+    blokgrens-kaarten hun antwoord wegschrijven. Maandag-uitgelijnd geeft dezelfde oprekking via
+    de bestaande ondergrens-klem, zonder die twee gebreken.
+    DE PREMISSE IS ONDERWEG GECORRIGEERD: het uitvoerings-oordeel was NIET doel-breed besmet.
+    Sinds punt 17 wordt een opbouwweek tegen het BEWAARDE PLAN van die week beoordeeld, dus een
+    hybride wisselweek wordt tegen zijn eigen hybride plan gelegd. Wat een wissel wél kapotmaakte
+    is de FASE en de mesoweek, en daar zit M49 op.
+    ROOD PER TERM: de vergelijking op de RAUWE string laat precies de twee legacy-asserties
+    vallen; de poort weghalen laat precies de venster-assertie vallen.
+    GEMETEN MET DE CAMERA: alle negen blokweek-1-scenario's bewegen en verliezen hun
+    blok-terugblik (8 naar 0 per scenario), terwijl `v7-blokweek4` byte-identiek blijft met de
+    terugblik op 8 — en `klim-weekstem`, dat dezelfde afgerond-tak draait maar waar het blok
+    precies OP `doelStart` begint, houdt hem eveneens op 8. Die laatste is de negatieve controle
+    die aantoont dat de poort niet alles wegsnijdt.
 29. **De shot-harness controleert de draaiende dev-worker niet** — af · TOOLING. De sweep
     schiet blind: hij toetst nergens of de `wrangler dev` die op 8787 luistert bij de HUIDIGE
     repo hoort.
@@ -1100,6 +1129,28 @@ punten staat onder *Gesloten — vindplaats*.
     DE OPENSTAANDE VRAAG IS ÉÉN REGEL: haalt de harness met deze fix erin een run af? Dat antwoord
     komt GRATIS in de eerstvolgende bouwronde die de harness draait. Blijkt hij structureel om te
     vallen, dan is de commit één revert.
+    ANTWOORD PER 07-08-2026, uit de punt-28-ronde. DE HARNESS HAALT WÉL VOLLEDIGE RUNS AF: vier
+    sweeps met exit 0, in twee paren achter elkaar (148 s en 147 s, later 131 s en 131 s). De
+    onverklaarde uitval uit dit punt is dus NIET structureel, en de commit hoeft niet terug.
+    MAAR DE VARIANTIE IS ER NIET MEE WEG, en dat is de reden dat dit punt open blijft: het
+    ijkpaar van twee opeenvolgende sweeps op ONGEWIJZIGDE code gaf 85 van de 95 identiek, met
+    ACHT afwijkende shots — alle acht in `klim-weekstem`. De fix-richting van dit punt is daarmee
+    NIET bevestigd als afdoende: het wissen van het leesvenster nam de kruisbesmetting weg die we
+    konden aanwijzen, maar er beweegt nog iets anders.
+37. **De vite-dev-server sterft stil tijdens een sweep** — open · TOOLING. GEMETEN: VIJF keer in
+    deze reeks valt de harness om terwijl poort 5173 daarna DOWN is en 8787 gewoon 200 geeft. Het
+    logboek eindigt op de startbanner zonder foutregel; de exitcode is 127 of 1.
+    DE HARNESS LEEST DAT ALS EEN INHOUDELIJKE UITVAL, EN DAT IS HET NIET. De punt-24-poort meldt
+    `still loading after settle`, wat klopt — de pagina laadt inderdaad niet meer — maar de
+    OORZAAK staat buiten de app. Elke ronde kost dat een herstart en een herhaalde sweep, en het
+    vervuilt de diagnose van punt 36: vier van de vijf uitvallen zaten in de ZAAI-fase, wat lang
+    op een trage zaai-load leek tot de settle-meting dat weerlegde (43 laadbeurten, mediaan
+    1558 ms, hoogste 8139 ms, nul boven 15000 ms).
+    DEZE RONDE VOOR HET EERST OP EEN SHOT-LABEL: `v4 weekscherm` in plaats van een bewijsweek.
+    Vijf keer is een patroon en geen incident.
+    RICHTING, niet vastgelegd: de harness kan vóór elke sweep — en eventueel per scenario — de
+    vite-poort proberen en met een EIGEN melding stoppen, zodat een dode dev-server niet als een
+    ladende pagina leest. De oorzaak van het sterven zelf is daarmee niet weggenomen.
 
 ## De tijdslijn
 
@@ -1333,6 +1384,12 @@ niet; hij verliest niet. Een punt gaat eruit zodra een STAP het opneemt — niet
 
 ### DATA
 
+- DE DOSIS-TREDE VERGELIJKT OP DE RAUWE DOEL-STRING. `apps/web/src/lib/schema.ts:1411` toetst
+  `dosisTredeRow.doel === (settings?.doel ?? null)` zonder `normalizeDoel_` ertussen. Een
+  bewaarde `"Beklimmingen"` naast een ingestelde `"Lange beklimmingen"` leest daar dus als een
+  ANDER doel, waarna de trede stil op 0 valt — precies de valkuil die punt 28 in `settings.ts`
+  wél afvangt. Vindplaats uit de punt-28-ronde, bewust niet meegebouwd: het is een tweede defect
+  met een eigen rood-meting.
 - GEMENGDE WEGING, één overgangsweek: bewaarde weekplannen van verstreken dagen houden hun oude
   getal; `workoutFromFrozenEntry` leest opgeslagen TSS verbatim. Precies zoals bij de vorige
   ijking.
