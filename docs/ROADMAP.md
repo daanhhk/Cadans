@@ -1089,7 +1089,7 @@ punten staat onder *Gesloten — vindplaats*.
     GAAT NA PUNT 17 — zonder een eerlijk uitvoerings-oordeel heeft een rijkere rit-beoordeling
     niets om op te landen.
 
-33. **De norm-vergelijking staat op drie plekken en de derde heeft geen vangnet** — open ·
+33. **De norm-vergelijking staat op drie plekken en de derde heeft geen vangnet** — af ·
     CLIENT plus TOOLING. Sinds punt 17 leest één en dezelfde regel — rond de geleverde minuten
     af en leg ze langs de getoonde norm — op DRIE plekken: `opNormPerZone` en `zoneOpNorm_` in
     `apps/web/src/lib/blok.ts`, plus TWEE inline kleurcondities in
@@ -1107,6 +1107,33 @@ punten staat onder *Gesloten — vindplaats*.
     voor de client — een tweede vitest-project met jsdom — zodat kleurlogica überhaupt te
     asserteren is. Term (ii) is breder dan dit punt en betaalt zich terug bij elke volgende
     kaart-wijziging.
+    AF op `e55637a` (de render-testlaag) en `8288d2b` (de gedeelde functie), live op Worker
+    Version `b8c6b7fa-e2ab-441f-b4bf-3d1d17a1eec7`.
+    DE VOLGORDE VAN DIT PUNT IS OMGEKEERD, en dat is de dragende keuze: eerst term (ii), dan
+    term (i). Een vangnet dat pas NA de consolidatie gebouwd wordt is per constructie niet meer
+    PER PLEK rood te meten — er is dan nog maar één plek. Met de omgekeerde volgorde kon dat wél:
+    R1 op `BlokReviewCard.tsx:179` liet A1 vallen met A2, A3 en A4 overeind, R2 op `:276` liet A3
+    vallen met de rest overeind. Andersom was dat bewijs onbereikbaar geweest.
+    TERM (i): `haaltNorm(geleverd, norm)` in `apps/web/src/lib/blok.ts` is de ENIGE plek waar de
+    vergelijking valt — vijf aanroepen daar (de drie zones van `opNormPerZone`, `totaalOpNorm` en
+    `zoneOpNorm_`) en twee in `apps/web/src/components/schema/BlokReviewCard.tsx`. GREPS: `Math.round`
+    gevolgd door `>=` in `blok.ts` van 5 naar 1, `Math.round` in de kaart van 4 naar 2 — en die twee
+    zijn WEERGAVE en horen te blijven. De punt-17-onderbouwing hing aan géén enkele functie en
+    hangt nu aan deze.
+    TERM (ii): project `web-render` in `apps/web/vitest.render.config.ts`, environment jsdom,
+    include `src/**/*.test.tsx`, met de dekking in
+    `apps/web/src/components/schema/BlokReviewCard.test.tsx`. Enige nieuwe dependency: `jsdom`.
+    GEEN `@testing-library` en GEEN `@vitejs/plugin-react` — `createRoot` plus `act` uit react
+    volstaan en de JSX-transform had geen plugin nodig. De node-suite pakt het `.tsx` niet op: het
+    totaal steeg met precies 4 en niet met 8.
+    ROOD NA DE CONSOLIDATIE, twee mutaties op `haaltNorm`: `>=` naar `>` liet 17 tests over 5
+    bestanden vallen, de ronding weghalen 13 over 4 — en BEIDE keren viel zowel de pure laag
+    (`blok`, `punt15`, `punt17`, `zonepoort`) als de render-laag (A1 en A3). De kaart leest
+    aantoonbaar dezelfde functie als het oordeel.
+    BEGRENZING: `git diff --stat HEAD~1 HEAD` toont exact twee bestanden, 20 bij en 11 weg, en
+    GEEN enkel testbestand — een refactor die zijn tests moet bijstellen is geen refactor. Op
+    prod voor en na: 9 van de 16 identiek, 16 vergeleken, 0 uitgesloten, en de zeven bewegende
+    shots verschillen uitsluitend op `Laatst gesynct`.
 
 34. **De effect-referent kent het doel niet** — open · CLIENT plus norm. GEGREPT:
     `apps/web/src/lib/effect.ts` geeft op case-SENSITIVE "doel" 0 treffers en
@@ -1444,10 +1471,11 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
    post-settle race is uitgesloten op 0 na-settle-requests over 50 zaai-loads, en de
    restvariantie vuurt in twee van vier sessies — telkens één scenario, alle acht shots, met
    verschillende innerText. Geen derde poging.
-4. **33** — de norm-vergelijking naar EEN gedeelde functie, plus een render-testlaag. Die
+4. **33** — af · de norm-vergelijking naar EEN gedeelde functie, plus een render-testlaag. Die
    laag BESTAAT NIET: `apps/web/vitest.config.ts` draait op `environment: "node"`, er is geen
    `.test.tsx` en geen jsdom. Dit is toevoegen, niet consolideren. Betaalt zich terug bij elke
-   kaart-ronde hierna.
+   kaart-ronde hierna. Gebouwd 07-08-2026 op `e55637a` en `8288d2b`, in OMGEKEERDE volgorde —
+   eerst het vangnet, dan de consolidatie, want per plek rood meten kan daarna niet meer.
 5. **21** — eerst de BEREIKBAARHEID meten. `buildWorkoutDescription_` wordt alleen bereikt als
    zowel de ZWO- als de DSL-tak faalt. Sluit vermoedelijk zonder bouw.
 6. **19** — het dagtype weekend is een kalendernaam. Botst met `DOELEN-SPEC` §2A en raakt elk

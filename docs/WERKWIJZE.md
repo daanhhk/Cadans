@@ -201,6 +201,15 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   gooit ongecommit werk in die bestanden weg. Aanleiding: bij punt 10 fase B verdween zo de nog
   niet gecommitte bouw en moesten zes bestanden opnieuw bewerkt worden. Aanvulling op de
   warmloop-regel: eerst COMMITTEN of stashen, dan pas de voor/na-meting draaien.
+  TWEEDE AANLEIDING, EN DIE VERBREEDT DE REGEL NAAR ELK GEBRUIK VAN `git checkout <bestand>`:
+  dat commando herstelt naar HEAD, NIET naar "de staat van vóór je patch". Draagt de werkboom
+  nog ongecommitte bouw, dan wist het die bouw mee. Aanleiding: het bouw-prompt van punt 33
+  schreef voor een rood-mutatie zo terug te draaien, terwijl datzelfde blok pas aan het EIND
+  committeert — bij M1 verdween daarmee de hele gedeelde functie, en CC bouwde hem opnieuw op.
+  Dezelfde instructie werkte in blok 1 wél, want dáár was het gepatchte bestand op alles behalve
+  de patch gelijk aan HEAD, en juist dat verschil maakt hem verraderlijk: hij werkt precies zo
+  lang tot hij dat niet meer doet. DE TOETS VOORAF is één vraag — is dit bestand op alles NA de
+  patch gelijk aan HEAD? Zo niet, draai de mutatie GERICHT terug in plaats van met git.
 - **Twee kaarten die hetzelfde signaal lezen, toets je op wat ze SAMEN op één scherm zeggen.** Beide
   waren apart correct en apart getest; het defect bestond alleen in het PAAR. Het werd pas beslisbaar
   toen de twee zinnen naast elkaar stonden: de terugblik zei "je trainde dit blok genoeg, maar niet
@@ -719,6 +728,14 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   constructie kan slagen, controleert niets", nu op het INSTRUMENT in plaats van op de eis. Dit
   is een LAAG BOVENOP "een harness die zelf schrijft, verzadigt zijn eigen invoer": die regel
   ijkt de HARNESS op twee gelijke runs, deze ijkt de VERGELIJKER die dat oordeel velt.
+  EN DE TWEEDE HELFT STAAT OP DE PADEN: de VERSCHIL-richting van zo'n ijking moet op bomen
+  liggen die DEZELFDE bestandsnamen dragen, anders vergelijkt hij geen enkele byte. GEMETEN:
+  `out-prod` tegen `out` gaf 0 van de 0 vergeleken, met alleen-links 16 en alleen-rechts 96 —
+  prod schrijft onder `prod/` en lokaal onder `v7/`, dus er viel niets te vergelijken en er was
+  nul bewijs. Met `out-prod/prod` tegen `out/v7` gaf dezelfde vergelijker 4 van de 16 identiek
+  en 12 bewegend. Een ijking zonder overlappende paden is precies de LEGE CONTROLE die deze
+  regel moest uitsluiten: hij meldt keurig verschillen, maar geen enkel byte-verschil. Kwam
+  binnen als CC-afwijking bij de prod-begrenzing van punt 33.
 - **ÉÉN CONDITIE KAN MEERDERE FOUTVORMEN DRAGEN.** Plaats een poort op de plek die ze allemaal
   ziet, nooit op de vorm die je toevallig in het veld zag. Aanleiding: punt 37 noemde één
   foutvorm, `still loading after settle`; gereproduceerd gaf dezelfde conditie
@@ -744,6 +761,14 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   Dat sloot meteen een gat dat de oorspronkelijke assertie liet staan: een sheet die opent maar
   waarvan de fetch faalt, haalde die assertie en had een foutkaart als bewijs gefotografeerd.
   Kwam binnen als CC-stop.
+  TWEEDE AANLEIDING, en die ligt in de DOM in plaats van in de codebase. Een render-assertie
+  selecteerde op `textContent`, en in JSX draagt een WRAPPER-element dezelfde `textContent` als
+  het BLAD-element erbinnen. Alleen het blad draagt de inline stijl, en `querySelectorAll` geeft
+  documentvolgorde, dus de eerste treffer is de wrapper met een LEGE kleur: de assertie slaagde
+  om de verkeerde reden en pas de tegenkant viel. De reparatie is dezelfde als de eerste keer —
+  selecteer het BLAD en eis dat er precies ÉÉN is. En de vindplaats is de eigenlijke les: de
+  chat had die JSX gelezen en de wrapper letterlijk zien staan; de kwalificatie viel opnieuw weg
+  tussen LEZEN en SCHRIJVEN. Twee keer dezelfde route, twee keer op een ander niveau.
 - **Wie een tak van MELDEN naar STOPPEN tilt, ruimt de meld-machinerie op.** Een administratie
   die achter een conditie staat die voortaan per constructie onwaar is, is dode code — en ze
   leest als een levende mogelijkheid. Aanleiding: met de harde stop op een gekapte shot werden
@@ -768,6 +793,14 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
   runs, 0 `PUT /api/weekplan/`, 0 afgebroken, met een sluitende identiteit aan beide kanten. Het
   venster is per constructie leeg; de race bestond niet. Zelfde familie als "draai het", nu op
   een mechanisme dat plausibel is juist ómdat alle onderdelen er zijn.
+- **`pnpm --filter <pakket> add -D <dep>` KAN DE WORKSPACE-LINKS BREKEN.** GEMETEN bij punt 33:
+  na het toevoegen van `jsdom` aan `apps/web` was `@cloudflare/vitest-pool-workers` in
+  `workers/api` onvindbaar en kon vitest GEEN ENKEL project meer initialiseren — de fout leest
+  als een kapotte config terwijl er niets aan een config veranderd is. Eén kale `pnpm install`
+  herstelt het. REKEN ER OOK OP DAT DE LOCKFILE-DIFF GROTER IS DAN DE ENE DEPENDENCY: 327
+  regels voor jsdom alleen. Meld dat in het rapport in plaats van het als afwijking te
+  behandelen of de diff te willen inperken — de lockfile hoort de werkelijke resolutie te
+  dragen, niet een opgeschoonde versie ervan.
 
 ## Vorm van een CC-prompt
 
@@ -1053,3 +1086,7 @@ Volg de FOCUS uit het bovenste STAND-blok.
 - 2026-08-07 — de TREFKANS-zin onder *Vorm van een CC-prompt* vervangen: de chat noemt voortaan WELKE controles hij gedraaid heeft en waarop, niet een score. Aanleiding: er stond "vijf van vijf" terwijl controle 1 voor één vindplaats-claim niet gedraaid was — dan is ook de rapportage over het prompt onbetrouwbaar, en dat is de duurdere van de twee.
 - 2026-08-07 — regel toegevoegd in *Vorm van een CC-prompt*: de bron-uitlezing hoort in de EERSTE versie van een prompt en niet in de overtypronde. Aanleiding: het meet-prompt van punt 36 ronde 3 kreeg pas bij het overtypen drie correcties, geen ervan uit het CC-rapport en alle drie uit een herlezing van `tools/shots/shot.mjs` die vooraf had moeten gebeuren.
 - 2026-08-07 — regel toegevoegd in *Recon en bewijslast*: de ingrediënten van een verschijnsel zijn niet het verschijnsel. Aanleiding: bij punt 36 vond lezen een fire-and-forget schrijfactie met een navigatie erachter en concludeerde "race", terwijl meten 0 na-settle-requests gaf over 25 zaai-loads maal twee runs, met sluitende identiteit.
+- 2026-08-07 — de uniciteits-regel in *Recon en bewijslast* kreeg een TWEEDE aanleiding, nu in de DOM: een render-assertie op `textContent` trof de WRAPPER in plaats van het blad-element, en alleen het blad draagt de inline stijl — de assertie slaagde om de verkeerde reden en pas de tegenkant viel. Zelfde route als de eerste keer: de kwalificatie viel weg tussen lezen en schrijven.
+- 2026-08-07 — de regel *Meet de VOOR-staat alleen vanaf een SCHONE werkboom* verbreed naar elk gebruik van `git checkout <bestand>`: dat herstelt naar HEAD en niet naar de staat van vóór je patch. Aanleiding: het bouw-prompt van punt 33 schreef zo een rood-mutatie terug te draaien terwijl het blok pas aan het eind committeert, waardoor bij M1 de hele gedeelde functie verdween.
+- 2026-08-07 — de vergelijker-regel kreeg zijn TWEEDE HELFT, op de PADEN: de verschil-richting van een ijking moet op bomen liggen met dezelfde bestandsnamen. Aanleiding: `out-prod` tegen `out` gaf 0 van de 0 vergeleken — nul byte-vergelijkingen en dus nul bewijs — waar `out-prod/prod` tegen `out/v7` 4 van de 16 identiek gaf.
+- 2026-08-07 — regel toegevoegd in *Recon en bewijslast*: `pnpm --filter <pakket> add -D <dep>` kan de workspace-links breken, en de lockfile-diff is groter dan de ene dependency. Aanleiding: na het toevoegen van jsdom was `@cloudflare/vitest-pool-workers` onvindbaar en kon vitest geen project initialiseren; één kale `pnpm install` herstelde het, met 327 lockfile-regels voor jsdom alleen.
