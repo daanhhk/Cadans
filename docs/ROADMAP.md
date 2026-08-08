@@ -1438,6 +1438,35 @@ punten staat onder *Gesloten — vindplaats*.
     bucket valt. Dat is de dragende beperking en die vraagt een eigen besluit.
     NORM-NEUTRAAL: er verandert geen training, alleen de zichtbaarheid. BLOKKEERT PUNT 39 EN
     PUNT 41.
+    GEMETEN 08-08-2026, volledige uitwerking in `docs/PUNT40-RECON.md`. Meetruimte 140 cellen, 640
+    sessies, 38 distincte %FTP-banden, 39190 blokminuten; instrument geijkt op 21 van de 21 gepinde
+    waarden van de weekvorm-as.
+    DE KNIP LIGT OP 95 EN NIET OP 100, en dat weerlegt de LT2-formulering hierboven als KNIP-plek.
+    Op **95** loopt NUL band dwars — 1824 minuten onder, 4578 boven. Op **100** worden **2742 van
+    de 6402** nominale drempelminuten doorgesneden, **43 procent**, midden door `95-102` (2646 min)
+    en `100-108` (630 min). Als DIAGNOSE blijft de formulering staan: het label loopt inderdaad
+    over de grens heen.
+    HET PLAN LAAT DRIE SCHONE NADEN: **81-88, 94-95, 109-112**. Het zone-raster knipt op 55/75/90/105
+    en van die vier vallen **90 en 105 er allebei buiten** — 90 snijdt door `88-92`, `88-93`, `89-92`
+    en `89-93`; 105 door `100-108` en `103-108`. De misalignment is dus een eigenschap van het paar
+    raster-en-bibliotheek, niet van één sjabloon.
+    TWEE LEKKEN DIE DIT PUNT NIET NOEMDE. Sweetspot lekt óók naar `tempo` — de korte sjablonen
+    dragen band `88-92`, midden 90 — en de splitsing is DUUR-gecorreleerd, dus juist bij weinig uren
+    valt de prikkel buiten `drempel`. En er bestaat GEEN tempo-intent: **2172 van de 2280** nominale
+    tempo-minuten komen uit `88-92` en de rest uit `86-86`, beide uitsluitend uit
+    sweetspot-archetypes. `GOAL_KWALITEIT_INTENTS_` kent drempel, sweetspot en vo2 — geen tempo.
+    HET LIVE GEVOLG ZIT IN DE POORT `werkzoneLabelsVan_` (`apps/web/src/lib/zonelabels.ts:27`), met
+    drie consumenten: de weekstem (`weektekort.ts:114`), de blok-terugblik (`blok.ts:413`) en de
+    sleutel-inhaal (`sleutelinhaal.ts:44`). Over de 90 cellen met sweetspot-werk labelen er **48**
+    het uitsluitend `tempo`, **33** uitsluitend `drempel` en **9** dragen beide in dezelfde week —
+    dezelfde intent, drie poort-uitkomsten, bepaald door welk sjabloon de rotatie koos. De
+    minuten-kant lijdt hier NIET aan: `planZone5_` splitst proportioneel.
+    TWEE CORRECTIES OP DIT PUNT ZELF. (1) Er is GEEN ENGINE-AUTORISATIE NODIG: `pctLo` en `pctHi`
+    staan al op elk blok en de poort woont in `apps/web/src/lib`. De classificatie ENGINE hierboven
+    is met deze meting onjuist geworden. (2) FASE B IS NIET NORM-NEUTRAAL — de poort verplaatsen
+    verandert wélke zones beoordeeld worden en kan een oordeel omkeren. Een karakter-as die de
+    poort niet raakt zou vooruit-bedrading zijn, want meetgat en poort-defect hebben dezelfde
+    oorzaak.
 41. **De weekmix polariseert niet bij hoger volume** — open · norm, TE METEN.
     GEMETEN, maar op ÉÉN AS — doel FTP, macrofase Base, mesoweek 1, lege `activities` en
     `weekplans` — dus dit is een MEETOPDRACHT en geen bevinding. Seiler-3-zone op het middelpunt
