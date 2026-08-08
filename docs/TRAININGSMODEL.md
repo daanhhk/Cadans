@@ -462,3 +462,5 @@ een meso-factor plus een fase-offset. Dat schendt de karakter-invariantie: in de
 verschuift elk blok een zone omhoog (endurance→tempo, sweetspot→threshold). Geërfd uit de
 referentie-implementatie. De duur-schaling van de lange rit is dosis-gedreven en correct; de
 pct-schaling is de te verwijderen hendel.
+
+<!-- EINDE docs/TRAININGSMODEL.md -->

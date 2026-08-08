@@ -430,3 +430,5 @@ Elke stap eigen bouw, stop-en-verifieer ertussen, gate en CI groen, vloeren niet
 - `DOEL_OPTIONS` en `profileForDoel_` — doel-lijst.
 - `climbTypeWorkout_` en de dode tak in `planner.ts` — klim-splitsing.
 - `packages/engine/src/selftest.test.ts` — asserties bewegen mee, vloer stijgt.
+
+<!-- EINDE docs/DOELEN-SPEC.md -->

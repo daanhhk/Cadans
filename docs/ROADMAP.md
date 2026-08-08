@@ -1338,7 +1338,7 @@ punten staat onder *Gesloten — vindplaats*.
     foutvormen, en een poort BINNEN `settle()` — de voor de hand liggende plek — had er twee van
     de drie gemist. LET OP BIJ HET CITEREN: die reproductie gebruikte een NETTE stop, dus ze
     reproduceert de CONDITIE en niet de OORZAAK.
-38. **De opener-fetch kapt af, en hij meldt het niet** — open · TOOLING plus norm.
+38. **De opener-fetch kapt af, en hij meldt het niet** — af · TOOLING plus norm.
     GEMETEN, twee keer en op twee bestanden: de RAW-fetch van de opener stopt rond **121200
     bytes**. Op 07-08-2026 haalde een chat `HANDOFF.md` binnen tot **121196 van de 610760
     bytes** — **19,8 procent**; 2599 van de 2954 regels kwamen niet aan en het document eindigde
@@ -1367,6 +1367,25 @@ punten staat onder *Gesloten — vindplaats*.
     NIET DOEN: de aanleidingen uit de lessen strippen. Dat scheelt 43009 bytes — 48,6 procent van
     de sectie — maar het zijn 89 losse knipbeslissingen, en de aanleiding draagt vaak juist het
     getal waarop de regel rust. Dat is wél iets inleveren.
+    AF per 08-08-2026, docs-only: geen code, geen engine, geen migratie, geen deploy en geen enkel
+    `wrangler`-commando.
+    DE CAP IS HERMETEN, en het getal week af van gisteren: de chat kreeg `HANDOFF.md` binnen voor
+    **121124 van de 616512 bytes** — 358 van de 2970 regels — en `docs/WERKWIJZE.md` kwam op 118399
+    bytes nog wél volledig binnen. Tegen 121196 op 07-08 betekent dat de grens NIET exact in bytes
+    ligt maar vermoedelijk in TOKENS; elke byte-marge is dus een schatting en geen drempel.
+    *Recon en bewijslast* bleek **90136 van de 118399 bytes, 76,1 procent, 122 bullets**, en is
+    VERBATIM verhuisd naar `docs/WERKWIJZE-LESSEN.md` — de norm zakt daarmee naar circa 31 kB.
+    `HANDOFF.md` is geroteerd op TWAALF STAND-blokken: circa 55 kB blijft staan, circa 562 kB gaat
+    naar `docs/HANDOFF-ARCHIEF.md`, dat de opener niet ophaalt.
+    HET VANGNET IS TWEEDELIG, en dat is de eigenlijke reparatie. TERUGKIJKEND: elk bestand dat de
+    opener ophaalt eindigt op een regel `<!-- EINDE <pad> -->`, en het opener-sjabloon draagt de
+    toets erop — een afgekapte fetch meldt zichzelf niet, een ontbrekende marker wel. VOORUITKIJKEND:
+    elke close-out rapporteert de bytes van die vijf bestanden met de marge tot circa 121000.
+    DE MARKER IS AANTOONBAAR ROOD ZONDER DE INGREEP — de HANDOFF-fetch van deze chat miste hem — maar
+    dat rood komt uit de CHAT-fetch en is door CC niet reproduceerbaar; hij leest van schijf.
+    NIET GEDAAN, met reden. De aanleidingen uit de lessen strippen: 89 losse knipbeslissingen en de
+    aanleiding draagt vaak het getal waarop de regel rust. En `DOELEN-SPEC` §150 aanpassen: die
+    verwijst naar *Recon en bewijslast*, en die KOP blijft in de norm staan, dus de verwijzing klopt.
 
 ## De tijdslijn
 
@@ -1525,11 +1544,14 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
 5. **21** — af, GESLOTEN ZONDER BOUW · de bereikbaarheid is gemeten en de tak vuurt nooit:
    0 van de 15275 sessies bereikt `buildWorkoutDescription_`, en de invoerruimte van de
    parsers telt 7 duur-vormen en 1 vermogensvorm die alle acht parsen. Verdict 07-08-2026.
-5b. **38** — de opener-fetch kapt af en meldt het niet. NAAR VOREN, met reden: de marge op
+5b. **38** — af · de opener-fetch kapt af en meldt het niet. NAAR VOREN, met reden: de marge op
     `docs/WERKWIJZE.md` is circa 2,8 kB en één ronde kostte er 1561, dus binnen één à twee
     rondes verliest de opener stilzwijgend de vijf promptcontroles, de gate en het
     opener-sjabloon. De ingreep is een verbatim verhuizing zonder verlies, plus een
-    byte-rapportage in elke close-out.
+    byte-rapportage in elke close-out. Gebouwd 08-08-2026: lessen naar
+    `docs/WERKWIJZE-LESSEN.md` (vijfde opener-URL), `HANDOFF.md` geroteerd op twaalf blokken naar
+    `docs/HANDOFF-ARCHIEF.md`, en een `<!-- EINDE <pad> -->`-marker op alle vijf de
+    opener-bestanden die het sjabloon zelf toetst.
 6. **19** — het dagtype weekend is een kalendernaam. Botst met `DOELEN-SPEC` §2A en raakt elk
    doel.
 7. **16** — de materialiteitsvloer en de prikkel, in EEN bouw. Zie `docs/PUNT16-RECON.md` §5.
