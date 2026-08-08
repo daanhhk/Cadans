@@ -56,6 +56,17 @@ hier over te schrijven.
   van 2805 is de stub, de twee nieuwe alinea's, de uitgebreide opener en de marker, allemaal in
   datzelfde prompt opgedragen. Geen gevolg, want er hing geen eis aan. Wel de reden dat
   `docs/ROADMAP.md` de GEMETEN getallen draagt en niet de 88553 uit de meting op `e08763c8`.
+- **DE BYTE-BULLET HIERBOVEN MEET `fe817ef` EN NIET DE COMMIT VAN DIT BLOK — precies de fout die de
+  bullet erboven beschrijft, nu op zichzelf.** Deze close-out voegde zelf **1296** bytes toe aan
+  `docs/WERKWIJZE-LESSEN.md` en **1611** aan `HANDOFF.md`. Op `fa6d5be` staat het dus op
+  `docs/WERKWIJZE.md` **31068** (+89932), `docs/WERKWIJZE-LESSEN.md` **92060** (+28940),
+  `docs/TRAININGSMODEL.md` **27779** (+93221), `HANDOFF.md` **56839** (+64161), `docs/DOELEN-SPEC.md`
+  **31808** (+89192) — opener-totaal **239554**, krapste marge de lessen met **28940**, ruwweg
+  negentien rondes. Deze reparatiecommit voegt daar nog aan toe; het exacte getal staat in het
+  CC-rapport, want een STAND-blok wordt geschreven vóór de commit die het bevat en meet daarom per
+  constructie te laag. *Close-out van een chat* is daarop bijgesteld: CC meet NA de commit. De
+  byte-bullet erboven blijft ongewijzigd staan — hij demonstreert waar hij voor waarschuwt. Kwam
+  binnen als CC-afwijking.
 - **NIET GEDAAN, met reden.** De aanleidingen uit de lessen strippen: 89 losse knipbeslissingen, en
   de aanleiding draagt vaak het getal waarop de regel rust. En `docs/DOELEN-SPEC.md` §150 aanpassen:
   de kop *Recon en bewijslast* blijft in de norm staan als doorverwijzing, dus die verwijzing klopt.

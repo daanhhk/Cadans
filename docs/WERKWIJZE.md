@@ -220,6 +220,17 @@ afkap die AL gebeurd is, deze regel ziet hem aankomen. Loopt een bestand binnen 
 grens, dan is de ingreep dezelfde als bij het log en de lessen — verplaats wat alleen achteraf
 verantwoordt, en houd in de fetch wat een chat bij elke start moet lezen.
 
+DIE METING HOORT IN HET CC-RAPPORT EN NIET IN HET STAND-BLOK, en de grond is gemeten. Een STAND-blok
+wordt geschreven VÓÓR de commit die het bevat, dus elk byte-getal erin is per constructie te laag
+met precies wat die close-out zelf nog toevoegt. Bij de close-out van punt 38 was dat 1296 bytes op
+`docs/WERKWIJZE-LESSEN.md` en 1611 op `HANDOFF.md`: het blok noemde 90764 en 55228, terwijl de
+gepushte staat 92060 en 56839 droeg. Zelfde vorm als de `head_sha`-regel bij CI — een controle die
+per constructie scheef kan lopen, controleert niets — en bij een VOORUITKIJKEND vangnet valt die
+scheefte samen met het moment waarop het getal ertoe doet. CC meet dus NA de commit en rapporteert
+het daar; herhaalt een STAND-blok het getal, dan noemt het de commit waarop het gemeten is. Een chat
+die het getal nodig heeft leest het uit zijn eigen read-only kloon op de gepinde hash. Kwam binnen
+als CC-afwijking.
+
 `HANDOFF.md` DRAAGT MAXIMAAL TWAALF STAND-BLOKKEN. Komt er een dertiende bij, dan verhuist het oudste
 in dezelfde close-out verbatim naar `docs/HANDOFF-ARCHIEF.md`, dat de opener niet ophaalt.
 
