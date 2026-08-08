@@ -13,6 +13,73 @@ live tot cutover.
 
 ## Stand
 
+**PUNT 38 IS AF (8 augustus 2026).** De opener-fetch kapt niet meer af, en waar hij dat ooit weer
+doet meldt hij het. Docs-only: geen code, geen engine, geen migratie, geen deploy, en geen enkel
+`wrangler`-commando. Commits: `fe817efb6b1063f8e2b7976c273de767b3b3d3f8` (de verhuizing) plus deze
+close-out. Prod en D1 staan waar het blok hieronder ze noemt; grep die twee daar op in plaats van ze
+hier over te schrijven.
+- **GEEN DEPLOY, EN DAT IS GEEN UITSTEL.** Er is geen letter aan de app veranderd — dit raakt
+  uitsluitend de documenten die een chat bij zijn start ophaalt.
+- **DE CAP IS HERMETEN IN DEZE CHAT, en dat was de opdracht.** De eigen HANDOFF-fetch kwam binnen
+  tot **121124 van de 616512 bytes** — 19,6 procent, **358 van de 2970 regels**, mid-zin, zonder
+  signaal. `docs/WERKWIJZE.md` kwam op **118399 bytes** nog volledig binnen; de staart is
+  byte-vergeleken met schijf. DE GRENS IS GEEN BYTE-GRENS: 07-08 gaf dezelfde cap 121196 op een
+  ander bestand, 08-08 gaf hij 121124. Reken op een TOKEN-grens en behandel elke byte-marge als
+  schatting.
+- **DE VERHUIZING IS BYTE-EXACT BEWEZEN, beide kanten.** sha256 van de lessen-slice
+  `afb4d8b953e65806705d0cabf895b4d1` en van de archief-slice `58b309f0c701180da4237986588bc10f`,
+  identiek voor en na. *Recon en bewijslast* was **90136 van 118399 bytes — 76,1 procent, 122
+  bullets**; `HANDOFF.md` is geroteerd op twaalf STAND-blokken.
+- **BYTES NA DE INGREEP, met marge tot 121000:** `docs/WERKWIJZE.md` **31068** (+89932),
+  `docs/WERKWIJZE-LESSEN.md` **90764** (+30236), `docs/TRAININGSMODEL.md` **27779** (+93221),
+  `HANDOFF.md` **55228** (+65772), `docs/DOELEN-SPEC.md` **31808** (+89192). Opener-totaal 236647
+  bytes over vijf fetches. DE KRAPSTE IS DE LESSEN met 30236: bij circa 1,5 kB per ronde is dat
+  ruwweg twintig rondes, en de byte-regel maakt die aankomst zichtbaar vóór hij er is.
+- **HET VANGNET IS TWEEDELIG, en die tweede helft stond niet in punt 38.** De eind-marker
+  `<!-- EINDE <pad> -->` vangt een afkap die AL gebeurd is en wordt gedetecteerd door de chat die de
+  schade lijdt; de byte-rapportage in elke close-out ziet hem aankomen. De marker is aantoonbaar
+  ROOD zonder de ingreep — de HANDOFF-fetch van deze chat miste hem — maar DAT ROOD KOMT UIT DE
+  CHAT-FETCH EN IS DOOR CC NIET REPRODUCEERBAAR. Dat is een grens op het bewijs, geen omissie.
+- **DE MARKER KOST ONDERHOUD, en dat bleek meteen.** Bij de naadreparatie in `docs/WERKWIJZE.md`
+  belandde de bestaande lege slotregel ná de marker; CC ving en repareerde het. Wie een sectie
+  toevoegt, laat de marker de LAATSTE regel.
+- **DE ACCEPTATIE-EIS BIJ DE ROTATIE WAS ONHAALBAAR ZOALS GEFORMULEERD, en dat is de les van deze
+  ronde.** "Precies één keer" veronderstelt dat de BRON uniek is. `HANDOFF.md` droeg NEGEN distincte
+  regels die er al 2 tot 5 keer stonden — vooral identieke `OPENSTAAND, ONGEWIJZIGD`-bullets — samen
+  23 voorkomens waarvan 14 overtollig, en de strikte toets meldde die 23 als fout. De multiset-toets
+  — de telling per distincte regel blijft gelijk — gaf **0**, op 2601 niet-lege regels waarvan 2587
+  distinct. Bij de lessen-helft maakte het geen verschil (775 niet-lege regels, alle uniek), en juist
+  daarom hield de log-verhuizing met dezelfde formulering stand. Kwam binnen als CC-afwijking; staat
+  nu in `docs/WERKWIJZE-LESSEN.md`.
+- **EEN PROJECTIE OP EEN VERHUIZING TELT OOK WAT DIEZELFDE RONDE TOEVOEGT.** De chat gaf de norm na
+  de ingreep op circa 28 kB — de kale slice-verwijdering — terwijl hij op 31068 staat; het verschil
+  van 2805 is de stub, de twee nieuwe alinea's, de uitgebreide opener en de marker, allemaal in
+  datzelfde prompt opgedragen. Geen gevolg, want er hing geen eis aan. Wel de reden dat
+  `docs/ROADMAP.md` de GEMETEN getallen draagt en niet de 88553 uit de meting op `e08763c8`.
+- **NIET GEDAAN, met reden.** De aanleidingen uit de lessen strippen: 89 losse knipbeslissingen, en
+  de aanleiding draagt vaak het getal waarop de regel rust. En `docs/DOELEN-SPEC.md` §150 aanpassen:
+  de kop *Recon en bewijslast* blijft in de norm staan als doorverwijzing, dus die verwijzing klopt.
+- **HET ARCHIEF IS EEN AFVOER, GEEN LEESBRON.** `docs/HANDOFF-ARCHIEF.md` draagt de oudere blokken
+  plus de historische projectsecties, en de opener haalt het bewust niet op. Er is niets weggegooid;
+  git houdt alles.
+- **WAT DAAN MERKT: NIETS aan de app.** Wat wél verandert is de opener: vijf URL's in plaats van
+  vier, met een regel die de eind-marker toetst.
+- **VLOEREN NU: vitest-totaal 975 over 76 bestanden · engine-selftest-assert-count 1652 ·
+  lint-waarschuwingen 20**, alle vier afgelezen uit de gate van DEZE ronde. Onbewogen: docs-only,
+  geen test geraakt. Lees ze zelf uit de suite; neem ze niet over uit dit blok.
+- **OPENSTAAND, elk item opnieuw gegrept in `docs/ROADMAP.md`:** 16 · 19 · 32 · 34 · 35. Punt 38
+  hoort er niet meer bij.
+
+FOCUS VOLGENDE CHAT: ROADMAP punt 19 — het dagtype weekend is een kalendernaam, geen eigenschap.
+Item 6 uit *De volgorde* in `docs/ROADMAP.md`, dus GEEN afwijking van de reeks. ENGINE, dus
+RECON-FIRST met een stop-en-verifieer voordat er ook maar één regel engine wordt aangeraakt; een
+echte engine-bug wordt geflagd, nooit stilzwijgend gepatcht. HET PUNT SCHRIJFT ZELF EERST EEN METING
+VOOR: `deriveDagtype` (`apps/web/src/lib/planner.ts:18`) leidt het type af uit za/zo terwijl de
+gebruiker alleen pendel, trainen en minuten opgeeft, en de weekend-tak in `assignWorkouts` is via
+`buildWeekProposal` grotendeels onbereikbaar omdat de allocator elke eligible dag claimt. Meet dus
+eerst wat het verschil in de praktijk oplevert — het kan zijn dat er niets aan hangt. Raakt
+`DOELEN-SPEC` §2A. Verse chat.
+
 **PUNT 21 IS AF — GESLOTEN ZONDER BOUW (7 augustus 2026).** De push-beschrijving draagt de ruis van punt 18, maar de tak die haar schrijft wordt nooit bereikt. Docs-only ronde: de chat mat zelf via een read-only kloon plus een esbuild-bundel van de engine, `apps/web/src/lib` en `workers/api/src/integrations/push.ts`; CC deed alleen de commits. GEEN code, geen engine, geen migratie, geen deploy, en geen enkel `wrangler`-commando — ook geen read. Prod en D1 staan waar het blok hieronder ze noemt.
 - **GEEN DEPLOY, EN DAT IS GEEN UITSTEL.** Er is geen letter aan de app veranderd; dit was een meting en een verdict.
 - **HET INSTRUMENT IS EERST GEIJKT: 21 van de 21 gepinde waarden gereproduceerd** — de volledige weekvorm-as uit `docs/ROADMAP.md` *Meetlat* (kwaliteitsminuten, week-TSS en kwaliteitsdagen over zeven vormen), gedraaid met `buildWeekProposal` zelf, de klok als Proxy op de ECHTE `Date` en `TZ=Europe/Amsterdam`.
@@ -164,19 +231,6 @@ FOCUS VOLGENDE CHAT: ROADMAP punt 36 BOUWEN — geef elk scenario in `tools/shot
 - **OPENSTAAND, elk item opnieuw gegrept:** 16 · 19 · 21 · 22 · 23 · 25 · 28 · 32 · 33 · 34 · 35 · en het nieuwe 36. Alle twaalf dragen bij hergrep nog status "open". Punt 24 en punt 31 staan er NIET meer bij. Het parkeerlijst-item over het gedeelde uitvoerpad is AFGEHANDELD en verwijst nu naar punt 31.
 
 FOCUS VOLGENDE CHAT: ROADMAP punt 36 — het weekplan van een scenario verschuift tussen twee runs. AFWIJKING VAN DE NUMMERING EN VAN DE EERDER VASTGELEGDE VOLGORDE, MET REDEN: punt 33 stond hierna gepland, maar het is nog niet vastgesteld of punt 36 een camera-defect is of een app-defect van de familie van punt 26 — en dat laatste zou Daan op zijn scherm zien. Het is bovendien vrijwel alleen meetwerk, en de rotatie van punt 31 maakt het ijkpaar dat ervoor nodig is nu bijna gratis. Blijkt het gesynchroniseerde ritdata, dan sluit het in één ronde en volgt punt 33 direct. METEN EERST, geen bouw voor het verdict. Verse chat.
-
-**PUNT 13 FASE A IS AF EN STAAT LIVE (5 augustus 2026).** Commits: `c6fc4f629dedb20d410eabeb8a1b2c762be7f066` (fase A, code) en `6aefef48f4522e860efa0c3052166c6511f13e83` (de recon, docs-only), plus deze close-out.
-- **WAT ER VERANDERD IS.** Het herstelvenster na een A-race is een DAGEN-venster geworden in plaats van de kalenderweek: `A_HERSTEL_DAGEN` staat op 7 in `packages/engine/src/phase.ts` en de Recovery-tak meet de afstand met `Math.round` op het dagverschil. HERKOMST BELEID — er staat geen A-race in de historie, dus er is geen reeks om op te bemonsteren en er hoort geen plateau-toets bij. GEMETEN EFFECT: de week van 2027-04-19 gaat van TSS 262 met high 51 en anaeroob 14 naar **TSS 79 met high 0 en anaeroob 0**, en 2027-04-26 hervat normaal op 265.
-- **DE GROND.** Een zaterdagrace gaf twee dagen herstel en een zondagrace NUL, want de oude tak eiste dat de race in dezelfde kalenderweek lag. Twee dagen na 240 km met 2960 hoogtemeters stond er een volle Peak-week met VO2 Hill Repeats 9x90s. Zie `docs/PUNT13-RECON.md` §2 en §4.
-- **ER GING EEN POORT MEE DIE NIET IN DE DIAGNOSE ZAT.** De overname-kaart vuurde AL binnen het herstelvenster en vroeg "gaat je doel mee naar AGR" op de dag dat AGR gereden was: de Recovery-return zet `wekenTot` 0 én `taperEvent` null, dus twee bestaande poorten lieten hem allebei door. `eventOvername.ts` draagt nu poort (3b), conditie `eventMacroFase === "Recovery"`. Zonder die poort had fase A dat defect VERBREED van 1 naar 3 van de 4 gemeten peildagen.
-- **VLOEREN NU: vitest-totaal 959 over 75 bestanden · engine-selftest-assert-count 1652** (was 1648; vier erbij voor de dagen-grenzen van het herstelvenster). Alle drie afgelezen uit de suite-uitvoer van DEZE ronde — lees ze zelf uit de suite, neem ze niet over uit dit blok.
-- **PROD.** Worker Version `03a3bc9e-7bad-4c1f-9576-729e9aad2f63`, bundel `index-CYxGkZQQ.js`. GEEN migratie deze ronde: het schema is onaangeroerd, dus D1 staat nog op `0010`.
-- **PUNT 13 STAAT OP FASE A AF, FASE B GEPARKEERD.** Fase B — de doelvraag na het event — is ONTWORPEN in `docs/PUNT13-RECON.md` §12 t/m §14 en staat NIET meer in de reeks; hij raakt punt 28. **PUNT 35 is nieuw** (een event draagt geen duur) en kwam binnen bij de recon: `EventItem` en de D1-tabel `events` dragen precies één datum, dus een trip krijgt bewust geen herstel.
-- **OPENSTAAND: 16 · 19 · 21 · 22 · 23 · 24 · 25 · 28 · 31 · 32 · 33 · 34 · 35.** Punt 13 staat er NIET meer bij. De drie administratieve meereizers zijn AFGEHANDELD en horen niet opnieuw als openstaand genoemd te worden: `indoor_ftp` is AFGEVOERD op de parkeerlijst onder DATA met reden, de coach-copy-ronde staat op de parkeerlijst onder CLIENT met reden, en de volgorde-les staat in `docs/WERKWIJZE.md`.
-- **DE VOLGORDE HIERNA STAAT VAST, met reden: eerst 31 en 24 als ÉÉN tooling-ronde, DAARNA pas 33.** Elk begrenzingsbewijs dat we leveren leunt op "X van de Y shots byte-identiek", en juist die twee punten ondermijnen die claim — 31 besmet mogelijk de eigen nulmeting, 24 laat een ladende pagina stil als geldige shot doorgaan. **DEZE RONDE LEVERDE HET BEWIJS:** bij de prod-verificatie viel de eerste run om op `#root > *` (punt 24), en er bleek geen bewaarde nulmeting te bestaan om tegen te vergelijken, want `tools/shots/out` wordt bij elke run gewist (punt 31). Er is daarom GEEN byte-vergelijking gedaan; de **15 van de 15** geschoten schermen, **11 volledig foutloos** en **4 uitgesloten** wegens de bekende 404 op `/api/checkin`, zijn een BEGRENZINGSbewijs. Fase A is op prod bovendien per constructie INERT: er staat vandaag geen A-race binnen een herstelvenster, dus `eventFase_` kan de Recovery-tak niet raken.
-- **VALKUIL VOOR EEN VOLGENDE PREMISSE-GREP.** Een grep op `weekStartDate` in `phase.ts` geeft nog één treffer, maar dat is COMMENTAAR dat documenteert wat er stond — geen aanroep. De import is vervallen. Toets op een aanroep, niet op het woord.
-
-FOCUS VOLGENDE CHAT: ROADMAP punt 31 en punt 24 als ÉÉN tooling-ronde, in die volgorde en met de grond hierboven. TOOLING, geen engine. Verse chat.
 
 De oudere STAND-blokken en de historische projectsecties staan in `docs/HANDOFF-ARCHIEF.md`.
 Dit bestand draagt de TWAALF nieuwste blokken; komt er een dertiende bij, dan schuift het oudste in

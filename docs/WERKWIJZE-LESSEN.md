@@ -787,6 +787,19 @@ Nieuwe of gewijzigde lessen komen HIER, met in dezelfde close-out een gedateerde
   GATE-sectie, de vijf promptcontroles en het opener-sjabloon verloren — zonder enig signaal.
   VOLGT HIERUIT ALS WERKREGEL: wat een chat bij elke start MOET lezen blijft in de norm; alles
   wat alleen achteraf verantwoordt, verhuist naar een eigen bestand.
-
+- **EEN "PRECIES ÉÉN KEER"-EIS OVER EEN VERHUIZING VERONDERSTELT DAT DE BRON UNIEK IS.** Wat
+  "niets verloren, niets verdubbeld" werkelijk uitdrukt is MULTISET-gelijkheid: de telling per
+  distincte regel blijft gelijk over de twee bestanden samen. Draagt de bron al dubbele regels, dan
+  meldt de strikte vorm afwijkingen die geen verlies en geen verdubbeling zijn, en stopt de
+  uitvoerder terecht op een eis die zelf niet klopte. Aanleiding: bij de HANDOFF-rotatie van punt 38
+  stonden NEGEN distincte regels er al 2 tot 5 keer — vooral identieke `OPENSTAAND,
+  ONGEWIJZIGD`-bullets — samen 23 voorkomens waarvan 14 overtollig, en de strikte toets meldde die
+  23 als fout. De multiset-toets gaf 0. Bij de lessen-helft maakte het geen verschil, want daar zijn
+  alle 775 niet-lege regels uniek, en juist DAAROM hield de log-verhuizing met dezelfde formulering
+  stand: die 106 regels waren toevallig uniek, dus de vorm was door geluk goed en is overgenomen
+  zonder de verdeling te tellen. Tel de verdeling in de BRON vóór je de eis verstuurt. Zelfde
+  familie als "een grep-EIS toets je tegen de echte trefferverdeling vóór je hem verstuurt" en "een
+  uniciteits-claim noemt het NIVEAU waarop hij geldt". Kwam binnen als CC-afwijking en is strikt
+  beter dan wat het prompt vroeg.
 
 <!-- EINDE docs/WERKWIJZE-LESSEN.md -->
