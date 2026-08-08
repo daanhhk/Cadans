@@ -718,7 +718,7 @@ punten staat onder *Gesloten — vindplaats*.
     GEEN tekst en houdt `Math.round`.
     HET NET STAAT HARD OP VIER DECIMALEN en faalt de run op een treffer. Vier is gemeten: de ruis
     droeg er veertien, elke legitieme waarde hoogstens drie.
-19. **Het dagtype weekend is een kalendernaam, geen eigenschap** — open · ENGINE. `deriveDagtype`
+19. **Het dagtype weekend is een kalendernaam, geen eigenschap** — af, GESLOTEN ZONDER APARTE BOUW · ENGINE. `deriveDagtype`
     (`apps/web/src/lib/planner.ts:18`) leidt het type af uit za/zo, terwijl de gebruiker alleen
     pendel, trainen en minuten opgeeft; `assignWorkouts` geeft weekend- en vrije dagen daarna
     verschillende per-dag-takken. Een deload-zaterdag en een deload-vrijdag van dezelfde lengte
@@ -727,6 +727,24 @@ punten staat onder *Gesloten — vindplaats*.
     een eigenschap van de dag, de kalendernaam is dat niet. EERST METEN wat het verschil in de
     praktijk oplevert, dan pas bouwen: de takken zijn via `buildWeekProposal` grotendeels
     onbereikbaar, dus het kan zijn dat er niets aan hangt. Raakt `DOELEN-SPEC`.
+    VERDICT 08-08-2026: GESLOTEN ZONDER APARTE BOUW, want de meting maakte dit punt een SYMPTOOM.
+    Volledige uitwerking in `docs/PUNT19-DELOAD-RECON.md`.
+    GEMETEN over 2100 weken en 8700 dag-cellen, met een A/A-ijking van 0 afwijkende cellen: de
+    label-flip weekend naar vrij raakt **369 cellen over 291 weken**, en die splitsen zonder rest
+    in twee families. **324 cellen** zitten in de DELOAD-tak — 49680 tegen 19440 minuten, TSS 35640
+    tegen 6804. De overige **45** zijn het allocator-weekendpaar, uitsluitend op V7 bij korte (33)
+    en lange (12) beklimmingen, dus precies de twee profielen met `weekendBlok` true; die rust op
+    `DOELEN-SPEC` §3.4 VASTGESTELD en is BUITEN SCOPE.
+    TWEE PREMISSEN VAN DIT PUNT ZIJN WEERLEGD. Verstreken en gereden dagen bereiken de takken
+    nooit — `apps/web/src/lib/proposal.ts:528` geeft `assignWorkouts` uitsluitend `tePlannen` mee —
+    en de taper-tak behandelt vrij en weekend in ÉÉN conditie (`packages/engine/src/planner.ts:817`),
+    gemeten op 0 verschillen over 420 Recovery-weken. Van de vier genoemde routes leeft alleen de
+    deload-tak.
+    WAT ER VANDAAG ECHT VERDWIJNT: op weekenddagen 0 minuten, op doordeweekse dagen 1482 minuten
+    over 76 dagen, en op Daans eigen weekvorm NUL. De kalendernaam werkt vandaag dus eerder MEE dan
+    tegen — hij houdt de lange rit overeind die anders óók zou sneuvelen.
+    GAAT OP IN PUNT 39. De echte fout ligt niet in het label maar in WAAR de dosisverlaging landt;
+    de kalendernaam-splitsing is daar één van de twee hendels.
 20. **DE GEPUSHTE WORKOUT IS KORTER DAN HET PLAN** — af · ENGINE.
     SYMPTOOM, LIVE WAARGENOMEN: een sessie van 65 minuten kwam op Garmin binnen als 27.
     DE GROND ZIT OP TWEE PLEKKEN, en allebei zijn ze nagerekend. (1) `dslDurationSec_`
@@ -1386,6 +1404,58 @@ punten staat onder *Gesloten — vindplaats*.
     NIET GEDAAN, met reden. De aanleidingen uit de lessen strippen: 89 losse knipbeslissingen en de
     aanleiding draagt vaak het getal waarop de regel rust. En `DOELEN-SPEC` §150 aanpassen: die
     verwijst naar *Recon en bewijslast*, en die KOP blijft in de norm staan, dus de verwijzing klopt.
+39. **De herstelweek snijdt in de frequentie in plaats van in het volume** — open · ENGINE.
+    DRAAGT M79 (HEURISTIEK) EN M80 (BEVINDING). M79: de dosisverlaging die M76 vraagt komt uit het
+    DUURvolume — de lange rit voorop — terwijl één tot twee korte prikkels op hun eigen relatieve
+    intensiteit blijven staan; richtwaarde 40 tot 60 procent minder volume, coachconventie en geen
+    wetenschap. M80: de app doet precies het omgekeerde.
+    GEMETEN over 2100 weken, volledige uitwerking in `docs/PUNT19-DELOAD-RECON.md`. Op de
+    testcase-weekvorm ma45 di60 do60 za120 bij FTP in Base: het volume gaat van **286 naar 285
+    minuten** terwijl de drempelminuten van **98 naar 10** gaan. Belasting 63 procent van de
+    opbouwweek, volledig uit de intensiteitskant; kwaliteitsdagen van **3 naar 1**. Drie andere
+    weekvormen geven hetzelfde beeld: V2 479 naar 420 minuten bij 130 naar 13 kwaliteitsminuten,
+    V3 479 naar 460 bij 130 naar 13, V7 450 naar 420 bij 103 naar 13. Bij Onderhoud 0 cellen, want
+    dat doel draagt geen mesocyclus.
+    WAT AL GOED GAAT, en dat hoort erbij: de overgebleven kwaliteitsdag HOUDT zijn karakter —
+    drempelblokken op 98 tot 105 procent FTP — en halveert alleen zijn blokduur van 18 naar 10
+    minuten. Dat is M76 correct geïmplementeerd. Wat niet klopt is de verdeling eromheen: de lange
+    rit blijft op VOLLE duur staan (120 minuten Z2, TSS 86) en is juist de post die als eerste
+    hoort te vervallen. Plek: `planner.ts:839-841`, eligibility op `:304`.
+    TWEE VARIANTEN ZIJN GEMETEN EN AFGEWEZEN. Alles als weekend geeft TSS 201 en **NUL**
+    kwaliteitsminuten — 77 procent van de opbouwweek, dus een week zonder prikkel. Alles als vrij
+    geeft TSS 100 en 225 minuten, maar snijdt BLIND in de opgegeven tijd. Geen van beide is de fix.
+    TWEE HENDELS voor de bouwronde: het **deload-quotum van 1** en de **kalendernaam-splitsing**.
+    N en de volumefactor worden dáár geijkt, nooit vooraf gekozen. PUNT 19 GAAT HIERIN OP.
+    HANGT AAN PUNT 40: zolang `drempel` twee zones dekt is er geen toets die de uitkomst kan
+    beoordelen.
+40. **Het drempel-label loopt dwars door de LT2-grens** — open · ENGINE plus norm.
+    Het app-label `drempel` draagt zowel SWEETSPOT (89-92 procent FTP) als BOVENDREMPEL (98-105) en
+    loopt daarmee dwars door LT2 — precies de grens waarop de TID-modellen zich van elkaar
+    onderscheiden. Gevolg: geen enkele methodiek-uitspraak die op dat label rust is toetsbaar.
+    DE PLAN-KANT IS SPLITSBAAR ZONDER NIEUWE DATABRON: elk blok draagt al `pctLo` en `pctHi`. DE
+    GELEVERDE KANT NIET — de zonegrenzen komen uit intervals `power_zones` en staan op
+    **55/75/90/105** procent (`apps/web/src/lib/zonemunt.ts:41`), waardoor LT2 midden in de vierde
+    bucket valt. Dat is de dragende beperking en die vraagt een eigen besluit.
+    NORM-NEUTRAAL: er verandert geen training, alleen de zichtbaarheid. BLOKKEERT PUNT 39 EN
+    PUNT 41.
+41. **De weekmix polariseert niet bij hoger volume** — open · norm, TE METEN.
+    GEMETEN, maar op ÉÉN AS — doel FTP, macrofase Base, mesoweek 1, lege `activities` en
+    `weekplans` — dus dit is een MEETOPDRACHT en geen bevinding. Seiler-3-zone op het middelpunt
+    van elk blok (Z1 onder 80 procent FTP, Z2 80 tot 100, Z3 boven 100): 3,0u 62/38/0 · 4,0u
+    74/19/7 · 4,75u 70/24/6 · 5,0u 69/31/0 · 8,0u 76/15/9 · 12,0u 84/12/3. Het plan is PIRAMIDAAL
+    en wordt dat sterker met de uren, waar de literatuur bij hoger volume juist polarisatie
+    verwacht.
+    DE ANAEROBE REEKS: **7 / 0 / 0 / 0 procent** bij 8, 10, 12 en 15 uur. Geen kanteling.
+    OPENSTAANDE VRAAG: de Z3-reeks 6/0/9/3 over de weekvormen lijkt op VARIANT-ROTATIE in plaats
+    van op ontwerp. Dat onderscheid moet de meetronde maken. Raakt M43, M44 en M45.
+    HANGT AAN PUNT 40: op een label dat twee zones dekt is deze vraag niet te beantwoorden.
+42. **M78 reproduceert niet** — open · norm.
+    GEMETEN op één as: over mesoweek 1 tot 4 staan de blokpercentages STIL — 99, 100, 98, 95-99 en
+    89-92 procent FTP — terwijl alleen de DUUR beweegt: 5/7/9/12 naar 5/8/10/13 naar 6/8/10/14 naar
+    3/4/5. Op deze as schaalt `mesoFactor` dus duur en géén %FTP, en dat is precies wat M78 als
+    schending aanwijst.
+    EEN AS IS GEEN INTREKKING. Hertoets over doelen en macrofasen vóór M78 wordt ingetrokken of
+    bevestigd; tot dan blijft die regel staan zoals hij staat.
 
 ## De tijdslijn
 
@@ -1552,8 +1622,19 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
     `docs/WERKWIJZE-LESSEN.md` (vijfde opener-URL), `HANDOFF.md` geroteerd op twaalf blokken naar
     `docs/HANDOFF-ARCHIEF.md`, en een `<!-- EINDE <pad> -->`-marker op alle vijf de
     opener-bestanden die het sjabloon zelf toetst.
-6. **19** — het dagtype weekend is een kalendernaam. Botst met `DOELEN-SPEC` §2A en raakt elk
-   doel.
+6. **40** — het drempel-label loopt dwars door de LT2-grens. IN DE PLAATS VAN PUNT 19, met reden:
+   de meting van 08-08-2026 maakte punt 19 tot SYMPTOOM — 369 cellen, waarvan 45 buiten scope en
+   de rest in de deload-tak, en op Daans eigen weekvorm nul — terwijl het label-meetgat punt 39 én
+   punt 41 allebei BLOKKEERT. Zolang `drempel` zowel 89-92 als 98-105 procent FTP dekt, is er geen
+   toets die een uitkomst over karakter of methodiek kan dragen. Norm-neutraal: er verandert geen
+   training, alleen de zichtbaarheid.
+6b. **41 + 42** — de weekmix en M78, samen ÉÉN meetronde. Beide zijn op één as gemeten en beide
+   vragen dezelfde uitbreiding: over doelen en macrofasen heen. 41 vraagt of het plan bij hoger
+   volume hoort te polariseren en of de Z3-reeks variant-rotatie is; 42 of `mesoFactor` %FTP
+   werkelijk schaalt. Geen bouw vóór het verdict.
+6c. **39** — de herstelweek snijdt in de frequentie in plaats van in het volume. Draagt M79 en M80.
+   Twee hendels: het deload-quotum van 1 en de kalendernaam-splitsing. Punt 19 gaat hierin op.
+   Kan pas ná punt 40.
 7. **16** — de materialiteitsvloer en de prikkel, in EEN bouw. Zie `docs/PUNT16-RECON.md` §5.
 8. **34** — de effect-referent kent het doel niet. M5-schending bij drie van de vijf doelen.
 9. **35** — een event draagt geen duur. Deblokkeert punt 13 fase B.
@@ -1606,6 +1687,11 @@ niet; hij verliest niet. Een punt gaat eruit zodra een STAP het opneemt — niet
   hard blok. Besmette categorie, effect circa 1 TSS. Blijft staan.
 - `genericRecovery` capt de duur hard op 60 min: een deloaddag met 90 beschikbare minuten wordt
   een rit van 60. Coach-canon, maar de resterende tijd verdwijnt stil uit het plan.
+  KRUISVERWIJZING NAAR PUNT 39 per 08-08-2026: die cap KLOPT en wordt onder M79 juist bevestigd —
+  een herstelweek hoort in het duurvolume te snijden. Het probleem is dat de WEEKEND-tak hem
+  omzeilt: de lange rit blijft op volle duur staan omdat die dag weekend heet, dus de enige post
+  die wél gecapt zou moeten worden ontsnapt eraan. De kwalificatie "Coach-canon" blijft dus staan;
+  wat verandert is dat punt 39 de omzeiling adresseert en niet de cap zelf.
 - `combo_long_with_efforts` reist mee met bouwitem 2 stap 2 en 4; `pendel_intervals` is alleen
   in een Test-week bereikbaar.
 - De dode `longride`-tak in de redenCode-mapping van `planner.ts`.

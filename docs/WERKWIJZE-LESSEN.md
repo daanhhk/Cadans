@@ -801,5 +801,19 @@ Nieuwe of gewijzigde lessen komen HIER, met in dezelfde close-out een gedateerde
   familie als "een grep-EIS toets je tegen de echte trefferverdeling vóór je hem verstuurt" en "een
   uniciteits-claim noemt het NIVEAU waarop hij geldt". Kwam binnen als CC-afwijking en is strikt
   beter dan wat het prompt vroeg.
+- **Een oordeel over KARAKTER leest de BLOKKEN, niet het sessie-TYPE.** Een typenaam zegt welke
+  bouwer draaide, niet in welke zone de minuten liggen — en juist de zone draagt elk oordeel over
+  karakter-invariantie (M74, M76). Aanleiding: bij punt 19 velde de chat TWEE keer een fout
+  karakteroordeel op grond van `voorgesteldType`. Eerst heette de herstelweek "een week grijs
+  rijden", terwijl er nul minuten Z3 in staat: de Recovery-ritten liggen rond 59 procent FTP en de
+  lange rit op 63 tot 72 procent, dus Z1 en Z2. Daarna heette het "het karakter verandert", terwijl
+  de overgebleven kwaliteitsdag zijn drempelblokken op 98 tot 105 procent FTP gewoon behoudt en
+  alleen zijn dosis halveert van 18 naar 10 minuten — precies wat M76 voorschrijft. Eén blik op
+  `blokken` met hun `pctLo`/`pctHi` had ze allebei voorkomen; die stonden in dezelfde meetuitvoer
+  en zijn niet gelezen. Daan ving ze allebei. EN DE TWEEDE HELFT ZIT IN HET LABEL ZELF: `drempel`
+  dekt zowel 89-92 als 98-105 procent FTP en loopt dus dwars door de LT2-grens waarop de
+  TID-modellen zich onderscheiden — een label dat twee zones dekt kan per constructie geen
+  karakteruitspraak dragen. Dat is ROADMAP punt 40. Zelfde familie als "citeer een meting met het
+  predicaat dat gemeten is", nu op de GROOTHEID in plaats van op de formulering.
 
 <!-- EINDE docs/WERKWIJZE-LESSEN.md -->

@@ -463,4 +463,29 @@ verschuift elk blok een zone omhoog (endurance→tempo, sweetspot→threshold). 
 referentie-implementatie. De duur-schaling van de lange rit is dosis-gedreven en correct; de
 pct-schaling is de te verwijderen hendel.
 
+**M79 (HEURISTIEK) — De herstelweek snijdt in het VOLUME, niet in de frequentie van de prikkel.**
+De dosisverlaging die M76 vraagt komt uit het duurvolume — de lange rit voorop — terwijl een tot
+twee korte prikkels op hun eigen relatieve intensiteit blijven staan. Richtwaarde: 40 tot 60
+procent minder volume. Dat getal is coachconventie, breed gedeeld in duursport, en wordt als
+zodanig benoemd en niet als wetenschap vermomd. Zwakte, expliciet: het directe bewijs is dun. De
+gecontroleerde duursportstudies gaan over drie weken verlaagd volume EN intensiteit zonder
+prestatieverlies, of over geintensiveerde blokken bij elite waar zowel behouden als fors verlaagd
+volume winst gaf. Over EEN week is detraining onwaarschijnlijk ongeacht de invulling; deze regel
+kiest dus de vorm die de prikkel het minst aantast, niet de vorm die aantoonbaar beter is.
+Falsificatiepad: dezelfde blokopbouw met twee invullingen, uitkomstmaat het vermogen in de eerste
+opbouwweek erna. Bij weinig uren weegt de regel zwaarder, want daar is de kwaliteitsprikkel de
+ruggengraat (M44) en het duurvolume het residu.
+
+**M80 (BEVINDING) — De herstelweek van de app snijdt precies andersom.**
+Gemeten over 2100 weken met de functie die de app zelf aanroept. Op de testcase-weekvorm gaat het
+volume van 286 naar 285 minuten terwijl de drempelminuten van 98 naar 10 gaan; de belasting komt
+op 63 procent van de opbouwweek, volledig uit de intensiteitskant. De kwaliteitsdagen gaan van
+drie naar een. Wat WEL klopt: de overgebleven kwaliteitsdag houdt zijn karakter — drempelblokken
+op 98 tot 105 procent FTP — en halveert alleen zijn blokduur van 18 naar 10 minuten, precies
+zoals M76 voorschrijft. Wat niet klopt is de verdeling eromheen: de lange rit blijft op volle duur
+staan. Drie andere weekvormen geven hetzelfde beeld. Bij Onderhoud vuurt de tak niet, want dat
+doel draagt geen mesocyclus. Opzet: sweep over zeven weekvormen, vijf doelen, alle macrofasen en
+alle mesoweken, met een A/A-ijking van nul afwijkende cellen. Bewijskracht hoog voor het gedrag,
+geen uitspraak over wat de renner ervan merkt.
+
 <!-- EINDE docs/TRAININGSMODEL.md -->
