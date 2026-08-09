@@ -123,3 +123,44 @@ precies het geval dat in `tempo` verdwijnt) en M5 (de app doet geen bewering zon
    eenzijdige verslechtering lezen.
 3. Of de dosis-trede meebeweegt: de blok-check voedt `dosisTredeVoorstel`, dus een poort-wijziging
    kan tot in het plan doorwerken. Blijft dat nul, dan is dat het begrenzingsbewijs.
+
+## 9. Correctie op paragraaf 6 — de sleutel-inhaal is NIET geraakt
+
+Paragraaf 6 mat `planDraagtSleutelzone_` LOS. Dat is fout: hij is een van TWEE OR-termen, en de
+primaire term leest de INTENT van het geplande type (`apps/web/src/lib/sleutelinhaal.ts:75` en
+`:116`). Los gemeten valt de zone-term om op 108 van de 360 kwaliteitsdagen — 2496 minuten,
+uitsluitend bij Conditie (45 dagen), Onderhoud (45) en Lange beklimmingen (18) — en dat leest als
+een gat.
+
+GEMETEN OP DE DISJUNCTIE, over dezelfde 360 dagen: zone-term 252, intent-term 312, samen **360 van
+de 360, nul dagen zonder sleutelstatus.** De sleutel-inhaal is dus niet geraakt en er is daar niets
+te repareren.
+
+De engine draagt die tweede term bovendien BEWUST en gedocumenteerd. `packages/engine/src/coach.ts`
+verankert de sleutelvraag aanvullend op het geplande TYPE, met in het commentaar de reden: zonder
+die term zouden zeven van de dertien sweet-spot-archetypes stil hun sleutelstatus verliezen. Zie
+`docs/SWEETSPOT-SLEUTEL-RECON.md`. Wat in paragraaf 5 als nieuw lek werd gepresenteerd was daar al
+bekend en al afgevangen.
+
+DE LES IS DE SPIEGEL VAN EEN BESTAANDE. "Een term kan gemaskeerd zijn door een andere" waarschuwt
+dat je een term LOS moet meten om te weten of hij gedekt is. Hier gold het omgekeerde: de losse
+meting was zelf de fout, want de UITKOMST leeft op de disjunctie. Meet een term los om zijn dekking
+vast te stellen, en meet de disjunctie om de uitkomst vast te stellen; die twee zijn niet
+verwisselbaar.
+
+## 10. Verdict punt 40 — gesloten zonder bouw
+
+- **Het meetgat gaat dicht als NORM-regel, niet als code.** `docs/TRAININGSMODEL.md` M81 legt vast
+  dat een karakter-uitspraak op de band rust en niet op het zone-label; M82 draagt de meting met de
+  drie naden. Daarmee zijn punt 41, punt 42 en punt 39 gedeblokkeerd: die rondes meten op de band.
+- **GEEN BOUW, en dat is geen uitstel.** De karakter-as heeft vandaag geen consument die zonder haar
+  stuk is — paragraaf 9 haalt de enige kandidaat weg. Een as bouwen die niets voedt is
+  vooruit-bedrading. Punt 39 bouwt haar samen met de eerste consument die haar nodig heeft.
+- **GEEN engine-autorisatie nodig, en er komt geen fase B.** De banden staan al op elk blok; wat
+  paragraaf 7 als fase B aankondigde is met paragraaf 9 vervallen.
+- **HET REST-DEFECT KRIJGT EEN EIGEN PUNT.** De poort van de weekstem en de blok-terugblik staat op
+  het midpunt-label: band `88-92` en band `88-93` zijn hetzelfde sjabloontype met een procentpunt
+  verschil en openen tegengestelde normpoorten — 48 cellen uitsluitend tempo, 33 uitsluitend
+  drempel, 9 beide, van de 90 met sweet-spot-werk. Dat staat als ROADMAP punt 43. Het is
+  UITDRUKKELIJK niet norm-neutraal: een poort die bepaalt waarop geoordeeld wordt kan een oordeel
+  omkeren, dus die ronde meet eerst per plek en in beide richtingen.

@@ -214,6 +214,14 @@ Nieuwe of gewijzigde lessen komen HIER, met in dezelfde close-out een gedateerde
   termen binnen dezelfde functie. Aanleiding: bij punt 14 fase 1d bleef de deload-term rood-loos
   omdat de bewijslast-drempel bij één bewaarde week de poort al blokkeert; met twee opbouwweken viel
   hij direct, op `['tempo','drempel']` tegen `['drempel']`.
+  TWEEDE AANLEIDING, en die snijdt de ANDERE kant op: LOS meten stelt de DEKKING van een term vast,
+  de DISJUNCTIE stelt de UITKOMST vast, en die twee zijn niet verwisselbaar. Wie een losse meting
+  als uitkomst rapporteert, meldt een defect dat er niet is. Aanleiding: bij punt 40 mat de chat
+  `planDraagtSleutelzone_` los, las **108 van de 360** kwaliteitsdagen als een gat en meldde dat als
+  LIVE defect. Die term is één van twee OR-termen; op de disjunctie is het **360 van de 360** —
+  zone-term 252, intent-term 312, nul dagen zonder sleutelstatus. De chat ving het zelf vóór er iets
+  op gebouwd was, maar het had bijna een bouwronde gedragen. Vraag dus expliciet wat je meet: hoort
+  deze term gedekt te zijn (los meten), of hoort de UITKOMST te kloppen (de hele conditie meten).
 - **Een test die de OUDE regel vastpint moet mee wanneer die regel valt.** Dat is geen verzwakking
   maar de herijking die erbij hoort — de regel is vervangen, dus de test die hem vastlegde is
   vervallen. Onderscheid hem scherp van een assertie die een MECHANISME toetst: die wordt NOOIT

@@ -13,6 +13,57 @@ live tot cutover.
 
 ## Stand
 
+**PUNT 40 IS AF — GESLOTEN ZONDER BOUW (8 augustus 2026).** Het label is gemeten, het meetgat is
+als norm-regel gesloten en er is geen letter code veranderd. Docs-only: geen code, geen engine,
+geen migratie, geen deploy, en geen enkel `wrangler`-commando. Commits:
+`75051f4df7b40cb5ab1d77c48ecbcc62efb6727d` (het recon-doc) plus deze close-out. Prod en D1 staan
+waar het blok hieronder ze noemt; grep die twee daar op in plaats van ze hier over te schrijven.
+- **GEEN DEPLOY, EN DAT IS GEEN UITSTEL.** Er is niets te verschepen — dit was een meting, een
+  verdict en twee norm-regels.
+- **DE METING.** `buildWeekProposal` en `expandArchetype_` zelf aangeroepen uit een
+  esbuild-bundel, `TZ=Europe/Amsterdam`, klok als Proxy op de echte `Date`. Zeven weekvormen maal
+  vijf doelen maal vier event-afstanden: **140 cellen, 640 sessies, 38 distincte banden, 39190
+  blokminuten**. Instrument eerst geijkt op de weekvorm-as: **21 van de 21** gepinde waarden.
+- **DE PREMISSE IS BEVESTIGD OP HET FEIT EN WEERLEGD OP DE KNIP.** Het label `drempel` draagt
+  **1824 minuten sweet-spot naast 4578 minuten drempelwerk**. Maar de knip ligt NIET op LT2: op
+  **95** loopt nul band dwars, op **100** worden **2742 van de 6402** minuten doorgesneden, dwars
+  door `95-102` en `100-108`.
+- **HET RASTER EN DE BIBLIOTHEEK ZIJN STRUCTUREEL SCHEEF.** De 38 banden laten precies drie
+  binnen-naden vrij: **81-88, 94-95, 109-112**. Het zone-raster knipt op 90 en 105 en die vallen er
+  allebei buiten. Twee lekken die het punt niet noemde: sweet-spot lekt ook naar `tempo` (**2172
+  van de 2280** nominale tempo-minuten), en er bestaat **geen enkel archetype met tempo als
+  bedoeling** — elke tempo-minuut komt uit een sweet-spot-sjabloon.
+- **STAAT NU ALS M81 (NORM) EN M82 (BEVINDING)** in `docs/TRAININGSMODEL.md`. M81: een
+  karakter-uitspraak rust op de band, niet op het zone-label. Daarmee zijn punt 39, 41 en 42
+  gedeblokkeerd — die meten voortaan op de band.
+- **EEN EIGEN FOUT, DOOR DE CHAT ZELF GEVANGEN VOOR ER IETS OP GEBOUWD WAS.** De chat mat
+  `planDraagtSleutelzone_` LOS en las 108 van de 360 kwaliteitsdagen als een gat. Hij is een van
+  TWEE OR-termen: op de disjunctie is het **360 van de 360** — zone-term 252, intent-term 312, nul
+  dagen zonder sleutelstatus. De sleutel-inhaal is niet geraakt, en de engine verankert die tweede
+  term al bewust en gedocumenteerd. Les toegevoegd in `docs/WERKWIJZE-LESSEN.md`.
+- **DAARMEE VERVIEL DE BOUW.** De karakter-as had geen consument die zonder haar stuk is, en een as
+  bouwen die niets voedt is vooruit-bedrading. Punt 39 bouwt haar samen met zijn eerste consument.
+  Het punt stond als ENGINE en dat is met deze meting onjuist: de banden staan al op elk blok.
+- **OPENSTAAND, NIEUW: ROADMAP punt 43** — de normpoort staat op het midpunt-label. Band `88-92` en
+  `88-93` verschillen een procentpunt en openen tegengestelde poorten: **48 cellen uitsluitend
+  tempo, 33 uitsluitend drempel, 9 beide**, van de 90 met sweet-spot-werk. Twee consumenten hangen
+  eraan. NIET norm-neutraal, dus eerst per plek meten en in beide richtingen. Staat als item 6d.
+- **WAT DAAN MERKT: NIETS.** Er verandert geen letter aan de app.
+- **VLOEREN NU: vitest-totaal 975 over 76 bestanden · engine-selftest-assert-count
+  1652 · lint-waarschuwingen 20**, alle vier afgelezen uit de gate van DEZE ronde.
+  Onbewogen: docs-only, geen test geraakt. Lees ze zelf uit de suite; neem ze niet over uit dit
+  blok.
+- **OPENSTAAND, elk item opnieuw gegrept in `docs/ROADMAP.md`:** 16 · 32 · 34 · 35 · 39 · 41 · 42 ·
+  43. Punt 40 hoort er niet meer bij.
+
+FOCUS VOLGENDE CHAT: ROADMAP punt 41 + 42 — de weekmix en M78, samen EEN meetronde. Item 6b uit
+*De volgorde* in `docs/ROADMAP.md`, dus GEEN afwijking van de reeks. NORM en METEN, geen bouw en
+geen engine. Beide punten zijn op EEN as gemeten en vragen dezelfde uitbreiding: over doelen en
+macrofasen heen. MEET OP DE BAND, NIET OP HET ZONE-LABEL — dat is M81, en het is precies wat punt
+40 heeft vrijgemaakt; de drie naden 81-88, 94-95 en 109-112 staan in M82. Punt 41 vraagt of het
+plan bij hoger volume hoort te polariseren en of de Z3-reeks variant-rotatie is; punt 42 of
+`mesoFactor` %FTP werkelijk schaalt. Eindigt op een VERDICT, geen bouw. Verse chat.
+
 **PUNT 19 IS AF — GESLOTEN ZONDER APARTE BOUW (8 augustus 2026).** De kalendernaam is gemeten en
 blijkt een symptoom; wat eronder ligt is groter en staat nu als punt 39 tot en met 42. Docs-only:
 geen code, geen engine, geen migratie, geen deploy, en geen enkel `wrangler`-commando. Commits:
@@ -289,21 +340,6 @@ FOCUS VOLGENDE CHAT: ROADMAP punt 16 — de goedkope bereik-prikkel, een prikkel
 - **OPENSTAAND, elk item opnieuw gegrept in `docs/ROADMAP.md`:** 16 · 19 · 21 · 22 · 23 · 25 · 28 · 32 · 33 · 34 · 35 · 36. Alle elf de eerste dragen nog "open"; 36 leest nu "GEBOUWD, PRAKTIJKBEVESTIGING OPEN" en blijft daarom in de lijst.
 
 FOCUS VOLGENDE CHAT: ROADMAP punt 28 — een doelwissel herstart de cyclus niet, waardoor de volgende bouw de resten van de vorige configuratie leest. Verse chat.
-
-**PUNT 36 IS GEMETEN EN VERKLAARD, NIET GEBOUWD (6 augustus 2026).** Docs-only ronde: drie meetrondes met een tijdelijk, vlag-gestuurd instrument in `tools/shots/shot.mjs` dat elke keer is teruggedraaid; de chat rekende de sleutel-telling zelf na op de gecommitte bron. GEEN code, geen engine, geen migratie, geen deploy, en geen enkel `wrangler`-commando behalve read-only `--local` SELECTs.
-- **HET VERDICT IS TOOLING, EN HET DRAAGT EEN MECHANISME.** De harness laat elf scenario's met verschillende settings naar DEZELFDE weekplan-sleutels schrijven: 33 schrijfacties op 7 unieke week-sleutels, met week 2026-07-13 tienmaal geschreven — elk met een ander doel, andere plannerdagen of een andere blokweek. `weekplans` heeft (user_id, week_monday) als sleutel, dus elke schrijver overschrijft zijn voorganger, en elk scenario leest via de recency-seed (`datum < weekMonday`) en de blok-terugblik terug wat een ander achterliet.
-- **DE METING ISOLEERT PRECIES ÉÉN AS.** Vier sweeps van hetzelfde scenario RUG AAN RUG: **72 van de 72** byte-identiek. Dezelfde scenario's met de tien andere ertussen, drie volledige cycli in één proces: c2 tegen c1 **24** afwijkend, c3 tegen c2 **16**, c3 tegen c1 **24** — telkens 93 vergeleken van de 95, twee uitgesloten wegens punt 23. De bron ligt dus in wat ANDERE scenario's achterlaten, niet in het herhalen zelf.
-- **WAT BEWEEGT IS HET PLAN, NIET WELLNESS.** Vier scenario's, telkens alle acht shots samen: `klim-weekstem`, `v7-blokweek4`, `v7-midweek`, `v7-weekstem`; de andere zeven staan alle drie de cycli stil. Scherpst: `v7-blokweek4` gaat van `Tempo 24/51 · Drempel 2/85 · VO2max 1/—` naar `Tempo 24/0 · Drempel 2/0 · VO2max 1/0`, teller `0/2` naar `3/3`. Nul gevallen van categorie (a) of (b), nul stille vervanging.
-- **MIJN EIGEN VOORSPELLING IS DEELS WEERLEGD, en die stond vooraf vast.** Voorspeld was c1 ≠ c2 = c3 (verzadiging). Dat klopt voor `klim-weekstem` en `v7-blokweek4`; `v7-weekstem` is c1 = c2 ≠ c3 en `v7-midweek` OSCILLEERT (c1 = c3 ≠ c2). De drie paren zijn onderling consistent — elk scenario valt in een sluitende klasse — wat losstaand bewijs is dat de vergelijking deugt. De weekplan-rijen groeiden met **1239** tekens bij een onveranderd rijaantal van **9**: de bak accreteert nog, dus een nulmeting erven blijft waardeloos, ook binnen één sessie.
-- **WAT DAAN MERKT: NIETS, en dat is nu onderbouwd.** Hij draait één configuratie, dus niemand anders schrijft zijn weken; zijn week stond de hele meetdag stil en het enige dat bewoog was zijn gereedheid na de wellness-sync. De APP-kant blijft wel broos: het plan-van-record is INVOER van de volgende bouw en wordt 2 of 3 keer per pageload geschreven, dus een wissel van doel, doelStart of plannerdagen laat de volgende bouw de resten van de vorige configuratie lezen. Dat raakt punt 28 en is een ANDER punt.
-- **TWEE INSTRUMENTFOUTEN, allebei van de chat, allebei door CC gevangen.** De A/B-probe las A 1723 tot 2825 ms ná de sync-responsen (22 van de 22) en kon per constructie geen vóór/ná-verschil zien; en de wachtlus matchte op de HELE tijdlijn en pakte de sync van een eerdere load (+1597 tegen +10719), waardoor hij stopte zonder ooit te pollen. Beide staan als les in `docs/WERKWIJZE.md`.
-- **DE PUNT-24-POORT DEED ZIJN WERK, en dat is de eerste keer in het wild.** De eerste meetrun viel om op `v7-pendel-c1 bewijsweek 2026-07-13: still loading after settle`, doordat vite voor de derde keer in deze reeks stil stierf (exit 127, 5173 down). Geen foto van een spinner, en de partiële uitvoer is niet gebruikt.
-- **VLOEREN NU: vitest-totaal 959 over 75 bestanden · engine-selftest-assert-count 1652**, afgelezen uit de suite-uitvoer van DEZE ronde. Onbewogen: geen enkele test geraakt. Lees ze zelf uit de suite; neem ze niet over uit dit blok.
-- **LET OP BIJ DE GATE: DRAAI GEEN WRANGLER-DEV TIJDENS `pnpm test`.** GEMETEN deze ronde: met de api-dev-server aan brak de suite af op 49 van de 75 bestanden met een fout op RUNNER-niveau (geen assertie) en EBUSY op de miniflare-tijdelijke mappen; `vitest-pool-workers` gebruikt diezelfde mappen. Met de server gestopt gaf dezelfde code twee keer achter elkaar 959 van de 959.
-- **PROD ONVERANDERD.** Worker Version `03a3bc9e-7bad-4c1f-9576-729e9aad2f63`, D1 op `0010`. Er valt niets te verschepen: deze ronde raakte alleen docs.
-- **OPENSTAAND, elk item opnieuw gegrept:** 16 · 19 · 21 · 22 · 23 · 25 · 28 · 32 · 33 · 34 · 35 · 36. Punt 36 blijft open, nu met verdict en fix-richting.
-
-FOCUS VOLGENDE CHAT: ROADMAP punt 36 BOUWEN — geef elk scenario in `tools/shots/shot.mjs` zijn eigen week-sleutels, zoals `overname` al doet met `monday`. TOOLING, geen engine, geen app-wijziging. REKEN OP EEN VERSCHUIVENDE NULMETING: elke shot krijgt andere datums, dus de baseline gaat één keer om, en dat is de prijs. DE UITSLUITENDE TOETS STAAT IN HET PUNT: herhaal daarna de drie-cycli-meting en eis 93 identiek over alle drie de paren; blijft er iets bewegen, dan is er een tweede bron. Toets de premisse eerst zelf — een fix-richting uit een STAND-blok is een voorstel, geen opdracht. Verse chat.
 
 De oudere STAND-blokken en de historische projectsecties staan in `docs/HANDOFF-ARCHIEF.md`.
 Dit bestand draagt de TWAALF nieuwste blokken; komt er een dertiende bij, dan schuift het oudste in

@@ -1428,45 +1428,38 @@ punten staat onder *Gesloten — vindplaats*.
     N en de volumefactor worden dáár geijkt, nooit vooraf gekozen. PUNT 19 GAAT HIERIN OP.
     HANGT AAN PUNT 40: zolang `drempel` twee zones dekt is er geen toets die de uitkomst kan
     beoordelen.
-40. **Het drempel-label loopt dwars door de LT2-grens** — open · ENGINE plus norm.
-    Het app-label `drempel` draagt zowel SWEETSPOT (89-92 procent FTP) als BOVENDREMPEL (98-105) en
-    loopt daarmee dwars door LT2 — precies de grens waarop de TID-modellen zich van elkaar
-    onderscheiden. Gevolg: geen enkele methodiek-uitspraak die op dat label rust is toetsbaar.
-    DE PLAN-KANT IS SPLITSBAAR ZONDER NIEUWE DATABRON: elk blok draagt al `pctLo` en `pctHi`. DE
-    GELEVERDE KANT NIET — de zonegrenzen komen uit intervals `power_zones` en staan op
-    **55/75/90/105** procent (`apps/web/src/lib/zonemunt.ts:41`), waardoor LT2 midden in de vierde
-    bucket valt. Dat is de dragende beperking en die vraagt een eigen besluit.
-    NORM-NEUTRAAL: er verandert geen training, alleen de zichtbaarheid. BLOKKEERT PUNT 39 EN
-    PUNT 41.
-    GEMETEN 08-08-2026, volledige uitwerking in `docs/PUNT40-RECON.md`. Meetruimte 140 cellen, 640
-    sessies, 38 distincte %FTP-banden, 39190 blokminuten; instrument geijkt op 21 van de 21 gepinde
-    waarden van de weekvorm-as.
-    DE KNIP LIGT OP 95 EN NIET OP 100, en dat weerlegt de LT2-formulering hierboven als KNIP-plek.
-    Op **95** loopt NUL band dwars — 1824 minuten onder, 4578 boven. Op **100** worden **2742 van
-    de 6402** nominale drempelminuten doorgesneden, **43 procent**, midden door `95-102` (2646 min)
-    en `100-108` (630 min). Als DIAGNOSE blijft de formulering staan: het label loopt inderdaad
-    over de grens heen.
-    HET PLAN LAAT DRIE SCHONE NADEN: **81-88, 94-95, 109-112**. Het zone-raster knipt op 55/75/90/105
-    en van die vier vallen **90 en 105 er allebei buiten** — 90 snijdt door `88-92`, `88-93`, `89-92`
-    en `89-93`; 105 door `100-108` en `103-108`. De misalignment is dus een eigenschap van het paar
-    raster-en-bibliotheek, niet van één sjabloon.
-    TWEE LEKKEN DIE DIT PUNT NIET NOEMDE. Sweetspot lekt óók naar `tempo` — de korte sjablonen
-    dragen band `88-92`, midden 90 — en de splitsing is DUUR-gecorreleerd, dus juist bij weinig uren
-    valt de prikkel buiten `drempel`. En er bestaat GEEN tempo-intent: **2172 van de 2280** nominale
-    tempo-minuten komen uit `88-92` en de rest uit `86-86`, beide uitsluitend uit
-    sweetspot-archetypes. `GOAL_KWALITEIT_INTENTS_` kent drempel, sweetspot en vo2 — geen tempo.
-    HET LIVE GEVOLG ZIT IN DE POORT `werkzoneLabelsVan_` (`apps/web/src/lib/zonelabels.ts:27`), met
-    drie consumenten: de weekstem (`weektekort.ts:114`), de blok-terugblik (`blok.ts:413`) en de
-    sleutel-inhaal (`sleutelinhaal.ts:44`). Over de 90 cellen met sweetspot-werk labelen er **48**
-    het uitsluitend `tempo`, **33** uitsluitend `drempel` en **9** dragen beide in dezelfde week —
-    dezelfde intent, drie poort-uitkomsten, bepaald door welk sjabloon de rotatie koos. De
-    minuten-kant lijdt hier NIET aan: `planZone5_` splitst proportioneel.
-    TWEE CORRECTIES OP DIT PUNT ZELF. (1) Er is GEEN ENGINE-AUTORISATIE NODIG: `pctLo` en `pctHi`
-    staan al op elk blok en de poort woont in `apps/web/src/lib`. De classificatie ENGINE hierboven
-    is met deze meting onjuist geworden. (2) FASE B IS NIET NORM-NEUTRAAL — de poort verplaatsen
-    verandert wélke zones beoordeeld worden en kan een oordeel omkeren. Een karakter-as die de
-    poort niet raakt zou vooruit-bedrading zijn, want meetgat en poort-defect hebben dezelfde
-    oorzaak.
+40. **Het drempel-label loopt dwars door de LT2-grens** — AF, gesloten zonder bouw (08-08-2026) · norm.
+    DE DIAGNOSE IS BEVESTIGD. Het nominale label `drempel` draagt beide soorten werk: **6402
+    minuten over 16 banden, waarvan 1824 sweet-spot (onder 95 procent FTP) en 4578 drempelwerk**.
+    28 tegen 72 procent, dus geen randgeval.
+    DE KNIP LIGT OP 95 EN NIET OP 100, en dat weerlegt de LT2-formulering in de kop als KNIP-plek.
+    Op **95** loopt NUL band dwars — 1824 onder, 4578 boven. Op **100** worden **2742 van de 6402**
+    minuten doorgesneden, **43 procent**, midden door `95-102` (2646 min) en `100-108` (630 min).
+    Als DIAGNOSE blijft de formulering staan: het label loopt inderdaad over de grens heen.
+    HET PLAN LAAT DRIE SCHONE NADEN: **81-88, 94-95, 109-112**. Het zone-raster knipt op
+    55/75/90/105 en van die vier vallen **90 en 105 er allebei buiten** — 90 snijdt door `88-92`,
+    `88-93`, `89-92` en `89-93`; 105 door `100-108` en `103-108`. De misalignment is dus een
+    eigenschap van het paar raster-en-bibliotheek, niet van één sjabloon.
+    TWEE LEKKEN DIE DIT PUNT NIET NOEMDE. Sweet-spot lekt óók naar `tempo` — de korte sjablonen
+    dragen band `88-92`, midden 90 — en de splitsing is DUUR-gecorreleerd, dus juist bij weinig
+    uren valt de prikkel buiten `drempel`. En er bestaat GEEN tempo-intent: **2172 van de 2280**
+    nominale tempo-minuten komen uit `88-92` en de rest uit `86-86`, beide uitsluitend uit
+    sweet-spot-archetypes. `GOAL_KWALITEIT_INTENTS_` kent drempel, sweetspot en vo2 — geen tempo.
+    VERDICT: GEEN BOUW. Het meetgat gaat dicht als NORM-regel — **M81 (NORM)** en **M82
+    (BEVINDING)** in `docs/TRAININGSMODEL.md`. M81: een karakter-uitspraak rust op de BAND en niet
+    op het zone-label. De karakter-as zelf heeft vandaag geen consument die zonder haar stuk is,
+    dus haar nu bouwen zou vooruit-bedrading zijn; punt 39 bouwt haar samen met zijn eerste
+    consument. Er is bovendien GEEN engine-autorisatie nodig — de banden staan al op elk blok en de
+    poort woont in `apps/web/src/lib` — dus de classificatie ENGINE is met deze meting vervallen.
+    Volledige meting in `docs/PUNT40-RECON.md`; meetruimte 140 cellen, 640 sessies, 38 distincte
+    banden, 39190 blokminuten, instrument geijkt op 21 van de 21 gepinde waarden.
+    DEBLOKKEERT PUNT 39, 41 EN 42. De regel dat dit punt ze BLOKKEERT vervalt: die drie meten
+    voortaan op de band, en M82 geeft ze de drie naden.
+    EEN GECORRIGEERDE PREMISSE, en die hoort hier zodat een volgende ronde hem niet opnieuw maakt.
+    De sleutel-inhaal is NIET geraakt. `planDraagtSleutelzone_` los gemeten valt om op 108 van de
+    360 kwaliteitsdagen, maar hij is één van TWEE OR-termen: op de DISJUNCTIE is het **360 van de
+    360** — zone-term 252, intent-term 312, nul dagen zonder sleutelstatus. Die 108 was een
+    meetfout, geen gat. Zie `docs/PUNT40-RECON.md` §9.
 41. **De weekmix polariseert niet bij hoger volume** — open · norm, TE METEN.
     GEMETEN, maar op ÉÉN AS — doel FTP, macrofase Base, mesoweek 1, lege `activities` en
     `weekplans` — dus dit is een MEETOPDRACHT en geen bevinding. Seiler-3-zone op het middelpunt
@@ -1485,6 +1478,23 @@ punten staat onder *Gesloten — vindplaats*.
     schending aanwijst.
     EEN AS IS GEEN INTREKKING. Hertoets over doelen en macrofasen vóór M78 wordt ingetrokken of
     bevestigd; tot dan blijft die regel staan zoals hij staat.
+43. **De normpoort staat op een midpunt-label dat identiek werk splitst** — open · CLIENT plus norm.
+    `werkzoneLabelsVan_` (`apps/web/src/lib/zonelabels.ts:27`) poort op het MIDPUNT-label van de
+    band, en twee consumenten hangen eraan die tegen GELEVERD vergelijken: de weekstem
+    (`apps/web/src/lib/weektekort.ts:114`) en de blok-terugblik (`apps/web/src/lib/blok.ts:413`).
+    GEMETEN, punt-40-ronde: van de **90 cellen met sweet-spot-werk** labelen er **48 het uitsluitend
+    `tempo`, 33 uitsluitend `drempel` en 9 beide**. Band `88-92` en band `88-93` zijn hetzelfde
+    sjabloontype met één procentpunt verschil op de bovengrens, en ze openen TEGENGESTELDE
+    normpoorten. Dezelfde intent, drie uitkomsten, bepaald door welk sjabloon de rotatie koos.
+    DE SLEUTEL-INHAAL VALT HIER BUITEN. Die draagt een INTENT-term naast de zone-term en meet op de
+    disjunctie 360 van de 360 — daar is niets te repareren. Zie `docs/PUNT40-RECON.md` §9.
+    NIET NORM-NEUTRAAL, en dat is de dragende beperking: een poort die bepaalt WAAROP geoordeeld
+    wordt kan een oordeel OMKEREN. De ronde meet dus eerst PER PLEK en in BEIDE richtingen met
+    aantallen, en toetst of `dosisTredeVoorstel` meebeweegt — blijft dat nul, dan is dat het
+    begrenzingsbewijs.
+    DE ZONE-MUNT BLIJFT ONGEMOEID. De geleverde kant komt uit intervals `power_zones` en kent geen
+    grens op 95; een poort op een raster dat de geleverde kant niet heeft zou beide kanten in
+    verschillende eenheden meten.
 
 ## De tijdslijn
 
@@ -1657,6 +1667,11 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
    punt 41 allebei BLOKKEERT. Zolang `drempel` zowel 89-92 als 98-105 procent FTP dekt, is er geen
    toets die een uitkomst over karakter of methodiek kan dragen. Norm-neutraal: er verandert geen
    training, alleen de zichtbaarheid.
+   **AF, GESLOTEN ZONDER BOUW op 08-08-2026.** Het meetgat is als NORM-regel gesloten — M81 en M82
+   in `docs/TRAININGSMODEL.md` — en niet als code: een karakter-uitspraak rust voortaan op de BAND
+   en niet op het zone-label. De karakter-as zelf had geen consument die zonder haar stuk is, dus
+   bouwen zou vooruit-bedrading zijn geweest. Punt 39, 41 en 42 zijn daarmee gedeblokkeerd. Wat
+   overbleef is het poort-defect en dat staat nu als punt 43, hieronder als item 6d.
 6b. **41 + 42** — de weekmix en M78, samen ÉÉN meetronde. Beide zijn op één as gemeten en beide
    vragen dezelfde uitbreiding: over doelen en macrofasen heen. 41 vraagt of het plan bij hoger
    volume hoort te polariseren en of de Z3-reeks variant-rotatie is; 42 of `mesoFactor` %FTP
@@ -1664,6 +1679,11 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
 6c. **39** — de herstelweek snijdt in de frequentie in plaats van in het volume. Draagt M79 en M80.
    Twee hendels: het deload-quotum van 1 en de kalendernaam-splitsing. Punt 19 gaat hierin op.
    Kan pas ná punt 40.
+6d. **43** — de normpoort staat op een midpunt-label dat identiek werk splitst. NÁ punt 39, met
+   reden: punt 39 bouwt de karakter-as samen met zijn eerste consument, en pas daarna is de
+   poort-reparatie goedkoop te meten — de as ligt er dan al en de rood-meting per plek gaat over
+   het verplaatsen van de poort, niet over het bouwen van een nieuwe grootheid. Andersom zou de
+   as tweemaal ontworpen worden. NIET norm-neutraal: eerst per plek meten, in beide richtingen.
 7. **16** — de materialiteitsvloer en de prikkel, in EEN bouw. Zie `docs/PUNT16-RECON.md` §5.
 8. **34** — de effect-referent kent het doel niet. M5-schending bij drie van de vijf doelen.
 9. **35** — een event draagt geen duur. Deblokkeert punt 13 fase B.

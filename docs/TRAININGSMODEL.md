@@ -488,4 +488,27 @@ doel draagt geen mesocyclus. Opzet: sweep over zeven weekvormen, vijf doelen, al
 alle mesoweken, met een A/A-ijking van nul afwijkende cellen. Bewijskracht hoog voor het gedrag,
 geen uitspraak over wat de renner ervan merkt.
 
+**M81 (NORM) — Een uitspraak over KARAKTER rust op de vermogensband van het blok, niet op de zone
+waarin dat blok wordt geteld.**
+M74 noemt het karakter de vermogenszone waarin de hoofdblokken liggen. De zone-indeling waarin de
+app minuten telt is die van de renner zelf en draagt haar eigen grenzen; een blok krijgt daarin
+EEN label terwijl zijn band over meerdere zones kan liggen. Zo'n label kan per constructie geen
+karakter-uitspraak dragen, en een methodiek-uitspraak die erop rust is niet toetsbaar. Wat de
+uitspraak wel draagt is de band zelf: de onder- en bovengrens in procenten van de drempel die het
+blok voorschrijft. Dit verbiedt de zone-telling niet en verandert er niets aan — het zegt alleen
+waar een karakter-oordeel op mag staan.
+
+**M82 (BEVINDING) — De trainingsbanden en de zone-indeling liggen structureel scheef.**
+Gemeten over 140 weken uit zeven weekvormen, vijf doelen en vier event-afstanden, met de
+plan-bouwer zelf aangeroepen: het plan levert 38 distincte banden over 39190 blokminuten, en die
+laten precies DRIE binnen-naden vrij waar geen enkele band dwars loopt — 81 tot 88, 94 tot 95, en
+109 tot 112. De zone-indeling knipt onder meer op 90 en op 105, en die vallen daar allebei buiten.
+Gevolg, drie lekken: sweet-spot dat als tempo telt, sweet-spot dat als drempel telt, en drempelwerk
+dat als anaeroob telt. De drempelzone draagt 1824 minuten sweet-spot naast 4578 minuten
+drempelwerk. De naad tussen die twee ligt op 95 procent en NIET op de drempel zelf: op 95 loopt nul
+band dwars, op 100 worden 2742 van de 6402 minuten doorgesneden. En er bestaat geen enkel sjabloon
+met tempo als bedoeling — elke minuut die als tempo telt komt uit een sweet-spot-sjabloon. Opzet:
+instrument vooraf geijkt op 21 van de 21 gepinde waarden; bewijskracht hoog voor deze bibliotheek,
+geen uitspraak over een andere.
+
 <!-- EINDE docs/TRAININGSMODEL.md -->
