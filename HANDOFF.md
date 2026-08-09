@@ -13,6 +13,70 @@ live tot cutover.
 
 ## Stand
 
+**PUNT 41 EN 42 ZIJN AF — BEIDE GESLOTEN ZONDER BOUW (9 augustus 2026).** Eén meetronde, twee
+verdicten, en M78 is ingetrokken. Docs-only: geen code, geen engine, geen migratie, geen deploy,
+en geen enkel `wrangler`-commando. ÉÉN commit: deze close-out draagt zowel
+`docs/PUNT41-42-RECON.md` als de norm- en ROADMAP-wijzigingen — hij noemt zijn eigen hash niet,
+want die bestaat pas nadat hij geschreven is. Prod en D1 staan waar het blok hieronder ze noemt;
+grep die twee daar op in plaats van ze hier over te schrijven.
+- **GEEN DEPLOY, EN DAT IS GEEN UITSTEL.** Er is geen letter aan de app veranderd — dit was een
+  meting, twee verdicten en vier norm-regels.
+- **DE METING.** `buildWeekProposal` zelf aangeroepen uit een esbuild-bundel,
+  `TZ=Europe/Amsterdam`, klok als Proxy op de echte `Date`. Zeven volumevormen maal vijf doelen
+  maal twaalf (fase,meso)-paren: **420 cellen, 1980 sessies, 14978 blokken, 42 distincte banden,
+  192674 blokminuten**. Instrument eerst geijkt op de weekvorm-as: **21 van de 21** gepinde
+  waarden. Volledige uitwerking in `docs/PUNT41-42-RECON.md`.
+- **PUNT 42: M78 IS WEERLEGD IN BEIDE TERMEN.** Binnen hetzelfde archetype gemeten — anders meet
+  je variant-rotatie. De werkband is identiek in **200 van de 200** groepen over mesoweken en in
+  **197 van de 197** over macrofasen; de werkMINUTEN bewegen in 200 van de 200. De factor is uit
+  die minuten afgelezen: **1,00 / 1,08 / 1,15 / 0,60**. Staat nu als **M83 (BEVINDING)**; M78 is
+  **INGETROKKEN** met de reden.
+- **PUNT 41: HET PLAN POLARISEERT NIET, HET VERDUNT.** Seiler-3-zone op de band, opbouwweken,
+  gepoold over doelen en fasen: 3,0u 69/20/10 · 4,5u 73/20/8 · 6,0u 78/17/6 · 8,0u 82/12/6 ·
+  10,0u 85/11/5 · 12,0u 87/9/4 · 14,0u 89/8/3. De toewijzingsregel is NIET dragend — midpunt,
+  proportioneel en meerderheid vallen binnen twee procentpunt samen, want op grens 80 wordt nul
+  en op 100 slechts **4,1 procent** van de blokminuten doorgesneden. Staat als **M84 (BEVINDING)**.
+- **DE ROTATIE-HYPOTHESE IS WEERLEGD.** Bij vaste weekvorm, doel én fase beweegt het Z3-aandeel
+  over de mesoweken gemiddeld **0,9 procentpunt** (maximum 3,3, n=91), tegen **8,7** over de
+  doelen en **6,9** over de volumes. De variatie is systematisch, geen sjabloonkeuze.
+- **DE VONDST DIE HET PUNT NIET NOEMDE: DE KWALITEITSDOSIS PLAFONNEERT.** Het weekvolume groeit
+  van 180 naar 840 minuten (factor 4,67) en Z1 van 125 naar 748 (factor 6,0), terwijl Z2 en Z3
+  samen van 55 naar 92 gaan en vanaf acht uur STILSTAAN: **88, 92, 94, 92**. Zes extra uren
+  leveren nul extra kwaliteitsminuten. Het plafond zit in het AANTAL kwaliteitsdagen — trainbare
+  dagen 3 naar 6, dagen met werk boven 100 procent FTP blijven op **1,6 à 1,75** — en niet in de
+  dosis per dag. Staat als **M85 (BEVINDING)** en als **ROADMAP punt 44**. COACH-CANON: of zes
+  extra uren extra kwaliteit HOREN te dragen valt niet op deze reeks te ijken; dat is een besluit
+  van Daan en er bestaat geen bouw vóór dat besluit. M45 wordt niet geschonden — die noemt acht à
+  tien uur als ondergrens en zwijgt over wat daarboven hoort.
+- **EEN GECORRIGEERDE AANNAME, en die hoort hier zodat een volgende ronde hem niet opnieuw
+  maakt.** De macrofase hangt NIET aan de eventdatum maar aan `doelStart`: over tien eventdata
+  van 1 tot 38 weken bleef `macroFase` op Build staan. `effectiveMacroFase_` laat de event-as
+  alleen winnen bij Recovery of binnen de overnamegrens MÉT bevestiging. De bereikbare ruimte is
+  daarmee **twaalf gekoppelde (fase,meso)-paren**, geen kruisproduct.
+- **EEN ANOMALIE IN DE EIGEN MEETUITVOER, VERKLAARD EN NIET WEGGEPOETST.** 208 van de 1980
+  sessies dragen geen blokken: alle 208 zijn Recovery-ritten, uitsluitend in mesoweek 4 en nooit
+  bij Onderhoud, samen 11960 minuten. Hun intensiteit is uit de TSS AFGELEID en niet aangenomen —
+  **46 procent FTP**, dus Z1. Meegeteld of niet verschuift de reeks hoogstens 3 procentpunt.
+- **DE VOLUME-AS W1..W7 IS NU VASTGELEGD** in `docs/ROADMAP.md`, want de reeks van punt 41 was
+  NIET reproduceerbaar: die weekvormen stonden nergens in de repo.
+- **WAT DAAN MERKT: NIETS.** Er verandert geen letter aan de app.
+- **VLOEREN NU: vitest-totaal 975 over 76 bestanden · engine-selftest-assert-count
+  1652 · lint-waarschuwingen 20**, alle vier afgelezen uit de gate van DEZE ronde.
+  Onbewogen: docs-only, geen test geraakt. Lees ze zelf uit de suite; neem ze niet over uit dit
+  blok.
+- **OPENSTAAND, elk item opnieuw gegrept in `docs/ROADMAP.md`:** 16 · 32 · 34 · 35 · 39 · 43 · 44.
+  Punt 41 en 42 horen er niet meer bij.
+
+FOCUS VOLGENDE CHAT: ROADMAP punt 39 — de herstelweek snijdt in de frequentie in plaats van in
+het volume. Item 6c uit *De volgorde* in `docs/ROADMAP.md`, dus GEEN afwijking van de reeks.
+Draagt M79 (HEURISTIEK) en M80 (BEVINDING). ENGINE, dus RECON-FIRST met een stop-en-verifieer
+voordat er één regel engine wordt aangeraakt; een echte engine-bug wordt geflagd, nooit
+stilzwijgend gepatcht. TWEE HENDELS: het deload-quotum van 1 en de kalendernaam-splitsing; N en
+de volumefactor worden in de bouwronde geijkt, nooit vooraf gekozen. PUNT 19 GAAT HIERIN OP.
+DEZE RONDE MAAKT HET VRIJ OP TWEE MANIEREN: M83 stelt vast dat de dosis-hendel werkelijk de
+dosis is en niet het percentage — precies wat M79 van een fix vraagt — en M81 geeft de band als
+meetgrootheid. De herstelweek is óók de plek waar de 208 Recovery-ritten wonen. Verse chat.
+
 **PUNT 40 IS AF — GESLOTEN ZONDER BOUW (8 augustus 2026).** Het label is gemeten, het meetgat is
 als norm-regel gesloten en er is geen letter code veranderd. Docs-only: geen code, geen engine,
 geen migratie, geen deploy, en geen enkel `wrangler`-commando. Commits:
@@ -328,18 +392,6 @@ FOCUS VOLGENDE CHAT: ROADMAP punt 37 — de vite-dev-server sterft stil tijdens 
 - **OPENSTAAND, elk item opnieuw gegrept in `docs/ROADMAP.md`:** 16 · 19 · 21 · 22 · 23 · 25 · 32 · 33 · 34 · 35 · 36 · 37. Punt 28 staat er NIET meer bij. Nieuw op de parkeerlijst onder DATA: `schema.ts:1411` vergelijkt de dosis-trede-rij met `settings.doel` op de RAUWE string, dus een legacy-waarde gooit de trede ten onrechte weg.
 
 FOCUS VOLGENDE CHAT: ROADMAP punt 16 — de goedkope bereik-prikkel, een prikkel boven de drempel die TOEVOEGT in plaats van RUILT. ENGINE plus norm, dus RECON-FIRST met een stop-en-verifieer voordat er ook maar één regel engine wordt aangeraakt; een echte engine-bug wordt geflagd, nooit stilzwijgend gepatcht. Het punt draagt zelf drie vragen in volgorde — route, norm, plaats — en raakt `DOELEN-SPEC`. Verse chat.
-
-**PUNT 36 IS GEBOUWD, NIET BEVESTIGD (6 augustus 2026).** Commits: `1911a188dcdb738577df935c3ad3f61f4581a408` (de fix) en deze close-out. TOOLING-only: geen engine, geen app, geen migratie, geen deploy, en geen enkel `wrangler`-commando. Prod blijft op Worker Version `03a3bc9e-7bad-4c1f-9576-729e9aad2f63`, D1 op `0010`.
-- **WAT ER GEBOUWD IS.** Elk scenario WIST zijn hele leesvenster voordat het zaait — acht weken weekplan-rijen, geteld terug vanaf de blokstart — en een GUARD toetst daarna dat het leeg is, op zowel de weekmaandag als de blokstart. `LEESVENSTER_WEKEN` staat op 8 en dekt TWEE bronnen die allebei 8 zijn: `RECENCY_HORIZON_WEEKS` in `packages/engine/src/planner.ts` en de default `window = 8` van `readRecentWeekplans` in `workers/api/src/db/repo.ts`. De PLANNER-tabel wordt bewust niet gewist: die wordt alleen voor de bekeken week gelezen.
-- **WISSEN EN NIET EIGEN WEEK-SLEUTELS, met de grond.** Eigen sleutels vragen acht weken tussenruimte per scenario, en dat is voor elf scenario's **tachtig weken** spreiding. Die botst VOORUIT op de acht-wekengrens van het A-event — dan neemt de event-as de periodisering over — en ACHTERUIT op de echte ritdata, terwijl de verstreken-dag-scenario's die weken juist ONGEREDEN nodig hebben.
-- **DE TOETS UIT PUNT 36 IS VERVANGEN, en dat is zelf een bevinding.** De drie-cycli-toets gaf op ONGEWIJZIGDE code **93 van de 95** identiek en nul afwijkende shots: de gedeelde toestand was naar een VAST PUNT geconvergeerd — `weekplans` op n=9 en `sum(length(entries_json))` **40061**, onbewogen over vier sweeps — terwijl diezelfde tabel een dag eerder nog met 1239 tekens groeide. Een toets die groen staat zónder ingreep beslist niets. In de plaats komt de VOLGORDE-TOETS: draai de scenario-lus om en er mag geen shot bewegen. Zonder fix gaf die **77 van de 95** identiek met **16** bewegende shots — heel `v2` en heel `v4`.
-- **DE GUARD IS AANTOONBAAR ROOD**, letterlijk: `v7: leesvenster niet leeg na wissen — maandag 2026-08-03 draagt 19 entries`.
-- **HET OPENSTAANDE RISICO, en daarom staat dit punt niet op af.** Met de fix erin haalde GEEN van de vier runs het einde, telkens afgebroken op de punt-24-poort in de ZAAI-fase en nooit op een shot. De voor de hand liggende verklaring is GEMETEN EN WEERLEGD: over **43 laadbeurten** is de mediaan **1558 ms** en de hoogste **8139 ms**, met **nul boven 15000 ms** en nul die de loader binnen 120000 ms niet kwijtraakte; de wandkloktijd was 246 s tegen 294 s en 320 s, dus de machine is ook uitgesloten. De uitval is INTERMITTENT en onverklaard, en het settle-budget verhogen is expliciet AFGEWEZEN — een grens die nooit gehaald wordt, verhoog je niet. De bevestiging komt GRATIS uit de eerstvolgende ronde die de harness draait; blijkt hij structureel om te vallen, dan is de commit één revert.
-- **WAT DAAN MERKT: NIETS aan de app.** Dit raakt uitsluitend het meetgereedschap.
-- **VLOEREN NU: vitest-totaal 959 over 75 bestanden · engine-selftest-assert-count 1652**, afgelezen uit de suite-uitvoer van DEZE ronde. Onbewogen: deze ronde raakte geen test. Lees ze zelf uit de suite; neem ze niet over uit dit blok.
-- **OPENSTAAND, elk item opnieuw gegrept in `docs/ROADMAP.md`:** 16 · 19 · 21 · 22 · 23 · 25 · 28 · 32 · 33 · 34 · 35 · 36. Alle elf de eerste dragen nog "open"; 36 leest nu "GEBOUWD, PRAKTIJKBEVESTIGING OPEN" en blijft daarom in de lijst.
-
-FOCUS VOLGENDE CHAT: ROADMAP punt 28 — een doelwissel herstart de cyclus niet, waardoor de volgende bouw de resten van de vorige configuratie leest. Verse chat.
 
 De oudere STAND-blokken en de historische projectsecties staan in `docs/HANDOFF-ARCHIEF.md`.
 Dit bestand draagt de TWAALF nieuwste blokken; komt er een dertiende bij, dan schuift het oudste in

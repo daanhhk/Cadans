@@ -823,5 +823,35 @@ Nieuwe of gewijzigde lessen komen HIER, met in dezelfde close-out een gedateerde
   TID-modellen zich onderscheiden — een label dat twee zones dekt kan per constructie geen
   karakteruitspraak dragen. Dat is ROADMAP punt 40. Zelfde familie als "citeer een meting met het
   predicaat dat gemeten is", nu op de GROOTHEID in plaats van op de formulering.
+- **Een SIGNATUUR die meer omvat dan de grootheid waarover je claim gaat, meldt afwijkingen
+  die er geen zijn.** Definieer hem op precies dat wat de claim draagt, en niets eromheen.
+  Aanleiding: bij punt 42 telde de bandsignatuur ALLE distincte banden van een sessie,
+  inclusief de Z2-vulblokken, en gaf 8 afwijkende groepen van de 200 — wat leest als
+  percentage-schaling en dus als bevestiging van M78. Die acht bleken het aan- of afwezig
+  zijn van een `65-65` vulblok bij `sweetspot_long_climb`, `vo2_hill_repeats` en
+  `threshold_2x20`, terwijl de werkbanden `89-93`, `112-118` en `95-100` alle drie stilstonden.
+  Op de WERKband — het zwaarste blok van de sessie — is het 200 van de 200. De claim ging over
+  het karakter van de prikkel; de vulling hoorde er nooit in. Zelfde familie als "citeer een
+  meting met het predicaat dat gemeten is", nu op de MEETGROOTHEID in plaats van op de
+  formulering.
+- **Een as die je denkt te sturen, kan aan een andere variabele hangen — lees hem af vóór je
+  hem beweegt.** Aanleiding: de macrofase leek via de eventdatum te sturen, zoals de
+  punt-40-meting hem beschrijft. GEMETEN over tien eventdata van 1 tot 38 weken bleef
+  `macroFase` onveranderd op "Build"; alleen `fase` kantelde naar Taper op één week. De grond
+  staat in `effectiveMacroFase_`: de event-as wint alleen bij Recovery, of binnen
+  `EVENT_OVERNAME_WEKEN` ÉN met `overnameBevestigd === true`. Zonder bevestiging stuurt
+  `computeMacroPhase` vanaf `doelStart` — die dus fase én mesoweek tegelijk zet, waardoor de
+  bereikbare ruimte TWAALF gekoppelde paren is en geen kruisproduct. Een sweep die de
+  veronderstelde as beweegt had 420 cellen op één fase gemeten en dat als dekking gelezen.
+  Zelfde familie als "enumereer met de functie die de app zelf aanroept", nu op de INVOER-as.
+- **Een gerapporteerde reeks zonder haar fixture-definitie is geen ijkpunt.** Ze is niet te
+  herhalen, dus niet te weerleggen en niet te vergelijken — en ze leest tóch als een meting.
+  Wie een reeks in een document zet, zet de vormen erbij. Aanleiding: de TID-reeks van punt 41
+  (3,0u 62/38/0 tot 12,0u 84/12/3) stond in `docs/ROADMAP.md` én in
+  `docs/PUNT19-DELOAD-RECON.md`, maar de zes weekvormen waarop ze gemeten was staan NERGENS in
+  de repo — één grep op de urenlabels geeft alleen de twee vindplaatsen van de reeks zelf. De
+  hertoets moest daarom een eigen volume-as vastleggen, en de oude reeks is geen vergelijkings-
+  basis maar alleen een aanleiding. Zelfde familie als "een gepind getal over de HUIDIGE VORM
+  van gereedschap is een uitspraak over het HEDEN", nu op de MEETOPSTELLING.
 
 <!-- EINDE docs/WERKWIJZE-LESSEN.md -->

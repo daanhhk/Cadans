@@ -1460,24 +1460,41 @@ punten staat onder *Gesloten — vindplaats*.
     360 kwaliteitsdagen, maar hij is één van TWEE OR-termen: op de DISJUNCTIE is het **360 van de
     360** — zone-term 252, intent-term 312, nul dagen zonder sleutelstatus. Die 108 was een
     meetfout, geen gat. Zie `docs/PUNT40-RECON.md` §9.
-41. **De weekmix polariseert niet bij hoger volume** — open · norm, TE METEN.
-    GEMETEN, maar op ÉÉN AS — doel FTP, macrofase Base, mesoweek 1, lege `activities` en
-    `weekplans` — dus dit is een MEETOPDRACHT en geen bevinding. Seiler-3-zone op het middelpunt
-    van elk blok (Z1 onder 80 procent FTP, Z2 80 tot 100, Z3 boven 100): 3,0u 62/38/0 · 4,0u
-    74/19/7 · 4,75u 70/24/6 · 5,0u 69/31/0 · 8,0u 76/15/9 · 12,0u 84/12/3. Het plan is PIRAMIDAAL
-    en wordt dat sterker met de uren, waar de literatuur bij hoger volume juist polarisatie
-    verwacht.
-    DE ANAEROBE REEKS: **7 / 0 / 0 / 0 procent** bij 8, 10, 12 en 15 uur. Geen kanteling.
-    OPENSTAANDE VRAAG: de Z3-reeks 6/0/9/3 over de weekvormen lijkt op VARIANT-ROTATIE in plaats
-    van op ontwerp. Dat onderscheid moet de meetronde maken. Raakt M43, M44 en M45.
-    HANGT AAN PUNT 40: op een label dat twee zones dekt is deze vraag niet te beantwoorden.
-42. **M78 reproduceert niet** — open · norm.
-    GEMETEN op één as: over mesoweek 1 tot 4 staan de blokpercentages STIL — 99, 100, 98, 95-99 en
-    89-92 procent FTP — terwijl alleen de DUUR beweegt: 5/7/9/12 naar 5/8/10/13 naar 6/8/10/14 naar
-    3/4/5. Op deze as schaalt `mesoFactor` dus duur en géén %FTP, en dat is precies wat M78 als
-    schending aanwijst.
-    EEN AS IS GEEN INTREKKING. Hertoets over doelen en macrofasen vóór M78 wordt ingetrokken of
-    bevestigd; tot dan blijft die regel staan zoals hij staat.
+41. **De weekmix polariseert niet bij hoger volume** — AF, gesloten zonder bouw (09-08-2026) · norm.
+    GEMETEN over de volle ruimte, volledige uitwerking in `docs/PUNT41-42-RECON.md`: 7 volumevormen
+    maal 5 doelen maal 12 (fase,meso)-paren — **420 cellen, 1980 sessies, 14978 blokken, 192674
+    blokminuten**, instrument geijkt op 21 van de 21 gepinde waarden.
+    HET PLAN POLARISEERT NIET; HET VERDUNT. Seiler-3-zone op de BAND (M81), opbouwweken, gepoold
+    over doelen en macrofasen: 3,0u **69/20/10** · 4,5u 73/20/8 · 6,0u 78/17/6 · 8,0u 82/12/6 ·
+    10,0u 85/11/5 · 12,0u 87/9/4 · 14,0u **89/8/3**. Piramidaal op elk volume, en sterker naarmate
+    de uren stijgen — van een kanteling naar polarized is geen spoor.
+    DE METHODEKEUZE IS NIET DRAGEND, en dat is zelf gemeten: midpunt, proportioneel en meerderheid
+    vallen binnen 2 procentpunt samen, want op grens 80 wordt NUL minuut doorgesneden en op grens
+    100 slechts **7921 van de 192674 (4,1 procent)**.
+    DE ROTATIE-HYPOTHESE IS WEERLEGD — dat was de openstaande vraag van dit punt. Spanwijdte van
+    het Z3-aandeel: doel **8,7** procentpunt, volume **6,9**, macrofase 3,8, mesoweek 2,8. Bij
+    VASTE weekvorm, doel én fase beweegt Z3 over de mesoweken gemiddeld **0,9** procentpunt
+    (maximum 3,3) over 91 groepen. De variatie is systematisch en zit in doel en volume.
+    NIEUW EN NIET IN DIT PUNT VOORZIEN: de ABSOLUTE kwaliteitsdosis plafonneert. Z2+Z3 gaat van 55
+    naar 92 minuten en staat vanaf 8 uur stil, terwijl het weekvolume met factor 4,67 groeit. Dat
+    krijgt een eigen punt — zie punt 44.
+    DRAAGT **M84** en **M85** in `docs/TRAININGSMODEL.md`. Raakt M43, M44 en M45.
+42. **M78 reproduceert niet** — AF, gesloten zonder bouw (09-08-2026) · norm.
+    GEMETEN over de volle ruimte, en in BEIDE termen weerlegd. Opzet: vergelijken BINNEN hetzelfde
+    archetype, want een vergelijking over archetypes heen meet variant-rotatie in plaats van
+    modulatie.
+    MESO-TERM: over 200 groepen (weekvorm maal doel maal fase maal archetype) met minstens twee
+    mesoweken is de WERKBAND — het zwaarste blok van de sessie — identiek in **200 van de 200**,
+    terwijl de werkMINUTEN in 200 van de 200 bewegen. FASE-TERM: over 197 groepen met minstens twee
+    macrofasen is de werkband identiek in **197 van de 197**.
+    DE FACTOR IS AFGELEZEN EN NIET AANGENOMEN: 1,00 / 1,08 / 1,15 / 0,60, met de spreiding verklaard
+    door afronding op één decimaal bij korte blokken.
+    EEN EERSTE SIGNATUUR GAF 8 AFWIJKINGEN EN DIE WAREN GEEN PERCENTAGE-SCHALING: het aan- of
+    afwezig zijn van een 65-65 vulblok bij `sweetspot_long_climb`, `vo2_hill_repeats` en
+    `threshold_2x20`, terwijl de werkbanden 89-93, 112-118 en 95-100 alle drie stilstonden.
+    UITKOMST: **M78 staat op INGETROKKEN** in `docs/TRAININGSMODEL.md`; **M83** draagt de bevinding.
+    `mesoFactor` schaalt de DOSIS en niet het percentage, en dat is precies wat M75 en M76
+    voorschrijven. Volledige uitwerking in `docs/PUNT41-42-RECON.md` §7.
 43. **De normpoort staat op een midpunt-label dat identiek werk splitst** — open · CLIENT plus norm.
     `werkzoneLabelsVan_` (`apps/web/src/lib/zonelabels.ts:27`) poort op het MIDPUNT-label van de
     band, en twee consumenten hangen eraan die tegen GELEVERD vergelijken: de weekstem
@@ -1495,6 +1512,23 @@ punten staat onder *Gesloten — vindplaats*.
     DE ZONE-MUNT BLIJFT ONGEMOEID. De geleverde kant komt uit intervals `power_zones` en kent geen
     grens op 95; een poort op een raster dat de geleverde kant niet heeft zou beide kanten in
     verschillende eenheden meten.
+44. **De kwaliteitsdosis plafonneert vanaf acht uur** — open · norm, COACH-CANON.
+    GEMETEN in de punt-41-ronde over 420 cellen en 1980 sessies, volledige uitwerking in
+    `docs/PUNT41-42-RECON.md` §6. Absolute minuten per week, opbouwweken, gemiddeld over doel en
+    fase: Z2+Z3 gaat van **55** minuten bij 3,0u naar **74 · 80 · 88 · 92 · 94 · 92** bij 4,5 tot
+    14,0 uur. Vanaf **8 uur staat die reeks stil**, terwijl het weekvolume van 180 naar 840 minuten
+    groeit (factor **4,67**) en Z1 van 125 naar 748 (factor **6,0**). Zes extra uren leveren dus
+    NUL extra kwaliteitsminuten.
+    HET PLAFOND ZIT IN HET QUOTUM, NIET IN DE DOSIS PER DAG. Trainbare dagen gaan van 3 naar 6,
+    maar dagen MET werk boven 100 procent FTP blijven op **1,6 à 1,75** — 1,75 / 1,63 / 0,94 /
+    1,75 / 1,56 / 1,75 / 1,75 — bij 10,4 tot 18,3 zulke minuten per dag.
+    DE VRAAG IS NIET OP DEZE REEKS TE IJKEN, en dat is de reden dat dit punt COACH-CANON heet en
+    geen meetopdracht. "Hoeveel kwaliteit hoort bij veertien uur" is een BESLUIT van Daan —
+    HERKOMST BELEID — en er bestaat geen meting die het antwoord kan dragen: de reeks laat zien wat
+    de app DOET, niet wat ze zou moeten doen. Een bouw bestaat pas ná dat besluit; zonder besluit
+    is er niets om tegen te bouwen.
+    M45 WORDT NIET GESCHONDEN: die noemt acht à tien uur als ONDERGRENS waaronder polarized zinloos
+    is en zwijgt over wat daarboven hoort. DRAAGT **M85**. Raakt M7, M43, M44 en M45.
 
 ## De tijdslijn
 
@@ -1676,6 +1710,12 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
    vragen dezelfde uitbreiding: over doelen en macrofasen heen. 41 vraagt of het plan bij hoger
    volume hoort te polariseren en of de Z3-reeks variant-rotatie is; 42 of `mesoFactor` %FTP
    werkelijk schaalt. Geen bouw vóór het verdict.
+   **AF, GESLOTEN ZONDER BOUW op 09-08-2026.** Beide vragen zijn over de volle ruimte beantwoord —
+   420 cellen, 1980 sessies, 14978 blokken. Het plan polariseert NIET maar verdunt (Z3 van 10 naar
+   3 procent), de rotatie-hypothese is weerlegd (0,9 procentpunt over de mesoweken tegen 8,7 over
+   de doelen), en `mesoFactor` schaalt de dosis en niet het percentage — werkband identiek in 200
+   van de 200 en 197 van de 197. M78 is INGETROKKEN; M83, M84 en M85 dragen de bevindingen. Er
+   volgde geen bouw, wél een nieuw punt: 44, hieronder als item 6e.
 6c. **39** — de herstelweek snijdt in de frequentie in plaats van in het volume. Draagt M79 en M80.
    Twee hendels: het deload-quotum van 1 en de kalendernaam-splitsing. Punt 19 gaat hierin op.
    Kan pas ná punt 40.
@@ -1684,6 +1724,11 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
    poort-reparatie goedkoop te meten — de as ligt er dan al en de rood-meting per plek gaat over
    het verplaatsen van de poort, niet over het bouwen van een nieuwe grootheid. Andersom zou de
    as tweemaal ontworpen worden. NIET norm-neutraal: eerst per plek meten, in beide richtingen.
+6e. **44** — de kwaliteitsdosis plafonneert vanaf acht uur. NÁ 6d en met een eigen soort stop: dit
+   is COACH-CANON en geen meetopdracht. De ronde begint met een BESLUIT van Daan over hoeveel
+   kwaliteit bij veertien uur hoort — herkomst BELEID — want er bestaat geen meting die dat
+   antwoord kan dragen. Zonder dat besluit is er niets om tegen te bouwen, dus deze plek in de rij
+   is een agendapunt en geen bouwronde. Draagt M85.
 7. **16** — de materialiteitsvloer en de prikkel, in EEN bouw. Zie `docs/PUNT16-RECON.md` §5.
 8. **34** — de effect-referent kent het doel niet. M5-schending bij drie van de vijf doelen.
 9. **35** — een event draagt geen duur. Deblokkeert punt 13 fase B.
@@ -1720,6 +1765,23 @@ heen; een verschil tussen as en app is geen regressie en nooit een herijk-aanlei
 Stand na stap 1b (doel FTP, fase Base, mesoweek 1):
 kwaliteitsminuten 93 / 113 / 113 / 105 / 84 / 93 / 90 · week-TSS 268 / 410 / 464 / 362 / 352 /
 227 / 375 · kwaliteitsdagen 3 / 3 / 3 / 3 / 3 / 3 / 3.
+
+DE VOLUME-AS W1 TOT EN MET W7, vastgelegd 09-08-2026. Dit is een TWEEDE as, naast de weekvorm-as
+hierboven: die varieert de VORM bij ongeveer gelijk volume, deze varieert het VOLUME van 3 tot 14
+uur. Elke ronde die iets over volume beweert draait deze vormen, en geen andere.
+
+- **W1** 3,0u — ma45 wo45 za90
+- **W2** 4,5u — ma50 wo50 vr50 za120
+- **W3** 6,0u — ma60 wo60 vr60 za180
+- **W4** 8,0u — ma70 wo70 vr70 za180 zo90
+- **W5** 10,0u — ma75 di60 do75 za210 zo180
+- **W6** 12,0u — ma90 di75 wo60 do90 za240 zo165
+- **W7** 14,0u — ma90 di90 wo90 do90 za270 zo210
+
+DE REDEN DAT DIT HIER STAAT is een gemeten kosten-post: punt 41 droeg een TID-reeks over 3,0 tot
+15,0 uur waarvan de weekvormen NERGENS waren vastgelegd, en die reeks bleek daardoor niet
+reproduceerbaar — de punt-41-ronde moest een eigen as verzinnen en kon de oude getallen niet
+weerleggen of bevestigen. Een as die niet in de repo staat, bestaat niet.
 
 ## Parkeerlijst
 

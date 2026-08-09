@@ -456,12 +456,13 @@ De verhouding tussen trainingstypen (de mix, bijvoorbeeld het aandeel VO2max teg
 sweetspot) verschuift op MACRO-niveau richting het doel of event (base→build→peak), niet als
 week-op-week meso-hendel.
 
-**M78 (BEVINDING) — De huidige intensiteits-modulatie schendt de karakter-invariantie.**
-De huidige implementatie moduleert intensiteit door het %FTP per blok te vermenigvuldigen met
-een meso-factor plus een fase-offset. Dat schendt de karakter-invariantie: in de piek-mesoweek
-verschuift elk blok een zone omhoog (endurance→tempo, sweetspot→threshold). Geërfd uit de
-referentie-implementatie. De duur-schaling van de lange rit is dosis-gedreven en correct; de
-pct-schaling is de te verwijderen hendel.
+**M78 (INGETROKKEN) — "De huidige intensiteits-modulatie schendt de karakter-invariantie."**
+Geclaimd op grond van een leesronde en teruggetrokken op grond van een meting; niet
+hergebruiken. De claim was dat de implementatie het %FTP per blok vermenigvuldigt met een
+meso-factor plus een fase-offset, en dat elk blok in de piek-mesoweek een zone omhoog
+schuift. Beide termen zijn gemeten en weerlegd — zie M83. Wat WEL beweegt is de dosis, en
+dat is precies wat M75 en M76 voorschrijven. De duur-schaling van de lange rit blijft
+correct; er is geen te verwijderen pct-hendel, want die hendel bestaat niet.
 
 **M79 (HEURISTIEK) — De herstelweek snijdt in het VOLUME, niet in de frequentie van de prikkel.**
 De dosisverlaging die M76 vraagt komt uit het duurvolume — de lange rit voorop — terwijl een tot
@@ -510,5 +511,39 @@ band dwars, op 100 worden 2742 van de 6402 minuten doorgesneden. En er bestaat g
 met tempo als bedoeling — elke minuut die als tempo telt komt uit een sweet-spot-sjabloon. Opzet:
 instrument vooraf geijkt op 21 van de 21 gepinde waarden; bewijskracht hoog voor deze bibliotheek,
 geen uitspraak over een andere.
+
+**M83 (BEVINDING) — `mesoFactor` schaalt de DOSIS en niet het percentage.**
+Gemeten binnen hetzelfde archetype, want een vergelijking over archetypes heen meet
+variant-rotatie in plaats van modulatie. Over 200 groepen van weekvorm maal doel maal
+macrofase maal archetype met minstens twee mesoweken is de werkband — het zwaarste blok van
+de sessie — identiek in 200 van de 200, terwijl de werkminuten in 200 van de 200 bewegen.
+Over 197 groepen met minstens twee macrofasen is de werkband identiek in 197 van de 197. De
+factor is uit de werkminuten afgelezen en niet aangenomen: 1,00 / 1,08 / 1,15 / 0,60, met de
+spreiding verklaard door afronding op één decimaal bij korte blokken. Hiermee vervalt M78.
+Opzet: 420 cellen, 1980 sessies, 14978 blokken, instrument vooraf geijkt op 21 van de 21
+gepinde waarden; bewijskracht hoog voor deze bibliotheek, geen uitspraak over een andere.
+
+**M84 (BEVINDING) — Het plan polariseert niet bij hoger volume; het verdunt.**
+Seiler-3-zone op de band (Z1 onder 80 procent FTP, Z2 80 tot 100, Z3 daarboven), opbouwweken,
+gepoold over vijf doelen en drie macrofasen: 3,0u 69/20/10 · 4,5u 73/20/8 · 6,0u 78/17/6 ·
+8,0u 82/12/6 · 10,0u 85/11/5 · 12,0u 87/9/4 · 14,0u 89/8/3. Het plan is piramidaal op elk
+volume en wordt dat sterker met de uren; van een kanteling naar polarized is geen spoor. De
+toewijzingsregel is niet dragend — midpunt, proportioneel en meerderheid vallen binnen twee
+procentpunt samen, omdat op grens 80 nul en op grens 100 slechts 4,1 procent van de
+blokminuten wordt doorgesneden. De variatie is systematisch en geen variant-rotatie: bij
+vaste weekvorm, doel en fase beweegt het Z3-aandeel gemiddeld 0,9 procentpunt over de
+mesoweken, tegen 8,7 over de doelen en 6,9 over de volumes.
+
+**M85 (BEVINDING) — De absolute kwaliteitsdosis plafonneert vanaf circa acht uur.**
+Absolute minuten per week over dezelfde meetruimte: het weekvolume groeit van 180 naar 840
+minuten (factor 4,67) en Z1 van 125 naar 748 (factor 6,0), terwijl Z2 en Z3 samen van 55 naar
+92 minuten gaan en vanaf acht uur stilstaan — 88, 92, 94, 92. Zes extra uren leveren nul
+extra kwaliteitsminuten. Het plafond zit in het AANTAL kwaliteitsdagen en niet in de dosis
+per dag: de trainbare dagen gaan van drie naar zes, maar het aantal dagen met werk boven 100
+procent FTP blijft op 1,6 à 1,75, bij 10,4 tot 18,3 zulke minuten per dag. Dit is een
+BEVINDING over het gedrag en uitdrukkelijk geen norm-uitspraak: of zes extra uren extra
+kwaliteit HOREN te dragen is coach-canon (M7, M43, M44, M45) en valt niet op deze reeks te
+ijken. M45 wordt er niet door geschonden — die noemt acht à tien uur als ondergrens waaronder
+polarized zinloos is en zwijgt over wat daarboven hoort. Staat als ROADMAP punt 44.
 
 <!-- EINDE docs/TRAININGSMODEL.md -->
