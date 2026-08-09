@@ -230,6 +230,12 @@ scheefte samen met het moment waarop het getal ertoe doet. CC meet dus NA de com
 het daar; herhaalt een STAND-blok het getal, dan noemt het de commit waarop het gemeten is. Een chat
 die het getal nodig heeft leest het uit zijn eigen read-only kloon op de gepinde hash. Kwam binnen
 als CC-afwijking.
+EN DE REGEL IS BREDER DAN BYTES: GEEN ENKEL GETAL IN EEN STAND-BLOK MAG NAAR DE COMMIT WIJZEN
+DIE DAT BLOK BEVAT. Bij de close-out van punt 41 en 42 droeg het blok een invulplek voor zijn
+eigen commit-hash, en die bestaat per constructie pas nadat het blok geschreven is. CC ving het
+en herschreef de regel naar een formulering die de eigen hash niet noemt. Een blok verwijst dus
+naar EERDERE commits met hun hash, en naar zichzelf uitsluitend met "deze close-out" — de hash
+en de bytes van de eigen commit staan in het CC-rapport, waar ze wél te meten zijn.
 
 `HANDOFF.md` DRAAGT MAXIMAAL TWAALF STAND-BLOKKEN. Komt er een dertiende bij, dan verhuist het oudste
 in dezelfde close-out verbatim naar `docs/HANDOFF-ARCHIEF.md`, dat de opener niet ophaalt.
