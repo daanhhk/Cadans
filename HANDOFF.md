@@ -13,6 +13,63 @@ live tot cutover.
 
 ## Stand
 
+**PUNT 39 EN 45 ZIJN AF EN STAAN LIVE (9 augustus 2026).** De herstelweek snijdt eindelijk in het
+volume, en hij kort tegen de OPBOUWWEKEN in plaats van tegen zichzelf. Commit `d7b8feb7b92b41955268fe2b6abf3b34b3ab00fc`
+(de bouw) plus deze close-out. Worker Version `ef9152dc-5c86-4606-ab97-55df97449877`. GEEN migratie en geen enkel
+`wrangler d1`-commando — deze bouw raakt D1 niet.
+- **WAT ER GEBOUWD IS, EN HET IS CLIENT-ONLY.** `herstelSchaal_` in `apps/web/src/lib/proposal.ts`
+  draagt M86 en M87 samen; de toepassing landt op `sessieMin` in de dag-loop. GEEN engine, GEEN
+  worker, GEEN nieuwe route: de historie komt uit drie extra aanroepen van de BESTAANDE
+  `GET /api/planner/:monday`, en `laadGelabeld` draait op `Promise.allSettled` dus dat kost geen
+  extra rondreis. `git diff --stat HEAD~1 HEAD -- packages/engine` is leeg.
+- **DE CONDITIE SPIEGELT DE ENGINE:** `mesoWeek === 4 && !nearTaper`, exact `isRecovery` op
+  `packages/engine/src/planner.ts:708`. Zonder de tweede term krimpt de client een week waar de
+  engine geen deload draait.
+- **HET VERDICT VAN PUNT 45, OP DE ECHTE D1 GEMETEN.** `planner_days` draagt **5 van de 5** weken,
+  alle vijf compleet met 7 rijen; de weekplan-blob draagt er **3** en heeft voor 2026-07-06 en
+  2026-07-13 niets. Waar beide bestaan wijkt de blob **0, +25,0 en +31,9 procent** af (300/300,
+  375/300, 356/270) — geen systematische offset, en een orde groter dan de +0,9 procent van de
+  gebouwde duur. DE REFERENT IS DUS `planner_days`, en dat is ook M28: de weekplanner is de
+  INVOER, de blob is het vorige VOORSTEL van de app. De twee queries sluiten op elkaar: 21
+  traindagen en 1425 minuten aan beide kanten.
+- **DE ACCEPTATIE IS GEHAALD, MET DE VOOR-STAAT ALS IJKING.** Instrument eerst geijkt op de
+  VOOR-reeks uit `docs/PUNT39-PLEK-RECON.md` §2: **100 / 100 / 100 / 95 / 97 / 92 / 88**, 7 van de
+  7. NA: **76 / 75 / 72 / 63 / 56 / 56 / 56** over W1..W7, 84 cellen. Werkband van de deloadweek
+  **56 van de 56** op Base+Build en **84 van de 84** over alle paren; opbouwweken **84 van de 84**
+  identiek; met en zonder historie **84 van de 84** gelijk.
+- **DE EIS "KWALITEITSDAGEN OP 1" WAS TE BREED GEFORMULEERD, NIET GESCHONDEN.** Doel Conditie geeft
+  er **0** in 14 van de 84 cellen — óók vóór de bouw. Voor tegen na is **84 van de 84** identiek.
+  Zelfde vorm als de Test-familie die de plek-recon al vond: de eis stond op een ABSOLUTE waarde
+  waar hij een VERSCHIL hoorde te toetsen.
+- **EEN TERM DIE BIJNA TEN ONRECHTE ALS ONBEWEZEN WEGGING.** De vijf bouw-tests dragen geen event,
+  dus `nearTaper` kan er per constructie niet true worden en de rood-patch liet niets vallen. Met
+  een event in de lopende week bestaan `mesoWeek 4` én `nearTaper true` wél, en met de term uit
+  zakt die week van **300,2 naar 231,2** minuten in alle drie de paren. De term is dus gedekt; wat
+  ontbrak was een fixture die de conditie kón dragen.
+- **M87 BIJT IN BEIDE RICHTINGEN, EN DE TWEEDE IS EEN EIGENSCHAP DIE DAAN MOET WETEN.** Herstelweek
+  W1 met historie W3 gaat van 135,6 naar **179,6** minuten — het defect uit M87 is weg. Maar W3 met
+  historie W1 gaat van 257,2 naar **157,2**: wie in zijn herstelweek MEER invult dan hij gewend is,
+  wordt dieper gekort. Dat volgt uit de norm — de herstelweek is een percentage van je NORMALE
+  volume — maar het betekent dat de app beschikbare tijd laat liggen. Geen defect, wel een keuze
+  die zichtbaar hoort te zijn.
+- **WAT DAAN MERKT:** in een herstelweek worden alle sessies korter terwijl het aantal ritten en de
+  intensiteit gelijk blijven. Pendeldagen en dag-overrides krimpen NIET mee.
+- **VLOEREN NU: vitest-totaal 980 over 77 bestanden · engine-selftest-assert-count 1652 ·
+  lint-waarschuwingen 20**, alle vier afgelezen uit de gate van DEZE ronde. Het vitest-totaal steeg
+  met 5 door `apps/web/src/lib/punt39.test.ts`; de engine-vloer is onbewogen. Lees ze zelf uit de
+  suite; neem ze niet over uit dit blok.
+- **OPENSTAAND, elk item opnieuw gegrept in `docs/ROADMAP.md`:** 16 · 32 · 34 · 35 · 43 · 44 · 46.
+  Punt 39 en 45 horen er niet meer bij.
+
+FOCUS VOLGENDE CHAT: ROADMAP punt 43 — de normpoort staat op een midpunt-label dat identiek werk
+splitst. Item 6d uit *De volgorde* in `docs/ROADMAP.md`, dus GEEN afwijking van de reeks. Band
+`88-92` en `88-93` verschillen één procentpunt en openen tegengestelde poorten: 48 cellen
+uitsluitend tempo, 33 uitsluitend drempel, 9 beide, van de 90 met sweet-spot-werk. NIET
+norm-neutraal, dus EERST per plek meten en in BEIDE richtingen — een poort die bepaalt waarop
+geoordeeld wordt kan het oordeel omkeren, niet alleen afzwakken. Twee consumenten hangen eraan.
+Punt 39 heeft de karakter-as nu samen met zijn eerste consument gebouwd, dus de as ligt er en de
+meting gaat over het VERPLAATSEN van de poort. Verse chat.
+
 **DE PLEK VOOR PUNT 39 IS GEMETEN EN BESLIST — NOG NIET GEBOUWD (9 augustus 2026).** Docs-only:
 geen code, geen engine, geen migratie, geen deploy, en geen enkel `wrangler`-commando. EEN
 commit — deze close-out draagt het plek-recon, M87, de M86-correctie, de ROADMAP en de lessen;
@@ -465,23 +522,6 @@ FOCUS VOLGENDE CHAT: ROADMAP punt 33 — de norm-vergelijking naar EEN gedeelde 
 - **OPENSTAAND, elk item opnieuw gegrept in `docs/ROADMAP.md`:** 16 · 19 · 21 · 32 · 33 · 34 · 35 · 36. Punt 22, 23 en 25 horen er niet meer bij.
 
 FOCUS VOLGENDE CHAT: ROADMAP punt 36 — het verdict. Ronde 3 van het tooling-blok uit *De volgorde* in `docs/ROADMAP.md`; die paragraaf legt de bouwvolgorde vast LOS van de nummering, dus dit is GEEN afwijking van de reeks. TOOLING, geen engine. Het punt heeft al één bouw achter zich die het verschijnsel niet wegnam, dus de uitkomst is gerepareerd OF begrensd uitgesloten met reden en aantal — geen derde poging. TWEE DINGEN LIGGEN NU KLAAR DIE ER EERDER NIET WAREN: `tools/shots/vergelijk.mjs` classificeert elke bewegende shot op zijn innerText, wat de punt-36-familie mechanisch van pixel-ruis scheidt, en de noemer is compleet nu punt 23 dicht is. MEET JE EIGEN IJKPAAR: de vloer zwierf over drie sessies van acht naar nul naar acht, en op een ander scenario. Verse chat.
-
-**PUNT 37 IS AF (7 augustus 2026).** De shot-harness leest een dode dev-server niet langer als een ladende pagina. TOOLING-only: geen engine, geen app, geen migratie, geen deploy, en geen enkel `wrangler`-commando behalve de lokale dev-servers. Commits: `526ce4ea5e4fe3fd0863c57e2e145b363fe767d9` (de bouw) plus deze close-out. CI success, run <https://github.com/daanhhk/Cadans/actions/runs/31176740420>. Prod blijft op Worker Version `82abac49-d032-4847-9b6f-efc90c3ac33d`, D1 op `0010`.
-- **GEEN DEPLOY, EN DAT IS GEEN UITSTEL.** `tools/shots` zit niet in de bundel en `pnpm build` raakt het niet — er valt hier niets te verschepen.
-- **WAT ER GEBOUWD IS: ÉÉN POORT OP ÉÉN PLEK.** De bestaande `try … finally` om de scenario-lus in `main()` krijgt een `catch` die `classifyFailure` aanroept. Die meet met ÉÉN fetch per origin (`AbortSignal.timeout(3000)`, geen lus — dit is een postmortem en geen preflight) of `http://127.0.0.1:5173` en `http://127.0.0.1:8787/api/settings` nog antwoorden. Antwoorden ze allebei, dan gaat de oorspronkelijke fout ONGEWIJZIGD door; antwoordt er één niet, dan stopt de run met `INFRASTRUCTUUR-UITVAL`, beide gemeten statussen, de oorspronkelijke melding en de zin dat de geschoten shots niets over de bouw bewijzen. Elk antwoord telt als LEVEND, ook 401, 404 of 500; alleen een gegooide of afgelopen fetch is `null`.
-- **DE PREMISSE VAN PUNT 37 WAS TE SMAL, en dat is de dragende uitkomst.** Het punt noemde één foutvorm: `still loading after settle`. Gereproduceerd gaf dezelfde conditie er TWEE ANDERE — zonder de fix `page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:5173/instellingen`, met de fix `page.waitForSelector: Timeout 60000ms exceeded` op `#root > *`. Geen van beide is de punt-24-melding. Eén conditie draagt dus minstens DRIE foutvormen, en een poort BINNEN `settle()` — de voor de hand liggende plek — had er twee van de drie gemist.
-- **LET OP BIJ HET CITEREN VAN DIE REPRODUCTIE.** `preview_stop` is een NETTE stop: gereproduceerd is de CONDITIE (de origin antwoordt niet meer), niet de OORZAAK (het stille sterven, exit 127 of 1). Dat het veld vijf keer de punt-24-melding gaf en deze reproductie niet, is daarmee niet weerlegd en ook niet bevestigd.
-- **ROOD EN GROEN, LOS GEMETEN.** Met de rood-patch bevat de melding `INFRASTRUCTUUR-UITVAL` 0 keer; zonder de patch dragen alle vier de bestanddelen. `classifyFailure` gaf 2 treffers vóór de patch, 1 tijdens, 2 erna — de patch raakte dus iets. Beide runs exitcode 1.
-- **DE RUISVLOER VAN DEZE SESSIE IS NUL, EN DAT IS NIEUW.** Twee opeenvolgende volledige sweeps op ONGEWIJZIGDE code: 93 van de 95 identiek, 93 vergeleken, 2 uitgesloten wegens punt 23 (`v7/09-vorm.png` en `v7/10-trainingen.png`), NUL bewegende shots. Op 7 augustus gaf hetzelfde ijkpaar 85 van de 95 met acht bewegende, alle acht in `klim-weekstem`. Het enige verschil in de opzet is de WEGGEGOOIDE WARMLOOP die eraan voorafging. KANDIDAAT, niet vastgesteld — en uitdrukkelijk GEEN uitspraak over punt 36: dit is een HERHALINGStoets, en de toets die dat punt discrimineert is de VOLGORDE-toets.
-- **DE VERGELIJKER IS EERST GEIJKT, IN TWEE RICHTINGEN.** `out/v2` tegen `out-vorige/v4` gaf 0 van de 8 identiek, `out/v2` tegen zichzelf 8 van de 8. Zonder die twee is "nul bewegende shots" niet te onderscheiden van een vergelijker die altijd identiek zegt.
-- **BEGRENZING.** NA tegen VOOR: 93 van de 95 identiek, 93 vergeleken, 2 uitgesloten wegens punt 23, nul bewegende shots — tegen een ruisvloer van nul, dus toe te schrijven aan de bouw. De diff is 84 regels bij en 1 weg over twee hunks; `settle()`, de vier `goto`/`settle`-paren en `process.exit(1)` zijn onaangeroerd, en `still loading after settle` geeft nog exact 1 treffer.
-- **BEIDE AFGEBROKEN RUNS GEDRAGEN ZICH ZOALS PUNT 31 BELOOFT.** Geen `RUN-COMPLEET.json` in `tools/shots/out` (12 respectievelijk 9 PNG's), en `tools/shots/out-vorige` bleef staan met 95 PNG's en zijn marker.
-- **NIEUWE VLOER: HET AANTAL LINT-WAARSCHUWINGEN.** Dat stond nergens vastgelegd en sloop er bijna in: een eerste bouwversie gaf een 21e waarschuwing (`useOptionalChain`) terwijl `pnpm lint` exit 0 gaf — de gate zou groen zijn geweest. CC ving het en werkte hem weg vóór de meting. Vanaf nu telt dat aantal mee als vloer.
-- **WAT DAAN MERKT: NIETS aan de app.** Dit raakt uitsluitend het meetgereedschap.
-- **VLOEREN NU: vitest-totaal 971 over 75 bestanden · engine-selftest-assert-count 1652 · lint-waarschuwingen 20**, alle vier afgelezen uit de uitvoer van DEZE ronde. Onbewogen: deze ronde raakte geen enkele test. Lees ze zelf uit de suite; neem ze niet over uit dit blok.
-- **OPENSTAAND, elk item opnieuw gegrept in `docs/ROADMAP.md`:** 16 · 19 · 21 · 22 · 23 · 25 · 32 · 33 · 34 · 35 · 36. Punt 37 staat er NIET meer bij.
-
-FOCUS VOLGENDE CHAT: ROADMAP punt 25 + 22 + 23 — de drie blinde vlekken van de camera, in ÉÉN ronde. Ronde 2 van het tooling-blok uit *De volgorde* in `docs/ROADMAP.md`; die paragraaf legt de bouwvolgorde vast LOS van de nummering, dus dit is GEEN afwijking van de reeks. TOOLING, geen engine. Lukt punt 23 niet met uitgezette animaties, dan blijven die twee shots UITGESLOTEN met reden en aantal — dat staat zo in het punt en is geen mislukking. NEEM DE RUISVLOER-KANDIDAAT MEE: draai eerst een warmloop en gooi die weg, en meet daarna je eigen ijkpaar; deze ronde gaf zo nul bewegende shots waar 7 augustus er acht gaf. Verse chat.
 
 De oudere STAND-blokken en de historische projectsecties staan in `docs/HANDOFF-ARCHIEF.md`.
 Dit bestand draagt de TWAALF nieuwste blokken; komt er een dertiende bij, dan schuift het oudste in

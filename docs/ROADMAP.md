@@ -1404,7 +1404,7 @@ punten staat onder *Gesloten — vindplaats*.
     NIET GEDAAN, met reden. De aanleidingen uit de lessen strippen: 89 losse knipbeslissingen en de
     aanleiding draagt vaak het getal waarop de regel rust. En `DOELEN-SPEC` §150 aanpassen: die
     verwijst naar *Recon en bewijslast*, en die KOP blijft in de norm staan, dus de verwijzing klopt.
-39. **De herstelweek snijdt in de frequentie in plaats van in het volume** — open · ENGINE.
+39. **De herstelweek snijdt in de frequentie in plaats van in het volume** — AF en LIVE (09-08-2026) · CLIENT.
     DRAAGT M79 (HEURISTIEK) EN M80 (BEVINDING). M79: de dosisverlaging die M76 vraagt komt uit het
     DUURvolume — de lange rit voorop — terwijl één tot twee korte prikkels op hun eigen relatieve
     intensiteit blijven staan; richtwaarde 40 tot 60 procent minder volume, coachconventie en geen
@@ -1452,6 +1452,19 @@ punten staat onder *Gesloten — vindplaats*.
     **75 / 75 / 71 / 63 / 55 / 55 / 55** procent volume tegenover de opbouwweek, met de
     kwaliteitsdagen ongewijzigd op 1 en de opbouwweek byte-identiek.
     PUNT 40 IS AF, dus de blokkade uit dit punt is vervallen: de meting draait op de band.
+    GEBOUWD EN LIVE op `d7b8feb`, Worker Version `ef9152dc-5c86-4606-ab97-55df97449877`. DE
+    INGREEP IS CLIENT-ONLY: `herstelSchaal_` in `apps/web/src/lib/proposal.ts` draagt M86 en M87
+    samen, en de toepassing landt op `sessieMin` in de dag-loop — geen engine, geen worker, geen
+    nieuwe route. De classificatie ENGINE in de kop hierboven is met de plek-meting vervallen.
+    DE REFERENT ZIJN DE PLANNER-DAGEN VAN DE DRIE VOORGAANDE WEKEN, opgehaald met drie extra
+    aanroepen van de BESTAANDE `GET /api/planner/:monday`. De weekplan-blob is AFGEWEZEN, en dat
+    is op de echte D1 gemeten: hij dekt **3 van de 5** weken en wijkt waar hij bestaat **0 tot
+    31,9 procent** af van de invoer (300/300, 375/300, 356/270). `planner_days` dekt 5 van de 5,
+    alle vijf compleet. Dat is ook M28 — de weekplanner is de INVOER, de blob het vorige VOORSTEL.
+    ACCEPTATIE GEHAALD, met de VOOR-staat als ijking: **100 / 100 / 100 / 95 / 97 / 92 / 88**
+    gereproduceerd (7 van de 7), NA **76 / 75 / 72 / 63 / 56 / 56 / 56** over 84 cellen; werkband
+    van de deloadweek 56 van de 56 op Base+Build en 84 van de 84 over alle paren; opbouwweken 84
+    van de 84 identiek.
 40. **Het drempel-label loopt dwars door de LT2-grens** — AF, gesloten zonder bouw (08-08-2026) · norm.
     DE DIAGNOSE IS BEVESTIGD. Het nominale label `drempel` draagt beide soorten werk: **6402
     minuten over 16 banden, waarvan 1824 sweet-spot (onder 95 procent FTP) en 4578 drempelwerk**.
@@ -1553,7 +1566,7 @@ punten staat onder *Gesloten — vindplaats*.
     is er niets om tegen te bouwen.
     M45 WORDT NIET GESCHONDEN: die noemt acht à tien uur als ONDERGRENS waaronder polarized zinloos
     is en zwijgt over wat daarboven hoort. DRAAGT **M85**. Raakt M7, M43, M44 en M45.
-45. **De herstelweek kent zijn eigen referentie niet** — open · CLIENT plus norm.
+45. **De herstelweek kent zijn eigen referentie niet** — AF en LIVE (09-08-2026) · CLIENT plus norm.
     De volumefactor uit M86 landt op de beschikbaarheid van de HERSTELWEEK ZELF, dus stapelt hij
     op een krimp die de gebruiker al droeg. **M87 (NORM)** legt vast waartegen hij hoort te
     korten: de OPBOUWWEKEN van hetzelfde blok. Ligt de beschikbaarheid daar al onder, dan is de
@@ -1575,6 +1588,29 @@ punten staat onder *Gesloten — vindplaats*.
     HOORT IN DEZELFDE BOUW ALS PUNT 39, item 6c: zonder referent doet M86 in een alledaags geval
     aantoonbaar het verkeerde. De bouwronde meet EERST welke bron bruikbaar is; blijkt geen van
     beide het, dan is dat een verdict met een getal en gaat de factor alleen.
+    GEBOUWD EN LIVE op `d7b8feb`, samen met punt 39. HET VERDICT OP DE BRON IS OP DE ECHTE D1
+    GEMETEN: `planner_days` dekt **5 van de 5** weken en alle vijf compleet met zeven rijen; de
+    weekplan-blob dekt er **3** en heeft voor 2026-07-06 en 2026-07-13 niets. Waar beide bestaan
+    wijkt de blob **0, +25,0 en +31,9 procent** af — geen systematische offset, en een orde groter
+    dan de +0,9 procent van de gebouwde duur. De referent is dus `planner_days`, opgehaald met drie
+    extra aanroepen van de bestaande route; het ophaalpad hoefde niet verbreed.
+    M87 BIJT IN BEIDE RICHTINGEN, en die tweede is een EIGENSCHAP en geen defect: herstelweek W1
+    met historie W3 gaat van 135,6 naar **179,6** minuten (het defect is weg), maar W3 met historie
+    W1 gaat van 257,2 naar **157,2** — wie in zijn herstelweek MEER invult dan gewend, wordt dieper
+    gekort. Dat volgt uit de norm, en het betekent dat de app beschikbare tijd laat liggen.
+46. **`docs/WERKWIJZE-LESSEN.md` loopt naar de opener-cap** — open · TOOLING.
+    Het bestand staat op **102123 bytes** met een marge van **18877** tot circa 121000, en is
+    daarmee het KRAPSTE van de vijf bestanden die de opener ophaalt. Bij het tempo van de laatste
+    rondes — ruwweg 2,5 kB per ronde — is dat nog een stuk of zeven rondes.
+    DE INGREEP VAN PUNT 38 IS HIER NIET ZOMAAR TE HERHALEN, en dat is de hele reden dat dit een
+    eigen punt is. Het wijzigingslog kon weg omdat het uitsluitend ACHTERAF verantwoordt en de
+    opener het bewust niet ophaalt; de lessen zijn WERKENDE DISCIPLINE die elke chat bij zijn start
+    MOET lezen. Verplaatsen naar een niet-opgehaald bestand zou ze stilzwijgend uitzetten — precies
+    het gat dat de log-verhuizing zelf blootlegde toen de eis over de logregel als imitatie leefde.
+    DE KNIP IS EEN ONTWERPVRAAG en geen mechanische verhuizing: splitsen in twee lessen-bestanden
+    met een ZESDE opener-URL, of een andere ordening waarin de lessen korter kunnen zonder hun
+    aanleiding te verliezen. Die aanleiding draagt vaak juist het getal waarop de regel rust — punt
+    38 mat dat op 89 losse knipbeslissingen en wees het af.
 
 ## De tijdslijn
 
@@ -1771,16 +1807,28 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
    over een zone-klasse-grens, en schendt M76. Acceptatie: reeks 76 / 75 / 72 / 63 / 56 / 56 /
    56, werkband 56 van de 56 identiek, kwaliteitsdagen 1 op Base en Build en 0 op Test,
    opbouwweken 84 van de 84, weekvorm-as 21 van de 21. Punt 45 hoort in DEZELFDE bouw.
+   **AF EN LIVE per 09-08-2026**, op `d7b8feb` en Worker Version
+   `ef9152dc-5c86-4606-ab97-55df97449877`. De reeks is gereproduceerd op **76 / 75 / 72 / 63 / 56 /
+   56 / 56**, met de VOOR-staat eerst geijkt op **100 / 100 / 100 / 95 / 97 / 92 / 88** (7 van de
+   7) zodat het verschil aan de bouw toe te schrijven is. Beide punten in één bouw, client-only.
 6d. **43** — de normpoort staat op een midpunt-label dat identiek werk splitst. NÁ punt 39, met
    reden: punt 39 bouwt de karakter-as samen met zijn eerste consument, en pas daarna is de
    poort-reparatie goedkoop te meten — de as ligt er dan al en de rood-meting per plek gaat over
    het verplaatsen van de poort, niet over het bouwen van een nieuwe grootheid. Andersom zou de
    as tweemaal ontworpen worden. NIET norm-neutraal: eerst per plek meten, in beide richtingen.
+   **DE VOORWAARDE IS INGELOST per 09-08-2026:** punt 39 is gebouwd en staat live, dus de
+   karakter-as ligt er samen met zijn eerste consument. De meting van dit item gaat daarmee over
+   het VERPLAATSEN van de poort en niet meer over het bouwen van een nieuwe grootheid.
 6e. **44** — de kwaliteitsdosis plafonneert vanaf acht uur. NÁ 6d en met een eigen soort stop: dit
    is COACH-CANON en geen meetopdracht. De ronde begint met een BESLUIT van Daan over hoeveel
    kwaliteit bij veertien uur hoort — herkomst BELEID — want er bestaat geen meting die dat
    antwoord kan dragen. Zonder dat besluit is er niets om tegen te bouwen, dus deze plek in de rij
    is een agendapunt en geen bouwronde. Draagt M85.
+6f. **46** — `docs/WERKWIJZE-LESSEN.md` loopt naar de opener-cap. NÁ punt 44, want het is geen
+   noodgeval: 18877 bytes marge is bij het huidige tempo nog ruwweg zeven rondes. Maar het is wél
+   een ONTWERPronde en geen verhuizing — de lessen zijn werkende discipline die elke chat moet
+   lezen, dus wegzetten in een niet-opgehaald bestand is precies de fout die punt 38 blootlegde.
+   De ronde kiest tussen splitsen met een zesde opener-URL en een andere ordening.
 7. **16** — de materialiteitsvloer en de prikkel, in EEN bouw. Zie `docs/PUNT16-RECON.md` §5.
 8. **34** — de effect-referent kent het doel niet. M5-schending bij drie van de vijf doelen.
 9. **35** — een event draagt geen duur. Deblokkeert punt 13 fase B.

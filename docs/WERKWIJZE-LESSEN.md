@@ -912,5 +912,23 @@ Nieuwe of gewijzigde lessen komen HIER, met in dezelfde close-out een gedateerde
   **2 uur 15** terwijl die drie uur al binnen de band van M79 ligt. De vraag kwam van Daan en
   niet uit de meting: de meetruimte hield het weekvolume PER CEL vast en kon het geval dus per
   constructie niet bevatten. Staat nu als M87 en als ROADMAP punt 45.
+- **Een rood-meting die NIETS laat vallen kan betekenen dat de FIXTURE-FAMILIE de conditie niet
+  KÁN dragen, in plaats van dat de term ongedekt is.** Toets vóór je een term als onbewezen
+  wegzet of er een fixture BESTAAT waarin zijn conditie true kan worden; is die er niet, dan meet
+  je niets over de term maar iets over je eigen meetruimte. Aanleiding: de `nearTaper`-term van
+  punt 39 liet in de rood-ronde niets vallen, en dat las als NIET-GEDEKT. Geen van de vijf tests
+  droeg een event, dus `nearTaper` kon er per constructie niet true worden. Met een event in de
+  lopende week bestaan `mesoWeek 4` én `nearTaper true` wél naast elkaar, en met de term uit zakt
+  diezelfde week van **300,2 naar 231,2** minuten in alle drie de deload-paren — de term is dus
+  gewoon gedekt. Zelfde familie als "een term kan GEMASKEERD zijn door een andere term", nu op de
+  MEETRUIMTE in plaats van op een tweede voorwaarde.
+- **Een acceptatie-eis die een ABSOLUTE waarde noemt, toets je tegen de VOOR-STAAT en niet tegen
+  de eis.** Anders leest een bestaande eigenschap als een regressie van je eigen bouw, en ga je
+  repareren wat er al was. Aanleiding: de eis "kwaliteitsdagen ongewijzigd op 1" gaf bij doel
+  Conditie **0** in 14 van de 84 cellen — óók vóór de bouw, want voor tegen na is 84 van de 84
+  identiek. De eis stond op de WAARDE waar hij op het VERSCHIL hoorde te staan. Dit is de TWEEDE
+  familie die zo boven kwam: de plek-recon vond de eerste (macrofase Test, quotum 0) al vóór de
+  bouw, en juist dát had de VORM van de eis moeten corrigeren in plaats van er een uitzondering
+  bij te schrijven. Eén tegenvoorbeeld op een absolute eis is een signaal over de eis zelf.
 
 <!-- EINDE docs/WERKWIJZE-LESSEN.md -->
