@@ -1553,6 +1553,28 @@ punten staat onder *Gesloten — vindplaats*.
     is er niets om tegen te bouwen.
     M45 WORDT NIET GESCHONDEN: die noemt acht à tien uur als ONDERGRENS waaronder polarized zinloos
     is en zwijgt over wat daarboven hoort. DRAAGT **M85**. Raakt M7, M43, M44 en M45.
+45. **De herstelweek kent zijn eigen referentie niet** — open · CLIENT plus norm.
+    De volumefactor uit M86 landt op de beschikbaarheid van de HERSTELWEEK ZELF, dus stapelt hij
+    op een krimp die de gebruiker al droeg. **M87 (NORM)** legt vast waartegen hij hoort te
+    korten: de OPBOUWWEKEN van hetzelfde blok. Ligt de beschikbaarheid daar al onder, dan is de
+    reductie geheel of gedeeltelijk al geleverd en korten we niet nog eens.
+    GEMETEN, doel FTP in dezelfde herstelweek: **5x60 ingevuld geeft 225 minuten**; **3x60 geeft
+    135** terwijl 180 het juiste antwoord is, want die drie uur is al 60 procent van de normale
+    vijf en ligt dus al in de band die M79 vraagt; **5x45 geeft 5x34** met de kwaliteitsminuten
+    van 13 naar **10**. Volledige uitwerking in `docs/PUNT39-PLEK-RECON.md` §8.
+    TWEE KANDIDAAT-BRONNEN, beide gegrept en beide met hun eigen beperking. `planner_days`
+    (`workers/api/src/db/schema.ts:128`) draagt `minuten` per (user_id, datum) en houdt dus de
+    INGEVULDE beschikbaarheid van eerdere weken vast — zuiver (M28), maar de client haalt EEN
+    week op (`apps/web/src/lib/api.ts:79`), dus het ophaalpad moet verbreed. De weekplan-blob
+    draagt wél meerdere weken, maar zijn `minuten` is `Math.round(sumMin)` over `s.totaalMin`
+    (`apps/web/src/lib/weekplanBlob.ts:118` en `:168`) — de GEBOUWDE sessieduur, dus het vorige
+    voorstel van de app en niet de invoer, en dagen zonder sessies vallen weg. Die blob is wél
+    ongegate leesbaar: `recencySeedEntries` (`apps/web/src/lib/proposal.ts:523`) doet het al, en
+    `PLAN_ADAPTATION_ENABLED` (`apps/web/src/lib/planFlags.ts:28`) gate't uitsluitend
+    `intentByDateFrom`. De twee sluiten elkaar niet uit.
+    HOORT IN DEZELFDE BOUW ALS PUNT 39, item 6c: zonder referent doet M86 in een alledaags geval
+    aantoonbaar het verkeerde. De bouwronde meet EERST welke bron bruikbaar is; blijkt geen van
+    beide het, dan is dat een verdict met een getal en gaat de factor alleen.
 
 ## De tijdslijn
 
@@ -1740,15 +1762,15 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
    de doelen), en `mesoFactor` schaalt de dosis en niet het percentage — werkband identiek in 200
    van de 200 en 197 van de 197. M78 is INGETROKKEN; M83, M84 en M85 dragen de bevindingen. Er
    volgde geen bouw, wél een nieuw punt: 44, hieronder als item 6e.
-6c. **39** — de herstelweek snijdt in de frequentie in plaats van in het volume. Draagt M79 en M80.
-   Twee hendels: het deload-quotum van 1 en de kalendernaam-splitsing. Punt 19 gaat hierin op.
-   Kan pas ná punt 40.
-   **GEMETEN op 09-08-2026 maar NIET GEBOUWD — blijft dus open.** Zie `docs/PUNT39-DELOAD-RECON.md`.
-   Beide genoemde hendels zijn weerlegd: de kalendernaam-splitsing is inert bij quotum 1 (0 van de
-   105) en het quotum verhogen maakt de week juist langer. De ingreep die overblijft is er ÉÉN — een
-   volumefactor op de sessieduur — en die staat als **M86 (NORM)**, herkomst BELEID. De bouwronde
-   kiest tussen twee plekken, meet de archetype-keuze op `planner.ts:943` eerst, en accepteert op de
-   curve 75 / 75 / 71 / 63 / 55 / 55 / 55.
+6c. **39 + 45** — de herstelweek: de volumefactor EN de referentie waartegen hij korten moet.
+   Draagt M79, M80, M86 en M87. Punt 19 gaat hierin op. Kan pas na punt 40.
+   **PLEK GEMETEN op 09-08-2026, nog niet gebouwd.** Zie `docs/PUNT39-PLEK-RECON.md`; §7 van
+   `docs/PUNT39-DELOAD-RECON.md` is daarmee vervangen. De ingreep landt CLIENT-SIDE op
+   `sessieMin` (`apps/web/src/lib/proposal.ts:619`), niet in de engine: de engine-plek voor de
+   allocator haalt de curve exact maar kantelt de werkband in 31 van de 56 cellen, zeven keer
+   over een zone-klasse-grens, en schendt M76. Acceptatie: reeks 76 / 75 / 72 / 63 / 56 / 56 /
+   56, werkband 56 van de 56 identiek, kwaliteitsdagen 1 op Base en Build en 0 op Test,
+   opbouwweken 84 van de 84, weekvorm-as 21 van de 21. Punt 45 hoort in DEZELFDE bouw.
 6d. **43** — de normpoort staat op een midpunt-label dat identiek werk splitst. NÁ punt 39, met
    reden: punt 39 bouwt de karakter-as samen met zijn eerste consument, en pas daarna is de
    poort-reparatie goedkoop te meten — de as ligt er dan al en de rood-meting per plek gaat over

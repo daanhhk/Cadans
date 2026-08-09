@@ -108,6 +108,11 @@ zodra het volume het werk doet. M76 en M83 blijven ongemoeid.
 
 ## 7. Bouwspec voor de volgende ronde
 
+> **VERVANGEN op 09-08-2026 door `docs/PUNT39-PLEK-RECON.md` §9.** De twee kandidaat-plekken
+> hieronder zijn er drie — de keuze valt ook binnen `allocateQualityWeek_` — en de gemeten
+> acceptatie-curve hoort bij de plek die M76 schendt. De drie genoemde vloeren zijn gemeten en
+> bijten geen van drieen. Lees deze paragraaf als historie, niet als opdracht.
+
 DE INGREEP IS ER ÉÉN, NIET TWEE. Het quotum en de eligibility blijven zoals ze zijn.
 
 KANDIDAAT-PLEK A, client-side: `sessieMin` in `apps/web/src/lib/proposal.ts:619-621`. Geen

@@ -13,6 +13,67 @@ live tot cutover.
 
 ## Stand
 
+**DE PLEK VOOR PUNT 39 IS GEMETEN EN BESLIST — NOG NIET GEBOUWD (9 augustus 2026).** Docs-only:
+geen code, geen engine, geen migratie, geen deploy, en geen enkel `wrangler`-commando. EEN
+commit — deze close-out draagt het plek-recon, M87, de M86-correctie, de ROADMAP en de lessen;
+hij noemt zijn eigen hash niet, want die bestaat pas nadat dit blok geschreven is. Prod en D1
+staan waar het blok hieronder ze noemt.
+- **GEEN DEPLOY, EN DAT IS GEEN UITSTEL.** Er is geen letter aan de app veranderd.
+- **DE METING.** `buildWeekProposal` uit een esbuild-bundel, `TZ=Europe/Amsterdam`, klok als
+  Proxy op de echte `Date`. Volume-as W1..W7 maal 4 doelen met mesocyclus maal 3 deload-paren:
+  **84 cellen**. IJking **21 van de 21**; (fase,meso)-as afgelezen over zestien
+  `doelStart`-offsets als **twaalf gekoppelde paren, periode 12**. Vergelijker in TWEE
+  richtingen geijkt: A/A **84 van de 84** aan beide kanten, tegenrichting **0 van de 84**.
+  Volledige uitwerking in `docs/PUNT39-PLEK-RECON.md`.
+- **ER ZIJN GEEN TWEE PLEKKEN MAAR DRIE**, en dat hoort hier zodat een volgende ronde de
+  aanname niet opnieuw maakt. De keuze valt ook BINNEN `allocateQualityWeek_` via
+  `draagkracht_`. De engine-patch NA de allocator gaf **84 van de 84 identiek** aan de
+  client-patch — inert, geen bevinding.
+- **DE PLEK IS CLIENT-SIDE, EN DE GROND IS M76.** De engine-plek VOOR de allocator haalt de
+  curve exact (75 / 75 / 71 / 63 / 55 / 55 / 55) maar kantelt de werkband in **31 van de 56**
+  Base+Build-cellen, waarvan **7** over een zone-klasse-grens — `threshold_ladder_kort`
+  (100-100) wordt `threshold_2x8` (98-105). Plek A houdt de werkband **56 van de 56** identiek
+  en de werkMINUTEN van de prikkel exact gelijk; **86 procent** van de volumekrimp komt uit de
+  niet-kwaliteitsdagen. A tegen C: 43 van de 84 identiek, **41 afwijkend, alle 41 op de
+  archetype-keuze en nul op alleen duur**. Het `weekV`-neveneffect is geisoleerd en niet
+  dragend.
+- **DRIE CORRECTIES OP DE OUDE BOUWSPEC.** De acceptatie-reeks is herijkt op
+  **76 / 75 / 72 / 63 / 56 / 56 / 56** — het verschil is een systematische **+0,9 procent**
+  doordat de gebouwde sessieduur boven de opgegeven duur uitkomt, niet een vloer. De eis
+  "kwaliteitsdagen op 1" geldt alleen op Base en Build: bij macrofase Test is het quotum 0 en
+  zijn het er 0, in **28 van de 84** cellen. En de drie genoemde vloeren bijten geen van
+  drieen — **0** op de recovery-60-cap, **0** op de 30-vloer, **0** op de longZ2-60-vloer.
+- **HET DEFECT DAT DEZE RONDE BLOOTLEGDE, EN DE VRAAG KWAM VAN DAAN.** De factor landt op de
+  beschikbaarheid van de herstelweek ZELF en stapelt dus op een krimp die de gebruiker al
+  droeg: 5x60 ingevuld geeft 225 minuten, 3x60 geeft **135** terwijl 180 het juiste antwoord
+  is, en 5x45 geeft 5x34 met de kwaliteitsminuten van 13 naar **10**. Staat nu als **M87
+  (NORM)**, herkomst BELEID, en als **ROADMAP punt 45** — in DEZELFDE bouw als de factor.
+- **DE BRON BESTAAT, DE APP HEEFT HEM NIET IN HANDEN.** `planner_days`
+  (`workers/api/src/db/schema.ts:128`) draagt de ingevulde beschikbaarheid per datum, maar de
+  client haalt EEN week op (`apps/web/src/lib/api.ts:79`). De weekplan-blob draagt meerdere
+  weken maar zijn `minuten` is de GEBOUWDE sessieduur, niet de invoer.
+- **BEGRENZING op twee assen:** weekvorm-as **21 van de 21** onder beide patches, opbouwweken
+  **84 van de 84** identiek bij alle patches.
+- **WAT DAAN MERKT: NIETS.** Er verandert geen letter aan de app.
+- **VLOEREN NU: vitest-totaal 975 over 76 bestanden · engine-selftest-assert-count 1652 ·
+  lint-waarschuwingen 20**, alle vier afgelezen uit de gate van DEZE ronde. Onbewogen:
+  docs-only, geen test geraakt. Lees ze zelf uit de suite; neem ze niet over uit dit blok.
+- **OPENSTAAND, elk item opnieuw gegrept in `docs/ROADMAP.md`:** 16 · 32 · 34 · 35 · 39 · 43 ·
+  44 · 45.
+
+FOCUS VOLGENDE CHAT: ROADMAP punt 39 + 45, nu de BOUW. Item 6c uit *De volgorde* in
+`docs/ROADMAP.md`, dus GEEN afwijking van de reeks. De plek staat vast en is CLIENT-SIDE op
+`sessieMin` (`apps/web/src/lib/proposal.ts:619`) — GEEN engine, en de engine-variant is
+gemeten en verworpen op M76. Lees `docs/PUNT39-PLEK-RECON.md` §9 voor de bouwspec; §7 van
+`docs/PUNT39-DELOAD-RECON.md` is vervangen en stuurt niets meer. DE RONDE BEGINT BIJ PUNT 45,
+niet bij de factor: meet EERST welke referentie-bron bruikbaar is — het ophaalpad verbreden zodat
+`planner_days` meerdere weken levert, of de weekplan-blob lezen zoals `recencySeedEntries` dat al
+doet — want zonder referent doet de factor in een alledaags geval het verkeerde. Blijkt geen van
+beide bruikbaar, dan is dat een VERDICT met een getal en gaat de factor alleen. ACCEPTATIE voor
+de factor: reeks 76 / 75 / 72 / 63 / 56 / 56 / 56, werkband 56 van de 56, kwaliteitsdagen 1 op
+Base en Build en 0 op Test, opbouwweken 84 van de 84, weekvorm-as 21 van de 21. PENDELDAGEN
+KRIMPEN NIET MEE — `DOELEN-SPEC` §2A, en uitdrukkelijk ongemeten. Verse chat.
+
 **PUNT 39 IS GEMETEN, NIET GEBOUWD (9 augustus 2026).** Docs-only: geen code, geen engine, geen
 migratie, geen deploy, en geen enkel `wrangler`-commando. ÉÉN commit — deze close-out draagt het
 recon-doc, de norm-regel, de ROADMAP en de lessen; hij noemt zijn eigen hash niet, want die
@@ -421,17 +482,6 @@ FOCUS VOLGENDE CHAT: ROADMAP punt 36 — het verdict. Ronde 3 van het tooling-bl
 - **OPENSTAAND, elk item opnieuw gegrept in `docs/ROADMAP.md`:** 16 · 19 · 21 · 22 · 23 · 25 · 32 · 33 · 34 · 35 · 36. Punt 37 staat er NIET meer bij.
 
 FOCUS VOLGENDE CHAT: ROADMAP punt 25 + 22 + 23 — de drie blinde vlekken van de camera, in ÉÉN ronde. Ronde 2 van het tooling-blok uit *De volgorde* in `docs/ROADMAP.md`; die paragraaf legt de bouwvolgorde vast LOS van de nummering, dus dit is GEEN afwijking van de reeks. TOOLING, geen engine. Lukt punt 23 niet met uitgezette animaties, dan blijven die twee shots UITGESLOTEN met reden en aantal — dat staat zo in het punt en is geen mislukking. NEEM DE RUISVLOER-KANDIDAAT MEE: draai eerst een warmloop en gooi die weg, en meet daarna je eigen ijkpaar; deze ronde gaf zo nul bewegende shots waar 7 augustus er acht gaf. Verse chat.
-
-**PUNT 16 IS GEMETEN EN GECORRIGEERD, NIET GEBOUWD (7 augustus 2026).** Docs-only ronde: de chat mat zelf via een read-only kloon plus een esbuild-bundel van de engine en `apps/web/src/lib`; CC deed alleen de commits. GEEN code, geen engine, geen migratie, geen deploy, en geen enkel `wrangler`-commando — ook geen read. Prod blijft op Worker Version `82abac49-d032-4847-9b6f-efc90c3ac33d`, D1 op `0010`. Twee commits: `f74ae158627587f7620d801b6ba0a9ec86cbcbc1` (het recon-doc plus de ROADMAP) en deze close-out. Er is NIETS afgevinkt: punt 16 blijft open.
-- **DRIE PREMISSEN VAN PUNT 16 ZIJN WEERLEGD**, en dat hoort hier zodat een volgende ronde ze niet opnieuw aanneemt. De bouwer van `combo_ss_sprints` is NIET volledig — van de drie wees-combo's dragen er 0 van de 3 `blokken`, 0 van de 3 `intent`, en alle drie zetten hun TSS als `mins` maal een factor in plaats van uit de blokken, exact de drie defecten die punt 15 elders heeft gerepareerd. Het regelnummer is `planner.ts:2777` en niet 2583. En de norm-vraag is ACHTERHAALD door punt 17: er bestaat geen doel-brede norm meer, de referent is plan-relatief. "NUL producenten" klopt wél. De route is bovendien de VULDAG en niet de duurdag: 70 van 120 Onderhoud-cellen dragen een Z2-vuldag zonder `archetypeId` en zonder werkzone-label, 45 / 59 / 60 minuten. Volledige meting in `docs/PUNT16-RECON.md`.
-- **HET BLOKKERENDE GETAL.** Een sprintblok van 6x15s is 1,5 anaerobe werkminuut; `Math.round` maakt daar een eis van 2 van, dus de meetlat vraagt 33 procent MEER dan het plan voorschrijft. Een tekort van 4,5 seconde kantelt het blok van 3 van 3 geleverd naar 0 van 3, en dan geeft `dosisTredeVoorstel` null en kan de trede niet stijgen. DE PLATEAU-TOETS FAALT: 60 procent getolereerd tekort bij een prikkel van 1,25 minuut, 0 procent bij 1,5 én bij 2,5, monotoon en nooit nul pas vanaf 3.
-- **DE BOUW DRAAGT TWEE TERMEN IN ÉÉN RONDE:** een materialiteitsvloer op de poortset (anker M64, uitgebreid naar de blok-laag) plus de prikkel zelf in de generieke vuldag-bouwer, MET `blokken`, MET `intent` en met TSS uit `tssFromBlokken_`. De vloer ALLEEN is vandaag inert — 0 van 1095 beoordeelde zone-cellen draagt een plan onder 3 minuten — en dus vooruit-bedrading; de prikkel alleen zet het blok-oordeel op een muntworp. N wordt in de bouwronde geijkt en nooit vooraf gekozen. De wees-combo's worden NIET gereanimeerd.
-- **DE VOLGORDE IS VASTGELEGD, en dat is de dragende uitkomst van deze ronde.** Twaalf rondes over veertien punten staan nu in `docs/ROADMAP.md` onder *De volgorde*, LOS van de nummering — die is voortaan de VONDSTvolgorde — met één ronde per punt en een VERDICT met een getal als een punt niet binnen zijn ronde sluit. AANLEIDING: parkeren op de grond "inert bij het huidige doel" is als patroon afgewezen; het was de derde keer, na punt 11 en punt 13 fase B. Inert bij het ingestelde doel is een grens op het BEWIJS, nooit op de bouw — M9, M21, M22, M33. De FOCUS-regel van een close-out wijst voortaan naar het eerstvolgende open punt uit die paragraaf; wijkt een chat ervan af, dan staat de reden in hetzelfde STAND-blok.
-- **WAT DAAN MERKT: NIETS.** Er verandert geen letter aan de app. Twee docs-only commits, geen deploy.
-- **VLOEREN NU: vitest-totaal 971 over 75 bestanden · engine-selftest-assert-count 1652**, afgelezen uit de suite-uitvoer van DEZE ronde. Neem ze niet over uit dit blok — lees ze opnieuw uit de suite, want een vloer die uit een STAND-blok wordt overgeschreven meet zichzelf.
-- **OPENSTAAND, elk item opnieuw gegrept in `docs/ROADMAP.md`:** 16 · 19 · 21 · 22 · 23 · 25 · 32 · 33 · 34 · 35 · 36 · 37. Punt 16 staat er nog steeds bij: deze ronde mat en corrigeerde het punt, ze bouwde het niet.
-
-FOCUS VOLGENDE CHAT: ROADMAP punt 37 — de vite-dev-server sterft stil tijdens een sweep. Eerste ronde van het tooling-blok uit *De volgorde* in `docs/ROADMAP.md`; die paragraaf legt de bouwvolgorde vast LOS van de nummering, dus dit is GEEN afwijking van de reeks. TOOLING, geen engine. Het te repareren defect is het ETIKET — de harness leest een infrastructuur-uitval als een inhoudelijke — en niet de grondoorzaak; die mag onopgelost blijven zolang hij niet meer liegt. Verse chat.
 
 De oudere STAND-blokken en de historische projectsecties staan in `docs/HANDOFF-ARCHIEF.md`.
 Dit bestand draagt de TWAALF nieuwste blokken; komt er een dertiende bij, dan schuift het oudste in

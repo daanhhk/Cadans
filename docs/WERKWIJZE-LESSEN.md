@@ -884,5 +884,33 @@ Nieuwe of gewijzigde lessen komen HIER, met in dezelfde close-out een gedateerde
   expliciet aan boven MINDER sessies. Dat laatste corrigeerde het advies van de chat — een
   duurcap per dag schrapt bij korte weken feitelijk ritten — naar een factor op de sessieduur.
   De popup had een slechter ontwerp bevroren.
+- **Een VINGERAFDRUK die een veldnaam mist, is BLIND voor dat veld — en "identiek" leest dan als
+  bewijs.** Een verkeerd gespelde sleutel levert `undefined` aan BEIDE kanten, dus de
+  vergelijking blijft formeel geldig terwijl ze de grootheid niet meer ziet; niets faalt, en dat
+  is precies het probleem. Dump één voorbeeldrij en LEES hem voor je een reeks vertrouwt.
+  Aanleiding: de plek-meting van punt 39 las het blokveld als `min` en het sessieveld als
+  `type`, terwijl ze `minuten` en `focus` heten. Elke blokduur stond daardoor als `undefined` in
+  elke reeks — en juist de DOSIS was wat de meting moest wegen. Gevonden bij het inspecteren van
+  een enkele sessie, niet door een falende toets; alle uitslagen zijn daarna opnieuw gedraaid en
+  hielden stand. Zelfde familie als "een anomalie in je eigen meetuitvoer is een gat in je
+  INSTRUMENT", nu op een veld dat STIL leeg blijft in plaats van opvallend nul.
+- **Een bouwspec die KANDIDAAT-PLEKKEN opsomt, heeft de plekken niet geteld.** Grep waar de
+  grootheid werkelijk geconsumeerd wordt vóór je de lijst overneemt: valt een keuze op twee
+  plaatsen, dan zijn het drie plekken en niet twee, en de verkeerde ervan is per constructie
+  inert. Aanleiding: punt 39 noemde client-side en "engine, vóór de bouwers". Maar de keuze valt
+  óók binnen `allocateQualityWeek_` via `draagkracht_`, dus die tweede formulering is ambigu. De
+  engine-patch NA de allocator gaf **84 van de 84 identiek** aan de client-patch — de allocator
+  had al gekozen. Die "identiek" was geen bevinding maar een te laat geplaatste patch; alleen
+  VOOR de allocator beweegt er iets, en juist die plek schendt M76. Zelfde familie als "een
+  bereikbaarheids-premisse noemt élke poort op het pad", nu op de INGREEP in plaats van op de
+  meting.
+- **Een regel die een REDUCTIE voorschrijft, noemt zijn REFERENT.** Een percentage zonder
+  referent landt op de grootheid die toevallig voorhanden is, en dat is zelden de bedoelde — hij
+  stapelt dan op een krimp die er al was. Aanleiding: M86 legde de factor vast (0,75 aflopend
+  naar 0,55) maar niet waaróp. Gemeten landt hij op de INGEVULDE beschikbaarheid van de
+  herstelweek zelf, dus wie die week drie uur heeft in plaats van zijn gebruikelijke vijf krijgt
+  **2 uur 15** terwijl die drie uur al binnen de band van M79 ligt. De vraag kwam van Daan en
+  niet uit de meting: de meetruimte hield het weekvolume PER CEL vast en kon het geval dus per
+  constructie niet bevatten. Staat nu als M87 en als ROADMAP punt 45.
 
 <!-- EINDE docs/WERKWIJZE-LESSEN.md -->

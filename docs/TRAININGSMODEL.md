@@ -560,8 +560,27 @@ beschrijft de literatuur GEEN urendrempel — de structuur is volume-onafhankeli
 absolute aantal uren beweegt mee, met circa 20 tot 25 procent bij een basis van vier tot zes
 uur. Dat is de reden dat dit een CONTINUE factor is en geen schakelaar: een drempel zou een
 aparte modus zijn en M9 verbiedt die. GEMETEN over de volume-as, volume tegenover de
-opbouwweek: 75 / 75 / 71 / 63 / 55 / 55 / 55 procent bij 3,0 tot 14,0 uur. De prikkeldosis
+opbouwweek: 76 / 75 / 72 / 63 / 56 / 56 / 56 procent bij 3,0 tot 14,0 uur, met de
+karakter-behoudende plek (`docs/PUNT39-PLEK-RECON.md`). De eerder genoteerde reeks
+75 / 75 / 71 / 63 / 55 / 55 / 55 hoort bij een ingreep die VOOR de allocator landt en daarmee de
+werkband in 31 van de 56 cellen kantelt — M76-schending, dus die curve is geen norm maar een
+gemeten eigenschap van een verworpen plek. De prikkeldosis
 blijft ×0,60 (M76, M83): met de prikkel vol stijgt de weekbelasting 1 tot 3 procentpunt en de
 kwaliteitsminuten van circa 13 naar 16,5 — niet dragend zodra het volume het werk doet.
+
+**M87 (NORM) — De volumekorting van de herstelweek wordt afgezet tegen de OPBOUWWEKEN van
+hetzelfde blok, niet tegen de beschikbaarheid van de herstelweek zelf.**
+M86 legt de SCHAAL van de factor vast; deze regel legt vast WAAROP hij landt, en dat stond
+nergens. De taper-literatuur spreekt over een reductie ten opzichte van het normale
+trainingsvolume — de opbouwweken zijn dus de referent. Ligt de beschikbaarheid van de
+herstelweek al onder die referentie, dan is de reductie geheel of gedeeltelijk al geleverd en
+korten we niet nog eens. HERKOMST BELEID — Daan-besluit van 9 augustus 2026; er bestaat geen
+reeks waarop dit te ijken valt. GEMETEN als noodzaak, doel FTP in een herstelweek: vijf dagen
+van een uur leveren met de factor 225 minuten, maar wie in diezelfde week drie uur invult
+krijgt 135 terwijl die drie uur al 60 procent van zijn normale vijf is en dus al in de band van
+M79 ligt; vult hij 5x45 in, dan wordt het 5x34 en zakken de kwaliteitsminuten van 13 naar 10.
+De factor stapelt dus op een krimp die de gebruiker zelf al droeg. Staat als ROADMAP punt 45 en
+hoort in dezelfde bouw als de factor: zonder deze regel doet M86 in een alledaags geval het
+verkeerde.
 
 <!-- EINDE docs/TRAININGSMODEL.md -->
