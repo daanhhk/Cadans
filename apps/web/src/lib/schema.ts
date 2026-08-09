@@ -1323,6 +1323,15 @@ export async function loadSchemaWeek(): Promise<{
 }> {
   const monday = weekMondayIso();
   const todayISO = todayIso();
+  // M87 — de drie voorafgaande weekmaandagen, als REFERENT voor de herstelweek-volumefactor.
+  // Kalender-constructor met dezelfde lokale-datum-rekenkunde als `weekMondayIso` hierboven:
+  // GEEN UTC-round-trip, anders schuift dit over de DST-sprong een dag op.
+  const maandagVoor = (weken: number): string => {
+    const [y, m, d] = monday.split("-").map(Number);
+    const dt = new Date(y ?? 1970, (m ?? 1) - 1, (d ?? 1) - weken * 7);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+  };
   const [
     settings,
     plannerDays,
@@ -1339,6 +1348,9 @@ export async function loadSchemaWeek(): Promise<{
     powerZonesRow,
     eventOvernameRow,
     doelPassendRow,
+    plannerVorige1,
+    plannerVorige2,
+    plannerVorige3,
   ] = await retryLoad(
     // ROADMAP punt 30 — DE HELE BOUW WORDT HERHAALD, en de rijen dragen een NAAM.
     //
@@ -1367,6 +1379,11 @@ export async function loadSchemaWeek(): Promise<{
         { label: "power-zones", laad: () => getPowerZones() },
         { label: "event-overname", laad: () => getEventOvername() },
         { label: "doel-passendheid", laad: () => getDoelPassend() },
+        // M87 — de referent-weken. Ze voeden UITSLUITEND `plannerHistorie`; de bestaande
+        // "weekplanner"-rij hierboven blijft de enige bron voor het grid en wordt niet breder.
+        { label: "weekplanner -1", laad: () => getPlanner(maandagVoor(1)) },
+        { label: "weekplanner -2", laad: () => getPlanner(maandagVoor(2)) },
+        { label: "weekplanner -3", laad: () => getPlanner(maandagVoor(3)) },
       ]) as unknown as Promise<
         [
           Awaited<ReturnType<typeof getSettings>>,
@@ -1384,6 +1401,9 @@ export async function loadSchemaWeek(): Promise<{
           Awaited<ReturnType<typeof getPowerZones>>,
           Awaited<ReturnType<typeof getEventOvername>>,
           Awaited<ReturnType<typeof getDoelPassend>>,
+          Awaited<ReturnType<typeof getPlanner>>,
+          Awaited<ReturnType<typeof getPlanner>>,
+          Awaited<ReturnType<typeof getPlanner>>,
         ]
       >,
   );
@@ -1461,6 +1481,9 @@ export async function loadSchemaWeek(): Promise<{
     mesoWeekOverride: fatigueOverride,
     dosisTrede,
     overnameBevestigd,
+    // M87 — de referent voor de herstelweek-volumefactor. Buiten de herstelweek leest
+    // `buildWeekProposal` dit veld niet, dus de gewone week is byte-identiek aan vóór deze bouw.
+    plannerHistorie: [plannerVorige1, plannerVorige2, plannerVorige3],
   };
   const proposalWeek = buildWeekProposal(proposalInput);
 
@@ -1504,6 +1527,7 @@ export async function loadSchemaWeek(): Promise<{
         readinessBand: readiness.band,
         todayISO,
         mesoWeekOverride: dir === "up" ? 1 : 4,
+        plannerHistorie: [plannerVorige1, plannerVorige2, plannerVorige3],
       });
       fatigue = { state: "offer", dir, tsbTrend: trend, blok, preview };
     }

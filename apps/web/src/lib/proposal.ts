@@ -111,6 +111,19 @@ export interface BuildProposalInput {
   weekplans: unknown[];
   wellness: WellnessInput[];
   rpe: RpeEntry[];
+  /** M87 — de REFERENT waartegen de herstelweek-volumefactor korten moet: de zeven
+   * planner-dagen van elk van een aantal VOORAFGAANDE weken, één array per week. Dit voedt
+   * `herstelSchaal_`; de VOLGORDE van de weken is niet dragend, want die helper middelt.
+   *
+   * Weglaten of leeg ⇒ het gedrag van vandaag: de factor valt dan terug op de week zelf en
+   * de ronde is byte-identiek aan vóór deze bouw. Dat is bewust — een caller die de historie
+   * niet kan ophalen mag niet stilzwijgend een andere week krijgen.
+   *
+   * WAAROM DE PLANNER-DAGEN EN NIET DE WEEKPLAN-BLOB: `planner_days` draagt de INVOER van de
+   * gebruiker, de blob draagt de door de app GEBOUWDE sessieduur (M28, en
+   * `docs/PUNT39-PLEK-RECON.md` §8). Meten tegen het eigen vorige voorstel zou de factor op
+   * zichzelf laten terugkoppelen. */
+  plannerHistorie?: PlannerDay[][];
   /** Dag-overrides (D2): plannbare dagen worden via buildOverrideWorkout_ geswapt.
    * Optioneel + default [] → bestaande fixtures/callers ongewijzigd. */
   overrides?: OverrideEntry[];
@@ -249,6 +262,53 @@ export function planModusLabel(
   eventDriven: boolean,
 ): string {
   return planModeLabel_(settings, { eventDriven }) as string;
+}
+
+/**
+ * M86 + M87 — DE HERSTELWEEK-VOLUMEFACTOR EN DE REFERENT WAARTEGEN HIJ KORT.
+ *
+ * M86 legt de SCHAAL vast: 0,75 tot en met vijf uur per week, aflopend naar 0,55 vanaf tien
+ * uur, lineair ertussen. M87 legt vast WAAROP hij landt: de OPBOUWWEKEN van hetzelfde blok, en
+ * niet de beschikbaarheid van de herstelweek zelf. Zonder die tweede regel stapelt de factor op
+ * een krimp die de gebruiker al droeg — gemeten geeft drie uur in een herstelweek dan 2 uur 15,
+ * terwijl die drie uur al binnen de band van M79 ligt.
+ *
+ * PENDELDAGEN TELLEN NIET MEE. De pendel is een VERPLAATSING en geen trainingskeuze
+ * (`DOELEN-SPEC` §2A), dus de factor landt er niet op — en dan hoort hij ook niet in de noemer.
+ *
+ * DE FACTOR WORDT OP DE REFERENTIE GEËVALUEERD, nooit op de ingevulde week: anders zou een
+ * toevallig lege week zichzelf een lichtere factor geven en zou de curve niet meer over de
+ * volume-as lopen die M86 vastlegt.
+ *
+ * @returns 1 als er niet gekort hoort te worden, anders de schaal op de SESSIEDUUR (0..1].
+ */
+export function herstelSchaal_(
+  dezeWeek: PlannerDay[],
+  historie: PlannerDay[][] | undefined,
+): number {
+  const volume = (week: PlannerDay[]): number =>
+    (week || []).reduce((som, d) => {
+      const m = typeof d?.minuten === "number" ? d.minuten : 0;
+      const telt = d?.train === true && d?.dagtype !== "pendel" && m > 0;
+      return telt ? som + m : som;
+    }, 0);
+
+  const eigen = volume(dezeWeek);
+  const bruikbaar = (historie ?? []).map(volume).filter((v) => v > 0);
+  // Nul bruikbare weken ⇒ de week meet zich aan zichzelf, en dat is precies M86 zonder M87.
+  const referentie =
+    bruikbaar.length > 0
+      ? bruikbaar.reduce((a, b) => a + b, 0) / bruikbaar.length
+      : eigen;
+
+  // M86, lineair tussen de twee ankers en daarbuiten geklemd.
+  const rauw = 0.75 + ((referentie - 300) * (0.55 - 0.75)) / (600 - 300);
+  const factor = Math.min(0.75, Math.max(0.55, rauw));
+
+  const doelVolume = factor * referentie;
+  // M87: ligt de week al onder het doel, dan is de reductie al geleverd — niet nog eens korten.
+  if (eigen <= doelVolume || eigen <= 0) return 1;
+  return doelVolume / eigen;
 }
 
 /**
@@ -583,6 +643,18 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
   //   (d.type === 'pendel') = pendelAantal sessies van pendelDuurMin: de vroege sessie(s)
   //   geforceerd 'pendel_z2' (steady, geen archetype), de LAATSTE draagt de dag-intent
   //   (d.voorgesteldType + d.archetypeId). Niet-pendel = 1 sessie. voltooid/rust → [].
+  // M86 + M87 — de volumefactor van de herstelweek, ÉÉN keer berekend en niet per dag.
+  //
+  // DE CONDITIE SPIEGELT `isRecovery` IN DE ENGINE (`packages/engine/src/planner.ts:708`):
+  // `isMesoRecovery && !nearTaper`. Zonder die tweede term zou de client krimpen in een week
+  // waar de engine géén deload draait, en dan beweren de twee lagen iets anders over dezelfde
+  // week. Buiten de herstelweek is de schaal per constructie 1 en is deze ronde byte-identiek
+  // aan vóór de bouw.
+  const herstelSchaal =
+    mesoWeek === 4 && !nearTaper
+      ? herstelSchaal_(plannerDays || [], input.plannerHistorie)
+      : 1;
+
   const days: ProposalDay[] = grid.map((d) => {
     const sessions: ProposalWorkout[] = [];
     // D2: een override op een plannbare dag (niet-gedaan, ≥ vandaag; GEEN d.train-eis — een override
@@ -616,9 +688,14 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
       const sessieCount = isPendel
         ? Math.max(1, Math.round(settings.pendelAantal ?? 0) || 1)
         : 1;
+      // M86 + M87 — de krimp landt UITSLUITEND op de niet-pendel-tak. De pendel is een
+      // verplaatsing en geen trainingskeuze (`DOELEN-SPEC` §2A), dus die duur blijft letterlijk
+      // wat hij was. Buiten de herstelweek is `herstelSchaal` 1 en verandert er niets.
       const sessieMin = isPendel
         ? settings.pendelDuurMin || d.minuten
-        : d.minuten;
+        : herstelSchaal !== 1 && typeof d.minuten === "number" && d.minuten > 0
+          ? Math.round(d.minuten * herstelSchaal)
+          : d.minuten;
       for (let si = 0; si < sessieCount; si++) {
         const last = si === sessieCount - 1;
         const sessieType = isPendel && !last ? "pendel_z2" : d.voorgesteldType;
