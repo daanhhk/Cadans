@@ -1424,10 +1424,34 @@ punten staat onder *Gesloten — vindplaats*.
     TWEE VARIANTEN ZIJN GEMETEN EN AFGEWEZEN. Alles als weekend geeft TSS 201 en **NUL**
     kwaliteitsminuten — 77 procent van de opbouwweek, dus een week zonder prikkel. Alles als vrij
     geeft TSS 100 en 225 minuten, maar snijdt BLIND in de opgegeven tijd. Geen van beide is de fix.
-    TWEE HENDELS voor de bouwronde: het **deload-quotum van 1** en de **kalendernaam-splitsing**.
-    N en de volumefactor worden dáár geijkt, nooit vooraf gekozen. PUNT 19 GAAT HIERIN OP.
-    HANGT AAN PUNT 40: zolang `drempel` twee zones dekt is er geen toets die de uitkomst kan
-    beoordelen.
+    GEMETEN 09-08-2026, volledige uitwerking in `docs/PUNT39-DELOAD-RECON.md`: de volume-as W1..W7
+    maal 5 doelen maal 5 (fase,meso)-paren — **175 cellen, 825 sessies**, instrument geijkt op
+    **21 van de 21** gepinde waarden. PUNT 19 GAAT HIERIN OP.
+    BEIDE HENDELS UIT DIT PUNT ZIJN WEERLEGD, en geen van beide raakt het volume. De
+    **kalendernaam-splitsing is INERT** bij het huidige quotum: `!(isDeload && d.type !== "vrij")`
+    (`planner.ts:304`) op `true` geeft **0 van de 105** bewegende cellen. Dat is inertie en geen
+    no-op — de term is GEMASKEERD door het quotum zelf, want bij quotum 2 bewegen er **56 van de
+    105**. Het **quotum verhogen werkt de verkeerde kant op**: `quota = 1` naar `2`
+    (`planner.ts:282`) geeft wél de frequentie (1 naar 2 kwaliteitsdagen in 28 van de 28) maar
+    maakt de week LANGER — **+10 tot +30 minuten** op W4 tot W7, want een quality-dag ontsnapt aan
+    de 60-minutencap. Bij alle drie de patches beweegt de opbouwweek 0 van de 35 cellen.
+    HET DEFECT IS VOLUME-AFHANKELIJK, en dat corrigeert de scherpte van de kop hierboven. Het
+    aandeel weekbelasting uit duurdagen gaat van **9 procent bij 3,0 uur naar 46 bij 14,0**:
+    onderin valt er aan de volumekant vrijwel niets weg te halen en doet de app ongeveer het
+    juiste. De enige bestaande volumekrimp is de cap `Math.max(30, Math.min(60, mins || 45))` in
+    `genericRecovery` (`planner.ts:2042`), die alleen weekdagen boven een uur raakt — vandaar nul
+    krimp op W1 tot W3 en −10,6 procent op W7. Van de drie termen van M79 faalt er dus één: alleen
+    het volume.
+    DE INGREEP IS ER ÉÉN, niet twee: een **volumefactor op de SESSIEDUUR**, 0,75 tot en met vijf
+    uur aflopend naar 0,55 vanaf tien uur, lineair ertussen. Quotum en eligibility blijven zoals ze
+    zijn. Staat als **M86 (NORM)** in `docs/TRAININGSMODEL.md`, HERKOMST BELEID — Daan-besluit van
+    09-08-2026, want er bestaat geen reeks waarop dit te ijken valt. De twee kandidaat-plekken
+    (`proposal.ts:619-621` client-side, of de dagduur vóór de bouwers in `assignWorkouts`) en de te
+    meten archetype-keuze op `planner.ts:943` staan in het recon-doc §7.
+    DE ACCEPTATIE-EIS VOOR DE BOUWRONDE is de CURVE en geen percentage per cel:
+    **75 / 75 / 71 / 63 / 55 / 55 / 55** procent volume tegenover de opbouwweek, met de
+    kwaliteitsdagen ongewijzigd op 1 en de opbouwweek byte-identiek.
+    PUNT 40 IS AF, dus de blokkade uit dit punt is vervallen: de meting draait op de band.
 40. **Het drempel-label loopt dwars door de LT2-grens** — AF, gesloten zonder bouw (08-08-2026) · norm.
     DE DIAGNOSE IS BEVESTIGD. Het nominale label `drempel` draagt beide soorten werk: **6402
     minuten over 16 banden, waarvan 1824 sweet-spot (onder 95 procent FTP) en 4578 drempelwerk**.
@@ -1719,6 +1743,12 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
 6c. **39** — de herstelweek snijdt in de frequentie in plaats van in het volume. Draagt M79 en M80.
    Twee hendels: het deload-quotum van 1 en de kalendernaam-splitsing. Punt 19 gaat hierin op.
    Kan pas ná punt 40.
+   **GEMETEN op 09-08-2026 maar NIET GEBOUWD — blijft dus open.** Zie `docs/PUNT39-DELOAD-RECON.md`.
+   Beide genoemde hendels zijn weerlegd: de kalendernaam-splitsing is inert bij quotum 1 (0 van de
+   105) en het quotum verhogen maakt de week juist langer. De ingreep die overblijft is er ÉÉN — een
+   volumefactor op de sessieduur — en die staat als **M86 (NORM)**, herkomst BELEID. De bouwronde
+   kiest tussen twee plekken, meet de archetype-keuze op `planner.ts:943` eerst, en accepteert op de
+   curve 75 / 75 / 71 / 63 / 55 / 55 / 55.
 6d. **43** — de normpoort staat op een midpunt-label dat identiek werk splitst. NÁ punt 39, met
    reden: punt 39 bouwt de karakter-as samen met zijn eerste consument, en pas daarna is de
    poort-reparatie goedkoop te meten — de as ligt er dan al en de rood-meting per plek gaat over

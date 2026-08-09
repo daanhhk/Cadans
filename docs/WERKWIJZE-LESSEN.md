@@ -79,6 +79,14 @@ Nieuwe of gewijzigde lessen komen HIER, met in dezelfde close-out een gedateerde
   moeten worden: `cutover` komt NUL keer voor in `CLAUDE.md`, `ROADMAP.md`, `WERKWIJZE.md`
   en `DOELEN-SPEC.md`. De R-serie is historisch. Een document dat de levende documenten niet
   meer noemen, stuurt niets.
+  TWEEDE AANLEIDING, en die ligt op een BOUWSPEC in plaats van op een verwijzing: een HENDEL die
+  een roadmap-punt zelf noemt is een PREMISSE en geen gegeven. Punt 39 droeg twee hendels voor
+  zijn eigen bouwronde, en gemeten is de kalendernaam-splitsing INERT bij quotum 1 — 0 van de 105
+  cellen, gemaskeerd door het quotum zelf, want bij quotum 2 bewegen er 56 — terwijl het quotum
+  verhogen de week juist 10 tot 30 minuten LANGER maakt. Geen van beide raakt het volume, dus de
+  bouwspec uit het punt was onbruikbaar zoals hij stond. Een punt dat zijn eigen oplossing
+  aanwijst, heeft die oplossing niet gemeten; toets elke genoemde hendel afzonderlijk vóór je
+  erop bouwt.
 - **Een pad kan dood zijn aan zijn INVOER of aan zijn UITVOER, niet alleen doordat niemand het aanroept.** "Getest is niet aangesloten" dekt maar één van de drie. Een functie kan keurig aangeroepen én getest zijn terwijl de aanroeper er een vaste `null` in stopt, en een waarde kan correct berekend en in een view-model gezet worden terwijl geen enkele component hem leest. In beide gevallen faalt er niets: de grep naar de aanroep slaagt, de tests zijn groen, en de app doet het niet. Controleer daarom BEIDE uiteinden — wat geeft de aanroeper mee, en wie leest de uitkomst — en niet alleen of de verbinding bestaat. Aanleiding, twee kanten in één ronde: `coachIntentFromZones_` is aangeroepen en getest, maar `coachPlannedArg_` geeft er `segmenten: null` in mee, waardoor de hele zone-afleiding van de geplande prikkel dood is en een chat-diagnose op de verkeerde plek landde; en `adapt` wordt bij een gemiste sleutelsessie berekend en op twee plekken in het view-model gezet zonder ook maar één lezer, waardoor de fix live alleen de copy omzette en niet het voorstel. Die tweede kwam binnen als CC-vondst bij de prod-verificatie.
 - **Een test die de UITKOMST van een pijplijn met de hand injecteert, toetst die pijplijn niet.** Zet je de waarde waarop de code beslist rechtstreeks in een nagebouwd invoer-object, dan bewijst groen alleen dat de CONSUMENT werkt — nooit dat de PRODUCENT hem ooit levert. Bij een test die op een geproduceerde waarde leunt hoort dus minstens één assertie die de producent zelf aanroept. Zelfde familie als "getest is niet aangesloten" en "een pad kan dood zijn aan zijn invoer of aan zijn uitvoer", nu op de TEST-kant. Aanleiding: `inhaal.test.ts` zet redenCode `catchup_high` met de hand in een nagebouwde `ProposalWeek` en is altijd groen geweest, terwijl de pijplijn die code in Base, Build en Peak per constructie niet kan produceren — gemeten over 48 combinaties, nul codes.
 - **Een dood mechanisme toets je op zijn UITKOMST, niet alleen op zijn bereikbaarheid.** "Deze tak kan niet vuren" is een diagnose, geen verdict: hij zegt wat er niet gebeurt, niet of het gebeuren MOET. Zet de tak daarom kunstmatig aan en meet wat hij dan produceert — pas dat getal beslist tussen repareren en opruimen. Zonder die stap is de gemakkelijke conclusie altijd "bereikbaar maken", want een onbereikbare tak lijkt per definitie een gemis. Aanleiding: de week-inhaal-kaart had drie onafhankelijke redenen om niet te verschijnen, en die drie samen rechtvaardigden hooguit een reparatie. Wat de zaak besliste was de wat-als-run zelf: over 72 cellen leverde die in 60 MINDER high plus anaerobe intentminuten dan het plan dat er al stond, in 12 meer, in nul gelijk. Het mechanisme bood aan een gemiste intensiteitsprikkel in te halen met een lichtere week; bereikbaar maken had dat live gezet. Zelfde familie als "getest is niet aangesloten", maar een stap verder: daar was de vraag of het pad LOOPT, hier of het pad de goede kant OP loopt.
@@ -853,5 +861,28 @@ Nieuwe of gewijzigde lessen komen HIER, met in dezelfde close-out een gedateerde
   hertoets moest daarom een eigen volume-as vastleggen, en de oude reeks is geen vergelijkings-
   basis maar alleen een aanleiding. Zelfde familie als "een gepind getal over de HUIDIGE VORM
   van gereedschap is een uitspraak over het HEDEN", nu op de MEETOPSTELLING.
+- **Een BEVINDING die op EEN punt van een as is gemeten, kan aan het andere uiteinde van
+  RICHTING kanteren.** Dit is scherper dan "een uitspraak over wat de gebruiker merkt die op
+  EEN cel gemeten is": daar viel een kwalificatie weg, hier keert het VERDICT om. Toets een
+  defect-claim daarom over de hele as vóór je hem als universeel behandelt, en vraag expliciet
+  waar het MECHANISME dat het defect draagt vandaan komt. Aanleiding: M80 stelt vast dat de
+  herstelweek in de frequentie snijdt in plaats van in het volume, gemeten op Daans weekvorm van
+  4,75 uur. Over de volume-as W1..W7 houdt de bevinding stand op de vorm — 28 van de 28 cellen
+  krimpen tussen 0,1 en 10,8 procent waar M79 om 40 tot 60 vraagt — maar het aandeel
+  weekbelasting uit duurdagen loopt van 9 procent bij 3,0 uur naar 46 bij 14,0. Bij drie uur
+  leveren alle duurdagen samen 16 TSS op een week van 168, dus daar is de volume-ingreep
+  grotendeels leeg en doet de app ongeveer het juiste. Een fix die op de bevinding alleen was
+  gebouwd, had onderin een week van 108 minuten opgeleverd zonder grond.
+- **Bij een COACH-CANON-vraag is de VAKLITERATUUR een bron, en die gaat VOOR een popup.** Een
+  popup hoort bij een keuze die alleen Daan kan maken; hij hoort NIET bij een vraag waarover een
+  vakgebied al geschreven heeft, want dan legt hij leeswerk terug dat de chat had moeten doen.
+  Zelfde familie als "een plan eindigt op een BESLUIT" in `docs/WERKWIJZE.md`, nu op de BRON in
+  plaats van op de vorm. Aanleiding: op de vraag hoe diep een herstelweek bij vijf uur hoort te
+  snijden, stelde de chat een popup met vier opties. Daan wees hem terug met de opmerking dat de
+  methodiek gewoon online staat, en dat klopte: de taper-meta-analyses geven 41 tot 60 procent
+  minder volume zonder wijziging van intensiteit of frequentie, en wijzen KORTERE SESSIES
+  expliciet aan boven MINDER sessies. Dat laatste corrigeerde het advies van de chat — een
+  duurcap per dag schrapt bij korte weken feitelijk ritten — naar een factor op de sessieduur.
+  De popup had een slechter ontwerp bevroren.
 
 <!-- EINDE docs/WERKWIJZE-LESSEN.md -->

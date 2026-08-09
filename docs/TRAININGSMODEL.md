@@ -546,4 +546,22 @@ kwaliteit HOREN te dragen is coach-canon (M7, M43, M44, M45) en valt niet op dez
 ijken. M45 wordt er niet door geschonden — die noemt acht à tien uur als ondergrens waaronder
 polarized zinloos is en zwijgt over wat daarboven hoort. Staat als ROADMAP punt 44.
 
+**M86 (NORM) — De herstelweek snijdt in de SESSIEDUUR, met een factor die met het weekvolume
+meeloopt.**
+De volumeverlaging die M79 vraagt landt op de duur van elke sessie en NOOIT op het aantal
+sessies: de frequentie blijft staan. De factor loopt van 0,75 tot en met vijf uur per week naar
+0,55 vanaf tien uur, lineair ertussen. HERKOMST BELEID — Daan-besluit van 9 augustus 2026; er
+bestaat geen reeks waarop dit te ijken valt, en de eigen historie is per de bewijslast-regels
+geen bron voor een regel die gedrag VERVANGT. Onderbouwing: de taper-meta-analyses vinden de
+grootste winst bij 41 tot 60 procent minder volume zonder wijziging van intensiteit of
+frequentie, en wijzen kortere sessies expliciet aan boven minder sessies; de coachpraktijk voor
+herstelweken hanteert 40 tot 50 procent met een of twee korte prikkels. Over de lage kant
+beschrijft de literatuur GEEN urendrempel — de structuur is volume-onafhankelijk en alleen het
+absolute aantal uren beweegt mee, met circa 20 tot 25 procent bij een basis van vier tot zes
+uur. Dat is de reden dat dit een CONTINUE factor is en geen schakelaar: een drempel zou een
+aparte modus zijn en M9 verbiedt die. GEMETEN over de volume-as, volume tegenover de
+opbouwweek: 75 / 75 / 71 / 63 / 55 / 55 / 55 procent bij 3,0 tot 14,0 uur. De prikkeldosis
+blijft ×0,60 (M76, M83): met de prikkel vol stijgt de weekbelasting 1 tot 3 procentpunt en de
+kwaliteitsminuten van circa 13 naar 16,5 — niet dragend zodra het volume het werk doet.
+
 <!-- EINDE docs/TRAININGSMODEL.md -->
