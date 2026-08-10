@@ -442,11 +442,24 @@ describe("punt 15 fase 2 — term 2, de eis op het totaal", () => {
 // buiten de poort verdampt.
 describe("punt 15 fase 2 — zones geslaagd, totaal gezakt", () => {
   it("de conjunctie laat de week vallen op het TOTAAL alleen", () => {
-    const b = blokOpPlan_("FTP", FASE_OFFSET.Build);
+    // HERIJKT BIJ ROADMAP PUNT 43 — VAN DOEL "FTP" NAAR "Korte beklimmingen".
+    //
+    // Dit geval stond op FTP/Build, waar de poort {drempel} was en de tempo-massa dus verdampte.
+    // Sinds punt 43 opent een core-werkblok zijn HELE band: de sweetspot-band 89-92 %FTP heeft
+    // haar midpunt op drempel, maar 89 en 90 liggen in tempo, dus de poort van FTP/Build is nu
+    // {tempo, drempel} — en die dekt de hele vraag (95 van 95). Er verdampt daar niets meer, en
+    // daarmee kon dat blok het TOTAAL niet meer laten zakken bij geslaagde zones.
+    //
+    // `Korte beklimmingen` in Build poort op {drempel, anaeroob} en vraagt daarnaast 4 tempo-
+    // minuten die BUITEN de poort vallen: 65 van de 69 gevraagde minuten zijn beoordeelbaar. Dat
+    // is dezelfde M3-verdamping als voorheen, op het blok dat haar na punt 43 nog draagt. Het
+    // MECHANISME dat dit geval toetst — `geleverdOk` neemt term 2 mee — staat onverkort.
+    const DOEL = "Korte beklimmingen";
+    const b = blokOpPlan_(DOEL, FASE_OFFSET.Build);
     const basis = buildBlokReferent({
       doelStart: b.doelStart,
       activities: b.activities,
-      doel: "FTP",
+      doel: DOEL,
       weekUren: 5,
       startMonday: b.blokStart,
       todayISO: schuif_(b.blokStart, 28),
@@ -456,23 +469,25 @@ describe("punt 15 fase 2 — zones geslaagd, totaal gezakt", () => {
     if (!basis) throw new Error("referent onverwacht null");
     const w0 = basis.weeks[0];
     if (!w0) throw new Error("geen weken");
-    // De poortset is hier {drempel}: de enige zone die beoordeeld wordt.
-    expect(w0.zonesVoorgeschreven).toEqual(["drempel"]);
+    // De poortset is hier {drempel, anaeroob}: de zones die beoordeeld worden. Tempo staat er
+    // NIET in, en juist die zone draagt de norm-massa die verdampt.
+    expect(w0.zonesVoorgeschreven).toEqual(["drempel", "anaeroob"]);
+    expect(w0.gevraagdTempo).toBeGreaterThan(0);
 
-    // Rijd EXACT de drempel-norm en verder geen enkele werkminuut.
+    // Rijd EXACT de norm van elke gepoorte zone en verder geen enkele werkminuut.
     const kaal = [0, 7, 14, 21].map((d) =>
       ritMet_(schuif_(b.blokStart, d + 1), {
         rust: 30,
         z2: 120,
         tempo: 0,
         drempel: w0.gevraagdDrempel,
-        anaeroob: 0,
+        anaeroob: w0.gevraagdAnaeroob,
       }),
     );
     const r = buildBlokReferent({
       doelStart: b.doelStart,
       activities: kaal,
-      doel: "FTP",
+      doel: DOEL,
       weekUren: 5,
       startMonday: b.blokStart,
       todayISO: schuif_(b.blokStart, 28),

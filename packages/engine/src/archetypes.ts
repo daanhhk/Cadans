@@ -149,12 +149,24 @@ export function expandArchetype_(rec: any, ctx: any): any {
   ): number {
     const min = r1(durMin);
     const mid = Math.round((pctLo + pctHi) / 2);
-    blokken.push({
+    const bucket = pctZoneBucket_(mid);
+    const blok: any = {
       minuten: min,
-      zone: pctZoneBucket_(mid),
+      zone: bucket,
       pctLo: pctLo,
       pctHi: pctHi,
-    });
+    };
+    // ROADMAP punt 43 — alleen de CORE-werkband draagt de bedoeling. `kind` is hier
+    // "warmup", "work", "steady" (de endurance-fill) of "cooldown"; alleen "work" is werk.
+    //
+    // MAAR NIET ELKE CORE-REGEL IS EEN PRIKKEL. `sweetspot_pyramid` en de over-unders zetten hun
+    // INTRA-RUST als core-regel neer (`kind: "steady"`, pct 50 of 55), en `endurance_*` heeft een
+    // Z2-basisblok als core. Die dragen de bedoeling van het archetype net zo min als de
+    // interval-OFF hieronder, die de vlag ook niet krijgt. Vandaar dezelfde grens als in
+    // `planner.ts` (`zone !== "low"`): rust en z2 zijn duurwerk, geen prikkel.
+    if (kind === "work" && bucket !== "rust" && bucket !== "z2")
+      blok.coreWork = true;
+    blokken.push(blok);
     structuur.push([
       label,
       durStr,
@@ -224,11 +236,15 @@ export function expandArchetype_(rec: any, ctx: any): any {
       ]);
       for (let rr = 0; rr < c.reps; rr++) {
         if (onMin > 0) {
+          // ROADMAP punt 43 — de ON-band van een interval is per definitie de prikkel; er is geen
+          // enkel archetype waarvan die in rust of z2 valt (de laagste is 86-90). Onvoorwaardelijk
+          // dus, en de selftest bewaakt dat: geen enkel blok met `coreWork` draagt zone rust of z2.
           blokken.push({
             minuten: r1(onMin),
             zone: pctZoneBucket_(onMid),
             pctLo: onLo,
             pctHi: onHi,
+            coreWork: true,
           });
           preMin += r1(onMin);
         }

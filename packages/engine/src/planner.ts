@@ -1343,13 +1343,17 @@ export function renderVariant_(
       const onZone = pctZoneBucket_(b.onPct),
         offZone = pctZoneBucket_(b.offPct);
       for (let rr = 0; rr < b.reps; rr++) {
-        if (onMin > 0)
-          blokken.push({
+        if (onMin > 0) {
+          const onBlok: any = {
             minuten: Math.round(onMin * 10) / 10,
             zone: onZone,
             pctLo: b.onPct - 2,
             pctHi: b.onPct + 2,
-          });
+          };
+          // ROADMAP punt 43 — een variant met zone "low" is duurwerk, geen prikkel.
+          if (variant.zone !== "low") onBlok.coreWork = true;
+          blokken.push(onBlok);
+        }
         if (offMin > 0)
           blokken.push({
             minuten: Math.round(offMin * 10) / 10,
@@ -1371,12 +1375,15 @@ export function renderVariant_(
       ]);
       intent[z] += dm;
       mainMin += dm;
-      blokken.push({
+      const steadyBlok: any = {
         minuten: dm,
         zone: pctZoneBucket_(b.pct),
         pctLo: b.pct - 2,
         pctHi: b.pct + 2,
-      });
+      };
+      // ROADMAP punt 43 — `z` is b.zone of variant.zone; "low" is duurwerk.
+      if (z !== "low") steadyBlok.coreWork = true;
+      blokken.push(steadyBlok);
     }
   });
 
@@ -2639,15 +2646,26 @@ export function genericCombo(
     // `intent` en `tss` blijven ONGEWIJZIGD. De blokken dekken `totaalMin` en niet `intent.low` —
     // die twee lopen 5 minuten uiteen omdat `fixed` drie intra-rusten telt en `intent.low` er twee;
     // het verschil zit uitsluitend in rust en raakt geen werkzone.
-    const blok_ = (minuten: number, pctLo: number, pctHi: number) => ({
-      minuten: minuten,
-      zone: pctZoneBucket_(Math.round((pctLo + pctHi) / 2)),
-      pctLo: pctLo,
-      pctHi: pctHi,
-    });
+    const blok_ = (
+      minuten: number,
+      pctLo: number,
+      pctHi: number,
+      coreWork?: boolean,
+    ) => {
+      const b: any = {
+        minuten: minuten,
+        zone: pctZoneBucket_(Math.round((pctLo + pctHi) / 2)),
+        pctLo: pctLo,
+        pctHi: pctHi,
+      };
+      // ROADMAP punt 43 — alleen de effort-blokken zijn werk; warmup, basis,
+      // intra-rust en uitrijden niet.
+      if (coreWork) b.coreWork = true;
+      return b;
+    };
     const blokken: any[] = [blok_(15, 55, 70), blok_(baseMin, 65, 75)];
     for (let i = 0; i < repsEff; i++) {
-      blokken.push(blok_(onMin, vorm.pctLo, vorm.pctHi));
+      blokken.push(blok_(onMin, vorm.pctLo, vorm.pctHi, true));
       blokken.push(blok_(vorm.rest, 45, 55));
     }
     blokken.push(blok_(15, 55, 65));

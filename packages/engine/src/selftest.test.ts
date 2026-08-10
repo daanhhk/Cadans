@@ -2192,6 +2192,28 @@ describe("engine selftest", () => {
       });
       assert_("lib " + rec.id + " blok-bounds", true, blokOk);
       assert_("lib " + rec.id + " blok-zone", true, zoneOk);
+      // ROADMAP punt 43 — DE CORE-VLAG. `coreWork` zegt: dit blok draagt de bedoeling van het
+      // archetype, en de normpoort in apps/web mag daarom de HELE band openen in plaats van
+      // alleen het midpunt-label. Drie eisen, want de vlag is pas bruikbaar als alle drie staan.
+      // Warmup is blokken[0] en cooldown het LAATSTE blok — die volgorde legt emit() vast.
+      const kern = wo.blokken.filter((b: any) => b.coreWork === true);
+      // (a) elk archetype in de LIB is zone 4 of 5 en levert dus werk. (De fixture-lus hierboven
+      //     kent wel een pure duur-vorm; die hoort géén kern te hebben en claimt dit niet.)
+      assert_("lib " + rec.id + " kern-aanwezig", true, kern.length > 0);
+      // (b) inrijden en uitrijden dragen de bedoeling niet.
+      assert_(
+        "lib " + rec.id + " kern-niet-op-rand",
+        true,
+        wo.blokken[0].coreWork !== true &&
+          wo.blokken[wo.blokken.length - 1].coreWork !== true,
+      );
+      // (c) en geen enkel kernblok ligt in rust of z2. Dit bewaakt de ONvoorwaardelijke vlag op de
+      //     interval-ON band: die staat er zonder zone-toets, en deze regel is de dekking daarvan.
+      assert_(
+        "lib " + rec.id + " kern-is-werk",
+        true,
+        kern.every((b: any) => b.zone !== "rust" && b.zone !== "z2"),
+      );
       assertClose_("lib " + rec.id + " som==totaal", wo.totaalMin, sum, 0.01);
       assertClose_("lib " + rec.id + " ~doelMin", dm, wo.totaalMin, 1.5);
       let pushOk = true,
@@ -6871,7 +6893,11 @@ describe("engine selftest", () => {
   // herstel-gat voor B2, en de vijfweg-lus die de keten zonder bevestiging doel-gestuurd houdt.
   // 1435→1447. NALEVERING: +2 voor de Recovery-tak buiten de poort (afgewezen en weggelaten) en
   // de tegenproef dat Build op dezelfde afstand wél een bevestiging vraagt. 1447→1449.
-  it("exactly 1652 assertions", () => {
-    expect(assertCount).toBe(1652);
+  // ROADMAP punt 43 (de core-vlag): +105 in testArchetypeLib — drie eisen per archetype over de
+  // 35 lib-vormen: er IS een kern, de kern raakt inrijden noch uitrijden, en geen kernblok ligt in
+  // rust of z2. Die laatste is de dekking van de onvoorwaardelijke vlag op de interval-ON band.
+  // 1652→1757.
+  it("exactly 1757 assertions", () => {
+    expect(assertCount).toBe(1757);
   });
 });

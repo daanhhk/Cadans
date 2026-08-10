@@ -1,3 +1,4 @@
+import { pctZoneBucket_ } from "@cadans/engine";
 import type { ProposalDay } from "./proposal";
 import type { Zone5Key } from "./zonemunt";
 
@@ -6,6 +7,11 @@ import type { Zone5Key } from "./zonemunt";
 // Elk engine-blok draagt `zone`, gezet door `pctZoneBucket_` op het MIDDEN van zijn band
 // (`archetypes.ts:154`, `planner.ts:1316`). Dat label is wat het plan BEDOELDE, los van hoe de
 // minuten proportioneel over de zone-grenzen vallen.
+//
+// ROADMAP punt 43 — EEN CORE-WERKBLOK OPENT ZIJN HELE BAND, niet alleen zijn midpunt. Een blok met
+// `coreWork` draagt de bedoeling van het archetype, en `sweetspot_3x8` (88-92, midpunt 90 → tempo)
+// en `sweetspot_4x12` (89-92, midpunt 90,5 → drempel) beweren daarmee hetzelfde en poorten
+// tegengesteld. Het midpunt-label blijft er onvoorwaardelijk in, dus de poort is nooit SMALLER.
 //
 // WAAROM DIT EEN GEDEELDE HELPER IS. `weektekort.ts` (punt 10 fase B) en `blok.ts` (punt 14)
 // poorten allebei op datzelfde label, en om dezelfde reden: `planZone5_` splitst een blok
@@ -21,6 +27,19 @@ export const WERKZONE_LABELS: readonly Zone5Key[] = [
 ];
 
 /**
+ * De zone-buckets die deze BAND raakt, op de indeling van `pctZoneBucket_` — dus NIET op de
+ * zone-grenzen van de renner. Het blok-label komt daar ook vandaan, en de zone-munt blijft
+ * ongemoeid; poorten op een raster dat de geleverde kant niet heeft zou beide kanten in
+ * verschillende eenheden meten. De scan loopt over hele procentpunten.
+ */
+function bandBuckets_(pctLo: number, pctHi: number): string[] {
+  const uit = new Set<string>();
+  for (let p = Math.floor(pctLo); p <= Math.ceil(pctHi); p++)
+    uit.add(pctZoneBucket_(p));
+  return Array.from(uit);
+}
+
+/**
  * De WERKZONE-labels die deze blokken voorschrijven, in de vaste volgorde tempo, drempel,
  * anaeroob. Blokken zonder minuten tellen niet mee: een blok van nul minuten schrijft niets voor.
  */
@@ -28,10 +47,25 @@ export function werkzoneLabelsVan_(blokken: unknown): Zone5Key[] {
   if (!Array.isArray(blokken)) return [];
   const gezien = new Set<string>();
   for (const b of blokken) {
-    const o = b as { zone?: unknown; minuten?: unknown };
+    const o = b as {
+      zone?: unknown;
+      minuten?: unknown;
+      coreWork?: unknown;
+      pctLo?: unknown;
+      pctHi?: unknown;
+    };
     const min = Number(o?.minuten);
     if (!Number.isFinite(min) || min <= 0) continue;
     if (typeof o?.zone === "string") gezien.add(o.zone);
+    // ROADMAP punt 43 — de RAAK-tak, uitsluitend voor CORE-werkblokken. Het midpunt-label
+    // hierboven blijft er onvoorwaardelijk in, dus deze poort is per constructie nooit SMALLER
+    // dan de vorige. Een bewaarde rij van vóór deze bouw draagt `coreWork` niet en valt daarmee
+    // vanzelf terug op het oude gedrag — dat is de terugval, geen aparte tak.
+    if (o?.coreWork !== true) continue;
+    const lo = Number(o?.pctLo);
+    const hi = Number(o?.pctHi);
+    if (!Number.isFinite(lo) || !Number.isFinite(hi)) continue;
+    for (const z of bandBuckets_(lo, hi)) gezien.add(z);
   }
   return WERKZONE_LABELS.filter((z) => gezien.has(z));
 }
