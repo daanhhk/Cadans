@@ -13,6 +13,67 @@ live tot cutover.
 
 ## Stand
 
+STAND 2026-08-10 — punt 46 GESLOTEN (item 6f) en NAAR VOREN GEHAALD vóór 6e. De lessen staan nu
+in TWEE bestanden die de opener allebei ophaalt; de opener telt zes URL's. Bouw `5de6c3f`, de
+omkering `296d065`. Docs-only: geen code, geen engine, geen migratie, geen deploy, en geen enkel
+`wrangler`-commando. Prod en D1 staan waar het blok hieronder ze noemt.
+DE OMKERING IS EERST VASTGELEGD, en dat was Daans instructie: 6f vóór 6e, met de reden in
+`docs/ROADMAP.md` *De volgorde*. GROND: het bestand stond op 110213 bytes met 10787 marge en
+groeide 2289 bytes per ronde — vier à vijf rondes — terwijl punt 44 er twee tot drie zou kosten.
+Dan had 6f onder tijdsdruk gemoeten, precies wat dit punt hoort te voorkomen.
+DE SPLITSING IS VERLIESLOOS BEWEZEN: multiset-gelijkheid over de twee nieuwe rompen tegen de romp
+uit `296d065` gaf **0 verschillen op 985 distincte regels**, 986 rompregels aan beide kanten. Een
+"precies één keer"-toets zou per constructie zijn gevallen — het bestand draagt één regel die er
+twee keer in staat. Dat is de les uit punt 38, nu op het bestand waar diezelfde ronde juist
+vaststelde dat alle regels toen nog uniek waren.
+DE KNIP LOOPT OP INSTRUMENT TEGEN BEWIJSLAST, en die as bepaalt waar een NIEUWE les landt.
+`docs/WERKWIJZE-LESSEN-GEREEDSCHAP.md` draagt de **57** lessen waarvan de grond aan een tool,
+bestand, commando of harness in deze repo hangt; die verouderen en worden herijkt zodra dat
+gereedschap verandert. `docs/WERKWIJZE-LESSEN.md` houdt de **87** over de VORM van bewijs, die
+niet verouderen. De regel staat in *Recon en bewijslast* en in de kop van beide bestanden.
+DE VOORGESTELDE AS IS GEMETEN EN AFGEVALLEN, en dat hoort hier zodat een volgende ronde het niet
+opnieuw probeert. "Nog dragend voor een openstaand punt" snijdt dit materiaal niet: **89 van de
+144** lessen noemen geen enkel puntnummer, en van de 55 die er wél een noemen doen er **50** dat
+binnen de AANLEIDING — dus als herkomst en niet als reikwijdte. Slechts **6** raken een open punt.
+INKORTEN IS OOK UITGEMETEN EN TE KLEIN. De aanleiding-massa is 56390 bytes (51,5 procent), maar
+**99 van de 108** aanleidingen dragen een cijfer en juist dat cijfer is de grond van de regel. Wat
+er zonder verlies uit kan is pure provenance: **26 zinnen, 2270 bytes, 2,1 procent**.
+Familie-consolidatie idem — 36 distincte families, de meest genoemde vier keer.
+DE GROEI IS SCHEEF, en dat is de reden dat de knip daar ligt. Over het nieuwste derde deel van de
+oude lijst ging **25470 bytes** naar de gereedschapshelft tegen **15217** naar de bewijslasthelft:
+de helft die veroudert is ook de helft die aangroeit. Runway op 2289 per ronde: circa 52 rondes
+gereedschap, circa 67 bewijslast.
+MARGES OP `5de6c3f`, grens circa 121000: WERKWIJZE 34347 (+86653), LESSEN 64834 (+56166),
+LESSEN-GEREEDSCHAP 47404 (+73596), TRAININGSMODEL 37588 (+83412), HANDOFF 63229 (+57771),
+DOELEN-SPEC 31808 (+89192). De krapste marge ging van 10787 naar 56166, en het knelpunt verschoof
+naar `HANDOFF.md` — die begrenst zichzelf met de rotatie op twaalf blokken, en deze close-out
+voert die uit. De bytes ná deze commit staan in het CC-rapport.
+VLOEREN NU: vitest-totaal 985 over 78 bestanden · engine-selftest-assert-count 1757 ·
+lint-waarschuwingen 20, alle vier afgelezen uit de gate van DEZE ronde. Onbewogen: docs-only, geen
+test geraakt. Lees ze zelf uit de suite; neem ze niet over uit dit blok.
+WAT DAAN MERKT: NIETS aan de app. Wat wél verandert is de opener: zes URL's in plaats van vijf.
+DRIE AFWIJKINGEN, alle door CC gemeld en alle goedgekeurd. (1) Vier regels van item 6e in *De
+volgorde* zijn opnieuw afgebroken omdat de vervanging de eerste regel op 122 tekens bracht; alleen
+regelafbreking. (2) De logregel belandde eerst boven in plaats van onderaan
+`docs/WERKWIJZE-LOG.md` en is teruggedraaid. (3) Een NIET-ingreep: de dubbele lege regel tussen
+kop en eerste les in `docs/WERKWIJZE-LESSEN.md` stond er al vóór deze ronde en is bewust blijven
+staan, want weghalen viel buiten de opdracht.
+OPENSTAAND, elk item opnieuw gegrept in `docs/ROADMAP.md`: 16 · 32 · 34 · 35 · 44. Punt 46 hoort
+er niet meer bij.
+
+FOCUS VOLGENDE CHAT: ROADMAP punt 44 — de kwaliteitsdosis plafonneert vanaf circa acht uur. Item
+6e uit *De volgorde* in `docs/ROADMAP.md`; 6f is met deze ronde gesloten, dus dit is GEEN
+afwijking van de reeks. LET OP DE SOORT: dit is COACH-CANON en geen meetopdracht. De ronde begint
+met een BESLUIT van Daan over hoeveel kwaliteit bij veertien uur hoort — herkomst BELEID — want er
+bestaat geen reeks waarop dat te ijken valt, en de eigen historie is per de bewijslast-regels geen
+bron voor een regel die gedrag VERVANGT. Zonder dat besluit is er niets om tegen te bouwen. DRAAGT
+M85 (BEVINDING): het weekvolume groeit van 180 naar 840 minuten en Z1 van 125 naar 748, terwijl Z2
+en Z3 samen van 55 naar 92 gaan en vanaf acht uur stilstaan op 88, 92, 94, 92 — zes extra uren
+leveren nul extra kwaliteitsminuten. Het plafond zit in het AANTAL kwaliteitsdagen (1,6 à 1,75) en
+niet in de dosis per dag. M45 wordt er niet door geschonden: die noemt acht à tien uur als
+ondergrens waaronder polarized zinloos is en zwijgt over wat daarboven hoort. DE VAKLITERATUUR
+GAAT VOOR EEN POPUP — dat is de les uit de M86-ronde, en ze geldt hier woordelijk. Verse chat.
+
 STAND 2026-08-10 — punt 43 GESLOTEN (item 6d) EN LIVE. Code 95751a1, recon-doc 16320fd.
 De normpoort stond op een midpunt-label dat identiek werk splitste. Blokken dragen nu
 `coreWork: true` waar ze een werkprikkel zijn; `werkzoneLabelsVan_` opent voor die blokken
@@ -655,19 +716,6 @@ eerst wat het verschil in de praktijk oplevert — het kan zijn dat er niets aan
 - **OPENSTAAND, elk item opnieuw gegrept in `docs/ROADMAP.md`:** 16 · 19 · 32 · 34 · 35 · 38. Punt 21 hoort er niet meer bij.
 
 FOCUS VOLGENDE CHAT: ROADMAP punt 38 — de opener-fetch kapt af en meldt het niet. Item 5b uit *De volgorde* in `docs/ROADMAP.md`, dus GEEN afwijking van de reeks: het punt is daar met reden vóór punt 19 gezet. TOOLING plus norm, geen engine en geen app. DE INGREEP IS EEN VERBATIM VERHUIZING — *Recon en bewijslast* naar `docs/WERKWIJZE-LESSEN.md`, vijfde URL in het opener-sjabloon, plus rotatie van `HANDOFF.md` naar `docs/HANDOFF-ARCHIEF.md` — dus de acceptatie-eis is dat elke verplaatste regel PRECIES ÉÉN KEER voorkomt over de twee bestanden, zoals bij de log-verhuizing. HERMEET DE BYTES ZELF; de getallen in punt 38 zijn een uitspraak over 7 augustus. Verse chat.
-
-**HET WIJZIGINGSLOG IS UIT `WERKWIJZE.md` GEHAALD (7 augustus 2026).** Docs-only reparatie: geen code, geen engine, geen migratie, geen deploy, geen enkel `wrangler`-commando. Prod blijft op Worker Version `b8c6b7fa-e2ab-441f-b4bf-3d1d17a1eec7`, D1 op `0010`.
-- **WAT ER STUK WAS, EN HET IS GEMETEN.** De opener haalt `docs/WERKWIJZE.md` bij ELKE chat via een RAW-fetch binnen. Met de 106 logregels erin was dat bestand 1092 regels en 150899 bytes, en de fetch van 7 augustus kapte af op **regel 1028 van 1092** — alle **59** augustus-logregels vielen buiten beeld.
-- **HET GEVOLG DAT WE ZAGEN.** De eis "elke afspraak krijgt een gedateerde logregel" stond NERGENS als instructie: 0 treffers in de close-out-sectie, 0 in `CLAUDE.md`, 1 in heel `WERKWIJZE.md` en dat was de kop zelf. Hij leefde uitsluitend als IMITATIE van de bestaande logregels — en zodra de fetch die regels niet meer haalde, verdween de gewoonte. Twee close-outs op rij vergat de chat hem; beide keren vulde CC hem aan. CC heeft dat probleem niet, want hij leest van schijf.
-- **HET ZWAARDERE GEVOLG, en dát is de reden dat dit gerepareerd is in plaats van genoteerd.** De norm-tekst eindigde op **114607 bytes** en de afkap lag rond **121000**: een marge van ongeveer 6 kB, terwijl de lessenlijst elke ronde groeit. Nog een paar lessen en de opener had de GATE-sectie, de vijf promptcontroles en het opener-sjabloon verloren — zonder enig signaal, want een afgekapte fetch meldt zichzelf niet.
-- **WAT ER NU STAAT.** `docs/WERKWIJZE-LOG.md` draagt de 106 regels VERBATIM plus een kop die zegt dat de norm elders staat en dat de opener dit bestand bewust niet ophaalt. `docs/WERKWIJZE.md` houdt op die plek een alinea met de reden. GEMETEN NA DE VERHUIZING: `WERKWIJZE.md` 1010 regels en **116838 bytes**, `WERKWIJZE-LOG.md` 122 regels en 38376 bytes; de 106 oorspronkelijke logregels komen samen **precies één keer** voor over de twee bestanden — 0 in de norm, 106 in het log, nul die niet exact één keer voorkomt. Geen verdubbeling, geen verlies.
-- **DE EIS IS VASTGELEGD** in *Close-out van een chat*: elke nieuwe of gewijzigde werkwijze-afspraak krijgt in DEZELFDE close-out een gedateerde regel in `docs/WERKWIJZE-LOG.md`, met sectie, strekking en aanleiding. Die regel is meteen op zichzelf toegepast: de twee wijzigingen van deze ronde staan er.
-- **DE LES STAAT IN *Recon en bewijslast***: een document dat te groot wordt om binnen te halen verliest zijn staart zonder het te melden. Werkregel eruit: wat een chat bij elke start MOET lezen blijft in de norm, alles wat alleen achteraf verantwoordt verhuist naar een eigen bestand.
-- **WAT DAAN MERKT: NIETS.** Er is geen letter code geraakt.
-- **VLOEREN NU: vitest-totaal 975 over 76 bestanden · engine-selftest-assert-count 1652 · lint-waarschuwingen 20**, alle vier afgelezen uit de gate van DEZE ronde. Een volgende chat leest ze uit de suite en neemt ze niet over uit dit blok.
-- **OPENSTAAND, elk item opnieuw gegrept in `docs/ROADMAP.md`:** 16 · 19 · 21 · 32 · 34 · 35.
-
-FOCUS VOLGENDE CHAT: ROADMAP punt 21 — de push-beschrijving. Vijfde item uit *De volgorde* in `docs/ROADMAP.md`, dus GEEN afwijking van de reeks. EERST DE BEREIKBAARHEID METEN, en pas daarna beslissen of er iets gebouwd wordt: `buildWorkoutDescription_` wordt alleen bereikt als zowel de ZWO- als de DSL-tak faalt, en bij punt 20 gaf `zwoStepFromRow_` over de hele populatie 0 keer null. Sluit vermoedelijk zonder bouw. ENGINE, dus recon-first met een stop-en-verifieer; een echte engine-bug wordt geflagd, nooit stilzwijgend gepatcht. Verse chat.
 
 De oudere STAND-blokken en de historische projectsecties staan in `docs/HANDOFF-ARCHIEF.md`.
 Dit bestand draagt de TWAALF nieuwste blokken; komt er een dertiende bij, dan schuift het oudste in

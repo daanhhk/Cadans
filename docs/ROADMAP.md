@@ -1644,7 +1644,7 @@ punten staat onder *Gesloten — vindplaats*.
     met historie W3 gaat van 135,6 naar **179,6** minuten (het defect is weg), maar W3 met historie
     W1 gaat van 257,2 naar **157,2** — wie in zijn herstelweek MEER invult dan gewend, wordt dieper
     gekort. Dat volgt uit de norm, en het betekent dat de app beschikbare tijd laat liggen.
-46. **`docs/WERKWIJZE-LESSEN.md` loopt naar de opener-cap** — open · TOOLING.
+46. **`docs/WERKWIJZE-LESSEN.md` loopt naar de opener-cap** — AF 10-08-2026 · TOOLING.
     HERMETEN 10-08-2026, bij de close-out van punt 43. VÓÓR die close-out: **107224 bytes**, marge
     **13776** tot circa 121000. ERNA, en dit is het getal dat telt: **110213 bytes**, marge
     **10787** — die ene close-out kostte **2989 bytes**, want hij droeg zeven lessen. Het bestand is
@@ -1663,6 +1663,18 @@ punten staat onder *Gesloten — vindplaats*.
     met een ZESDE opener-URL, of een andere ordening waarin de lessen korter kunnen zonder hun
     aanleiding te verliezen. Die aanleiding draagt vaak juist het getal waarop de regel rust — punt
     38 mat dat op 89 losse knipbeslissingen en wees het af.
+    **AF per 10-08-2026:** gesplitst in twee bestanden die de opener ALLEBEI ophaalt, bouw
+    `5de6c3f`. `docs/WERKWIJZE-LESSEN-GEREEDSCHAP.md` draagt de **57** lessen waarvan de grond aan
+    een tool, bestand, commando of harness in deze repo hangt en die dus verouderen;
+    `docs/WERKWIJZE-LESSEN.md` houdt de **87** over de VORM van bewijs. VERLIESLOOS BEWEZEN:
+    multiset-gelijkheid over de twee nieuwe rompen gaf **0 verschillen op 985 distincte regels**,
+    986 rompregels aan beide kanten — een "precies één keer"-toets zou per constructie zijn
+    gevallen over de ene regel die er twee keer in staat. De krapste opener-marge ging van **10787
+    naar 56166**, en het knelpunt verschoof naar `HANDOFF.md`, dat zichzelf begrenst met de rotatie
+    op twaalf STAND-blokken. Het sjabloon telt sindsdien **zes** URL's. De as die dit punt zelf
+    voorstelde is gemeten en afgevallen: "nog dragend voor een openstaand punt" snijdt niet — 89
+    van de 144 lessen noemen geen puntnummer, 50 van de 55 die er wél een noemen doen dat binnen de
+    aanleiding, en inkorten levert 2,1 procent.
 
 ## De tijdslijn
 
@@ -1873,7 +1885,7 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
    het VERPLAATSEN van de poort en niet meer over het bouwen van een nieuwe grootheid.
    **AFGEVINKT per 10-08-2026:** gebouwd in `95751a1` en live op Version ID
    `e994c768-3d73-4aec-876b-b614b7fe1302`. Drie meetrondes; de derde droeg de bouw.
-   **DE VOLGENDE IS 6f, NIET 6e** — zie de omkering onder 6f.
+   **NA 6d VOLGDE 6f, EN DAARNA 6e** — zie de omkering onder 6f.
 6e. **44** — de kwaliteitsdosis plafonneert vanaf acht uur. NÁ 6f — zie de omkering daar — en met
    een eigen soort stop: dit is COACH-CANON en geen meetopdracht. De ronde begint met een BESLUIT
    van Daan over hoeveel kwaliteit bij veertien uur hoort — herkomst BELEID — want er bestaat geen
@@ -1894,6 +1906,11 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
    Het blijft wel een ONTWERPronde en geen verhuizing — de lessen zijn werkende discipline die
    elke chat moet lezen, dus wegzetten in een niet-opgehaald bestand is precies de fout die punt
    38 blootlegde. De ronde kiest tussen splitsen met een zesde opener-URL en een andere ordening.
+   **AFGEVINKT per 10-08-2026:** de ronde koos het SPLITSEN, en de zesde opener-URL staat er.
+   Gebouwd in `5de6c3f`: 57 lessen gereedschap tegen 87 bewijslast, multiset-gelijkheid met 0
+   verschillen op 985 distincte regels, en de krapste opener-marge van 10787 naar 56166. Het
+   knelpunt ligt sindsdien bij `HANDOFF.md`, dat zichzelf begrenst op twaalf STAND-blokken.
+   **DE VOLGENDE IS 6e.**
 7. **16** — de materialiteitsvloer en de prikkel, in EEN bouw. Zie `docs/PUNT16-RECON.md` §5.
 8. **34** — de effect-referent kent het doel niet. M5-schending bij drie van de vijf doelen.
 9. **35** — een event draagt geen duur. Deblokkeert punt 13 fase B.
