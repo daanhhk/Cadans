@@ -1645,13 +1645,15 @@ punten staat onder *Gesloten — vindplaats*.
     W1 gaat van 257,2 naar **157,2** — wie in zijn herstelweek MEER invult dan gewend, wordt dieper
     gekort. Dat volgt uit de norm, en het betekent dat de app beschikbare tijd laat liggen.
 46. **`docs/WERKWIJZE-LESSEN.md` loopt naar de opener-cap** — open · TOOLING.
-    HERMETEN 10-08-2026, vóór de close-out van punt 43: het bestand staat op **107224 bytes** met
-    een marge van **13776** tot circa 121000, en is daarmee het KRAPSTE van de vijf bestanden die de
-    opener ophaalt. De groei is over de laatste zeven close-outs gemeten op **ruwweg 2200 bytes per
-    ronde**, dus de runway is nog **ongeveer zes rondes**. De eerdere schatting stond op 102123
-    bytes, marge 18877 en zeven rondes; die is hiermee vervangen. Let op de richting: de marge daalt
-    sneller dan het rondetempo suggereert, want elke close-out die een afwijking draagt levert meer
-    dan één les.
+    HERMETEN 10-08-2026, bij de close-out van punt 43. VÓÓR die close-out: **107224 bytes**, marge
+    **13776** tot circa 121000. ERNA, en dit is het getal dat telt: **110213 bytes**, marge
+    **10787** — die ene close-out kostte **2989 bytes**, want hij droeg zeven lessen. Het bestand is
+    daarmee veruit het KRAPSTE van de vijf die de opener ophaalt; de vier andere staan op 63229,
+    37588, 32544 en 31808. De groei is over de laatste zeven close-outs gemeten op **ruwweg 2200
+    bytes per ronde**, dus de runway is nog **ongeveer vijf rondes**. De eerdere schatting stond op
+    102123 bytes, marge 18877 en zeven rondes; die is hiermee vervangen. Let op de richting: de
+    marge daalt sneller dan het rondetempo suggereert, want een close-out die afwijkingen draagt
+    levert meer dan één les — 2989 tegen de verwachte 2200 is daar meteen een geval van.
     DE INGREEP VAN PUNT 38 IS HIER NIET ZOMAAR TE HERHALEN, en dat is de hele reden dat dit een
     eigen punt is. Het wijzigingslog kon weg omdat het uitsluitend ACHTERAF verantwoordt en de
     opener het bewust niet ophaalt; de lessen zijn WERKENDE DISCIPLINE die elke chat bij zijn start
