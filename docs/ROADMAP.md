@@ -1532,7 +1532,15 @@ punten staat onder *Gesloten — vindplaats*.
     UITKOMST: **M78 staat op INGETROKKEN** in `docs/TRAININGSMODEL.md`; **M83** draagt de bevinding.
     `mesoFactor` schaalt de DOSIS en niet het percentage, en dat is precies wat M75 en M76
     voorschrijven. Volledige uitwerking in `docs/PUNT41-42-RECON.md` §7.
-43. **De normpoort staat op een midpunt-label dat identiek werk splitst** — open · ENGINE plus CLIENT plus norm.
+43. **De normpoort staat op een midpunt-label dat identiek werk splitst** — GESLOTEN EN LIVE
+    10-08-2026 · ENGINE plus CLIENT plus norm. Recon-doc `16320fd`, bouw `95751a1`, prod Version ID
+    `e994c768-3d73-4aec-876b-b614b7fe1302`. UITSLAG: sweetspot **266 van de 266** cellen consistent,
+    **0 weken en 0 dagen smaller**, verdamping **2866,8 → 509,1** van 30201,6 werkminuten.
+    Een blok draagt nu `coreWork: true` waar het een werkprikkel is; `werkzoneLabelsVan_` opent voor
+    zo'n blok de HELE band op de indeling van `pctZoneBucket_` en houdt het midpunt-label er
+    onvoorwaardelijk in, dus de poort kan per constructie nooit smaller worden. Een bewaarde rij
+    zonder het veld valt vanzelf terug op het oude gedrag — geen aparte tak. De uitwerking van de
+    meetrondes staat hieronder; ze blijft staan omdat de bouwspec eruit volgt.
     `werkzoneLabelsVan_` (`apps/web/src/lib/zonelabels.ts:27`) poort op het MIDPUNT-label van de
     band, en twee consumenten hangen eraan die tegen GELEVERD vergelijken: de weekstem
     (`apps/web/src/lib/weektekort.ts:114`) en de blok-terugblik (`apps/web/src/lib/blok.ts:413`).
@@ -1637,9 +1645,13 @@ punten staat onder *Gesloten — vindplaats*.
     W1 gaat van 257,2 naar **157,2** — wie in zijn herstelweek MEER invult dan gewend, wordt dieper
     gekort. Dat volgt uit de norm, en het betekent dat de app beschikbare tijd laat liggen.
 46. **`docs/WERKWIJZE-LESSEN.md` loopt naar de opener-cap** — open · TOOLING.
-    Het bestand staat op **102123 bytes** met een marge van **18877** tot circa 121000, en is
-    daarmee het KRAPSTE van de vijf bestanden die de opener ophaalt. Bij het tempo van de laatste
-    rondes — ruwweg 2,5 kB per ronde — is dat nog een stuk of zeven rondes.
+    HERMETEN 10-08-2026, vóór de close-out van punt 43: het bestand staat op **107224 bytes** met
+    een marge van **13776** tot circa 121000, en is daarmee het KRAPSTE van de vijf bestanden die de
+    opener ophaalt. De groei is over de laatste zeven close-outs gemeten op **ruwweg 2200 bytes per
+    ronde**, dus de runway is nog **ongeveer zes rondes**. De eerdere schatting stond op 102123
+    bytes, marge 18877 en zeven rondes; die is hiermee vervangen. Let op de richting: de marge daalt
+    sneller dan het rondetempo suggereert, want elke close-out die een afwijking draagt levert meer
+    dan één les.
     DE INGREEP VAN PUNT 38 IS HIER NIET ZOMAAR TE HERHALEN, en dat is de hele reden dat dit een
     eigen punt is. Het wijzigingslog kon weg omdat het uitsluitend ACHTERAF verantwoordt en de
     opener het bewust niet ophaalt; de lessen zijn WERKENDE DISCIPLINE die elke chat bij zijn start
@@ -1857,13 +1869,17 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
    **DE VOORWAARDE IS INGELOST per 09-08-2026:** punt 39 is gebouwd en staat live, dus de
    karakter-as ligt er samen met zijn eerste consument. De meting van dit item gaat daarmee over
    het VERPLAATSEN van de poort en niet meer over het bouwen van een nieuwe grootheid.
+   **AFGEVINKT per 10-08-2026:** gebouwd in `95751a1` en live op Version ID
+   `e994c768-3d73-4aec-876b-b614b7fe1302`. Drie meetrondes; de derde droeg de bouw.
+   **DE VOLGENDE IS 6e.**
 6e. **44** — de kwaliteitsdosis plafonneert vanaf acht uur. NÁ 6d en met een eigen soort stop: dit
    is COACH-CANON en geen meetopdracht. De ronde begint met een BESLUIT van Daan over hoeveel
    kwaliteit bij veertien uur hoort — herkomst BELEID — want er bestaat geen meting die dat
    antwoord kan dragen. Zonder dat besluit is er niets om tegen te bouwen, dus deze plek in de rij
    is een agendapunt en geen bouwronde. Draagt M85.
 6f. **46** — `docs/WERKWIJZE-LESSEN.md` loopt naar de opener-cap. NÁ punt 44, want het is geen
-   noodgeval: 18877 bytes marge is bij het huidige tempo nog ruwweg zeven rondes. Maar het is wél
+   noodgeval: **13776 bytes marge is bij het gemeten tempo nog ruwweg zes rondes** — de schatting
+   van zeven rondes hierboven stond op 18877 bytes en is per 10-08-2026 achterhaald. Maar het is wél
    een ONTWERPronde en geen verhuizing — de lessen zijn werkende discipline die elke chat moet
    lezen, dus wegzetten in een niet-opgehaald bestand is precies de fout die punt 38 blootlegde.
    De ronde kiest tussen splitsen met een zesde opener-URL en een andere ordening.
@@ -1973,6 +1989,14 @@ niet; hij verliest niet. Een punt gaat eruit zodra een STAP het opneemt — niet
 - OP DOSIS-TREDE 4 staat bij Korte beklimmingen op weekvorm V3 in 3 van de 960 gemeten
   dagcellen MEER gepland dan de gebruiker opgaf, maximaal 3,8 minuten. Gemeten chat-zijde bij
   punt 17; klein, maar het plan hoort de opgegeven ruimte nooit te overschrijden.
+- DE M3-VERDAMPINGSCLAIM IN `apps/web/src/lib/punt15.test.ts` RUST NOG OP DRIE BLOKKEN. Dat geval
+  isoleert term 2 van de conjunctie — zones slagen, totaal zakt — en dat kan alleen op een blok
+  waar norm-massa BUITEN de poort valt. Punt 43 verbreedde de poort en haalde FTP/Build als drager
+  weg (95 van de 95 nu binnen de poort); het geval staat sinds 10-08-2026 op Korte
+  beklimmingen/Build met marge 4. Wat overblijft: Korte beklimmingen/Peak met marge 4 en Lange
+  beklimmingen/Peak met **marge 1**. Verbreedt een volgend punt de poort verder, dan moet dit geval
+  opnieuw VERPLAATST worden naar een blok dat de claim nog draagt — nooit verzwakt, want dan meet
+  het de conjunctie niet meer.
 
 
 - DE ELSE-TAK IN DE `plannedForDone`-TOEKENNING VAN `proposal.ts` IS DOOD AAN ZIJN INVOER. Hij
@@ -2035,6 +2059,12 @@ niet; hij verliest niet. Een punt gaat eruit zodra een STAP het opneemt — niet
 
 ### TOOLING
 
+- `/api/health` DRAAGT GEEN VERSIEVELD, waardoor een deploy niet op de endpoint zelf te verifiëren
+  is. Hij geeft `{"ok":true,"service":"cadans-api"}` — dat bewijst dat de Worker leeft, niet welke
+  bundel eronder zit. Bij de deploy van punt 43 (10-08-2026) is daarom uitgeweken naar
+  BUNDEL-IDENTITEIT: het asset waar de live `index.html` naar wijst, byte-vergeleken met de lokale
+  build. Dat werkt, maar het is een omweg van twee ophalingen waar één veld zou volstaan. Een
+  `version`-veld met de commit-hash of de Worker Version ID maakt de verificatie één regel.
 - DE SHOT `16-ritdetail` ASSERTEERT ZIJN TWEE GETALLEN MAAR PRINT ZE NIET. Het trefferaantal van
   de rij-selector en het aantal `aria-label="Sluiten"`-elementen na de klik staan nergens in de
   `.txt`, dus op een PROD-run zijn ze niet te noemen — daar is alleen "hij gooide niet" af te

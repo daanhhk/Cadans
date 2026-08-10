@@ -966,5 +966,37 @@ Nieuwe of gewijzigde lessen komen HIER, met in dezelfde close-out een gedateerde
   gaven exact hetzelfde, dus de definitie was het niet. WERKREGEL: wie een reeks in een document
   zet waarop een volgende ronde moet voortbouwen, commit het meetscript erbij; en wie een reeks
   erft, ijkt zijn eigen instrument en gebruikt geen enkel geërfd getal als EIS.
+- **Poort-inert is niet hetzelfde als correct gevlagd.** Een veld dat de uitvoer vandaag niet kan
+  raken mag daarom nog niet verkeerd staan: de volgende consument erft de SEMANTIEK, niet de
+  inertie. Aanleiding: punt 43, de bouwspec zette `coreWork` op elke core-regel, waardoor 473
+  intra-rust-blokken van `sweetspot_pyramid` en de over-unders (puntbanden op 50 en 55 procent) de
+  werkvlag kregen. Poort-inert, want een puntband in rust opent geen werkzone — en dat is in de
+  spec als "geen probleem" weggeredeneerd in plaats van als "verkeerd gevlagd". Grens erbij in
+  `packages/engine/src/archetypes.ts`; ALLE acceptatiegetallen bleven identiek.
+- **Een metriek hoort op de KORREL van zijn consument.** Aanleiding: punt 43 mat verdamping eerst
+  op dagkorrel en kwam op 22,5 procent, terwijl `apps/web/src/lib/blok.ts` op WEEKkorrel oordeelt
+  en daar 9,5 procent ziet. Die eerste uitslag is ingetrokken. Meet je fijner dan de consument
+  leest, dan meet je een grootheid die niemand gebruikt.
+- **Een poort die in de METING via een proxy is gedefinieerd, is niet de poort die zijn naam draagt
+  in de IMPLEMENTATIE.** Aanleiding: punt 43 ronde 2 mat `PH_core` op archetype-core-banden; de
+  implementatie poort op elk blok met de vlag, en `renderVariant_` levert die ook. De proxy kon die
+  producent per constructie niet zien — precies waar het `73-77`-lek uit `z2_progressief` zat.
+- **Een fixture waarin een OR-term per constructie leeg is, meet de disjunctie niet.** Aanleiding:
+  punt 43, `voorgesteldType` is in de meetopstelling op alle 1920 sessies null, dus de intent-term
+  van `sleutelinhaal.ts` is 0 en de 360 van de 360 uit punt 40 is er niet mee vergelijkbaar.
+- **Een testgeval dat op VERDAMPING leunt, verliest zijn grond zodra een latere ronde de poort
+  verbreedt.** Verplaats het dan naar een blok dat de claim nog draagt; verzwak het nooit.
+  Aanleiding: `apps/web/src/lib/punt15.test.ts` isoleert term 2 van de conjunctie op FTP/Build, en
+  na punt 43 dekt de poort daar de hele vraag (95 van de 95) — verplaatst naar Korte
+  beklimmingen/Build, poort {drempel, anaeroob}, gevraagd 69, beoordeelbaar 65.
+- **Een prompt met een placeholder is een prompt met een fout.** Past de inhoud niet in één bericht,
+  dan genummerde blokken voor dezelfde CC-sessie — nooit een verwijzing naar een bericht dat CC niet
+  kan zien. Aanleiding: punt 43 ronde 3 blok 1 verwees naar "mijn volgende bericht"; CC draaide de
+  premissen en STOPTE, in plaats van een meetdocument te verzinnen.
+- **Een health-endpoint zonder versieveld bewijst dat de Worker LEEFT, niet welke bundel eronder
+  zit.** Verifieer een deploy daarom op BUNDEL-IDENTITEIT: haal de live `index.html` op, lees het
+  asset waar hij naar wijst, en vergelijk dat byte-voor-byte met de lokale build. Aanleiding: de
+  deploy van punt 43 — `/api/health` gaf `{"ok":true,"service":"cadans-api"}` en verder niets;
+  `assets/index-BoCic_Ah.js` was 584155 bytes en sha256-identiek aan `apps/web/dist`.
 
 <!-- EINDE docs/WERKWIJZE-LESSEN.md -->

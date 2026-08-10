@@ -13,6 +13,58 @@ live tot cutover.
 
 ## Stand
 
+STAND 2026-08-10 — punt 43 GESLOTEN (item 6d) EN LIVE. Code 95751a1, recon-doc 16320fd.
+De normpoort stond op een midpunt-label dat identiek werk splitste. Blokken dragen nu
+`coreWork: true` waar ze een werkprikkel zijn; `werkzoneLabelsVan_` opent voor die blokken
+de HELE band op de indeling van `pctZoneBucket_`, en houdt het midpunt-label er
+onvoorwaardelijk in. De poort kan daardoor per constructie nooit smaller worden.
+DEPLOYED naar prod, Version ID e994c768-3d73-4aec-876b-b614b7fe1302,
+https://cadans-api.dtkorteweg.workers.dev — geen migratie, geen remote-D1-mutatie.
+Live geverifieerd op BUNDEL-IDENTITEIT, niet op health: de live index.html verwijst naar
+assets/index-BoCic_Ah.js en die bundel is byte-identiek aan de lokale build (584155 bytes,
+sha256 begint op 2678c3a89933696f).
+GEMETEN, eigen instrument, 420 cellen / 1920 sessies / 12965 blokken, weekvorm-as 21 van de 21
+voor en na: sweetspot-cellen 266 van de 266 consistent op drempel+tempo (was 161 enkel tempo /
+90 enkel drempel / 15 beide). Weekkorrel 116 breder, 0 smaller; dagkorrel 410 breder, 0 smaller.
+Verdamping 2866,8 → 509,1 van 30201,6 werkminuten. Sleutelzone-dagen 714 → 980.
+Terugval: een bewaarde rij zonder het veld geeft 420 van de 420 weken en 1592 van de 1592 dagen
+gelijk aan de VOOR-staat — geen aparte tak, `weekplanBlob.ts:128` draagt de blokken verbatim.
+BEGRENZING, structureel: de poort bepaalt WIE moet slagen, niet de norm (`blok.ts:651`/`:671`),
+dus `geleverdOk` kan alleen true→false en `dosisTredeVoorstel` alleen naar null. Geen
+dosisverhoging die er niet was. De nieuwe eis is nergens dun: over de 116 toegevoegde
+(week,zone)-paren minimaal 7 minuten, mediaan 20, nul onder de 7.
+VLOEREN 985 tests / 78 bestanden / 1757 engine-asserts / 20 lint-waarschuwingen.
+VIJF AFWIJKINGEN, alle goedgekeurd. (1) De emit-helper kreeg een grens bovenop
+`kind === "work"`: geen vlag als het midpunt in rust of z2 ligt. Chat-zijde nagemeten — 473
+intra-rust-blokken verloren de vlag, ALLE acceptatiegetallen identiek. De spec had hier een gat:
+die blokken waren poort-inert (puntbanden) en dat is als "geen probleem" weggeredeneerd in plaats
+van als "verkeerd gevlagd". (2) De selftest-assertie landde in `testArchetypeLib` en niet in de
+fixture-lus, want `fx_steady_duur` is zone 2 en hoort geen kern te hebben; drie eisen per
+archetype, +105 asserts. (3) T4 was eerst groen om de verkeerde reden — de Onderhoud-fixture gaf
+een `expandArchetype_`-dag in plaats van een `renderVariant_`-duursessie, en viel dus niet onder
+R2. Herschreven zodat hij die sessie EIST. (4) `punt15.test.ts` moest mee: dat geval isoleerde
+term 2 van de conjunctie via verdamping, en op FTP/Build dekt de bredere poort sinds deze bouw de
+hele vraag (95 van 95). Verplaatst naar Korte beklimmingen/Build — poort {drempel, anaeroob},
+gevraagd 69, beoordeelbaar 65. Zelfde claim, ander dragend blok. (5) Bij de deploy bleek
+`/api/health` geen versieveld te dragen; CC heeft de verificatie daarom op bundel-identiteit
+gezet. Dat is vanaf nu de norm, en het versieveld staat op de parkeerlijst.
+LET OP VOOR EEN VOLGENDE POORT-VERBREDING: nog drie blokken dragen die M3-claim, en Lange
+beklimmingen/Peak heeft marge 1. Verbreedt een volgend punt de poort verder, dan verliest dat
+geval zijn grond en moet het opnieuw verplaatst, niet verzwakt.
+ROOD, gedraaid en gevallen: R1 vlag weg bij interval-ON → 4 tests over 2 bestanden (chat-zijde:
+sweetspot zakt 266 → 15). R2 low-uitzondering weg op het steady-blok → 2 tests (chat-zijde: 116 →
+144 weken breder, het 73-77-lek uit `z2_progressief`).
+NIET GEMETEN: het effect op een echt OORDEEL (`activities` leeg gevoed, dus `geleverd` nul) en de
+disjunctie in `sleutelinhaal.ts` (`voorgesteldType` is in de opstelling op alle 1920 sessies null,
+dus de intent-term is per constructie 0 — niet vergelijkbaar met de 360 van de 360 uit punt 40).
+De volume-as W1..W7 is niet gedraaid.
+MARGE: `docs/WERKWIJZE-LESSEN.md` stond voor deze close-out op 107224 bytes, 13776 tot de
+opener-limiet. Gemeten over de laatste zeven close-outs groeit dat bestand ~2200 bytes per ronde,
+dus ruwweg zes rondes runway — krapper dan wat punt 46 in de ROADMAP schat.
+
+FOCUS VOLGENDE CHAT: ROADMAP punt 44 — item 6e uit *De volgorde* in `docs/ROADMAP.md`, dus GEEN
+afwijking van de reeks. Verse chat.
+
 **PUNT 43 RONDE 2: DE HERKOMST-KANDIDAAT IS WEERLEGD, DE OPVOLGER HAALT DE EISEN (10 augustus
 2026).** Docs-only: geen code, geen engine, geen migratie, geen deploy, en geen enkel
 `wrangler`-commando. ÉÉN commit — deze close-out draagt `docs/PUNT43-HERKOMST-RECON.md`, de
@@ -614,21 +666,6 @@ FOCUS VOLGENDE CHAT: ROADMAP punt 38 — de opener-fetch kapt af en meldt het ni
 - **WAT DAAN MERKT: NIETS.** Er is geen letter code geraakt.
 - **VLOEREN NU: vitest-totaal 975 over 76 bestanden · engine-selftest-assert-count 1652 · lint-waarschuwingen 20**, alle vier afgelezen uit de gate van DEZE ronde. Een volgende chat leest ze uit de suite en neemt ze niet over uit dit blok.
 - **OPENSTAAND, elk item opnieuw gegrept in `docs/ROADMAP.md`:** 16 · 19 · 21 · 32 · 34 · 35.
-
-FOCUS VOLGENDE CHAT: ROADMAP punt 21 — de push-beschrijving. Vijfde item uit *De volgorde* in `docs/ROADMAP.md`, dus GEEN afwijking van de reeks. EERST DE BEREIKBAARHEID METEN, en pas daarna beslissen of er iets gebouwd wordt: `buildWorkoutDescription_` wordt alleen bereikt als zowel de ZWO- als de DSL-tak faalt, en bij punt 20 gaf `zwoStepFromRow_` over de hele populatie 0 keer null. Sluit vermoedelijk zonder bouw. ENGINE, dus recon-first met een stop-en-verifieer; een echte engine-bug wordt geflagd, nooit stilzwijgend gepatcht. Verse chat.
-
-**PUNT 33 IS AF EN STAAT LIVE (7 augustus 2026).** Commits: `e55637a` (de render-testlaag), `8288d2b` (de gedeelde functie), plus deze close-out. Worker Version `b8c6b7fa-e2ab-441f-b4bf-3d1d17a1eec7`, 3 van de 3 assets vervangen, bundel `index-DRTXHxtd.js`. GEEN migratie en geen enkel `wrangler d1`-commando — D1 blijft op `0010`.
-- **WAT ER GEBOUWD IS.** `haaltNorm(geleverd, norm)` in `apps/web/src/lib/blok.ts` is de ENIGE plek waar de norm-vergelijking valt: vijf aanroepen daar — de drie zones van `opNormPerZone`, `totaalOpNorm` en `zoneOpNorm_` — en twee in `BlokReviewCard.tsx`. GREPS: `Math.round` gevolgd door `>=` in `blok.ts` van **5 naar 1**, `Math.round` in `BlokReviewCard.tsx` van **4 naar 2** — en die twee zijn WEERGAVE en horen te blijven. De onderbouwing uit punt 17 hing aan géén enkele functie en hangt nu aan deze.
-- **DE RENDER-TESTLAAG BESTOND NIET EN BESTAAT NU.** Project `web-render` in `apps/web/vitest.render.config.ts`, environment jsdom, include `src/**/*.test.tsx`. ENIGE nieuwe dependency: `jsdom`. GEEN `@testing-library` en GEEN `@vitejs/plugin-react` — chat-zijde gemeten dat renderen lukt met `createRoot` plus `act` uit react zelf, en de JSX-transform had geen plugin nodig. De bestaande node-suite pakt het `.tsx`-bestand niet op: het totaal steeg met precies **4** en niet met 8.
-- **DE VOLGORDE VAN HET PUNT IS OMGEKEERD, en dat is de dragende keuze.** Eerst het vangnet, dan de consolidatie: R1 op regel 179 liet **A1** vallen met A2, A3 en A4 overeind, R2 op regel 276 liet **A3** vallen met de rest overeind. Na de consolidatie is dat per constructie niet meer te scheiden — er is dan nog maar één plek — dus andersom was dit bewijs onbereikbaar geweest.
-- **ROOD NA DE CONSOLIDATIE, twee mutaties.** `>=` naar `>` liet **17 tests over 5 bestanden** vallen, de ronding weghalen **13 over 4** — en BEIDE keren viel zowel de pure laag (`blok`, `punt15`, `punt17`, `zonepoort`) als de render-laag (A1 en A3). De kaart leest aantoonbaar dezelfde functie als het oordeel.
-- **BEGRENZING.** `git diff --stat HEAD~1 HEAD` toont exact **twee bestanden, 20 bij en 11 weg**, en GEEN enkel testbestand: een refactor die zijn tests moet bijstellen is geen refactor. Het vitest-totaal is onveranderd.
-- **PROD, VOOR EN NA: 9 van de 16 identiek, 16 vergeleken, 0 uitgesloten.** De zeven bewegende shots (`prod/02-ma` tot en met `prod/08-zo`) verschillen UITSLUITEND op regel 15, `Laatst gesynct · 20:13` tegen `20:16`. Nul innerText-verschillen daarbuiten. Geen propagatie-uitval: de vier ophalingen gaven alle vier 200.
-- **DE KAART ZELF IS OP PROD NIET TOETSBAAR, en dat is een grens en geen omissie.** Het lopende blok staat in blokweek 2, dus `blokReviewVenster` levert geen venster: `BLOK · TERUGBLIK` komt in **0 van de 16** `.txt` voor, in beide runs, terwijl datzelfde label in de lokale boom in 16 `.txt` staat — die tegencontrole maakt de afwezigheid een bevinding in plaats van een lege grep.
-- **WAT DAAN MERKT: NIETS.** Gedragsneutrale refactor plus testinfra.
-- **VIER NIEUWE WERKWIJZE-AFSPRAKEN uit deze ronde**, alle vier in `docs/WERKWIJZE.md`: (1) de uniciteits-regel geldt óók in de DOM — een JSX-wrapper draagt dezelfde `textContent` als het blad, en alleen het blad draagt de stijl; (2) `git checkout <bestand>` herstelt naar HEAD en niet naar de staat van vóór je patch, dus met ongecommitte bouw in de werkboom wist het die bouw mee; (3) de verschil-richting van een vergelijker-ijking moet op bomen liggen met DEZELFDE bestandsnamen, anders vergelijkt hij nul bytes; (4) `pnpm --filter <pakket> add -D <dep>` kan de workspace-links breken en geeft een lockfile-diff die groter is dan de ene dependency.
-- **VLOEREN NU: vitest-totaal 975 over 76 bestanden · engine-selftest-assert-count 1652 · lint-waarschuwingen 20**, alle vier afgelezen uit de gate van DEZE ronde. Een volgende chat leest ze uit de suite en neemt ze niet over uit dit blok.
-- **OPENSTAAND, elk item opnieuw gegrept in `docs/ROADMAP.md`:** 16 · 19 · 21 · 32 · 34 · 35. Punt 33 hoort er niet meer bij.
 
 FOCUS VOLGENDE CHAT: ROADMAP punt 21 — de push-beschrijving. Vijfde item uit *De volgorde* in `docs/ROADMAP.md`, dus GEEN afwijking van de reeks. EERST DE BEREIKBAARHEID METEN, en pas daarna beslissen of er iets gebouwd wordt: `buildWorkoutDescription_` wordt alleen bereikt als zowel de ZWO- als de DSL-tak faalt, en bij punt 20 gaf `zwoStepFromRow_` over de hele populatie 0 keer null. Sluit vermoedelijk zonder bouw. ENGINE, dus recon-first met een stop-en-verifieer; een echte engine-bug wordt geflagd, nooit stilzwijgend gepatcht. Verse chat.
 
