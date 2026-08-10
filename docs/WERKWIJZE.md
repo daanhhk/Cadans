@@ -58,23 +58,42 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
 
 ## Recon en bewijslast
 
-De lessen staan vanaf 08-08-2026 in `docs/WERKWIJZE-LESSEN.md`, en de opener haalt dat bestand op
-als VIJFDE URL. De reden is dezelfde als bij het wijzigingslog en ze is gemeten: dit document wordt
-door ELKE chat via een RAW-fetch binnengehaald, die fetch kapt af rond 121 kB, en met de 122 lessen
-erin stond `WERKWIJZE.md` op 118399 bytes — circa 2,7 kB marge terwijl één ronde er 1561 kostte.
-Wat als EERSTE was afgevallen is de STAART van dit document: de vijf promptcontroles, de gate,
-*Prod en veiligheid*, de close-out en het opener-sjabloon.
+De lessen staan vanaf 08-08-2026 in een eigen bestand, en sinds 10-08-2026 in TWEE:
+`docs/WERKWIJZE-LESSEN.md` en `docs/WERKWIJZE-LESSEN-GEREEDSCHAP.md`, die de opener als TWEEDE
+en DERDE URL ophaalt. De reden is dezelfde als bij het wijzigingslog en ze is gemeten: dit
+document wordt door ELKE chat via een RAW-fetch binnengehaald, die fetch kapt af rond 121 kB, en
+met de 122 lessen erin stond `WERKWIJZE.md` op 118399 bytes — circa 2,7 kB marge terwijl één
+ronde er 1561 kostte. Wat als EERSTE was afgevallen is de STAART van dit document: de vijf
+promptcontroles, de gate, *Prod en veiligheid*, de close-out en het opener-sjabloon.
 
 Het verschil met het log zit in wat een chat MOET lezen. Het log verantwoordt achteraf en wordt
 bewust niet opgehaald; de lessen zijn werkende discipline en worden WEL opgehaald, alleen in een
-eigen fetch, zodat geen van beide helften de cap raakt. Een nieuwe les gaat naar
-`docs/WERKWIJZE-LESSEN.md`, niet hierheen.
+eigen fetch, zodat geen van de delen de cap raakt.
+
+DE TWEEDE SPLITSING LIEP OP EEN ANDERE AS DAN DE EERSTE, en die as bepaalt waar een NIEUWE les
+landt. Hangt de grond van de les aan een tool, een bestand, een commando of een harness in deze
+repo — iets dat met een commit of een versiesprong kan veranderen — dan hoort hij in
+`docs/WERKWIJZE-LESSEN-GEREEDSCHAP.md`, en hij wordt herijkt zodra dat gereedschap verandert.
+Gaat de les alleen over de VORM van bewijs, dan hoort hij in `docs/WERKWIJZE-LESSEN.md` en
+veroudert hij niet. Nooit hierheen. GEMETEN bij de splitsing: 57 lessen gereedschap tegen 87
+bewijslast, en de groei is scheef — over het nieuwste derde deel van de oude lijst ging 25470
+bytes naar de gereedschapshelft tegen 15217 naar de bewijslasthelft. De helft die veroudert is
+dus ook de helft die aangroeit, en dat is precies waarom de knip daar ligt.
+
+WAT NIET KON, en dat hoort hier zodat een volgende ronde het niet opnieuw probeert. Splitsen op
+"nog dragend voor een openstaand punt" snijdt dit materiaal niet: **89 van de 144 lessen noemen
+geen enkel puntnummer**, en van de 55 die er wel een noemen doen er **50** dat binnen de
+AANLEIDING — dus als herkomst en niet als reikwijdte. Slechts 6 raken een open punt. En inkorten
+levert te weinig: de aanleiding-massa is 51,5 procent van het bestand, maar **99 van de 108
+aanleidingen dragen een cijfer** en dat is juist het getal waarop de regel rust; wat er zonder
+verlies uit kan is pure provenance, gemeten op **26 zinnen en 2270 bytes, 2,1 procent**. Daarom
+is de ingreep een VERLIESLOZE splitsing en geen inkorting.
 
 ## Vorm van een CC-prompt
 
 - **Eén plain code-blok**, zonder taal-tag — dat is de één-tap-kopie op mobiel. Nooit proza in het blok mengen; Claude's kader eromheen staat als gewone tekst.
 - Te lang voor één blok → splits in **genummerde blokken** (Blok 1/2, 2/2) die CC na elkaar in dezelfde **CC-sessie** draait. Een later blok mag leunen op wat een eerder blok zette. Het gaat om de CC-sessie, niet om een shell: PowerShell is de shell waarin CC zijn commando's uitvoert, geen omgeving waarin Daan zelf werkt.
-- **EEN BLOK MET EEN STOP-CONDITIE IS EEN BESLISMOMENT, GEEN LENGTE-SPLIT.** Draagt een blok een STOP-conditie en vraagt het om een rapport, dan hangt alles erna aan de UITKOMST — dus schrijf de latere blokken pas als dat rapport binnen is. Dat is iets anders dan de lengte-split hierboven, waar een later blok alleen leunt op wat een eerder blok ZETTE en niet op wat het VOND. Aanleiding: in de punt-37-ronde zijn blok 2 en 3 vooruit geschreven terwijl blok 1 drie uitkomsten kon dragen die ze allebei zouden omgooien — een afwijkende premisse, een ijkrun die het eind niet haalt, en een grote ruisvloer. Daan wees het aan; de twee blokken zijn ingetrokken en opnieuw geschreven. Zie ook *een genummerd blok zegt zelf of het een commit-punt is* in `docs/WERKWIJZE-LESSEN.md`: die regel gaat over de VRAAG of er gecommit wordt, deze over de vraag of het blok er al mag zijn. TWEEDE AANLEIDING, 07-08-2026, en de regel bestond toen al: bij punt 36 ronde 3 is blok 2 opnieuw vooruit geschreven terwijl blok 1 een premissen-STOP droeg. Daan wees het aan vóór hij het plakte; het blok is ingetrokken en pas na het rapport herschreven — en dat rapport veranderde het op drie plekken, waarvan één (de warmloop vóór het ijkpaar) de meting zonder meer had verpest. Twee overtredingen binnen twee rondes betekent dat deze regel niet HERINNERD moet worden maar GEDRAAID: staat er een STOP in een blok, dan bestaat het volgende blok nog niet.
+- **EEN BLOK MET EEN STOP-CONDITIE IS EEN BESLISMOMENT, GEEN LENGTE-SPLIT.** Draagt een blok een STOP-conditie en vraagt het om een rapport, dan hangt alles erna aan de UITKOMST — dus schrijf de latere blokken pas als dat rapport binnen is. Dat is iets anders dan de lengte-split hierboven, waar een later blok alleen leunt op wat een eerder blok ZETTE en niet op wat het VOND. Aanleiding: in de punt-37-ronde zijn blok 2 en 3 vooruit geschreven terwijl blok 1 drie uitkomsten kon dragen die ze allebei zouden omgooien — een afwijkende premisse, een ijkrun die het eind niet haalt, en een grote ruisvloer. Daan wees het aan; de twee blokken zijn ingetrokken en opnieuw geschreven. Zie ook *een genummerd blok zegt zelf of het een commit-punt is* in `docs/WERKWIJZE-LESSEN-GEREEDSCHAP.md`: die regel gaat over de VRAAG of er gecommit wordt, deze over de vraag of het blok er al mag zijn. TWEEDE AANLEIDING, 07-08-2026, en de regel bestond toen al: bij punt 36 ronde 3 is blok 2 opnieuw vooruit geschreven terwijl blok 1 een premissen-STOP droeg. Daan wees het aan vóór hij het plakte; het blok is ingetrokken en pas na het rapport herschreven — en dat rapport veranderde het op drie plekken, waarvan één (de warmloop vóór het ijkpaar) de meting zonder meer had verpest. Twee overtredingen binnen twee rondes betekent dat deze regel niet HERINNERD moet worden maar GEDRAAID: staat er een STOP in een blok, dan bestaat het volgende blok nog niet.
 - De prompt is een **stap-instructie in het Nederlands, geen uitvoerbaar script**. PowerShell-idioom alleen in de kop: `cd` naar de repo, daarna `Get-Location` op een eigen regel. Verder kale, zelf-printende commandoregels (git, pnpm). **Geen** `Write-Host` of `echo`, **geen** here-strings, **geen** loops, **geen** .NET File API. Secties label je met `#`-commentaarregels.
 - In te voegen inhoud (een HANDOFF-blok, een doc) mag **verbatim** tussen eigen tekst-delimiters (`=== BEGIN … ===` / `=== EINDE … ===`) óf als strekking-bullets die CC in de huisstijl uitschrijft. Bij artefacten waar de exacte formulering telt: altijd verbatim.
 - Inhoud: **spec-gedreven by default** — architectuur, exact gedrag, sleutel-logica en de gate. CC schrijft de code, vindt de call-sites zelf en past aan de **échte** staat aan (geen letterlijke `str_replace`-blokken). Exacte code alleen als **anker** bij fragiele edits: byte-getrouwe GAS-mirrors, TZ-grens-logica, formules en zone-mappings. CC meldt in het rapport de kern-implementatiekeuzes (gekozen conditie, plaatsing), zodat review tegen de spec kan zonder de volledige diff. Verder: verificatiestappen, een harde gate en de commit message.
@@ -103,8 +122,8 @@ overleefd, met als eerste stap voor CC dat hij ze toetst en bij afwijking STOPT.
 recon-prompt van punt 20 wél en in het bouw-prompt niet, en precies daar landden beide fouten.
 Twee netten in plaats van één, en het eerste ligt vóór de CC-ronde.
 
-HET MAXIMUM IS VIJF. Groeit die lijst, dan wordt hij hetzelfde als de lessenlijst in
-`docs/WERKWIJZE-LESSEN.md`: te lang om te draaien, dus niet gedraaid. Daarom staat dit hier en niet daar —
+HET MAXIMUM IS VIJF. Groeit die lijst, dan wordt hij hetzelfde als de twee lessenlijsten:
+te lang om te draaien, dus niet gedraaid. Daarom staat dit hier en niet daar —
 "raadpleeg de lessen" is geen handeling.
 
 AANLEIDING: twee fouten in één sessie, allebei in punt 20, en allebei al gedekt door een BESTAANDE
@@ -214,7 +233,7 @@ ELKE NIEUWE OF GEWIJZIGDE WERKWIJZE-AFSPRAAK KRIJGT IN DEZELFDE CLOSE-OUT EEN GE
 
 Het nieuwe STAND-blok gaat BOVENAAN in `HANDOFF.md`, boven het vorige, en vervangt of verwijdert niets. Het eindigt ALTIJD op een `FOCUS VOLGENDE CHAT`-regel. Die twee zijn geen stijl maar een afhankelijkheid: de opener draagt de stand niet meer zelf en wijst naar dat blok, dus een blok dat onderaan belandt of geen FOCUS draagt laat de volgende chat met lege handen staan.
 
-ELKE CLOSE-OUT RAPPORTEERT DE BYTES VAN DE VIJF BESTANDEN DIE DE OPENER OPHAALT, met de marge tot de
+ELKE CLOSE-OUT RAPPORTEERT DE BYTES VAN DE ZES BESTANDEN DIE DE OPENER OPHAALT, met de marge tot de
 afkapgrens van circa 121000. Dat is de vooruitkijkende helft van het vangnet: de eind-marker vangt een
 afkap die AL gebeurd is, deze regel ziet hem aankomen. Loopt een bestand binnen twee rondes tegen de
 grens, dan is de ingreep dezelfde als bij het log en de lessen — verplaats wat alleen achteraf
@@ -255,7 +274,7 @@ ondoorzichtig: er is per ronde vooruitgang zichtbaar maar nooit de afstand tot d
 
 ## Opener-sjabloon
 
-**De afsluitende chat schrijft de opener uit** — verbatim uit dit sjabloon, in één code-blok, ná het close-out-rapport (dan pas is de hash bekend). Er valt nog maar ÉÉN ding in te vullen: `<hash>`, op alle vijf de URL's dezelfde close-out-hash. STAND en FOCUS worden NIET overgenomen — de opener WIJST naar het bovenste STAND-blok in `HANDOFF.md` in plaats van het na te vertellen. `docs/TRAININGSMODEL.md` staat er sinds 04-08-2026 bij: dat is de NORM-laag voor de trainingskant, en zonder die URL reconstrueert elke chat de coach-bril in plaats van hem te lezen. Verder niets toevoegen op de marker-regel na: de werkwijze staat hier, niet in de opener. Daan hoeft niets samen te stellen; hij krijgt één kant-en-klaar blok.
+**De afsluitende chat schrijft de opener uit** — verbatim uit dit sjabloon, in één code-blok, ná het close-out-rapport (dan pas is de hash bekend). Er valt nog maar ÉÉN ding in te vullen: `<hash>`, op alle zes de URL's dezelfde close-out-hash. STAND en FOCUS worden NIET overgenomen — de opener WIJST naar het bovenste STAND-blok in `HANDOFF.md` in plaats van het na te vertellen. `docs/TRAININGSMODEL.md` staat er sinds 04-08-2026 bij: dat is de NORM-laag voor de trainingskant, en zonder die URL reconstrueert elke chat de coach-bril in plaats van hem te lezen. Verder niets toevoegen op de marker-regel na: de werkwijze staat hier, niet in de opener. Daan hoeft niets samen te stellen; hij krijgt één kant-en-klaar blok.
 
 Reden voor die vorm: een opener die de stand overschrijft laat dezelfde tekst op twee plekken leven die elk per chat muteren — precies de drift die dit document moest opheffen. Eén bron, en de opener verwijst ernaar.
 
@@ -273,20 +292,23 @@ terugkijkende helft van het vangnet — de byte-regel in *Close-out van een chat
 Dat leunt op twee eisen aan de close-out, en zonder die twee is de verwijzing loos: het nieuwste STAND-blok staat BOVENAAN in `HANDOFF.md`, en élk STAND-blok eindigt op een expliciete `FOCUS VOLGENDE CHAT`-regel. Zie *Close-out van een chat*.
 
 --- BEGIN OPENER ---
-Lees eerst deze vijf via web_fetch (RAW, gepind op commit-hash — NIET de blob-URL, die is stale):
+Lees eerst deze zes via web_fetch (RAW, gepind op commit-hash — NIET de blob-URL, die is stale):
 https://raw.githubusercontent.com/daanhhk/Cadans/<hash>/docs/WERKWIJZE.md
 https://raw.githubusercontent.com/daanhhk/Cadans/<hash>/docs/WERKWIJZE-LESSEN.md
+https://raw.githubusercontent.com/daanhhk/Cadans/<hash>/docs/WERKWIJZE-LESSEN-GEREEDSCHAP.md
 https://raw.githubusercontent.com/daanhhk/Cadans/<hash>/docs/TRAININGSMODEL.md
 https://raw.githubusercontent.com/daanhhk/Cadans/<hash>/HANDOFF.md
 https://raw.githubusercontent.com/daanhhk/Cadans/<hash>/docs/DOELEN-SPEC.md
 
-Elk van deze vijf eindigt op een regel `<!-- EINDE <pad> -->`. Zie je die regel bij een bestand niet
+Elk van deze zes eindigt op een regel `<!-- EINDE <pad> -->`. Zie je die regel bij een bestand niet
 staan, dan is de fetch afgekapt: meld dat en werk niet verder op dat document.
 
-WERKWIJZE.md is canoniek voor hoe we werken en leidend bij tegenspraak; WERKWIJZE-LESSEN.md draagt de
-bewijslast-regels waarop die norm rust; TRAININGSMODEL.md is de NORM-laag voor de trainingskant en
-gaat vóór DOELEN-SPEC; HANDOFF.md is de projectstand; DOELEN-SPEC.md draagt de VASTGESTELDE
-doel-besluiten en wordt niet heropend.
+WERKWIJZE.md is canoniek voor hoe we werken en leidend bij tegenspraak; de twee LESSEN-bestanden
+dragen de bewijslast-regels waarop die norm rust — WERKWIJZE-LESSEN.md die over de VORM van
+bewijs gaan, WERKWIJZE-LESSEN-GEREEDSCHAP.md die aan een tool, bestand, commando of harness in
+deze repo hangen; TRAININGSMODEL.md is de NORM-laag voor de trainingskant en gaat vóór
+DOELEN-SPEC; HANDOFF.md is de projectstand; DOELEN-SPEC.md draagt de VASTGESTELDE doel-besluiten
+en wordt niet heropend.
 Cadans = Cloudflare-herbouw van de trainings-app: pnpm-monorepo, pure engine + Workers/D1 + React-PWA.
 Je kunt mijn uncommitte lokale staat (C:\Users\daan\Projects\cadans, Windows/PowerShell, via Remote
 Control) niet lezen; de gecommitte Cadans-code en de bevroren GAS-bron lees je wel gewoon zelf.
