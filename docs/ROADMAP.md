@@ -1873,18 +1873,27 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
    het VERPLAATSEN van de poort en niet meer over het bouwen van een nieuwe grootheid.
    **AFGEVINKT per 10-08-2026:** gebouwd in `95751a1` en live op Version ID
    `e994c768-3d73-4aec-876b-b614b7fe1302`. Drie meetrondes; de derde droeg de bouw.
-   **DE VOLGENDE IS 6e.**
-6e. **44** — de kwaliteitsdosis plafonneert vanaf acht uur. NÁ 6d en met een eigen soort stop: dit
-   is COACH-CANON en geen meetopdracht. De ronde begint met een BESLUIT van Daan over hoeveel
-   kwaliteit bij veertien uur hoort — herkomst BELEID — want er bestaat geen meting die dat
-   antwoord kan dragen. Zonder dat besluit is er niets om tegen te bouwen, dus deze plek in de rij
-   is een agendapunt en geen bouwronde. Draagt M85.
-6f. **46** — `docs/WERKWIJZE-LESSEN.md` loopt naar de opener-cap. NÁ punt 44, want het is geen
-   noodgeval: **13776 bytes marge is bij het gemeten tempo nog ruwweg zes rondes** — de schatting
-   van zeven rondes hierboven stond op 18877 bytes en is per 10-08-2026 achterhaald. Maar het is wél
-   een ONTWERPronde en geen verhuizing — de lessen zijn werkende discipline die elke chat moet
-   lezen, dus wegzetten in een niet-opgehaald bestand is precies de fout die punt 38 blootlegde.
-   De ronde kiest tussen splitsen met een zesde opener-URL en een andere ordening.
+   **DE VOLGENDE IS 6f, NIET 6e** — zie de omkering onder 6f.
+6e. **44** — de kwaliteitsdosis plafonneert vanaf acht uur. NÁ 6f — zie de omkering daar — en met
+   een eigen soort stop: dit is COACH-CANON en geen meetopdracht. De ronde begint met een BESLUIT
+   van Daan over hoeveel kwaliteit bij veertien uur hoort — herkomst BELEID — want er bestaat geen
+   meting die dat antwoord kan dragen. Zonder dat besluit is er niets om tegen te bouwen, dus deze
+   plek in de rij is een agendapunt en geen bouwronde. Draagt M85.
+6f. **46** — `docs/WERKWIJZE-LESSEN.md` loopt naar de opener-cap. **NAAR VOREN, VOOR 6e —
+   Daan-besluit van 10-08-2026, en de reden staat in de cijfers.** Het bestand staat na de
+   close-out van punt 43 op **110213 bytes**, marge **10787** tot circa 121000. Die ene
+   close-out kostte er **2989**, want hij droeg zeven lessen; over de laatste zeven close-outs
+   is de groei **2289 bytes per ronde**. Dat is nog **vier à vijf rondes**, en op het tempo van
+   de zwaarste ronde **3,6**. Punt 44 kost er naar verwachting twee tot drie, dus 6f zou daarna
+   met minder dan twee rondes marge moeten draaien — onder tijdsdruk, en dat is precies wat dit
+   punt hoort te voorkomen. DE EERDERE FORMULERING HIER IS VERVANGEN: die zei "NÁ punt 44, want
+   het is geen noodgeval: 13776 bytes marge is bij het gemeten tempo nog ruwweg zes rondes" en
+   mat de staat VÓÓR de close-out van punt 43. *De reeks* punt 46 droeg het gecorrigeerde getal
+   toen al, dus de twee plekken in dit document liepen uiteen — dezelfde vorm als de regel dat
+   een STAND-blok zijn eigen commit per constructie te laag meet.
+   Het blijft wel een ONTWERPronde en geen verhuizing — de lessen zijn werkende discipline die
+   elke chat moet lezen, dus wegzetten in een niet-opgehaald bestand is precies de fout die punt
+   38 blootlegde. De ronde kiest tussen splitsen met een zesde opener-URL en een andere ordening.
 7. **16** — de materialiteitsvloer en de prikkel, in EEN bouw. Zie `docs/PUNT16-RECON.md` §5.
 8. **34** — de effect-referent kent het doel niet. M5-schending bij drie van de vijf doelen.
 9. **35** — een event draagt geen duur. Deblokkeert punt 13 fase B.
