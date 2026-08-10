@@ -1532,7 +1532,7 @@ punten staat onder *Gesloten — vindplaats*.
     UITKOMST: **M78 staat op INGETROKKEN** in `docs/TRAININGSMODEL.md`; **M83** draagt de bevinding.
     `mesoFactor` schaalt de DOSIS en niet het percentage, en dat is precies wat M75 en M76
     voorschrijven. Volledige uitwerking in `docs/PUNT41-42-RECON.md` §7.
-43. **De normpoort staat op een midpunt-label dat identiek werk splitst** — open · CLIENT plus norm.
+43. **De normpoort staat op een midpunt-label dat identiek werk splitst** — open · ENGINE plus CLIENT plus norm.
     `werkzoneLabelsVan_` (`apps/web/src/lib/zonelabels.ts:27`) poort op het MIDPUNT-label van de
     band, en twee consumenten hangen eraan die tegen GELEVERD vergelijken: de weekstem
     (`apps/web/src/lib/weektekort.ts:114`) en de blok-terugblik (`apps/web/src/lib/blok.ts:413`).
@@ -1563,10 +1563,26 @@ punten staat onder *Gesloten — vindplaats*.
     `pct ± 2` en ligt daarmee per constructie op de Z2/tempo-grens. Over het HELE plateau krijgen
     daardoor **105 van de 1496 dagen** een werkzone uitsluitend uit vulling-overloop. Op aandeel
     zijn die twee niet te scheiden.
-    RONDE 2 MEET DE HERKOMST-KANDIDAAT: poorten op wat een blok BEDOELT te zijn — `sweetspot_*`
-    tegenover een vulblok zonder `archetypeId` — scheidt precies die twee gevallen, en M81 wijst
-    dezelfde kant op. NOG NIET GEDAAN EN HET HOORT ERBIJ: `dosisTredeVoorstel` is niet op
-    meebewegen getoetst.
+    RONDE 2 IS GEDAAN EN DE HERKOMST-KANDIDAAT IS WEERLEGD — volledige uitwerking in
+    `docs/PUNT43-HERKOMST-RECON.md`. Een blok draagt over alle **14** producenten exact VIER
+    velden (`minuten`, `zone`, `pctLo`, `pctHi`); de bedoeling staat op het archetype
+    (`effectTags`) en reist niet mee. Op SESSIE-niveau gepoort scheidt hij de twee gevallen NIET:
+    van de 122 cellen met een werkzone uitsluitend uit een niet-werkblok blijven er **121** staan,
+    want de vulling zit ook BINNEN werksessies (`55-78`, `55-80`). En hij faalt op het
+    begrenzingsbewijs — 0 cellen maar **84 dagen** SMALLER, doordat **2701** werkzone-minuten uit
+    sessies zonder `archetypeId` komen (`95-102`, `100-108`, echt drempelwerk).
+    DE KANDIDAAT DIE OVERBLIJFT IS DE MONOTONE SYNTHESE: de raak-poort voor CORE-werkblokken,
+    het bestaande midpunt-label voor al het overige. GEMETEN over 420 cellen: sweetspot **266 van
+    de 266** consistent, **0 cellen en 0 dagen smaller**, verdamping van **2870 van de 30201
+    (9,5 procent)** naar **509 (1,7 procent)**, en het niet-werkblok-lek onder de voor-staat
+    (87 tegen 108 cellen).
+    DE SCOPE VERSCHUIFT DAARMEE NAAR ENGINE: het blok moet zijn bedoeling gaan dragen, plus
+    doorvoer naar de bewaarde weekplan-rijen. Rijen zonder dat veld vallen terug op het huidige
+    gedrag; die terugval hoort in de bouwspec en in een rood-meting.
+    NOG STEEDS NIET GEDAAN: `dosisTredeVoorstel` op meebewegen, en de hertoets van
+    `sleutelinhaal.ts:44`. Beide meten het EFFECT op een oordeel en vragen de GELEVERDE kant, die
+    in een lege opstelling per constructie niet bestaat — ze horen op de echte D1 en in dezelfde
+    ronde als de bouw.
     DE GRENZEN ZIJN AAN DE BRON GETOETST EN STAAN GOED: intervals `power_zones` geeft bij de
     testcase 55 / 75 / 90 / 105, identiek aan `ZONE5_GRENZEN_DEFAULT`. De Sweet Spot-band van
     84 tot 97 procent die intervals toont is een OVERLAY en geen zone, en loopt zelf dwars over

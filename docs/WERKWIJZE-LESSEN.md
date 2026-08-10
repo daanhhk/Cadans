@@ -944,5 +944,27 @@ Nieuwe of gewijzigde lessen komen HIER, met in dezelfde close-out een gedateerde
   dubbele parameters — en de chat leest hem na ALS COMMANDO, niet alleen als bewering. Dit is
   bewust GEEN zesde promptcontrole: dat maximum staat op vijf met een reden, en dit is een
   eigenschap van hoe controle 1 wordt OPGESCHREVEN, niet een nieuwe controle.
+- **Een KANDIDAAT die een EIGENSCHAP van een object noemt, toetst eerst of dat object die
+  eigenschap DRAAGT.** Grep de producenten en tel de velden vóór je erop bouwt; anders schrijf je
+  een reparatie die op de verkeerde LAAG leeft en die per constructie niet client-only kan zijn.
+  Zelfde familie als "een bouwspec die KANDIDAAT-PLEKKEN opsomt heeft de plekken niet geteld", nu
+  op de GROOTHEID in plaats van op de plek. Aanleiding: punt 43 ronde 1 wees als kandidaat aan
+  "poorten op `sweetspot_*` tegenover een vulblok zonder `archetypeId`", terwijl een blok over alle
+  14 producenten exact vier velden draagt — `minuten`, `zone`, `pctLo`, `pctHi` — en de bedoeling
+  op het ARCHETYPE staat (`effectTags`) en op de SESSIE (`archetypeId`). Op sessie-niveau gepoort
+  bleef 121 van de 122 lek-cellen staan, want de vulling zit ook binnen werksessies, en de poort
+  werd op 84 dagen SMALLER doordat 2701 minuten echt drempelwerk uit sessies zonder `archetypeId`
+  komen. Het punt had zijn eigen oplossing niet gemeten.
+- **Een REEKS uit een vorige ronde is pas een ijkpunt als haar SCRIPT in de repo staat — een
+  fixture-BESCHRIJVING is niet genoeg.** Dit is scherper dan "een gerapporteerde reeks zonder haar
+  fixture-definitie is geen ijkpunt": daar ONTBRAK de definitie, hier stond ze er, is ze gevolgd,
+  en reproduceerde de reeks tóch niet. Aanleiding: `docs/PUNT43-POORT-RECON.md` §1 beschrijft de
+  meetopstelling volledig; nagebouwd geeft hij 21 van de 21 op de ijk-as, 420 cellen en 1920
+  sessies identiek, alle negen band-aandelen en band-labels van §3 exact — en tóch 266 cellen met
+  sweetspot-werk tegen 278, en 161/90/15 tegen 146/117/15. Het verschil is variant-rotatie, en het
+  is met de beschrijving alleen niet te herleiden. Twee onafhankelijke definities van de teller
+  gaven exact hetzelfde, dus de definitie was het niet. WERKREGEL: wie een reeks in een document
+  zet waarop een volgende ronde moet voortbouwen, commit het meetscript erbij; en wie een reeks
+  erft, ijkt zijn eigen instrument en gebruikt geen enkel geërfd getal als EIS.
 
 <!-- EINDE docs/WERKWIJZE-LESSEN.md -->

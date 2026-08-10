@@ -13,6 +13,76 @@ live tot cutover.
 
 ## Stand
 
+**PUNT 43 RONDE 2: DE HERKOMST-KANDIDAAT IS WEERLEGD, DE OPVOLGER HAALT DE EISEN (10 augustus
+2026).** Docs-only: geen code, geen engine, geen migratie, geen deploy, en geen enkel
+`wrangler`-commando. ÉÉN commit — deze close-out draagt `docs/PUNT43-HERKOMST-RECON.md`, de
+ROADMAP-correctie, twee lessen, twee logregels en de HANDOFF-rotatie; hij noemt zijn eigen hash
+niet, want die bestaat pas nadat dit blok geschreven is. Prod en D1 staan waar het blok hieronder
+ze noemt.
+- **GEEN DEPLOY, EN DAT IS GEEN UITSTEL.** Er is geen letter aan de app veranderd — dit was een
+  meting en een weerlegging.
+- **DE METING.** `buildWeekProposal`, `ARCHETYPES` en `pctZoneBucket_` uit een esbuild-bundel,
+  `TZ=Europe/Amsterdam`, klok als Proxy op de echte `Date`. Weekvorm-as V1..V7 maal 5 doelen maal
+  12 (fase,meso)-paren: **420 cellen, 1920 sessies, 12965 blokken, 40 distincte banden, 150514,2
+  blokminuten**. IJking vooraf **21 van de 21**; A/A op de volledige dump **byte-identiek**; de
+  twaalf paren AFGELEZEN over zestien `doelStart`-offsets, periode 12.
+- **EEN GAT IN DE EIGEN OPSTELLING, GEVONDEN VOOR ER IETS OP GEBOUWD WAS.** De cel-sleutel stond
+  op `(vorm, doel, fase, meso)` en collabeerde: bij Onderhoud is `mesoCyclus` false, dus twaalf
+  offsets vallen samen — **343 cellen in plaats van 420**. De sleutel staat nu op de OFFSET.
+- **DE KANDIDAAT UIT RONDE 1 IS PER CONSTRUCTIE NIET LEESBAAR.** Over alle **14** blok-producenten
+  draagt een blok exact VIER velden: `minuten`, `zone`, `pctLo`, `pctHi`. De bedoeling staat op het
+  archetype — `sweetspot_3x8` en `sweetspot_4x12` dragen allebei `effectTags: ["sweetspot"]` — en
+  reist niet mee. Het defect is daarmee scherp: 88-92 geeft midpunt 90 en label `tempo`, 89-92
+  geeft 90,5 en label `drempel`.
+- **OP SESSIE-NIVEAU GEPOORT SCHEIDT HIJ DE TWEE GEVALLEN NIET.** Van de 122 cellen met een
+  werkzone uitsluitend uit een niet-werkblok blijven er **121** staan; op dagniveau zakt het lek
+  van 574 naar 385 en verdwijnt het niet. De vulling zit ook BINNEN werksessies: `55-78` bij
+  `threshold_ladder_kort`, `55-80` bij de vo2-archetypes.
+- **EN HIJ FAALT OP HET BEGRENZINGSBEWIJS.** 0 cellen maar **84 dagen** SMALLER, doordat **2701**
+  werkzone-blokminuten uit sessies ZONDER `archetypeId` komen — `95-102` (1357) en `100-108`
+  (1344), geen vulling maar echt drempelwerk. Op die dagen kan hij een tekort verbergen.
+- **DE OPVOLGER HAALT ALLES: de raak-poort voor CORE-werkblokken, het midpunt-label voor de rest.**
+  Sweetspot **266 van de 266** consistent op `drempel+tempo` tegen 161/90/15 nu; **0 cellen en 0
+  dagen SMALLER**; verdamping van **2870 van de 30201 (9,5 procent)** naar **509 (1,7 procent)**;
+  en het niet-werkblok-lek op 87 cellen tegen **108 in de VOOR-STAAT**, dus eronder.
+- **DEZE REEKS IS NIET DIE VAN RONDE 1, EN DAT HOORT HIER.** Cellen (420), sessies (1920), alle
+  negen band-aandelen én band-labels van `docs/PUNT43-POORT-RECON.md` §3 en de band `100-108`
+  (1344 minuten) reproduceren exact — maar de cel-verdeling geeft **266 / 161 / 90 / 15** tegen
+  **278 / 146 / 117 / 15**. Het verschil is variant-rotatie. Twee onafhankelijke definities van de
+  teller gaven identiek 266/161/90/15, dus de definitie was het niet. GEEN ENKEL getal uit ronde 1
+  is als eis gebruikt.
+- **DE SCOPE VERSCHUIFT NAAR ENGINE.** Het blok moet zijn bedoeling gaan dragen, plus doorvoer naar
+  de bewaarde weekplan-rijen. Punt 43 stond als CLIENT en dat is met deze meting onjuist. Rijen
+  zonder dat veld vallen terug op het huidige gedrag; die terugval hoort in de bouwspec en in een
+  rood-meting.
+- **WAT DEZE RONDE NIET DEED, expliciet.** `dosisTredeVoorstel` is NIET op meebewegen getoetst en
+  `sleutelinhaal.ts:44` is niet hertoetst. Beide meten het EFFECT op een oordeel en vragen de
+  GELEVERDE kant, en die is hier leeg gevoed. De volume-as W1..W7 is niet gedraaid.
+- **WAT DAAN MERKT: NIETS.** Er verandert geen letter aan de app.
+- **TWEE NIEUWE WERKWIJZE-AFSPRAKEN**, beide in `docs/WERKWIJZE-LESSEN.md`: (1) een kandidaat die
+  een eigenschap van een object noemt, toetst eerst of dat object die eigenschap draagt; (2) een
+  reeks uit een vorige ronde is pas een ijkpunt als haar SCRIPT in de repo staat — een
+  fixture-beschrijving volstaat niet, en dit is de eerste keer dat een volledig gevolgde
+  beschrijving tóch niet reproduceerde.
+- **VLOEREN NU: vitest-totaal 980 over 77 bestanden · engine-selftest-assert-count 1652 ·
+  lint-waarschuwingen 20**, alle vier afgelezen uit de gate van DEZE ronde. Onbewogen: docs-only,
+  geen test geraakt. Lees ze zelf uit de suite; neem ze niet over uit een ouder blok.
+- **OPENSTAAND, elk item opnieuw gegrept in `docs/ROADMAP.md`:** 16 · 32 · 34 · 35 · 43 · 44 · 46.
+  Punt 43 hoort er nog steeds bij — deze ronde weerlegde een kandidaat, ze repareerde niets.
+
+FOCUS VOLGENDE CHAT: ROADMAP punt 43, ronde 3 — nu de BOUW. Item 6d uit *De volgorde* in
+`docs/ROADMAP.md`, dus GEEN afwijking van de reeks. DE KANDIDAAT STAAT VAST en is de monotone
+synthese uit `docs/PUNT43-HERKOMST-RECON.md` §5; de aandeel-familie en de sessie-herkomst zijn
+allebei uitgemeten en afgevallen, begin daar niet opnieuw. ENGINE, dus RECON-FIRST met een
+stop-en-verifieer voordat er één regel engine wordt aangeraakt; een echte engine-bug wordt
+geflagd, nooit stilzwijgend gepatcht. DRIE DINGEN HOREN IN DIE RONDE: (a) de terugval voor
+bewaarde weekplan-rijen ZONDER het nieuwe veld, met een rood-meting die aantoonbaar valt; (b)
+`dosisTredeVoorstel` op meebewegen — blijft dat nul, dan is dat het begrenzingsbewijs dat het punt
+vraagt; (c) de hertoets van `sleutelinhaal.ts:44`, want een bredere zone-term verandert de
+disjunctie waarop punt 43 hem buiten scope zette. MEET PER PLEK EN IN BEIDE RICHTINGEN over
+`weektekort.ts:114`, `blok.ts:413` en `sleutelinhaal.ts:44`. IJK JE EIGEN INSTRUMENT en erf geen
+getal uit ronde 1 of 2. Verse chat.
+
 **PUNT 43 IS GEMETEN, NIET GEREPAREERD (10 augustus 2026).** De poort is gekwantificeerd, de voor
 de hand liggende reparatie is uitgemeten en loopt vast op een band die geen aandeel-drempel kan
 scheiden. Docs-only: geen code, geen engine, geen migratie, geen deploy, en geen enkel
@@ -561,20 +631,6 @@ FOCUS VOLGENDE CHAT: ROADMAP punt 21 — de push-beschrijving. Vijfde item uit *
 - **OPENSTAAND, elk item opnieuw gegrept in `docs/ROADMAP.md`:** 16 · 19 · 21 · 32 · 34 · 35. Punt 33 hoort er niet meer bij.
 
 FOCUS VOLGENDE CHAT: ROADMAP punt 21 — de push-beschrijving. Vijfde item uit *De volgorde* in `docs/ROADMAP.md`, dus GEEN afwijking van de reeks. EERST DE BEREIKBAARHEID METEN, en pas daarna beslissen of er iets gebouwd wordt: `buildWorkoutDescription_` wordt alleen bereikt als zowel de ZWO- als de DSL-tak faalt, en bij punt 20 gaf `zwoStepFromRow_` over de hele populatie 0 keer null. Sluit vermoedelijk zonder bouw. ENGINE, dus recon-first met een stop-en-verifieer; een echte engine-bug wordt geflagd, nooit stilzwijgend gepatcht. Verse chat.
-
-**PUNT 36 IS AF — BEGRENSD UITGESLOTEN (7 augustus 2026).** Docs-only close-out; de meetronde zelf liet NIETS in de repo achter — het tijdelijke instrument is met `git checkout` teruggedraaid en `git status --porcelain` was daarna leeg. Geen engine, geen app, geen migratie, geen deploy, en geen enkel `wrangler`-commando. Prod en D1 staan waar het blok hieronder ze noemt; grep die twee daar op in plaats van ze hier over te schrijven.
-- **GEEN DEPLOY, EN DAT IS GEEN UITSTEL.** Er is geen letter aan de app veranderd — dit was een meetronde en een verdict, geen bouw.
-- **HET IJKPAAR VAN DEZE SESSIE IS SCHOON: 96 van de 96 identiek, 96 vergeleken, NUL uitgesloten.** Nul bewegende shots. De vergelijker is eerst in TWEE richtingen geijkt: `out` tegen zichzelf 96 van de 96, en `out/v2` tegen `out-vorige/v4` 0 van de 8 met alle acht op verschillende innerText. Opzet: warmloop weggegooid, daarna twee sweeps rug aan rug, alle drie exit 0.
-- **DE RACE-HYPOTHESE IS GEMETEN EN WEERLEGD.** Het vermoeden was dat `persistWeekplan` fire-and-forget schrijft (`apps/web/src/lib/schema.ts:1283` en `:1289`) terwijl `settle` na 800 ms wegnavigeert. Een passief instrument telde per settle-marker elke `/api/`-request die NA de terugkeer en VOOR de eerstvolgende navigatie startte. Over **25 zaai-loads maal twee runs: NUL** — nul na-settle-requests, nul `PUT /api/weekplan/`, nul afgebroken. De identiteit sluit aan beide kanten (**1906/1906/0/0** en **1903/1903/0/0**) en beide runs dragen **45 settle-markers**, exact 25 zaai plus 11 weekscherm plus 9 in `v7`. Het venster is per constructie leeg: de ingrediënten van een race zijn niet hetzelfde als een race.
-- **HET GETAL DAT OPENSTAAT, EN HET LAG VOOR HET OPRAPEN:** 1906 tegen 1903 `/api/`-requests bij BYTE-IDENTIEKE shots. Drie requests meer in de ene run zonder dat het beeld beweegt. WELKE drie, in welke load, en of er een `PUT /api/weekplan/` bij zit is NIET gemeten — het instrument telde alleen het na-settle-venster, en dat is een gat in het ontwerp van de meting. Kandidaat, niet vastgesteld: de post-sync herbouw op `Schema.tsx:116`. Dit is de enige draad die dit punt achterlaat, en hij is BEWUST niet opgepakt: er komt geen derde poging.
-- **DE VLOER OVER VIER SESSIES MET DEZELFDE OPZET: 8, 0, 8, 0** — en telkens op een ánder scenario (`klim-weekstem`, dan `v7-midweek`). Twee van de vier vuren. Vuurt het, dan is het één scenario, alle acht shots samen, met VERSCHILLENDE innerText: het plan beweegt, niet de camera. Een schoon ijkpaar bewijst het verschijnsel dus niet weg — deze ronde vuurde het simpelweg niet.
-- **DE WERKREGEL WAARMEE DE HARNESS BRUIKBAAR BLIJFT,** en er valt niets bij te bouwen: elke ronde meet zijn EIGEN ijkpaar, erft er nooit een, en sluit een bewegend scenario uit met reden en aantal terwijl de noemer het TOTAAL blijft. `tools/shots/vergelijk.mjs` maakt die toewijzing mechanisch via de innerText-kolom, en staat beschreven in `tools/shots/README.md`.
-- **WAT DAAN MERKT: NIETS.**
-- **VIER NIEUWE WERKWIJZE-AFSPRAKEN uit deze ronde**, alle vier in `docs/WERKWIJZE.md`: (1) de STOP-conditie-regel kreeg een tweede aanleiding — twee overtredingen in twee rondes, dus die regel moet GEDRAAID worden en niet herinnerd; (2) de chat noemt voortaan WELKE controles hij gedraaid heeft en waarop, niet een score als "vijf van vijf"; (3) de bron-uitlezing hoort in de EERSTE versie van een prompt, want een prompt dat groeit bij het overtypen is te vroeg geschreven; (4) de ingrediënten van een verschijnsel zijn niet het verschijnsel — meet het venster leeg of vol vóór je er een mechanisme op bouwt.
-- **VLOEREN NU: vitest-totaal 971 over 75 bestanden · engine-selftest-assert-count 1652 · lint-waarschuwingen 20**, alle drie afgelezen uit de gate van DEZE ronde. Lees ze zelf uit de suite; neem ze niet over uit dit blok.
-- **OPENSTAAND, elk item opnieuw gegrept in `docs/ROADMAP.md`:** 16 · 19 · 21 · 32 · 33 · 34 · 35. Punt 36 hoort er niet meer bij.
-
-FOCUS VOLGENDE CHAT: ROADMAP punt 33 — de norm-vergelijking naar EEN gedeelde functie, plus een render-testlaag. Vierde item uit *De volgorde* in `docs/ROADMAP.md`, dus GEEN afwijking van de reeks. Die laag BESTAAT NIET: `apps/web/vitest.config.ts` draait op environment "node", er is geen `.test.tsx` en geen jsdom. Dit is TOEVOEGEN, niet consolideren. Verse chat.
 
 De oudere STAND-blokken en de historische projectsecties staan in `docs/HANDOFF-ARCHIEF.md`.
 Dit bestand draagt de TWAALF nieuwste blokken; komt er een dertiende bij, dan schuift het oudste in
