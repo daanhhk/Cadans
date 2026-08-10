@@ -930,5 +930,19 @@ Nieuwe of gewijzigde lessen komen HIER, met in dezelfde close-out een gedateerde
   familie die zo boven kwam: de plek-recon vond de eerste (macrofase Test, quotum 0) al vóór de
   bouw, en juist dát had de VORM van de eis moeten corrigeren in plaats van er een uitzondering
   bij te schrijven. Eén tegenvoorbeeld op een absolute eis is een signaal over de eis zelf.
+- **EEN CONTROLEREGEL IS ZELF EEN COMMANDO, en een commando dat niet kan DRAAIEN is niet te
+  onderscheiden van een geslaagde controle.** De vijf promptcontroles toetsen of iets BESTAAT; ze
+  toetsen niet of het toetsende commando uitvoerbaar is. Aanleiding: een premissenregel in een
+  CC-prompt droeg tweemaal `-Path` en was als PowerShell ongeldig. De VINDPLAATS klopte — de
+  gezochte tekst stond er, op de genoemde regel — dus controle 1 was gedraaid en gaf groen,
+  terwijl de regel die hem in CC moest toetsen niet kón draaien. CC ving het en las de bedoeling
+  correct; het kostte niets. Maar de VORM is het gat: een niet-draaiende controle meldt zichzelf
+  niet, en groen-omdat-hij-niet-liep is niet te onderscheiden van groen-omdat-hij-slaagde. Zelfde
+  familie als "een controle die per constructie kan slagen, controleert niets", nu op de
+  UITVOERBAARHEID in plaats van op de uitkomst. WERKREGEL: elke premissen- of controleregel die
+  als commando in een prompt gaat is een GELDIG commando in de doelshell — één `-Path`, geen
+  dubbele parameters — en de chat leest hem na ALS COMMANDO, niet alleen als bewering. Dit is
+  bewust GEEN zesde promptcontrole: dat maximum staat op vijf met een reden, en dit is een
+  eigenschap van hoe controle 1 wordt OPGESCHREVEN, niet een nieuwe controle.
 
 <!-- EINDE docs/WERKWIJZE-LESSEN.md -->

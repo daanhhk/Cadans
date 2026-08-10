@@ -1549,6 +1549,28 @@ punten staat onder *Gesloten — vindplaats*.
     DE ZONE-MUNT BLIJFT ONGEMOEID. De geleverde kant komt uit intervals `power_zones` en kent geen
     grens op 95; een poort op een raster dat de geleverde kant niet heeft zou beide kanten in
     verschillende eenheden meten.
+    GEMETEN 10-08-2026, ronde 1 — volledige uitwerking in `docs/PUNT43-POORT-RECON.md`. Over 420
+    cellen, 1920 sessies en 13372 blokken labelt de poort van de **278 cellen met sweetspot-werk**
+    er **146 uitsluitend tempo, 117 uitsluitend drempel en 15 beide**; de premisse houdt dus stand
+    op een as die de fase NIET vastzet. DE PRIJS IS GEKWANTIFICEERD: **3578 van de 31474
+    voorgeschreven werkminuten (11,4 procent) vallen BUITEN de poort**.
+    DE AANDEEL-KANDIDAAT IS UITGEMETEN EN LOOPT VAST. Een poort op het minuten-aandeel in plaats
+    van op het midpunt maakt **nul cellen en nul dagen smaller** over de hele as t 0 tot 50 — hij
+    kan dus geen tekort verbergen — en draagt een PLATEAU op **t 21 tot en met 33** waar alle 278
+    sweetspot-cellen consistent zijn. Maar band **`73-77`** draagt aandeel 50/50 over z2 en tempo,
+    exact gelijk aan sweetspot-band `88-92`, en komt uit een naamloos `Z2 progressief`-vulblok:
+    een blok op 75 procent FTP krijgt op `packages/engine/src/planner.ts:1377` de band
+    `pct ± 2` en ligt daarmee per constructie op de Z2/tempo-grens. Over het HELE plateau krijgen
+    daardoor **105 van de 1496 dagen** een werkzone uitsluitend uit vulling-overloop. Op aandeel
+    zijn die twee niet te scheiden.
+    RONDE 2 MEET DE HERKOMST-KANDIDAAT: poorten op wat een blok BEDOELT te zijn — `sweetspot_*`
+    tegenover een vulblok zonder `archetypeId` — scheidt precies die twee gevallen, en M81 wijst
+    dezelfde kant op. NOG NIET GEDAAN EN HET HOORT ERBIJ: `dosisTredeVoorstel` is niet op
+    meebewegen getoetst.
+    DE GRENZEN ZIJN AAN DE BRON GETOETST EN STAAN GOED: intervals `power_zones` geeft bij de
+    testcase 55 / 75 / 90 / 105, identiek aan `ZONE5_GRENZEN_DEFAULT`. De Sweet Spot-band van
+    84 tot 97 procent die intervals toont is een OVERLAY en geen zone, en loopt zelf dwars over
+    de Z3/Z4-grens.
 44. **De kwaliteitsdosis plafonneert vanaf acht uur** — open · norm, COACH-CANON.
     GEMETEN in de punt-41-ronde over 420 cellen en 1980 sessies, volledige uitwerking in
     `docs/PUNT41-42-RECON.md` §6. Absolute minuten per week, opbouwweken, gemiddeld over doel en
