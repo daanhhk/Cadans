@@ -1595,7 +1595,7 @@ punten staat onder *Gesloten — vindplaats*.
     testcase 55 / 75 / 90 / 105, identiek aan `ZONE5_GRENZEN_DEFAULT`. De Sweet Spot-band van
     84 tot 97 procent die intervals toont is een OVERLAY en geen zone, en loopt zelf dwars over
     de Z3/Z4-grens.
-44. **De kwaliteitsdosis plafonneert vanaf acht uur** — open · norm, COACH-CANON.
+44. **De kwaliteitsdosis plafonneert vanaf acht uur** — AF 20-08-2026 · norm, COACH-CANON.
     GEMETEN in de punt-41-ronde over 420 cellen en 1980 sessies, volledige uitwerking in
     `docs/PUNT41-42-RECON.md` §6. Absolute minuten per week, opbouwweken, gemiddeld over doel en
     fase: Z2+Z3 gaat van **55** minuten bij 3,0u naar **74 · 80 · 88 · 92 · 94 · 92** bij 4,5 tot
@@ -1636,6 +1636,16 @@ punten staat onder *Gesloten — vindplaats*.
     goed sluiten zoals 40, 41 en 42 — norm vast, verder niets. ENGINE-terrein, dus recon-first met
     een stop-en-verifieer; engine-autorisatie is nog NIET gegeven en is voor een read-only meting
     ook niet nodig.
+    **PUNT 44 IS AF — GESLOTEN ZONDER BOUW (20 augustus 2026), net als 40, 41 en 42.**
+    DE MEETLAT WAS HET DEFECT, NIET DE APP. De meting van M85 telde als kwaliteit uitsluitend werk
+    BOVEN 100 procent FTP. De engine zelf zet de drempelzone op **91 tot 105 procent** — GEMETEN
+    20-08-2026 in `packages/engine/src/zones.ts`, de 5-bucket-regel. Het predicaat sneed dus de
+    onderste helft van de eigen drempelzone weg. Met de zonegrens van de engine verdwijnt het
+    grootste deel van het verschijnsel dat dit punt beschreef.
+    WAT BLIJFT STAAN: M88 als norm — de frequentie plafonneert (literatuur), de dosis per
+    kwaliteitsdag daalt niet met het volume (beleid). Er is GEEN getal als eis en er is niets
+    gebouwd. Wie dit punt heropent, meet eerst op BEIDE predicaten en noemt bij elk getal welk
+    predicaat het draagt.
 45. **De herstelweek kent zijn eigen referentie niet** — AF en LIVE (09-08-2026) · CLIENT plus norm.
     De volumefactor uit M86 landt op de beschikbaarheid van de HERSTELWEEK ZELF, dus stapelt hij
     op een krimp die de gebruiker al droeg. **M87 (NORM)** legt vast waartegen hij hoort te
@@ -1910,7 +1920,8 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
    **AFGEVINKT per 10-08-2026:** gebouwd in `95751a1` en live op Version ID
    `e994c768-3d73-4aec-876b-b614b7fe1302`. Drie meetrondes; de derde droeg de bouw.
    **NA 6d VOLGDE 6f, EN DAARNA 6e** — zie de omkering onder 6f.
-6e. **44** — de kwaliteitsdosis plafonneert vanaf acht uur. NÁ 6f — zie de omkering daar — en met
+6e. **44** — AF (20-08-2026) — de kwaliteitsdosis plafonneert vanaf acht uur. NÁ 6f — zie de
+   omkering daar — en met
    een eigen soort stop: dit is COACH-CANON en geen meetopdracht. De ronde begint met een BESLUIT
    van Daan over hoeveel kwaliteit bij veertien uur hoort — herkomst BELEID — want er bestaat geen
    meting die dat antwoord kan dragen. Zonder dat besluit is er niets om tegen te bouwen, dus deze
@@ -1918,6 +1929,9 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
    **HET BESLUIT IS ER per 11-08-2026 — M88 (NORM).** Daarmee is 6e geen agendapunt meer maar een
    meetronde: de decompositie van de 1,75, read-only, met "geen bouw" als geldige uitkomst. Zie
    punt 44 hierboven.
+   **6e IS AF (20-08-2026), gesloten zonder bouw.** De meetlat bleek het defect: kwaliteit werd
+   op boven-100-procent geteld terwijl de engine de drempelzone op 91 tot 105 procent zet. Zie
+   punt 44.
 6f. **46** — `docs/WERKWIJZE-LESSEN.md` loopt naar de opener-cap. **NAAR VOREN, VOOR 6e —
    Daan-besluit van 10-08-2026, en de reden staat in de cijfers.** Het bestand staat na de
    close-out van punt 43 op **110213 bytes**, marge **10787** tot circa 121000. Die ene

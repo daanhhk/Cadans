@@ -13,6 +13,34 @@ live tot cutover.
 
 ## Stand
 
+STAND 2026-08-20 — PUNT 44 IS AF, GESLOTEN ZONDER BOUW (item 6e). Docs-only: geen code, geen
+engine, geen migratie, geen deploy, geen enkel `wrangler`-commando. Prod en D1 staan waar het blok
+hieronder ze noemt.
+- **DE MEETLAT WAS HET DEFECT.** GEMETEN in `packages/engine/src/zones.ts`: de engine zet de
+  drempelzone op **91 tot 105 procent FTP**. De metingen van punt 44 telden kwaliteit als werk
+  BOVEN 100 procent en sneden daarmee de onderste helft van de eigen drempelzone weg. Met de
+  zonegrens van de engine verdwijnt het grootste deel van het verschijnsel.
+- **M88 BLIJFT STAAN ALS NORM** en wordt niet heropend: frequentie plafonneert (literatuur), dosis
+  per kwaliteitsdag daalt niet met het volume (beleid). Geen getal als eis.
+- **VIER PUNTEN OP RIJ ZONDER BOUW — 40, 41, 42, 44.** Dat is geen reeks mislukkingen maar een
+  bevinding: op de coach-canon doet de app grotendeels het juiste. Wie een vijfde canon-punt opent,
+  weegt dat mee.
+- **NIEUWE LES** in `docs/WERKWIJZE-LESSEN.md`: een geërfde meetlat is niet getoetst tot je hem
+  tegen de bron legt; het predicaat hoort bij elk getal genoemd.
+- **NIEUWE REGEL** in `docs/WERKWIJZE.md`: een meting en een voorstel komen nooit in dezelfde
+  beurt, en een autorisatie dekt één plek.
+- **VLOEREN NU: vitest-totaal 985 over 78 bestanden · engine-selftest-assert-count 1757 ·
+  lint-waarschuwingen 20**, alle vier afgelezen uit de gate van DEZE ronde. Onbewogen: docs-only,
+  geen test geraakt. Lees ze zelf uit de suite; neem ze niet over uit dit blok.
+- **OPENSTAAND, opnieuw te greppen in `docs/ROADMAP.md`:** 16 · 32 · 34 · 35. Punt 44 hoort er
+  niet meer bij.
+
+FOCUS VOLGENDE CHAT: DE CUTOVER, niet de coach-canon. De canon-punten 40, 41, 42 en 44 sloten alle
+vier zonder bouw; wat het project AF maakt zijn FASE-C (de Garmin-push via intervals.icu) en de
+DocProp-weekplan-migratie. Begin met een RECON, read-only: wat staat er van FASE-C al, wat ontbreekt,
+en wat is de kleinste stap die werkend resultaat oplevert. LEVER DE RECON EN STOP — geen bouwvoorstel
+in dezelfde beurt. Verse chat.
+
 STAND 2026-08-11 — punt 44: HET BESLUIT STAAT, ER IS NIETS GEBOUWD (item 6e). Docs-only, met ÉÉN
 losse code-commit voor een test-defect dat de gate blokkeerde (zie onderaan). Geen engine, geen
 migratie, geen deploy, geen enkel `wrangler`-commando — ook geen read. Prod en D1 staan waar het
@@ -678,84 +706,6 @@ stop-en-verifieer voordat er één regel engine wordt aangeraakt; een echte engi
 geflagd, nooit stilzwijgend gepatcht. GEEN intervals-werk nodig: de plan-kant is splitsbaar uit
 `pctLo`/`pctHi`. Punt 40 deblokkeert punt 41 (de weekmix-meting) en punt 39 (de herstelweek).
 Verse chat.
-
-**PUNT 38 IS AF (8 augustus 2026).** De opener-fetch kapt niet meer af, en waar hij dat ooit weer
-doet meldt hij het. Docs-only: geen code, geen engine, geen migratie, geen deploy, en geen enkel
-`wrangler`-commando. Commits: `fe817efb6b1063f8e2b7976c273de767b3b3d3f8` (de verhuizing) plus deze
-close-out. Prod en D1 staan waar het blok hieronder ze noemt; grep die twee daar op in plaats van ze
-hier over te schrijven.
-- **GEEN DEPLOY, EN DAT IS GEEN UITSTEL.** Er is geen letter aan de app veranderd — dit raakt
-  uitsluitend de documenten die een chat bij zijn start ophaalt.
-- **DE CAP IS HERMETEN IN DEZE CHAT, en dat was de opdracht.** De eigen HANDOFF-fetch kwam binnen
-  tot **121124 van de 616512 bytes** — 19,6 procent, **358 van de 2970 regels**, mid-zin, zonder
-  signaal. `docs/WERKWIJZE.md` kwam op **118399 bytes** nog volledig binnen; de staart is
-  byte-vergeleken met schijf. DE GRENS IS GEEN BYTE-GRENS: 07-08 gaf dezelfde cap 121196 op een
-  ander bestand, 08-08 gaf hij 121124. Reken op een TOKEN-grens en behandel elke byte-marge als
-  schatting.
-- **DE VERHUIZING IS BYTE-EXACT BEWEZEN, beide kanten.** sha256 van de lessen-slice
-  `afb4d8b953e65806705d0cabf895b4d1` en van de archief-slice `58b309f0c701180da4237986588bc10f`,
-  identiek voor en na. *Recon en bewijslast* was **90136 van 118399 bytes — 76,1 procent, 122
-  bullets**; `HANDOFF.md` is geroteerd op twaalf STAND-blokken.
-- **BYTES NA DE INGREEP, met marge tot 121000:** `docs/WERKWIJZE.md` **31068** (+89932),
-  `docs/WERKWIJZE-LESSEN.md` **90764** (+30236), `docs/TRAININGSMODEL.md` **27779** (+93221),
-  `HANDOFF.md` **55228** (+65772), `docs/DOELEN-SPEC.md` **31808** (+89192). Opener-totaal 236647
-  bytes over vijf fetches. DE KRAPSTE IS DE LESSEN met 30236: bij circa 1,5 kB per ronde is dat
-  ruwweg twintig rondes, en de byte-regel maakt die aankomst zichtbaar vóór hij er is.
-- **HET VANGNET IS TWEEDELIG, en die tweede helft stond niet in punt 38.** De eind-marker
-  `<!-- EINDE <pad> -->` vangt een afkap die AL gebeurd is en wordt gedetecteerd door de chat die de
-  schade lijdt; de byte-rapportage in elke close-out ziet hem aankomen. De marker is aantoonbaar
-  ROOD zonder de ingreep — de HANDOFF-fetch van deze chat miste hem — maar DAT ROOD KOMT UIT DE
-  CHAT-FETCH EN IS DOOR CC NIET REPRODUCEERBAAR. Dat is een grens op het bewijs, geen omissie.
-- **DE MARKER KOST ONDERHOUD, en dat bleek meteen.** Bij de naadreparatie in `docs/WERKWIJZE.md`
-  belandde de bestaande lege slotregel ná de marker; CC ving en repareerde het. Wie een sectie
-  toevoegt, laat de marker de LAATSTE regel.
-- **DE ACCEPTATIE-EIS BIJ DE ROTATIE WAS ONHAALBAAR ZOALS GEFORMULEERD, en dat is de les van deze
-  ronde.** "Precies één keer" veronderstelt dat de BRON uniek is. `HANDOFF.md` droeg NEGEN distincte
-  regels die er al 2 tot 5 keer stonden — vooral identieke `OPENSTAAND, ONGEWIJZIGD`-bullets — samen
-  23 voorkomens waarvan 14 overtollig, en de strikte toets meldde die 23 als fout. De multiset-toets
-  — de telling per distincte regel blijft gelijk — gaf **0**, op 2601 niet-lege regels waarvan 2587
-  distinct. Bij de lessen-helft maakte het geen verschil (775 niet-lege regels, alle uniek), en juist
-  daarom hield de log-verhuizing met dezelfde formulering stand. Kwam binnen als CC-afwijking; staat
-  nu in `docs/WERKWIJZE-LESSEN.md`.
-- **EEN PROJECTIE OP EEN VERHUIZING TELT OOK WAT DIEZELFDE RONDE TOEVOEGT.** De chat gaf de norm na
-  de ingreep op circa 28 kB — de kale slice-verwijdering — terwijl hij op 31068 staat; het verschil
-  van 2805 is de stub, de twee nieuwe alinea's, de uitgebreide opener en de marker, allemaal in
-  datzelfde prompt opgedragen. Geen gevolg, want er hing geen eis aan. Wel de reden dat
-  `docs/ROADMAP.md` de GEMETEN getallen draagt en niet de 88553 uit de meting op `e08763c8`.
-- **DE BYTE-BULLET HIERBOVEN MEET `fe817ef` EN NIET DE COMMIT VAN DIT BLOK — precies de fout die de
-  bullet erboven beschrijft, nu op zichzelf.** Deze close-out voegde zelf **1296** bytes toe aan
-  `docs/WERKWIJZE-LESSEN.md` en **1611** aan `HANDOFF.md`. Op `fa6d5be` staat het dus op
-  `docs/WERKWIJZE.md` **31068** (+89932), `docs/WERKWIJZE-LESSEN.md` **92060** (+28940),
-  `docs/TRAININGSMODEL.md` **27779** (+93221), `HANDOFF.md` **56839** (+64161), `docs/DOELEN-SPEC.md`
-  **31808** (+89192) — opener-totaal **239554**, krapste marge de lessen met **28940**, ruwweg
-  negentien rondes. Deze reparatiecommit voegt daar nog aan toe; het exacte getal staat in het
-  CC-rapport, want een STAND-blok wordt geschreven vóór de commit die het bevat en meet daarom per
-  constructie te laag. *Close-out van een chat* is daarop bijgesteld: CC meet NA de commit. De
-  byte-bullet erboven blijft ongewijzigd staan — hij demonstreert waar hij voor waarschuwt. Kwam
-  binnen als CC-afwijking.
-- **NIET GEDAAN, met reden.** De aanleidingen uit de lessen strippen: 89 losse knipbeslissingen, en
-  de aanleiding draagt vaak het getal waarop de regel rust. En `docs/DOELEN-SPEC.md` §150 aanpassen:
-  de kop *Recon en bewijslast* blijft in de norm staan als doorverwijzing, dus die verwijzing klopt.
-- **HET ARCHIEF IS EEN AFVOER, GEEN LEESBRON.** `docs/HANDOFF-ARCHIEF.md` draagt de oudere blokken
-  plus de historische projectsecties, en de opener haalt het bewust niet op. Er is niets weggegooid;
-  git houdt alles.
-- **WAT DAAN MERKT: NIETS aan de app.** Wat wél verandert is de opener: vijf URL's in plaats van
-  vier, met een regel die de eind-marker toetst.
-- **VLOEREN NU: vitest-totaal 975 over 76 bestanden · engine-selftest-assert-count 1652 ·
-  lint-waarschuwingen 20**, alle vier afgelezen uit de gate van DEZE ronde. Onbewogen: docs-only,
-  geen test geraakt. Lees ze zelf uit de suite; neem ze niet over uit dit blok.
-- **OPENSTAAND, elk item opnieuw gegrept in `docs/ROADMAP.md`:** 16 · 19 · 32 · 34 · 35. Punt 38
-  hoort er niet meer bij.
-
-FOCUS VOLGENDE CHAT: ROADMAP punt 19 — het dagtype weekend is een kalendernaam, geen eigenschap.
-Item 6 uit *De volgorde* in `docs/ROADMAP.md`, dus GEEN afwijking van de reeks. ENGINE, dus
-RECON-FIRST met een stop-en-verifieer voordat er ook maar één regel engine wordt aangeraakt; een
-echte engine-bug wordt geflagd, nooit stilzwijgend gepatcht. HET PUNT SCHRIJFT ZELF EERST EEN METING
-VOOR: `deriveDagtype` (`apps/web/src/lib/planner.ts:18`) leidt het type af uit za/zo terwijl de
-gebruiker alleen pendel, trainen en minuten opgeeft, en de weekend-tak in `assignWorkouts` is via
-`buildWeekProposal` grotendeels onbereikbaar omdat de allocator elke eligible dag claimt. Meet dus
-eerst wat het verschil in de praktijk oplevert — het kan zijn dat er niets aan hangt. Raakt
-`DOELEN-SPEC` §2A. Verse chat.
 
 De oudere STAND-blokken en de historische projectsecties staan in `docs/HANDOFF-ARCHIEF.md`.
 Dit bestand draagt de TWAALF nieuwste blokken; komt er een dertiende bij, dan schuift het oudste in

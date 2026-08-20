@@ -89,6 +89,13 @@ aanleidingen dragen een cijfer** en dat is juist het getal waarop de regel rust;
 verlies uit kan is pure provenance, gemeten op **26 zinnen en 2270 bytes, 2,1 procent**. Daarom
 is de ingreep een VERLIESLOZE splitsing en geen inkorting.
 
+- **EEN METING EN EEN VOORSTEL KOMEN NOOIT IN DEZELFDE BEURT.** Wie om een meting is gevraagd,
+  levert de meting en stopt; een ingreep erbij leggen maakt van de mens de verificateur van werk
+  dat hij niet heeft kunnen nalezen. Dit is een POORT, geen aansporing: een akkoord op een
+  voorstel dat bij een meting zat, telt niet als autorisatie. En een autorisatie dekt ÉÉN plek —
+  verschuift de kandidaat naar een andere functie of een ander veld, dan vervalt ze en wordt ze
+  opnieuw gevraagd.
+
 ## Vorm van een CC-prompt
 
 - **Eén plain code-blok**, zonder taal-tag — dat is de één-tap-kopie op mobiel. Nooit proza in het blok mengen; Claude's kader eromheen staat als gewone tekst.

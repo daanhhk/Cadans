@@ -538,5 +538,12 @@ hier — met in dezelfde close-out een gedateerde regel in `docs/WERKWIJZE-LOG.m
   aangewezen ingreep verschoof van "meer kwaliteitsdagen" naar "de dagen die er staan dragen de
   drempel". Zelfde familie als "een bouwspec die KANDIDAAT-PLEKKEN opsomt, heeft de plekken niet
   geteld", nu op de NORM in plaats van op de bouwspec.
+- **Een GEËRFDE MEETLAT is niet getoetst tot je hem tegen de bron legt.** Wie een predicaat
+  overneemt uit een vorige ronde meet wat die ronde toevallig mat, niet wat de vraag stelt — en
+  een verschijnsel dat alleen onder één meetlat bestaat, is een eigenschap van de meetlat.
+  Aanleiding: punt 44 draaide drie rondes op "werk boven 100 procent FTP" terwijl
+  `packages/engine/src/zones.ts` de drempelzone op 91 tot 105 procent zet; met de eigen zonegrens
+  van de engine verdween het grootste deel van het verschijnsel en sloot het punt zonder bouw.
+  HET PREDICAAT HOORT BIJ ELK GETAL GENOEMD, en bij twijfel meet je op twee.
 
 <!-- EINDE docs/WERKWIJZE-LESSEN.md -->
