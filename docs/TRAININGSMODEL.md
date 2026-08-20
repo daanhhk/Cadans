@@ -583,4 +583,34 @@ De factor stapelt dus op een krimp die de gebruiker zelf al droeg. Staat als ROA
 hoort in dezelfde bouw als de factor: zonder deze regel doet M86 in een alledaags geval het
 verkeerde.
 
+**M88 (NORM) — De kwaliteitsFREQUENTIE plafonneert; de kwaliteitsDOSIS mag niet met het volume
+dalen.**
+Twee delen met verschillende herkomst.
+(a) HERKOMST LITERATUUR. Het aantal dagen per week waarop boven de drempel wordt gewerkt groeit
+niet mee met het beschikbare volume: vanaf circa acht uur horen er TWEE van die dagen te staan, en
+meer worden het er niet. Grond: twee intervalsessies per week geven goed getrainde duursporters 2
+tot 4 procent winst en verdere frequentieverhoging levert daarbovenop niets, en bij gelijk
+totaalvolume bleken twee langere sessies superieur aan vier kortere. DEZE REGEL GAAT OVER
+SAMENSTELLING, NIET OVER HET AANTAL KWALITEITSDAGEN. Het plan zet al twee tot drie kwaliteitsdagen
+neer; een deel daarvan draagt sweet-spot-werk dat onder de drempel blijft. Wat de regel eist is dat
+er vanaf acht uur twee van die dagen ECHT boven de drempel liggen — er komen geen dagen bij.
+(b) HERKOMST BELEID — Daan-besluit van 11 augustus 2026. De tijd boven de drempel PER
+kwaliteitsdag daalt niet wanneer het weekvolume stijgt. Er bestaat geen grond waarom een sessie
+korter zou worden naarmate er meer tijd is; ligt de frequentie vast, dan is de sessieduur de enige
+as waarlangs extra beschikbare tijd nog kwaliteit kan dragen.
+GEEN GETAL ALS EIS. De uitkomst bij veertien uur ligt niet vast. De eerder genoemde 36 tot 40
+minuten boven de drempel was een schatting op de reeks van M85, gemaakt voordat de bron gelezen
+was, en is INGETROKKEN als eis; ze blijft een verwachting tot een meting haar draagt.
+WAT DE REGEL NIET ZEGT, en dat hoort erbij zodat een volgende ronde de zaak niet groter maakt dan
+hij is: dat het huidige plafond fout is. BEREKEND op de reeks van M85 — geen eigen meting — staat
+het plan bij veertien uur op 89,0 / 7,9 / 3,2 procent over de drie zones, en dat valt binnen de
+spreiding van drie top-5-Giro-renners: 91,3-6,5-2,2 · 83,6-10,6-5,8 · 86,7-8,9-4,4 bij 19,7 · 16,2
+· 14,7 uur per week. Kwaliteit evenredig met het volume laten groeien zou het plan buiten die
+praktijk duwen. Twee kwalificaties op die vergelijking: die renners rijden 17 tot 29 wedstrijden in
+22 weken en halen daar kwaliteit uit die een amateur uit training moet halen, en hun zone-indeling
+knipt op circa 85 procent van het drempelvermogen waar M85 op 80 knipt — het app-getal is dus per
+constructie het ruimste van de twee.
+M9 BLIJFT GELDEN: dit is een continue eigenschap over de hele volume-as en geen aparte modus vanaf
+acht uur.
+
 <!-- EINDE docs/TRAININGSMODEL.md -->

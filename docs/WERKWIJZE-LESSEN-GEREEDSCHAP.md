@@ -497,5 +497,21 @@ helft. Nieuwe of gewijzigde lessen krijgen in dezelfde close-out een gedateerde 
   asset waar hij naar wijst, en vergelijk dat byte-voor-byte met de lokale build. Aanleiding: de
   deploy van punt 43 — `/api/health` gaf `{"ok":true,"service":"cadans-api"}` en verder niets;
   `assets/index-BoCic_Ah.js` was 584155 bytes en sha256-identiek aan `apps/web/dist`.
+- **Een fixture die op MODULE-NIVEAU een builder aanroept, valt buiten `beforeAll` en ziet de
+  wandklok.** ESM evalueert de module vóór elke hook, dus een `vi.setSystemTime` in `beforeAll`
+  pint die ene aanroep niet. De test is dan groen zolang de echte datum toevallig dicht bij de
+  gepinde ligt en wordt rood door tijdsverloop alleen — een groene gate met houdbaarheidsdatum, en
+  CI mist niets want op die dag was hij werkelijk groen. Aanleiding: `apps/web/src/lib/pendel.test.ts`
+  was groen op `53fd893` en stabiel rood op diezelfde commit drie weken later, 509 in plaats van
+  530 over vijf runs; `const BLOB` riep `buildWeekProposal` aan op module-niveau. Fix in
+  `acd46355eaa481499307c6ca3598b55cf8bc818c`: de pin naar module-niveau, boven de fixture. WIE EEN
+  KLOK PINT, PINT HEM BOVEN ALLES WAT ERAAN HANGT — en `beforeAll` staat daar niet boven.
+- **`pnpm test -- <naam>` FILTERT NIET in deze repo, maar geeft wel een uitslag die er goed
+  uitziet.** Het root-script is `node scripts/ensure-web-dist.mjs && cross-env TZ=Europe/Amsterdam
+  vitest run`, en het argument bereikt `vitest` niet door de `&&`-keten: alle 78 bestanden draaien.
+  Wie daarmee een rood/groen-meting per bestand doet, meet de hele suite en denkt één bestand te
+  zien. Gemeten 20-08-2026 bij de pendel-fix. WERKT WEL: `pnpm vitest run --project web <pad>`.
+  Let op dat die vorm de TZ-pin van het root-script MIST — zet `TZ=Europe/Amsterdam` erbij zodra de
+  uitslag van de tijdzone kan afhangen.
 
 <!-- EINDE docs/WERKWIJZE-LESSEN-GEREEDSCHAP.md -->

@@ -527,5 +527,16 @@ hier — met in dezelfde close-out een gedateerde regel in `docs/WERKWIJZE-LOG.m
   Aanleiding: `apps/web/src/lib/punt15.test.ts` isoleert term 2 van de conjunctie op FTP/Build, en
   na punt 43 dekt de poort daar de hele vraag (95 van de 95) — verplaatst naar Korte
   beklimmingen/Build, poort {drempel, anaeroob}, gevraagd 69, beoordeelbaar 65.
+- **Een BESLUIT dat een GETAL als uitkomst noemt, heeft de bron gelezen die dat getal
+  produceert.** De norm-vraag en de mechanisme-vraag zijn twee vragen — wat er hoort te gebeuren
+  is coach-canon, waar het vandaan komt is een grep — en wie ze in één beweging beantwoordt, wijst
+  de verkeerde INGREEP aan terwijl de norm gewoon klopt. Aanleiding: bij punt 44 is M88 voorgelegd
+  én goedgekeurd met een uitkomst van 36 tot 40 minuten boven de drempel bij veertien uur, vóór
+  het quotum-veld gelezen was. Dat veld kent het weekvolume niet en zet 2 of 3 kwaliteitsdagen;
+  de gemeten 1,75 is een SAMENSTELLINGS-getal, want sweet-spot op 89-93 procent valt buiten het
+  predicaat "boven 100 procent FTP". De regel hield stand, het getal is als eis ingetrokken, en de
+  aangewezen ingreep verschoof van "meer kwaliteitsdagen" naar "de dagen die er staan dragen de
+  drempel". Zelfde familie als "een bouwspec die KANDIDAAT-PLEKKEN opsomt, heeft de plekken niet
+  geteld", nu op de NORM in plaats van op de bouwspec.
 
 <!-- EINDE docs/WERKWIJZE-LESSEN.md -->

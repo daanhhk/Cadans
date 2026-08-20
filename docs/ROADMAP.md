@@ -1612,6 +1612,30 @@ punten staat onder *Gesloten — vindplaats*.
     is er niets om tegen te bouwen.
     M45 WORDT NIET GESCHONDEN: die noemt acht à tien uur als ONDERGRENS waaronder polarized zinloos
     is en zwijgt over wat daarboven hoort. DRAAGT **M85**. Raakt M7, M43, M44 en M45.
+    **HET BESLUIT IS ER per 11-08-2026 en staat als M88 (NORM).** De frequentie plafonneert
+    (herkomst literatuur), de dosis per kwaliteitsdag mag niet met het volume dalen (herkomst
+    BELEID). Er is GEEN getal als eis vastgelegd.
+    **HET PLAFOND IS EEN CONSTANTE, GEEN ONTSTAAND GEDRAG**, en dat hoort hier zodat een volgende
+    ronde het niet opnieuw zoekt. Het aantal kwaliteitsdagen komt uit één veld per doelprofiel met
+    een waarde per macrofase: drie profielen staan op 3/3/3, twee op 2/3/2, de Test-fase kent geen
+    sleutel en geeft 0, en een deloadweek klemt naar 1. Dat veld kent het weekvolume NIET. Bij W1
+    begrenzen de beschikbare dagen het quotum, vanaf W4 begrenst het quotum de dagen — het
+    "plafond vanaf acht uur" is dus een getal dat er altijd al stond.
+    **DE 1,75 IS NIET DAT QUOTUM, en dat verschuift de aangewezen ingreep.** Het predicaat van de
+    meting is dagen met werk boven 100 procent FTP; sweet-spot op 89-93 procent valt daar buiten
+    en dat staat expliciet in `docs/PUNT41-42-RECON.md` §6. Tussen "quotum 2 of 3" en "1,75 dagen
+    boven de drempel" zit een SAMENSTELLINGSSTAP die nog nooit geteld is. De ingreep is daarmee
+    niet "meer kwaliteitsdagen" maar "de dagen die er staan dragen de drempel", en dat raakt M74
+    en M81.
+    **RUIMTE IS ER, EN DE REM ZIT NIET IN DE DAG.** W7 is ma90 di90 wo90 do90 za270 zo210: zes
+    trainbare dagen waarvan vier midweekse van negentig minuten.
+    **DE VOLGENDE RONDE IS EEN DECOMPOSITIE-METING, GEEN BOUW.** Ze telt per volumepunt W1..W7 de
+    keten quotum → toegewezen kwaliteitsdagen → dagen met werk boven 100 procent FTP, en zoekt uit
+    waarom de dosis per kwaliteitsdag bovenin DAALT (18,3 bij tien uur naar 14,9 bij twaalf en
+    15,2 bij veertien). GEEN BOUW IS EEN GELDIGE UITKOMST: op wat er nu ligt kan dit punt net zo
+    goed sluiten zoals 40, 41 en 42 — norm vast, verder niets. ENGINE-terrein, dus recon-first met
+    een stop-en-verifieer; engine-autorisatie is nog NIET gegeven en is voor een read-only meting
+    ook niet nodig.
 45. **De herstelweek kent zijn eigen referentie niet** — AF en LIVE (09-08-2026) · CLIENT plus norm.
     De volumefactor uit M86 landt op de beschikbaarheid van de HERSTELWEEK ZELF, dus stapelt hij
     op een krimp die de gebruiker al droeg. **M87 (NORM)** legt vast waartegen hij hoort te
@@ -1891,6 +1915,9 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
    van Daan over hoeveel kwaliteit bij veertien uur hoort — herkomst BELEID — want er bestaat geen
    meting die dat antwoord kan dragen. Zonder dat besluit is er niets om tegen te bouwen, dus deze
    plek in de rij is een agendapunt en geen bouwronde. Draagt M85.
+   **HET BESLUIT IS ER per 11-08-2026 — M88 (NORM).** Daarmee is 6e geen agendapunt meer maar een
+   meetronde: de decompositie van de 1,75, read-only, met "geen bouw" als geldige uitkomst. Zie
+   punt 44 hierboven.
 6f. **46** — `docs/WERKWIJZE-LESSEN.md` loopt naar de opener-cap. **NAAR VOREN, VOOR 6e —
    Daan-besluit van 10-08-2026, en de reden staat in de cijfers.** Het bestand staat na de
    close-out van punt 43 op **110213 bytes**, marge **10787** tot circa 121000. Die ene
@@ -2087,6 +2114,13 @@ niet; hij verliest niet. Een punt gaat eruit zodra een STAP het opneemt — niet
 
 ### TOOLING
 
+- ER STAAT GEEN MEETSCRIPT VOOR DE PLAN-METINGEN IN DE REPO, terwijl de les na punt 43 voorschrijft
+  dat wie een reeks in een document zet het script erbij commit. Elke ronde bouwt zijn
+  esbuild-bundel opnieuw en ijkt hem opnieuw op 21 van de 21 gepinde waarden. Gegrept op
+  11-08-2026: `tools/` draagt alleen `audit` en `shots`, en GEEN ENKEL `.mjs` in de repo roept de
+  planner aan — de acht buiten `scripts/` zijn de audit- en shot-tooling, de vier erbinnen zijn
+  API-rooktests plus een dist-helper. Een gecommit meetharnas met de weekvorm-as en de
+  volume-as W1..W7 zou die ijkstap per ronde wegnemen; de kosten en de vorm zijn niet uitgemeten.
 - `/api/health` DRAAGT GEEN VERSIEVELD, waardoor een deploy niet op de endpoint zelf te verifiëren
   is. Hij geeft `{"ok":true,"service":"cadans-api"}` — dat bewijst dat de Worker leeft, niet welke
   bundel eronder zit. Bij de deploy van punt 43 (10-08-2026) is daarom uitgeweken naar

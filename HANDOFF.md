@@ -13,6 +13,62 @@ live tot cutover.
 
 ## Stand
 
+STAND 2026-08-11 — punt 44: HET BESLUIT STAAT, ER IS NIETS GEBOUWD (item 6e). Docs-only, met ÉÉN
+losse code-commit voor een test-defect dat de gate blokkeerde (zie onderaan). Geen engine, geen
+migratie, geen deploy, geen enkel `wrangler`-commando — ook geen read. Prod en D1 staan waar het
+blok hieronder ze noemt. Punt 44 blijft OPEN: het besluit is de norm, de meting komt nog.
+- **M88 STAAT ALS NORM** in `docs/TRAININGSMODEL.md`, twee delen met VERSCHILLENDE herkomst. (a)
+  LITERATUUR: het aantal dagen per week met werk boven de drempel groeit niet mee met het volume —
+  vanaf circa acht uur zijn het er twee. (b) BELEID, Daan-besluit 11-08-2026: de tijd boven de
+  drempel PER kwaliteitsdag daalt niet als het weekvolume stijgt.
+- **ER IS GEEN GETAL ALS EIS, EN DAT IS EEN INTREKKING.** De 36 tot 40 minuten boven de drempel bij
+  veertien uur zijn voorgelegd én goedgekeurd vóórdat de bron gelezen was. Ze zijn INGETROKKEN als
+  eis en staan nog als verwachting. Een volgende ronde die ze tegenkomt: dit is geen norm.
+- **HET PLAFOND IS EEN CONSTANTE, GEEN ONTSTAAND GEDRAG.** Het aantal kwaliteitsdagen komt uit één
+  veld per doelprofiel met een waarde per macrofase — drie profielen 3/3/3, twee 2/3/2, Test-fase
+  geen sleutel dus 0, deload klemt naar 1. Dat veld kent het weekvolume niet. Bij W1 begrenzen de
+  dagen het quotum, vanaf W4 begrenst het quotum de dagen.
+- **DE 1,75 IS EEN SAMENSTELLINGS-GETAL, en dat verschuift de aangewezen ingreep.** Het predicaat
+  van de meting is werk boven 100 procent FTP; sweet-spot op 89-93 procent valt daarbuiten. Tussen
+  quotum 2 of 3 en 1,75 dagen boven de drempel zit een stap die nooit geteld is. De ingreep is niet
+  "meer kwaliteitsdagen" maar "de dagen die er staan dragen de drempel" — raakt M74 en M81.
+- **HET HUIDIGE PLAFOND IS GROTENDEELS TERECHT, en dat hoort hier zodat de volgende ronde het niet
+  groter maakt dan het is.** BEREKEND op de reeks van M85, geen eigen meting: 89,0 / 7,9 / 3,2 bij
+  veertien uur, binnen de spreiding van drie top-5-Giro-renners. Kwaliteit evenredig met volume
+  laten groeien zou het plan buiten die praktijk duwen.
+- **EEN GROENE GATE HEEFT EEN HOUDBAARHEIDSDATUM, en dat is de zwaarste vondst van deze ronde.**
+  `apps/web/src/lib/pendel.test.ts` was groen op `53fd893` toen CI hem draaide en STABIEL ROOD op
+  diezelfde commit toen de close-out hem drie weken later opnieuw draaide — vijf runs, 509 in
+  plaats van 530 op `v.minuten.gepland`, zonder dat er een letter aan de repo veranderd was. Oorzaak:
+  `const BLOB` riep `buildWeekProposal` aan tijdens de MODULE-EVALUATIE, die aan elke `beforeAll`
+  voorafgaat, dus die ene aanroep zag de wandklok terwijl de rest van de test op 2026-07-29 stond.
+  CI had niets gemist: op de dag van die run WAS de test groen.
+- **DE FIX IS EEN EIGEN COMMIT, `acd46355eaa481499307c6ca3598b55cf8bc818c`** — precies één bestand,
+  de klok-pin van `beforeAll` naar module-niveau, geen verwachte waarde aangeraakt. Rood 9/1 vóór,
+  groen 10/0 ná. GEGREPT over alle 21 testbestanden met `setSystemTime`: `pendel.test.ts` is de
+  ENIGE waar een module-fixture een builder aanroept; de tweede kandidaat `quotaAftrek.test.ts`
+  bouwt op een absolute datum en is klok-onafhankelijk.
+- **TWEE NIEUWE LESSEN** in `docs/WERKWIJZE-LESSEN-GEREEDSCHAP.md`: de module-fixture boven de
+  klok-pin, en `pnpm test -- <naam>` dat NIET filtert maar wel een plausibele uitslag geeft.
+- **NIEUWE LES** in `docs/WERKWIJZE-LESSEN.md`: een besluit dat een getal als uitkomst noemt, heeft
+  de bron gelezen die dat getal produceert. Norm-vraag en mechanisme-vraag zijn twee vragen.
+- **NIEUW OP DE PARKEERLIJST (TOOLING):** er staat geen meetscript voor de plan-metingen in de
+  repo; elke ronde bouwt en ijkt zijn eigen esbuild-instrument opnieuw op 21 van de 21.
+- **VLOEREN NU: vitest-totaal 985 over 78 bestanden · engine-selftest-assert-count 1757 ·
+  lint-waarschuwingen 20**, alle vier afgelezen uit de gate van DEZE ronde. Lees ze zelf uit de
+  suite; neem ze niet over uit dit blok.
+- **OPENSTAAND, elk item opnieuw gegrept in `docs/ROADMAP.md`:** 16 · 32 · 34 · 35 · 44. Punt 46
+  hoort er niet meer bij.
+
+FOCUS VOLGENDE CHAT: ROADMAP punt 44 — de decompositie-meting, item 6e. READ-ONLY RECON, GEEN BOUW:
+tel per volumepunt W1 tot en met W7 de keten quotum → toegewezen kwaliteitsdagen → dagen met werk
+boven 100 procent FTP, en zoek uit waarom de dosis per kwaliteitsdag bovenin DAALT (18,3 bij tien
+uur naar 14,9 bij twaalf en 15,2 bij veertien). GEEN BOUW IS EEN GELDIGE UITKOMST — dit punt kan
+sluiten zoals 40, 41 en 42. De norm ligt vast in M88 en wordt niet heropend; wat openstaat is het
+MECHANISME. Engine-terrein: engine-autorisatie is NIET gegeven en voor een read-only meting ook niet
+nodig. IJK HET INSTRUMENT EERST op de gepinde waarden en meld de ijkuitslag vóór enige conclusie.
+Verse chat.
+
 STAND 2026-08-10 — punt 46 GESLOTEN (item 6f) en NAAR VOREN GEHAALD vóór 6e. De lessen staan nu
 in TWEE bestanden die de opener allebei ophaalt; de opener telt zes URL's. Bouw `5de6c3f`, de
 omkering `296d065`. Docs-only: geen code, geen engine, geen migratie, geen deploy, en geen enkel
@@ -700,22 +756,6 @@ gebruiker alleen pendel, trainen en minuten opgeeft, en de weekend-tak in `assig
 `buildWeekProposal` grotendeels onbereikbaar omdat de allocator elke eligible dag claimt. Meet dus
 eerst wat het verschil in de praktijk oplevert — het kan zijn dat er niets aan hangt. Raakt
 `DOELEN-SPEC` §2A. Verse chat.
-
-**PUNT 21 IS AF — GESLOTEN ZONDER BOUW (7 augustus 2026).** De push-beschrijving draagt de ruis van punt 18, maar de tak die haar schrijft wordt nooit bereikt. Docs-only ronde: de chat mat zelf via een read-only kloon plus een esbuild-bundel van de engine, `apps/web/src/lib` en `workers/api/src/integrations/push.ts`; CC deed alleen de commits. GEEN code, geen engine, geen migratie, geen deploy, en geen enkel `wrangler`-commando — ook geen read. Prod en D1 staan waar het blok hieronder ze noemt.
-- **GEEN DEPLOY, EN DAT IS GEEN UITSTEL.** Er is geen letter aan de app veranderd; dit was een meting en een verdict.
-- **HET INSTRUMENT IS EERST GEIJKT: 21 van de 21 gepinde waarden gereproduceerd** — de volledige weekvorm-as uit `docs/ROADMAP.md` *Meetlat* (kwaliteitsminuten, week-TSS en kwaliteitsdagen over zeven vormen), gedraaid met `buildWeekProposal` zelf, de klok als Proxy op de ECHTE `Date` en `TZ=Europe/Amsterdam`.
-- **DE PREMISSE KLOPTE MAAR WAS TE SMAL, en dat hoort hier zodat een volgende ronde de aanname niet opnieuw maakt.** `buildWorkoutDescription_` wordt bereikt als ZWO falsy is ÉN DSL `null`, en dat kan langs TWEE poorten. Punt 20 mat alleen de RIJ-poort. De tweede ligt EERDER: `buildWorkoutZwo_` én `buildWorkoutDsl_` vallen allebei uit op een LEGE of ontbrekende `structuur`, zonder ooit een rij-parser aan te raken. Die poort was nooit gemeten — en geeft eveneens nul.
-- **DE UITSLAG: 0 VAN DE 15275.** Gemeten over 5 doelen maal 11 weekvormen maal 13 doelStart-offsets maal 5 dosis-treden: **3575 weken, 15275 sessies, 64951 structuur-rijen**, met dekking Base 1815 / Build 880 / Peak 660 / Test 220 en mesoweek 1 tot en met 4 alle vier bezet — die laatste as is precies wat punt 20 miste. ZWO gelukt **15275 van de 15275**; DSL-terugval **0**; description-tak **0**; lege `structuur` **0**. Op rij-niveau `zwoStepFromRow_` null **0 van 64951** en `dslBlockFromRow_` null **0 van 64951**. En op APP-niveau, met `buildEventPayload` zelf gedraaid over de JSON-grens die de client passeert (`toSession` plus `JSON.stringify`): description-fallback in **0 van de 15275** payloads.
-- **DE NOEMER DIE HET VERDICT DRAAGT IS NIET 15275 MAAR ZEVEN, en dat is de eigenlijke uitkomst.** Die 64951 rijen zijn geen 64951 onafhankelijke steekproeven: de parser krijgt **7 distincte duur-vormen** binnen (`N min` 39899x, `N.N min` 17682x, `Nx N.N min` 5034x, `Nx N min` 1086x, `Nx N sec` 770x, `Nx Nmin` 272x, `Nx N.Nmin` 208x) en **1 vermogensvorm** (`N-NW`, 64951 van de 64951). Alle acht parsen. En `packages/engine/src/planner.ts` kan er per constructie geen achtste maken: de duurcel loopt via `+ " min"`, `+ " sec"`, `+ "min"` en het herhalings-voorvoegsel, de vermogenscel heeft precies ÉÉN producent (`wattsRange`, 14 van de 14 structuur-rij-literals). Een andere variant levert dezelfde zeven vormen met andere getallen erin — dus de bekende beperking van de as (lege `activities` en `weekplans`, andere variant-rotatie op de levende D1) kan deze uitkomst niet omgooien. DE CHAT WILDE HIER EEN TWEEDE MEETRONDE OP DRAAIEN en Daan wees dat af; hij had gelijk, en de regel staat nu in `docs/WERKWIJZE.md`.
-- **DE VINDPLAATS IN PUNT 21 WAS VEROUDERD.** `buildWorkoutDescription_` staat op `packages/engine/src/zones.ts:613`, niet op `:569`. Gecorrigeerd in `docs/ROADMAP.md`; de twee treffers in oudere STAND-blokken hieronder blijven staan — dat is historie, geen drift.
-- **DE TAK BLIJFT STAAN, en dat is een besluit.** Hij is aangeroepen (`workers/api/src/integrations/push.ts:92`) en getest (`selftest.test.ts:2609` en `:2625`); hij vuurt alleen nooit. Opruimen hoort NIET bij dit verdict: dat zou de laatste terugval weghalen bij precies de parser-wijziging die hem nodig kan maken.
-- **WAT DAAN MERKT: NIETS.** Er verandert geen letter aan de app.
-- **TWEE WERKWIJZE-AFSPRAKEN, beide in `docs/WERKWIJZE.md`:** (1) NIEUWE BULLET — de noemer van een dekkingsclaim is het aantal distincte INVOERVORMEN, niet de steekproefomvang; (2) TWEEDE AANLEIDING onder *toets een "per constructie onbereikbaar" op de ruimte waarin de app WERKT* — een bereikbaarheids-premisse noemt élke poort op het pad, niet de poort waarop hij is gemeten. Eén nieuwe bullet in plaats van twee, met de grond in punt 38: de bytemarge.
-- **OPENSTAAND, NIEUW: ROADMAP punt 38 — de opener-fetch kapt af en meldt het niet.** GEMETEN: de cap ligt rond 121200 bytes, `HANDOFF.md` kwam voor **19,8 procent** binnen (121196 van 610760, 2599 van 2954 regels niet), en `docs/WERKWIJZE.md` staat na deze ronde op **118399 bytes** — circa 2,8 kB marge terwijl deze ronde er 1561 kostte. Staat als item 5b in *De volgorde*, met de verliesloze ingreep erbij.
-- **VLOEREN NU: vitest-totaal 975 over 76 bestanden · engine-selftest-assert-count 1652 · lint-waarschuwingen 20**, alle vier afgelezen uit de gate van DEZE ronde. Onbewogen: docs-only, geen test geraakt. Lees ze zelf uit de suite; neem ze niet over uit dit blok.
-- **OPENSTAAND, elk item opnieuw gegrept in `docs/ROADMAP.md`:** 16 · 19 · 32 · 34 · 35 · 38. Punt 21 hoort er niet meer bij.
-
-FOCUS VOLGENDE CHAT: ROADMAP punt 38 — de opener-fetch kapt af en meldt het niet. Item 5b uit *De volgorde* in `docs/ROADMAP.md`, dus GEEN afwijking van de reeks: het punt is daar met reden vóór punt 19 gezet. TOOLING plus norm, geen engine en geen app. DE INGREEP IS EEN VERBATIM VERHUIZING — *Recon en bewijslast* naar `docs/WERKWIJZE-LESSEN.md`, vijfde URL in het opener-sjabloon, plus rotatie van `HANDOFF.md` naar `docs/HANDOFF-ARCHIEF.md` — dus de acceptatie-eis is dat elke verplaatste regel PRECIES ÉÉN KEER voorkomt over de twee bestanden, zoals bij de log-verhuizing. HERMEET DE BYTES ZELF; de getallen in punt 38 zijn een uitspraak over 7 augustus. Verse chat.
 
 De oudere STAND-blokken en de historische projectsecties staan in `docs/HANDOFF-ARCHIEF.md`.
 Dit bestand draagt de TWAALF nieuwste blokken; komt er een dertiende bij, dan schuift het oudste in
