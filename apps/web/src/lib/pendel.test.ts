@@ -1,5 +1,5 @@
 import type { PlannerDay, SettingsInput } from "@cadans/shared";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import { type ActValuesRow, derivePlannerGedaan } from "./activities";
 import { buildWeekProposal } from "./proposal";
 import {
@@ -21,10 +21,16 @@ import { buildWeekplanEntries } from "./weekplanBlob";
 const MAANDAG = "2026-07-27";
 const WOENSDAG = "2026-07-29";
 
-beforeAll(() => {
-  vi.useFakeTimers();
-  vi.setSystemTime(new Date(2026, 6, 29, 8, 0, 0));
-});
+// DE KLOK WORDT OP MODULE-NIVEAU GEPIND, NIET IN `beforeAll`, en dat is dragend. `const BLOB`
+// hieronder roept `buildWeekProposal` aan tijdens de MODULE-EVALUATIE, en die gaat vooraf aan elke
+// `beforeAll`. Met de pin in `beforeAll` zag die ene aanroep dus de ECHTE systeemklok terwijl alle
+// aanroepen in de tests op 2026-07-29 stonden, en de variant-keuze in de seed hangt daaraan.
+// GEMETEN 20-08-2026: de test was groen zolang de wandklok dicht bij 29 juli lag en werd rood toen
+// hij ruim drie weken verder stond — 509 in plaats van 530 op `v.minuten.gepland`, stabiel over vijf
+// runs, zonder dat er een letter aan de repo veranderd was. Een test die de wandklok binnenlaat
+// heeft een houdbaarheidsdatum; deze pin haalt die eruit.
+vi.useFakeTimers();
+vi.setSystemTime(new Date(2026, 6, 29, 8, 0, 0));
 afterAll(() => {
   vi.useRealTimers();
 });
