@@ -251,6 +251,31 @@ const VERWACHT = {
   }
 })();
 
+// ── DE MEETAS, GESCHEIDEN VAN DE IJKAS ───────────────────────────────────────────────────────
+// `VORMEN` hierboven is het IJKPUNT en blijft ONGEWIJZIGD: zijn gepinde reeks hoort bij precies
+// die zeven vormen, en de zelfcontrole hierboven bewaakt dat. Meten doe je op een EIGEN as.
+//
+// V6 valt af: die is qua dagen identiek aan V1 en verschilt alleen in welke dag "vandaag" is.
+// Voor een blok dat volledig vooruit ligt voegt dat niets toe.
+// WINTER komt erbij, OVERGENOMEN UIT `docs/PUNT16-RECON.md` §1(e): ma45 di60 do60, geen
+// pendeldagen. Die vorm ligt als enige ONDER de vijf-uursdrempel die `urenPrikkels` stuurt
+// (`PRIKKEL_UREN_DREMPEL = 5`), en juist daar ligt de vuldag ingeklemd tussen twee
+// kwaliteitsdagen.
+const WINTER = {
+  naam: "WINTER 2,75u ma45 di60 do60",
+  min: { 0: 45, 1: 60, 3: 60 },
+  pendel: [],
+  pendelDuurMin: 80,
+};
+const MEETAS = [
+  ...["V1", "V2", "V3", "V4", "V5", "V7"].map((k) => {
+    const v = VORMEN.find((x) => x.naam.startsWith(`${k} `));
+    if (!v) throw new Error(`weekvorm ${k} niet gevonden in de ijkas`);
+    return v;
+  }),
+  WINTER,
+];
+
 // ── DE ACTIVITEIT ────────────────────────────────────────────────────────────────────────────
 // Rij van 17 velden, de vorm uit `punt15.test.ts`: idx0 Date, idx1 "Ride", idx3 duur in minuten,
 // idx15 de zone-JSON Z1..Z5 in SECONDEN.
@@ -349,6 +374,12 @@ const DOELEN = [
 // die fase kent geen sleutelsessie en levert per constructie quotum 0.
 const FASE_OFFSET = { Base: 0, Build: -28, Peak: -56 };
 
+const WEEKDAGEN = ["ma", "di", "wo", "do", "vr", "za", "zo"];
+const parseISO = (s) => {
+  const [y, m, d] = String(s).split("-").map(Number);
+  return new RealDate(y, m - 1, d).getTime();
+};
+
 const blokkenVan = (entry) =>
   Array.isArray(entry?.blokken) ? entry.blokken : [];
 const minutenVan = (entry) =>
@@ -414,18 +445,60 @@ function cel(doel, vorm, offset) {
   });
   const uit = ref ? blokUitvoering(ref) : null;
 
-  // (c) — vuldagen van de EERSTE week van de cel; de vier weken delen hun weekvorm.
-  const eersteWeek = weekplans.filter((e) => {
-    const dm = e?.datum ?? "";
-    return dm >= blokStart && dm < schuif_(blokStart, 7);
-  });
-  const vuldagen = eersteWeek.filter(isVuldag);
-  const opDatum = new Map(eersteWeek.map((e) => [e.datum, e]));
-  const buurDraagt = vuldagen.some((v) => {
-    const voor = opDatum.get(schuif_(v.datum, -1));
-    const na = opDatum.get(schuif_(v.datum, 1));
-    return (voor && draagtWerkzone(voor)) || (na && draagtWerkzone(na));
-  });
+  // (c) en (d) — PER WEEK, niet alleen de eerste: de vier weken van een cel delen hun weekvorm
+  // maar niet hun plan, want de mesoweek en de recency-seed bewegen mee.
+  const weken = [];
+  for (let i = 0; i < 4; i++) {
+    const maandag = schuif_(blokStart, i * 7);
+    const eind = schuif_(blokStart, (i + 1) * 7);
+    const inWeek = weekplans.filter((e) => {
+      const dm = e?.datum ?? "";
+      return dm >= maandag && dm < eind;
+    });
+    const dagIndex = (d) =>
+      Math.round((parseISO(d) - parseISO(maandag)) / 864e5);
+    const werkdagen = inWeek.filter(draagtWerkzone);
+    // De dag met de hoogste TSS van die week — de referent voor (f).
+    const topTss = inWeek.reduce(
+      (best, e) =>
+        best === null || (Number(e.tss) || 0) > (Number(best.tss) || 0)
+          ? e
+          : best,
+      null,
+    );
+
+    const vuldagen = inWeek.filter(isVuldag).map((v) => {
+      // (d) — de afstand tot de DICHTSTBIJZIJNDE dag met een werkzone-label.
+      const afstanden = werkdagen.map((w) =>
+        Math.abs(dagIndex(w.datum) - dagIndex(v.datum)),
+      );
+      return {
+        datum: v.datum,
+        weekdag: WEEKDAGEN[dagIndex(v.datum)] ?? "?",
+        minuten: Math.round(minutenVan(v) * 10) / 10,
+        variantId: v.variantId ?? null,
+        naam: v.naam ?? null,
+        afstandWerkzone: afstanden.length > 0 ? Math.min(...afstanden) : null,
+        afstandTopTss: topTss
+          ? Math.abs(dagIndex(topTss.datum) - dagIndex(v.datum))
+          : null,
+      };
+    });
+
+    // (f) — bij meer dan één vuldag: welke ligt het VERST van de zwaarste dag?
+    let kandidaat = null;
+    let gelijkspel = null;
+    if (vuldagen.length > 1 && topTss) {
+      const max = Math.max(...vuldagen.map((v) => v.afstandTopTss));
+      const winnaars = vuldagen.filter((v) => v.afstandTopTss === max);
+      kandidaat = winnaars[0].datum;
+      gelijkspel = winnaars.length > 1;
+    }
+
+    weken.push({ maandag, vuldagen, kandidaat, gelijkspel });
+  }
+
+  const alleVuldagen = weken.flatMap((w) => w.vuldagen);
 
   return {
     doel,
@@ -433,15 +506,18 @@ function cel(doel, vorm, offset) {
     fase: Object.keys(FASE_OFFSET).find((k) => FASE_OFFSET[k] === offset),
     geleverd: uit ? uit.geleverd : null,
     beoordeeldeWeken: ref ? ref.weeks.filter((w) => w.telt).length : 0,
-    vuldagen: vuldagen.length,
-    buurDraagt,
+    weken,
+    // (c) uit blok 1 blijft op de EERSTE week staan, zodat die uitslag vergelijkbaar blijft.
+    vuldagen: weken[0].vuldagen.length,
+    buurDraagt: weken[0].vuldagen.some((v) => v.afstandWerkzone === 1),
+    vuldagenTotaal: alleVuldagen.length,
   };
 }
 
 function nulmeting() {
   const cellen = [];
   for (const doel of DOELEN)
-    for (const vorm of VORMEN)
+    for (const vorm of MEETAS)
       for (const offset of Object.values(FASE_OFFSET))
         cellen.push(cel(doel, vorm, offset));
   return cellen;
@@ -467,6 +543,96 @@ const precies1 = cellen.filter((c) => c.vuldagen === 1).length;
 const meer = cellen.filter((c) => c.vuldagen > 1).length;
 const geen = cellen.filter((c) => c.vuldagen === 0).length;
 const metBuur = cellen.filter((c) => c.vuldagen > 0 && c.buurDraagt).length;
+
+// ── (d) (e) (f) — de PLEK-inventaris, over een selectie cellen ───────────────────────────────
+// De low-pool van `genericPools_` (`planner.ts:1661`) draagt VIER varianten. Die lijst staat hier
+// als NOEMER, niet als filter: een vuldag met een variantId erbuiten is zelf een bevinding.
+const LOW_POOL = ["z2_steady", "z2_cadans", "z2_progressief", "z2_nuchter"];
+
+function inventaris(sel) {
+  const weken = sel.flatMap((c) => c.weken);
+  const vuldagen = weken.flatMap((w) => w.vuldagen);
+
+  const perWeek = { 0: 0, 1: 0, 2: 0, "3+": 0 };
+  for (const w of weken) {
+    const n = w.vuldagen.length;
+    perWeek[n >= 3 ? "3+" : n]++;
+  }
+
+  const afstand = { 1: 0, 2: 0, "3+": 0, geen: 0 };
+  for (const v of vuldagen) {
+    if (v.afstandWerkzone === null) afstand.geen++;
+    else if (v.afstandWerkzone >= 3) afstand["3+"]++;
+    else afstand[v.afstandWerkzone]++;
+  }
+
+  const perWeekdag = {};
+  const duren = [];
+  const perVariant = {};
+  let zonderVariant = 0;
+  for (const v of vuldagen) {
+    perWeekdag[v.weekdag] = (perWeekdag[v.weekdag] ?? 0) + 1;
+    duren.push(v.minuten);
+    if (v.variantId == null) zonderVariant++;
+    else perVariant[v.variantId] = (perVariant[v.variantId] ?? 0) + 1;
+  }
+  duren.sort((a, b) => a - b);
+  const mediaan = duren.length ? duren[Math.floor(duren.length / 2)] : null;
+
+  const meerdere = weken.filter((w) => w.vuldagen.length > 1);
+  const uniek = meerdere.filter((w) => w.gelijkspel === false).length;
+  const gelijk = meerdere.filter((w) => w.gelijkspel === true).length;
+
+  return {
+    cellen: sel.length,
+    weken: weken.length,
+    vuldagen: vuldagen.length,
+    perWeek,
+    afstand,
+    perWeekdag,
+    duur: duren.length
+      ? { min: duren[0], mediaan, max: duren[duren.length - 1] }
+      : null,
+    perVariant,
+    zonderVariant,
+    meerdere: meerdere.length,
+    uniek,
+    gelijk,
+  };
+}
+
+function drukInventaris(kop, inv) {
+  console.log(
+    `${kop} — ${inv.cellen} cellen, ${inv.weken} weken, ${inv.vuldagen} vuldagen`,
+  );
+  console.log(
+    `  (d) vuldagen per week: 0 in ${inv.perWeek[0]}, 1 in ${inv.perWeek[1]}, 2 in ${inv.perWeek[2]}, 3 of meer in ${inv.perWeek["3+"]} van de ${inv.weken}`,
+  );
+  console.log(
+    `  (d) afstand tot de dichtstbijzijnde werkzone-dag: 1 dag ${inv.afstand[1]}, 2 dagen ${inv.afstand[2]}, 3 of meer ${inv.afstand["3+"]}, geen werkzone-dag ${inv.afstand.geen} van de ${inv.vuldagen}`,
+  );
+  console.log(
+    `  (d) weekdag: ${
+      Object.entries(inv.perWeekdag)
+        .map(([k, n]) => `${k} ${n}`)
+        .join(", ") || "geen"
+    }`,
+  );
+  if (inv.duur)
+    console.log(
+      `  (d) duur min/mediaan/max: ${inv.duur.min} / ${inv.duur.mediaan} / ${inv.duur.max}`,
+    );
+  const varianten = [
+    ...LOW_POOL,
+    ...Object.keys(inv.perVariant).filter((k) => !LOW_POOL.includes(k)),
+  ];
+  console.log(
+    `  (e) variantId: ${varianten.map((k) => `${k} ${inv.perVariant[k] ?? 0}`).join(", ")} - zonder variantId ${inv.zonderVariant} - noemer ${inv.vuldagen}`,
+  );
+  console.log(
+    `  (f) weken met meer dan een vuldag: ${inv.meerdere} - keuze uniek ${inv.uniek}, gelijkspel ${inv.gelijk}`,
+  );
+}
 
 if (ALS_JSON) {
   console.log(JSON.stringify({ ijking: ijk, cellen }, null, 2));
@@ -495,4 +661,28 @@ if (ALS_JSON) {
   console.log(
     `  cellen met een vuldag waarvan de buurdag wel een werkzone draagt: ${metBuur}`,
   );
+  console.log("");
+  drukInventaris("ALLE DOELEN", inventaris(cellen));
+  console.log("");
+  drukInventaris(
+    "(g) ONDERHOUD",
+    inventaris(cellen.filter((c) => c.doel === "Onderhoud")),
+  );
+  console.log("");
+  drukInventaris(
+    "(g) ONDERHOUD op WINTER",
+    inventaris(
+      cellen.filter((c) => c.doel === "Onderhoud" && c.vorm === WINTER.naam),
+    ),
+  );
+  const winterCellen = cellen.filter(
+    (c) => c.doel === "Onderhoud" && c.vorm === WINTER.naam,
+  );
+  console.log("  de vuldagen zelf, per week:");
+  for (const c of winterCellen)
+    for (const w of c.weken)
+      for (const v of w.vuldagen)
+        console.log(
+          `    ${c.fase} ${w.maandag} ${v.weekdag} ${v.minuten} min - variantId ${v.variantId ?? "GEEN"} - "${v.naam}" - afstand werkzone ${v.afstandWerkzone}`,
+        );
 }
