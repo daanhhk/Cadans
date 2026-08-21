@@ -81,6 +81,15 @@ daarmee lexicografisch op string. Activiteiten staan als datetime opgeslagen, al
 als kale dag — een filter dat een kale dag tegen een datetime legt, sluit die dag per constructie
 uit.
 
+**De weekallocator dateert zich op de AMBIENT systeemklok, en dat is de enige plek waar de engine
+dat doet.** `assignWorkouts` bepaalt zijn peildatum met `stripTime_(new Date())` en geeft die door
+aan `allocateQualityWeek_`; die gebruikt hem om te bepalen welke dagen nog te plannen zijn. Ligt de
+week in het VERLEDEN, dan is geen enkele dag meer eligible, levert de allocator een leeg plan en
+staan alle rollen op null — de hele weekbrede laag is dan stil inert, zonder foutmelding. Een
+fixture of meetopstelling met een week in het verleden meet die laag dus niet, en leest nul waar het
+mechanisme wél leeft. Wie op de allocator-rollen poort, poort op iets dat in zo'n week leeg is.
+Overal elders in de engine komt de datum als parameter binnen.
+
 **Alles hangt aan een gepinde tijdzone.** De engine formatteert met lokale getters; de correctheid
 leunt op `TZ=Europe/Amsterdam`. Het root-testscript zet die pin via `cross-env`. Een gedeployde
 Worker draait UTC; dat verschil staat als openstaande schuld en niet als opgelost.

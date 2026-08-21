@@ -50,9 +50,9 @@ Claude neemt de technische beslissingen zelf en vraagt alleen wat vanuit Daans p
 
 `daanhhk/training` is publiek en **bevroren op `3e8090a`**. Lees die bron **direct** als eerste reflex bij elke parity-vraag — architectuur én vormgevingslogica — nooit uit geheugen en nooit uit een samenvatting.
 
-- **Chat-Claude**: kloon de publieke repo's read-only in de container (`git clone --depth 1` van `daanhhk/training` en `daanhhk/Cadans`) en grep. Byte-exact en sneller dan losse fetches. Anders `raw.githubusercontent.com/daanhhk/training/3e8090a/<pad>`.
-- **CC**: leest de GAS-bron van schijf (`C:\Users\daan\Projects\training`, read-only) — **nooit via WebFetch**, dat geeft een lossy parafrase.
-- De regel "de chat kan de repo niet lezen" geldt **alleen de uncommitte lokale Cadans-staat**. De GAS-bron en de gecommitte Cadans-code lees je gewoon zelf.
+- **Chat-Claude: INGETROKKEN per 21-08-2026.** De regel luidde: kloon de publieke repo's read-only in de container (`git clone --depth 1` van `daanhhk/training` en `daanhhk/Cadans`) en grep; byte-exact en sneller dan losse fetches. REDEN VAN INTREKKING: de chat kan de LEVENDE staat per constructie niet zien — een kloon geeft de gecommitte boom en niet de werkboom, en de uitkomst van een meting hangt aan wat er NU draait. Elke zelfmeting produceerde daarmee aannames die CC daarna moest corrigeren. Parity- en staatvragen lopen sindsdien via een RECON-prompt aan CC. De regel blijft hier staan omdat een verwijderde regel opnieuw wordt uitgevonden.
+- **CC**: leest de GAS-bron van schijf (`C:\Users\daan\Projects\training`, read-only) — **nooit via WebFetch**, dat geeft een lossy parafrase. Sinds de intrekking hierboven is dit de ENIGE route naar de bevroren bron.
+- De regel "de chat kan de repo niet lezen" geldt sinds 21-08-2026 ZONDER uitzondering. Ze gold eerder alleen de uncommitte lokale Cadans-staat; nu geldt ze ook voor de gecommitte code en de GAS-bron.
 - `VORMGEVING-SPEC.md`, `HANDOFF.md` en de recon-docs zijn een gepinde **samenvatting**, geen vervanging. Verifieer elke parity-claim tegen de bron.
 - **GAS is een PORT-referentie, geen normbron.** De bevroren bron beantwoordt uitsluitend "hebben we functie X destijds getrouw overgezet". Hij beantwoordt NOOIT "is dit de juiste waarde": waar een getal vandaan komt zegt niets over of het klopt. Is er een meting op de echte reeks, dan wint die, en dan is de herkomst van het oude getal geen bespreking waard — een fork hoeft niet als fork verantwoord te worden. Aanleiding: bij de TSS-ijking werd de GAS-oorsprong van de weging 0,7/0,95/1,05 opgezocht om de wijziging als "bewuste fork" te labelen, terwijl HANDOFF §7 GAS al gesloten had verklaard en de meting het antwoord al gaf. TWEEDE KEER: bij de sweet-spot-sleutelvraag zocht de chat opnieuw de GAS-bron op, ditmaal om vast te stellen of de ontbrekende sleutel-intent een geporte omissie was of Cadans-drift. Die vraag deed er niet toe — de norm stond al in `DOELEN-SPEC` §3.1 en de meting gaf het antwoord — en Daan wees het terecht af. De bron is nooit nodig om een WIJZIGING te verantwoorden.
 
@@ -142,6 +142,8 @@ ronde eindigde op de stopregel. (b) Het close-out-prompt gaf een correctie-instr
 ze; ze kostten twee rondes.
 - **De gate staat VÓÓR de commit in de stap-volgorde, en geen invulplek hangt af van een latere stap.** Een prompt die eerst laat committen en daarna de gate draait, dwingt CC tot herordenen of tot getallen uit het geheugen — en dat laatste is precies wat de vloer-regel verbiedt. Aanleiding: de close-out van punt 36 zette de commit op STAP 7 en de gate op STAP 8, terwijl het STAND-blok twee vloeren uit die gate moest halen. CC keerde de volgorde om en meldde het.
 - **DE BRON-UITLEZING HOORT IN DE EERSTE VERSIE VAN EEN PROMPT, NIET IN DE OVERTYPRONDE.** Een prompt dat GROEIT bij het overtypen is een prompt dat te vroeg geschreven is: de correcties die er dan bij komen zijn geen aanscherping maar reparatie van wat er nooit in had mogen ontbreken. Aanleiding: het meet-prompt van punt 36 ronde 3 kreeg pas bij het overtypen drie correcties — de venster-splitsing tussen zaai-markers en de rest, het aantal settle-markers als instrumentcontrole, en de warmloop vóór het ijkpaar — en GÉÉN ervan kwam uit het CC-rapport. Ze kwamen alle drie uit een herlezing van `tools/shots/shot.mjs` die vóór de eerste versie had moeten gebeuren, en die laatste (de warmloop) had de meting zonder meer verpest. Lees de bron dus vóór je schrijft, niet vóór je verstuurt.
+- **ELK GETAL IN EEN PROMPT DRAAGT ZIJN HERKOMST, in één label achter het getal.** `RECON <hash>` als het uit een CC-rapport komt en bij welke commit, `GEPIND <document>` als het uit een gepind document komt, `BESLUIT` als het een keuze van Daan of van de chat is. Een getal zonder label is een AANNAME, en sinds de chat niet meer zelf meet is dat het enige onderscheid dat er nog is tussen een gemeten feit en een herinnering. Dit is dezelfde regel als de herkomst-eis op een voorstel, nu op de prompt zelf.
+- **CC LEIDT ZIJN EIGEN CONDITIE AF; de chat schrijft die niet voor.** Wat een ronde doet — ALTIJD, METING, HARNESS, DEPLOY, COMMIT of ENGINE — volgt uit de stappen, en CC draait de bijbehorende checks uit `docs/CC-CHECKS.md` en meldt in het rapport welke condities golden en welke checks hij gedraaid heeft. Een prompt die de conditie vóórschrijft zet de uitvoerder op een lijst in plaats van op zijn eigen oordeel, en dan valt een check weg zodra de chat er niet aan dacht.
 
 ## Vorm van een CC-rapport
 
@@ -240,7 +242,7 @@ ELKE NIEUWE OF GEWIJZIGDE WERKWIJZE-AFSPRAAK KRIJGT IN DEZELFDE CLOSE-OUT EEN GE
 
 Het nieuwe STAND-blok gaat BOVENAAN in `HANDOFF.md`, boven het vorige, en vervangt of verwijdert niets. Het eindigt ALTIJD op een `FOCUS VOLGENDE CHAT`-regel. Die twee zijn geen stijl maar een afhankelijkheid: de opener draagt de stand niet meer zelf en wijst naar dat blok, dus een blok dat onderaan belandt of geen FOCUS draagt laat de volgende chat met lege handen staan.
 
-ELKE CLOSE-OUT RAPPORTEERT DE BYTES VAN DE ZES BESTANDEN DIE DE OPENER OPHAALT, met de marge tot de
+ELKE CLOSE-OUT RAPPORTEERT DE BYTES VAN DE VIER BESTANDEN DIE DE OPENER OPHAALT, met de marge tot de
 afkapgrens van circa 121000. Dat is de vooruitkijkende helft van het vangnet: de eind-marker vangt een
 afkap die AL gebeurd is, deze regel ziet hem aankomen. Loopt een bestand binnen twee rondes tegen de
 grens, dan is de ingreep dezelfde als bij het log en de lessen — verplaats wat alleen achteraf
@@ -263,8 +265,15 @@ en herschreef de regel naar een formulering die de eigen hash niet noemt. Een bl
 naar EERDERE commits met hun hash, en naar zichzelf uitsluitend met "deze close-out" — de hash
 en de bytes van de eigen commit staan in het CC-rapport, waar ze wél te meten zijn.
 
-`HANDOFF.md` DRAAGT MAXIMAAL TWAALF STAND-BLOKKEN. Komt er een dertiende bij, dan verhuist het oudste
-in dezelfde close-out verbatim naar `docs/HANDOFF-ARCHIEF.md`, dat de opener niet ophaalt.
+`HANDOFF.md` DRAAGT MAXIMAAL TWEE STAND-BLOKKEN, per 21-08-2026 en tot dan twaalf. Komt er een derde
+bij, dan verhuizen de oudste in dezelfde close-out verbatim naar `docs/HANDOFF-ARCHIEF.md`, dat de
+opener niet ophaalt.
+
+REDEN VOOR DE VERSCHERPING: de opener droeg de stand mee als HISTORIE, en twaalf blokken is een
+verslag van drie weken werk waarvan de nieuwe chat er één nodig heeft. De rest kostte fetch-marge
+en nodigde uit tot redeneren op een oude stand. Wat een chat moet weten staat in het bovenste blok
+en in de FOCUS-regel; wat hij daarnaast nodig heeft vraagt hij op bij CC. De oudere blokken zijn
+niet weg — ze staan verbatim in het archief en git houdt sowieso alles.
 
 Na het close-out-rapport schrijft de chat de opener voor de volgende chat uit, verbatim uit *§ Opener-sjabloon*.
 
@@ -281,7 +290,7 @@ ondoorzichtig: er is per ronde vooruitgang zichtbaar maar nooit de afstand tot d
 
 ## Opener-sjabloon
 
-**De afsluitende chat schrijft de opener uit** — verbatim uit dit sjabloon, in één code-blok, ná het close-out-rapport (dan pas is de hash bekend). Er valt nog maar ÉÉN ding in te vullen: `<hash>`, op alle zes de URL's dezelfde close-out-hash. STAND en FOCUS worden NIET overgenomen — de opener WIJST naar het bovenste STAND-blok in `HANDOFF.md` in plaats van het na te vertellen. `docs/TRAININGSMODEL.md` staat er sinds 04-08-2026 bij: dat is de NORM-laag voor de trainingskant, en zonder die URL reconstrueert elke chat de coach-bril in plaats van hem te lezen. Verder niets toevoegen op de marker-regel na: de werkwijze staat hier, niet in de opener. Daan hoeft niets samen te stellen; hij krijgt één kant-en-klaar blok.
+**De afsluitende chat schrijft de opener uit** — verbatim uit dit sjabloon, in één code-blok, ná het close-out-rapport (dan pas is de hash bekend). Er valt nog maar ÉÉN ding in te vullen: `<hash>`, op alle vier de URL's dezelfde close-out-hash. STAND en FOCUS worden NIET overgenomen — de opener WIJST naar het bovenste STAND-blok in `HANDOFF.md` in plaats van het na te vertellen. `docs/TRAININGSMODEL.md` staat er sinds 04-08-2026 bij: dat is de NORM-laag voor de trainingskant, en zonder die URL reconstrueert elke chat de coach-bril in plaats van hem te lezen. `docs/ARCHITECTUUR.md` staat er sinds 21-08-2026 bij en verving de twee LESSEN-bestanden: de chat meet niet meer zelf, dus hij heeft de bewijslast-regels niet nodig maar wél een kaart van wat er per constructie niet kan. Verder niets toevoegen op de marker-regel na: de werkwijze staat aan CC's kant, niet in de opener. Daan hoeft niets samen te stellen; hij krijgt één kant-en-klaar blok.
 
 Reden voor die vorm: een opener die de stand overschrijft laat dezelfde tekst op twee plekken leven die elk per chat muteren — precies de drift die dit document moest opheffen. Eén bron, en de opener verwijst ernaar.
 
@@ -299,26 +308,43 @@ terugkijkende helft van het vangnet — de byte-regel in *Close-out van een chat
 Dat leunt op twee eisen aan de close-out, en zonder die twee is de verwijzing loos: het nieuwste STAND-blok staat BOVENAAN in `HANDOFF.md`, en élk STAND-blok eindigt op een expliciete `FOCUS VOLGENDE CHAT`-regel. Zie *Close-out van een chat*.
 
 --- BEGIN OPENER ---
-Lees eerst deze zes via web_fetch (RAW, gepind op commit-hash — NIET de blob-URL, die is stale):
-https://raw.githubusercontent.com/daanhhk/Cadans/<hash>/docs/WERKWIJZE.md
-https://raw.githubusercontent.com/daanhhk/Cadans/<hash>/docs/WERKWIJZE-LESSEN.md
-https://raw.githubusercontent.com/daanhhk/Cadans/<hash>/docs/WERKWIJZE-LESSEN-GEREEDSCHAP.md
-https://raw.githubusercontent.com/daanhhk/Cadans/<hash>/docs/TRAININGSMODEL.md
+Lees eerst deze vier via web_fetch (RAW, gepind op commit-hash — NIET de blob-URL, die is stale):
 https://raw.githubusercontent.com/daanhhk/Cadans/<hash>/HANDOFF.md
+https://raw.githubusercontent.com/daanhhk/Cadans/<hash>/docs/ARCHITECTUUR.md
+https://raw.githubusercontent.com/daanhhk/Cadans/<hash>/docs/TRAININGSMODEL.md
 https://raw.githubusercontent.com/daanhhk/Cadans/<hash>/docs/DOELEN-SPEC.md
 
-Elk van deze zes eindigt op een regel `<!-- EINDE <pad> -->`. Zie je die regel bij een bestand niet
-staan, dan is de fetch afgekapt: meld dat en werk niet verder op dat document.
+Elk van deze vier eindigt op een regel `<!-- EINDE <pad> -->`. Zie je die regel bij een bestand
+niet staan, dan is de fetch afgekapt: meld dat en werk niet verder op dat document.
 
-WERKWIJZE.md is canoniek voor hoe we werken en leidend bij tegenspraak; de twee LESSEN-bestanden
-dragen de bewijslast-regels waarop die norm rust — WERKWIJZE-LESSEN.md die over de VORM van
-bewijs gaan, WERKWIJZE-LESSEN-GEREEDSCHAP.md die aan een tool, bestand, commando of harness in
-deze repo hangen; TRAININGSMODEL.md is de NORM-laag voor de trainingskant en gaat vóór
-DOELEN-SPEC; HANDOFF.md is de projectstand; DOELEN-SPEC.md draagt de VASTGESTELDE doel-besluiten
-en wordt niet heropend.
+HANDOFF.md is de projectstand. ARCHITECTUUR.md beschrijft hoe de app in elkaar zit en wat er
+per constructie niet kan. TRAININGSMODEL.md is de NORM voor de trainingskant en gaat vóór
+DOELEN-SPEC.md, dat de VASTGESTELDE doel-besluiten draagt en niet heropend wordt.
 Cadans = Cloudflare-herbouw van de trainings-app: pnpm-monorepo, pure engine + Workers/D1 + React-PWA.
-Je kunt mijn uncommitte lokale staat (C:\Users\daan\Projects\cadans, Windows/PowerShell, via Remote
-Control) niet lezen; de gecommitte Cadans-code en de bevroren GAS-bron lees je wel gewoon zelf.
+
+JOUW ROL — coach en architect.
+1. Je denkt mee over wat deze renner nodig heeft, en je schrijft de prompts die Claude Code
+   (CC) aan het werk zetten. CC bouwt, meet en commit; jij denkt en stuurt.
+2. JE MEET NIET ZELF. Elk feit over de levende repo komt uit een CC-rapport. Je kloont niet,
+   je grept niet, je leidt geen staat af uit een document.
+3. Elk getal in een prompt draagt zijn herkomst: RECON <hash>, GEPIND <document>, of BESLUIT.
+   Een getal zonder label is een aanname en hoort er niet in.
+4. Weet je iets niet, dan vraag je het aan CC. Een plausibele aanname is een fout.
+5. Een ronde die op de levende staat leunt, opent met een RECON-prompt: read-only, geen commit.
+6. Een ronde die een MECHANISME wijzigt, krijgt een WAT-ALS vóór de bouw, met jouw verwachting
+   er expliciet in, zodat die toetsbaar is.
+7. Je eindigt op een BESLUIT, nooit op "of wil je X?". Bij echte ambiguïteit een popup mét je
+   advies in de begeleidende proza.
+8. CC-prompt: één plain code-blok zonder taal-tag, stap-instructies in het Nederlands, gate vóór
+   de commit, rapport in platte tekst zonder code-fences.
+9. CC leidt zelf af welke conditie zijn ronde draagt en draait de bijbehorende checks uit
+   docs/CC-CHECKS.md. Jij zet die conditie niet.
+10. De volledige werkwijze en de lessen staan aan CC's kant. Heb je een regel nodig, vraag CC
+    hem op — haal hem niet uit je geheugen.
+
+Je kunt mijn lokale repo (C:\Users\daan\Projects\cadans, Windows/PowerShell, via Remote Control)
+niet lezen. De bevroren GAS-bron daanhhk/training @ 3e8090a is de parity-referentie; vraag CC
+ernaar wanneer een parity-vraag speelt.
 
 Volg de FOCUS uit het bovenste STAND-blok.
 --- EINDE OPENER ---

@@ -3,6 +3,27 @@
 Instructies voor Claude Code in deze repo. Chat-Claude is architect en schrijft de prompts; jij voert uit.
 De volledige werkwijze staat in `docs/WERKWIJZE.md` — bij tegenspraak wint dat document.
 
+## De procesdocumenten staan aan JOUW kant
+
+Sinds 21-08-2026 haalt de opener van chat-Claude ze niet meer op. Hij leest alleen `HANDOFF.md`,
+`docs/ARCHITECTUUR.md`, `docs/TRAININGSMODEL.md` en `docs/DOELEN-SPEC.md`. De werkwijze, de lessen
+en de controles draag JIJ: `docs/WERKWIJZE.md`, `docs/WERKWIJZE-LESSEN.md`,
+`docs/WERKWIJZE-LESSEN-GEREEDSCHAP.md` en `docs/CC-CHECKS.md`.
+
+**Je leidt je eigen CONDITIE af.** Niet de chat. Kijk naar wat de ronde werkelijk doet en bepaal
+welke van de zes gelden — ALTIJD, METING, HARNESS, DEPLOY, COMMIT, ENGINE. ALTIJD geldt zonder
+uitzondering; de andere vijf gelden zodra de ronde die soort werk raakt. Een ronde draagt er vaak
+meer dan één.
+
+**Je draait de bijbehorende checks uit `docs/CC-CHECKS.md`** en meldt in het rapport WELKE condities
+golden en WELKE checks je gedraaid hebt. Schrijft een prompt een conditie voor, dan is dat hoogstens
+een aanwijzing: klopt hij niet met wat de ronde doet, dan volg je je eigen afleiding en meld je dat
+als afwijking. Een lijst die de uitvoerder krijgt aangereikt mist precies de check waar de opsteller
+niet aan dacht.
+
+**Vraagt de chat om een regel, citeer hem dan VERBATIM** met zijn vindplaats erbij, en vat hem niet
+samen. De chat heeft die tekst niet meer; een parafrase wordt daar de nieuwe regel.
+
 ## Harde grenzen
 
 - **Nooit schrijven** in `C:\Users\daan\Projects\training` — de oude, nog live Apps-Script-app, bevroren op HEAD `3e8090a`. Read-only lezen voor recon mag. Elk rapport bevestigt: training onaangeroerd, HEAD `3e8090a`.
