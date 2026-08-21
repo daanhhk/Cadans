@@ -1696,6 +1696,14 @@ punten staat onder *Gesloten — vindplaats*.
     W1 gaat van 257,2 naar **157,2** — wie in zijn herstelweek MEER invult dan gewend, wordt dieper
     gekort. Dat volgt uit de norm, en het betekent dat de app beschikbare tijd laat liggen.
 46. **`docs/WERKWIJZE-LESSEN.md` loopt naar de opener-cap** — AF 10-08-2026 · TOOLING.
+    **ACHTERHAALD PER 21-08-2026, en dat hoort bovenaan zodat de cijfers hieronder niet meer als
+    runway gelezen worden.** De opener haalt `docs/WERKWIJZE-LESSEN.md` en
+    `docs/WERKWIJZE-LESSEN-GEREEDSCHAP.md` niet meer op: beide staan sinds de werkwijze-omkering aan
+    CC's kant. De cap-vraag voor die twee bestaat daarmee niet meer. De opener draagt nu vier
+    bestanden — `HANDOFF.md`, `docs/ARCHITECTUUR.md`, `docs/TRAININGSMODEL.md` en
+    `docs/DOELEN-SPEC.md` — en het krapste daarvan is `HANDOFF.md`, dat zichzelf begrenst met de
+    rotatie op TWEE STAND-blokken. De meting hieronder blijft staan als vindplaats van de methode,
+    niet als geldende marge.
     HERMETEN 10-08-2026, bij de close-out van punt 43. VÓÓR die close-out: **107224 bytes**, marge
     **13776** tot circa 121000. ERNA, en dit is het getal dat telt: **110213 bytes**, marge
     **10787** — die ene close-out kostte **2989 bytes**, want hij droeg zeven lessen. Het bestand is
