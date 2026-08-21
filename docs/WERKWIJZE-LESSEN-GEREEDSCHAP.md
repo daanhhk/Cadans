@@ -513,5 +513,14 @@ helft. Nieuwe of gewijzigde lessen krijgen in dezelfde close-out een gedateerde 
   zien. Gemeten 20-08-2026 bij de pendel-fix. WERKT WEL: `pnpm vitest run --project web <pad>`.
   Let op dat die vorm de TZ-pin van het root-script MIST — zet `TZ=Europe/Amsterdam` erbij zodra de
   uitslag van de tijdzone kan afhangen.
+- **DE KLOK IS EEN FIXTURE-VARIABELE IN ELKE TEST DIE OP DE WEEK-ALLOCATOR LEUNT.**
+  `allocateQualityWeek_` dateert zich op de ambient `new Date()`. Ligt de fixture-week in het
+  VERLEDEN, dan is geen enkele dag eligible, geeft `quotaPlan` op ALLE dagen `null` en is de
+  allocator stil inert — de test meet dan niets en staat groen. Aanleiding: T2 van punt 16 stond op
+  0 in plaats van 1 tot de klok op de fixture-maandag gepind was; `quotaPlan` gaf `0:null 1:null
+  3:null 5:null`. GEVOLG DAT VERDER REIKT DAN DE TEST: waar de allocator inert is, is er per
+  constructie geen ANKER, ook als dagen wel een kwaliteitstype dragen — de types komen daar uit de
+  per-dag-takken en niet uit het weekplan. Wie op `quotaPlan` poort, poort dus op iets dat in een
+  verleden week leeg is.
 
 <!-- EINDE docs/WERKWIJZE-LESSEN-GEREEDSCHAP.md -->

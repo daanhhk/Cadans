@@ -552,7 +552,7 @@ punten staat onder *Gesloten — vindplaats*.
     de fit-poort schaalt vanzelf mee naar 117 — maar blijft GEPARKEERD achter punt 17: ze mikt op
     13,8 minuten tekort over 18 cellen bij een event zonder datum, en het eigenlijke tekort is een
     NORM-vraag. Dat maakt punt 15 af en punt 17 de opvolger.
-16. **De goedkope bereik-prikkel** — open · ENGINE plus norm. Een prikkel boven de drempel die
+16. **De goedkope bereik-prikkel** — GEBOUWD 21-08-2026, BEREIK 15 VAN 420 · ENGINE plus norm. Een prikkel boven de drempel die
     TOEVOEGT in plaats van RUILT: sprints of hard starts aan het eind van een Z2-rit, of een korte
     set achter sweet-spot-werk. Kwam binnen bij punt 14 fase 2, waar de RUIL-vorm meetbaar is
     afgewezen (7 van 7 weekvormen zwakker, blok-oordeel van 7 van 7 naar 0 van 7) en de TOEVOEG-vorm
@@ -596,6 +596,23 @@ punten staat onder *Gesloten — vindplaats*.
     beoordeelde zone-cellen draagt een plan onder 3 minuten — en dus vooruit-bedrading; de prikkel
     alleen zet het blok-oordeel op een muntworp. N wordt in de bouwronde geijkt op de as "hoeveel
     blok-cellen kantelen bij welke N", en NOOIT hier gekozen.
+    **GEBOUWD per 21-08-2026 in `5f8a63c3050511bd786720432008cd621647ff77`, en het bereik hoort in
+    dezelfde adem.** De prikkel is 6 herhalingen van 30 seconden op 150 procent FTP — 3,0 anaerobe
+    werkminuten — op ÉÉN vuldag per week, en hij landt in **15 van de 420 gemeten weken**. Zonder
+    de ruimte-ondergrens zouden dat er 294 zijn; de set kost 25,5 minuten inclusief herstel en die
+    passen niet in de endurance-fill van een typische vuldag. Dit punt leest dus als AF terwijl het
+    in circa 4 procent van de weken vuurt — correct begrensd, nauwelijks werkzaam.
+    DE VLOER staat als `MATERIALITEIT_MIN_MINUTEN` op `apps/web/src/lib/blok.ts:46`, toegepast in
+    `poortsetVoorWeek_` (`:415`) zodat BEIDE aanroepers gedekt zijn, met N gepind op **4**. GEIJKT
+    over de as 0 tot 10: geen enkele N verandert het geleverd-oordeel (105 van de 105 bij
+    uitvoeringsschaal 1,00 en 78 bij 0,95, over de HELE as). Wat N wél doet is de anaerobe poort
+    dichthouden op weken waar alleen de prikkel anaerobe minuten levert — 9 weken en 9 zone-cellen
+    tussen N 3 en 3,5. De vloer is dus een POORT-effect en geen oordeel-effect. De voorspelling
+    hierboven dat de vloer inert zou zijn, is daarmee bevestigd voor het OORDEEL en weerlegd voor
+    de POORT.
+    **TWEE OPEN VERVOLGVRAGEN, coach-canon en niet door een chat te beslissen:** (1) moet de set
+    korter, of moet de ruimte anders gevonden worden, gegeven een bereik van 15 van de 420;
+    (2) blijft de vloer staan nu vaststaat dat hij geen oordeel raakt.
 17. **De norm is voor de klim-doelen onbereikbaar** — af · NORM plus BIBLIOTHEEK. GEMETEN op
     weekvorm V1 in Build, norm én plan op DEZELFDE dosis-trede: FTP levert 95 tegen 84, 108,2 tegen
     96 en 121,4 tegen 108 en is overal GELEVERD; Korte beklimmingen levert 68,5 tegen 78, 79,6
@@ -1952,7 +1969,10 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
    verschillen op 985 distincte regels, en de krapste opener-marge van 10787 naar 56166. Het
    knelpunt ligt sindsdien bij `HANDOFF.md`, dat zichzelf begrenst op twaalf STAND-blokken.
    **DE VOLGENDE IS 6e.**
-7. **16** — de materialiteitsvloer en de prikkel, in EEN bouw. Zie `docs/PUNT16-RECON.md` §5.
+7. **16** — AF (21-08-2026) — de materialiteitsvloer en de prikkel, in EEN bouw. Zie
+   `docs/PUNT16-RECON.md` §5. **AFGEVINKT:** gebouwd in `5f8a63c`, drie blokken (harness, plek-recon,
+   bouw). Bereik 15 van de 420 weken, vloer N = 4 en aantoonbaar zonder oordeel-effect; de twee
+   vervolgvragen staan bij punt 16 in *De reeks*. **DE VOLGENDE IS 8 — punt 34.**
 8. **34** — de effect-referent kent het doel niet. M5-schending bij drie van de vijf doelen.
 9. **35** — een event draagt geen duur. Deblokkeert punt 13 fase B.
 10. **13 fase B** — de doelvraag na het event.
@@ -2128,13 +2148,6 @@ niet; hij verliest niet. Een punt gaat eruit zodra een STAP het opneemt — niet
 
 ### TOOLING
 
-- ER STAAT GEEN MEETSCRIPT VOOR DE PLAN-METINGEN IN DE REPO, terwijl de les na punt 43 voorschrijft
-  dat wie een reeks in een document zet het script erbij commit. Elke ronde bouwt zijn
-  esbuild-bundel opnieuw en ijkt hem opnieuw op 21 van de 21 gepinde waarden. Gegrept op
-  11-08-2026: `tools/` draagt alleen `audit` en `shots`, en GEEN ENKEL `.mjs` in de repo roept de
-  planner aan — de acht buiten `scripts/` zijn de audit- en shot-tooling, de vier erbinnen zijn
-  API-rooktests plus een dist-helper. Een gecommit meetharnas met de weekvorm-as en de
-  volume-as W1..W7 zou die ijkstap per ronde wegnemen; de kosten en de vorm zijn niet uitgemeten.
 - `/api/health` DRAAGT GEEN VERSIEVELD, waardoor een deploy niet op de endpoint zelf te verifiëren
   is. Hij geeft `{"ok":true,"service":"cadans-api"}` — dat bewijst dat de Worker leeft, niet welke
   bundel eronder zit. Bij de deploy van punt 43 (10-08-2026) is daarom uitgeweken naar

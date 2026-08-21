@@ -10,6 +10,78 @@ of uit de publieke repo.
 
 De levende projectstand staat in `HANDOFF.md`, met de twaalf nieuwste STAND-blokken.
 
+**PUNT 19 IS AF — GESLOTEN ZONDER APARTE BOUW (8 augustus 2026).** De kalendernaam is gemeten en
+blijkt een symptoom; wat eronder ligt is groter en staat nu als punt 39 tot en met 42. Docs-only:
+geen code, geen engine, geen migratie, geen deploy, en geen enkel `wrangler`-commando. Commits:
+`40bf49228f6050accb0a405c71743312575948f1` plus deze close-out. Prod en D1 staan waar het blok
+hieronder ze noemt; grep die twee daar op in plaats van ze hier over te schrijven.
+- **GEEN DEPLOY, EN DAT IS GEEN UITSTEL.** Er is geen letter aan de app veranderd — dit was een
+  meetronde, een verdict en twee norm-regels.
+- **DE METING.** `buildWeekProposal` zelf aangeroepen uit een esbuild-bundel, `TZ=Europe/Amsterdam`,
+  klok als Proxy op de echte `Date`. Zeven weekvormen maal vijf doelen maal vijf
+  fase-configuraties maal twaalf doelStart-offsets: **2100 weken, 8700 dag-cellen met sessie**.
+  Instrument eerst geijkt met A/A: **0 afwijkende cellen**. De ingreep is puur het LABEL —
+  dezelfde dag, dezelfde minuten, `dagtype` van `weekend` naar `vrij`.
+- **UITSLAG: 369 CELLEN OVER 291 WEKEN, in twee families zonder rest.** Familie 1, de deload-tak,
+  324 cellen: 49680 tegen 19440 minuten, TSS 35640 tegen 6804. Familie 2, de
+  allocator-weekendpaarregel, 45 cellen — uitsluitend weekvorm V7, uitsluitend korte (33) en
+  lange (12) beklimmingen, de twee profielen met `weekendBlok` true. Die rust op `DOELEN-SPEC`
+  §3.4 VASTGESTELD en is buiten scope.
+- **TWEE PREMISSEN VAN PUNT 19 ZIJN WEERLEGD**, en dat hoort hier zodat een volgende ronde ze niet
+  opnieuw maakt. Verstreken en gereden dagen bereiken de takken NOOIT: `proposal.ts:528` geeft
+  `assignWorkouts` alleen `tePlannen`. En de taper-tak behandelt vrij en weekend in ÉÉN conditie
+  (`planner.ts:817`), dus die kan per constructie niet uiteenlopen — 0 verschillen over 420
+  Recovery-weken. Van de vier genoemde routes leeft alleen **deload**.
+- **WAT ER VANDAAG ECHT VERDWIJNT IS KLEIN.** Weekenddagen verliezen **0** minuten, doordeweekse
+  dagen **1482 minuten over 76 dagen**, en dat treft alleen dagen boven een uur. Op Daans eigen
+  weekvorm nul. Onderhoud geeft 0 cellen (`mesoCyclus: false`). De kalendernaam werkt vandaag dus
+  eerder mee dan tegen: hij houdt de lange dag lang. Beide voor de hand liggende reparaties zijn
+  gemeten en allebei slechter — alles als weekend geeft TSS 201 met NUL kwaliteitsminuten, alles
+  als vrij geeft TSS 100 maar snijdt blind in opgegeven tijd.
+- **HET DEFECT ERONDER, en dat is de opbrengst van deze ronde.** Op Daans weekvorm gaat de
+  herstelweek van 286 naar 285 minuten terwijl de drempelminuten van 98 naar 10 gaan: het volume
+  blijft staan en de hele daling komt uit de prikkel. Kwaliteitsdagen 3 naar 1, belasting 63
+  procent. WAT WEL KLOPT: de overgebleven kwaliteitsdag houdt zijn karakter — drempel op 98 tot
+  105 procent FTP — en halveert alleen zijn blokduur van 18 naar 10 minuten, precies M76. Wat niet
+  klopt is de verdeling eromheen, en de lange rit blijft juist staan omdat de dag weekend heet.
+  Staat als **M79 (HEURISTIEK)** en **M80 (BEVINDING)** in `docs/TRAININGSMODEL.md`.
+- **TWEE EIGEN FOUTEN, allebei door Daan gevangen, en de les staat in `docs/WERKWIJZE-LESSEN.md`.**
+  De chat noemde de herstelweek "grijs rijden" terwijl er nul minuten Z3 in staat, en daarna
+  "het karakter verandert" terwijl de kwaliteitsdag zijn zone gewoon behoudt. Beide oordelen
+  rustten op `voorgesteldType`; de `blokken` met hun `pctLo`/`pctHi` stonden in dezelfde
+  meetuitvoer en zijn niet gelezen.
+- **M78 REPRODUCEERT NIET.** Over mesoweek 1 tot 4 staan de blokpercentages stil (99, 100, 98,
+  95-99 en 89-92 procent FTP) en beweegt alleen de duur: 5/7/9/12 naar 5/8/10/13 naar 6/8/10/14
+  naar 3/4/5. Op DEZE as schaalt `mesoFactor` dus duur en geen %FTP. ÉÉN AS — dat is een
+  aanleiding tot hertoetsing en GEEN intrekking. Staat als punt 42.
+- **DE TID-BRUG, en die legt het meetgat bloot.** Het app-plan omgerekend naar het Seiler-3-zone-
+  model (Z1 onder 80 procent FTP, Z2 80 tot 100, Z3 daarboven), doel FTP in Base: 3,0u 62/38/0 ·
+  4,75u 70/24/6 · 5,0u 69/31/0 · 8,0u 76/15/9 · 12,0u 84/12/3. Het plan is piramidaal en wordt dat
+  sterker met de uren; er is GEEN polarisatie-kanteling op 8 à 10 uur, en anaeroob verschijnt
+  alleen bij 8,0u om bij 10, 12 en 15 uur weer op nul te staan. Maar de uitspraak is niet
+  toetsbaar zolang het app-label `drempel` zowel sweetspot (89-92) als bovendrempel (98-105)
+  draagt en dus dwars door LT2 loopt. Dat is punt 40, en het blokkeert punt 39 en punt 41.
+- **DE PLAN-KANT IS SPLITSBAAR ZONDER NIEUWE DATABRON**, want elk blok draagt `pctLo` en `pctHi`.
+  De GELEVERDE kant niet: de zonegrenzen komen uit intervals `power_zones` en staan op
+  55/75/90/105 procent (`apps/web/src/lib/zonemunt.ts:41`), waardoor LT2 midden in de vierde
+  bucket valt. Punt 40 vraagt dus geen intervals-werk, geen custom zones en geen streams.
+- **WAT DAAN MERKT: NIETS.** Er verandert geen letter aan de app.
+- **VLOEREN NU: vitest-totaal 975 over 76 bestanden · engine-selftest-assert-count 1652 ·
+  lint-waarschuwingen 20**, alle vier afgelezen uit de gate van DEZE ronde. Onbewogen: docs-only,
+  geen test geraakt. Lees ze zelf uit de suite; neem ze niet over uit dit blok.
+- **OPENSTAAND, elk item opnieuw gegrept in `docs/ROADMAP.md`:** 16 · 32 · 34 · 35 · 39 · 40 · 41 ·
+  42. Punt 19 hoort er niet meer bij.
+
+FOCUS VOLGENDE CHAT: ROADMAP punt 40 — het drempel-label loopt dwars door de LT2-grens. Item 6 uit
+*De volgorde* in `docs/ROADMAP.md`, dus GEEN afwijking van de reeks: punt 19 stond daar en is
+vervangen omdat de meting het tot symptoom maakte. NORM-NEUTRAAL: er verandert geen enkele
+training, alleen de zichtbaarheid — sweetspot en bovendrempel krijgen ieder hun eigen label zodat
+een methodiek-uitspraak überhaupt toetsbaar wordt. ENGINE, dus RECON-FIRST met een
+stop-en-verifieer voordat er één regel engine wordt aangeraakt; een echte engine-bug wordt
+geflagd, nooit stilzwijgend gepatcht. GEEN intervals-werk nodig: de plan-kant is splitsbaar uit
+`pctLo`/`pctHi`. Punt 40 deblokkeert punt 41 (de weekmix-meting) en punt 39 (de herstelweek).
+Verse chat.
+
 **PUNT 38 IS AF (8 augustus 2026).** De opener-fetch kapt niet meer af, en waar hij dat ooit weer
 doet meldt hij het. Docs-only: geen code, geen engine, geen migratie, geen deploy, en geen enkel
 `wrangler`-commando. Commits: `fe817efb6b1063f8e2b7976c273de767b3b3d3f8` (de verhuizing) plus deze

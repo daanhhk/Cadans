@@ -13,6 +13,66 @@ live tot cutover.
 
 ## Stand
 
+STAND 2026-08-21 — PUNT 16 IS GEBOUWD EN STAAT IN MAIN, MAAR VUURT IN 4 PROCENT VAN DE WEKEN
+(item 7). Commit `5f8a63c3050511bd786720432008cd621647ff77`, CI success, run
+https://github.com/daanhhk/Cadans/actions/runs/32455214216. NIET GEDEPLOYD — prod en D1 staan waar
+het blok hieronder ze noemt.
+- **DE PRIKKEL.** 6 herhalingen van 30 seconden op 150 procent FTP, samen **3,0 anaerobe
+  werkminuten**, met 4,5 minuut herstel ertussen. Hij landt op ÉÉN vuldag per week, gekozen op de
+  grootste afstand in trainingsdagen tot het zwaarste anker; gelijkspel valt op de laagste
+  `dagIdx`, deterministisch. ANKERS ZIJN `quality` ÉN `longride_efforts` — die tweede draagt sinds
+  punt 15 zijn eigen efforts, en hem als vuldag behandelen zou de sprints naast bestaand werk
+  leggen. Doel **Onderhoud krijgt er nooit een**: daar ligt de vuldag in alle 108 gemeten gevallen
+  op afstand 1 van een werkzone-dag.
+- **HET GEMETEN BEREIK IS 15 VAN DE 420 WEKEN, en dat is geen schuld die stil blijft.** Zonder de
+  ruimte-ondergrens zouden het er **294** zijn: de set kost 25,5 minuten inclusief herstel en die
+  passen niet in de endurance-fill van een typische vuldag. De reservering komt uit de bestaande
+  bronnen in de volgorde van de kwaliteits-ramp — eerst de fill, dan de cooldown tot 5, dan de
+  warmup tot 8 — zodat de sessieduur exact `mins` blijft. Zonder die reservering kwam het plan
+  gemeten **25,5 minuten boven de opgegeven ruimte** uit (555,5 tegen 530 weekminuten). De ingreep
+  is dus correct begrensd en nauwelijks werkzaam.
+- **DE VLOER.** `MATERIALITEIT_MIN_MINUTEN` op `apps/web/src/lib/blok.ts:46`, toegepast IN
+  `poortsetVoorWeek_` (`:415`) zodat beide aanroepers gedekt zijn — een vloer bij één aanroeper
+  bijt maar half. **N gepind op 4.** Over de hele as 0 tot 10 verandert GEEN ENKELE N het
+  geleverd-oordeel: 105 van de 105 bij uitvoeringsschaal 1,00 en 78 bij 0,95, overal. Wat N wél
+  doet is de anaerobe poort dichthouden waar alleen de prikkel anaerobe minuten levert: 9 weken en
+  9 zone-cellen tussen N 3 en 3,5. Een POORT-effect, geen oordeel-effect.
+- **ARCHITECTUURFEIT DAT DE ENGINE ALLEEN NIET TOONT.** De prikkel-vlag reist van `assignWorkouts`
+  via `apps/web/src/lib/proposal.ts` (`:719` en `:771`) naar `buildWorkout` en `renderVariant_`. De
+  engine produceert niet zelfstandig een prikkel — `assignWorkouts` maakt geen blokken, hij zet
+  types; de CLIENT geeft door. Wie de keten alleen in `packages/engine` zoekt, vindt hem niet.
+- **`prikkelUit` op `BuildProposalInput` IS EEN MEET-SCHAKELAAR, GEEN FEATURE-VLAG.** Hij bestaat
+  omdat een BASISLIJN-fixture de prikkelloze uitvoer moet kunnen meten. Vier gebruikers:
+  `weekvormAs.test.ts`, `dosisTrede.test.ts` (twee gevallen) en de ijking in
+  `tools/punt16/meet.mjs`. Hun verwachtingen zijn ONGEWIJZIGD gebleven.
+- **HET INSTRUMENT STAAT IN DE REPO.** `tools/punt16/meet.mjs` — blok 1 `a94edd8`, uitgebreid in
+  blok 2 `3cdd785`. Geijkt op de weekvorm-as, **21 van de 21**, met een zelfcontrole die stopt
+  zodra die reeks in `weekvormAs.test.ts` herijkt wordt en het script niet. Het parkeerlijst-item
+  dat elke ronde zijn eigen esbuild-instrument opnieuw bouwde, is daarmee VERVALLEN en verwijderd.
+- **VLOEREN NU: vitest-totaal 986 over 78 bestanden · engine-selftest-assert-count 1772 ·
+  lint-waarschuwingen 20**, alle vier afgelezen uit de gate van DEZE ronde. Lees ze zelf uit de
+  suite; neem ze niet over uit dit blok.
+- **TWEE OPEN VERVOLGVRAGEN OP PUNT 16, coach-canon en niet door een chat te beslissen:** (1) moet
+  de set korter of moet de ruimte anders gevonden worden, gegeven een bereik van 15 van de 420;
+  (2) blijft de vloer staan nu vaststaat dat hij geen oordeel raakt.
+- **OPENSTAAND, elk item opnieuw gegrept in `docs/ROADMAP.md`:** 32 · 34 · 35. Punt 16 hoort er
+  niet meer bij. Het eerstvolgende open item in *De volgorde* is **item 8 — punt 34**, de
+  effect-referent die het doel niet kent.
+
+FOCUS VOLGENDE CHAT: DE WERKWIJZE ZELF, en dat is een BEWUSTE AFWIJKING van de volgorde — het
+eerstvolgende open item is punt 34 en dat blijft wachten. DE REDEN STAAT IN DEZE SESSIE. Ze leverde
+in de PLAN-laag — de stap tussen punt kiezen en prompt schrijven, waar geen enkele poort staat —
+vijf fouten: drie verzonnen faseringen ("fase 1" en "blok 2/3" bestonden niet in de ROADMAP), een
+bouwspec op `assignWorkouts` terwijl die functie geen blokken produceert, een setvorm die de
+beschikbare ruimte met 25,5 minuten overschreed, en een vloer gebouwd op een defect dat de gekozen
+setvorm zelf al wegnam. Alle vijf zijn gevangen door CC of door Daan; GEEN ENKELE door een
+bestaande regel. De engine-autorisatie-regel vuurde daarentegen voor het eerst en werkte wél — hij
+stopte een bouw op de verkeerde functie vóór er een letter geschreven was. MATERIAAL VOOR DIE
+RONDE, en bewust nog NIET tot regel gemaakt: hoort de plan-laag poorten te krijgen naar het model
+van de vijf promptcontroles, of moet er juist iets WEG — die tweede richting is nooit onderzocht.
+Overweeg te TELLEN wat de close-outs al noemen: overtredingen per ronde plus de laag waarin ze
+vielen, zodat er na vijf rondes een getal ligt in plaats van een gevoel. Verse chat.
+
 STAND 2026-08-20 — PUNT 44 IS AF, GESLOTEN ZONDER BOUW (item 6e). Docs-only: geen code, geen
 engine, geen migratie, geen deploy, geen enkel `wrangler`-commando. Prod en D1 staan waar het blok
 hieronder ze noemt.
@@ -634,78 +694,6 @@ macrofasen heen. MEET OP DE BAND, NIET OP HET ZONE-LABEL — dat is M81, en het 
 40 heeft vrijgemaakt; de drie naden 81-88, 94-95 en 109-112 staan in M82. Punt 41 vraagt of het
 plan bij hoger volume hoort te polariseren en of de Z3-reeks variant-rotatie is; punt 42 of
 `mesoFactor` %FTP werkelijk schaalt. Eindigt op een VERDICT, geen bouw. Verse chat.
-
-**PUNT 19 IS AF — GESLOTEN ZONDER APARTE BOUW (8 augustus 2026).** De kalendernaam is gemeten en
-blijkt een symptoom; wat eronder ligt is groter en staat nu als punt 39 tot en met 42. Docs-only:
-geen code, geen engine, geen migratie, geen deploy, en geen enkel `wrangler`-commando. Commits:
-`40bf49228f6050accb0a405c71743312575948f1` plus deze close-out. Prod en D1 staan waar het blok
-hieronder ze noemt; grep die twee daar op in plaats van ze hier over te schrijven.
-- **GEEN DEPLOY, EN DAT IS GEEN UITSTEL.** Er is geen letter aan de app veranderd — dit was een
-  meetronde, een verdict en twee norm-regels.
-- **DE METING.** `buildWeekProposal` zelf aangeroepen uit een esbuild-bundel, `TZ=Europe/Amsterdam`,
-  klok als Proxy op de echte `Date`. Zeven weekvormen maal vijf doelen maal vijf
-  fase-configuraties maal twaalf doelStart-offsets: **2100 weken, 8700 dag-cellen met sessie**.
-  Instrument eerst geijkt met A/A: **0 afwijkende cellen**. De ingreep is puur het LABEL —
-  dezelfde dag, dezelfde minuten, `dagtype` van `weekend` naar `vrij`.
-- **UITSLAG: 369 CELLEN OVER 291 WEKEN, in twee families zonder rest.** Familie 1, de deload-tak,
-  324 cellen: 49680 tegen 19440 minuten, TSS 35640 tegen 6804. Familie 2, de
-  allocator-weekendpaarregel, 45 cellen — uitsluitend weekvorm V7, uitsluitend korte (33) en
-  lange (12) beklimmingen, de twee profielen met `weekendBlok` true. Die rust op `DOELEN-SPEC`
-  §3.4 VASTGESTELD en is buiten scope.
-- **TWEE PREMISSEN VAN PUNT 19 ZIJN WEERLEGD**, en dat hoort hier zodat een volgende ronde ze niet
-  opnieuw maakt. Verstreken en gereden dagen bereiken de takken NOOIT: `proposal.ts:528` geeft
-  `assignWorkouts` alleen `tePlannen`. En de taper-tak behandelt vrij en weekend in ÉÉN conditie
-  (`planner.ts:817`), dus die kan per constructie niet uiteenlopen — 0 verschillen over 420
-  Recovery-weken. Van de vier genoemde routes leeft alleen **deload**.
-- **WAT ER VANDAAG ECHT VERDWIJNT IS KLEIN.** Weekenddagen verliezen **0** minuten, doordeweekse
-  dagen **1482 minuten over 76 dagen**, en dat treft alleen dagen boven een uur. Op Daans eigen
-  weekvorm nul. Onderhoud geeft 0 cellen (`mesoCyclus: false`). De kalendernaam werkt vandaag dus
-  eerder mee dan tegen: hij houdt de lange dag lang. Beide voor de hand liggende reparaties zijn
-  gemeten en allebei slechter — alles als weekend geeft TSS 201 met NUL kwaliteitsminuten, alles
-  als vrij geeft TSS 100 maar snijdt blind in opgegeven tijd.
-- **HET DEFECT ERONDER, en dat is de opbrengst van deze ronde.** Op Daans weekvorm gaat de
-  herstelweek van 286 naar 285 minuten terwijl de drempelminuten van 98 naar 10 gaan: het volume
-  blijft staan en de hele daling komt uit de prikkel. Kwaliteitsdagen 3 naar 1, belasting 63
-  procent. WAT WEL KLOPT: de overgebleven kwaliteitsdag houdt zijn karakter — drempel op 98 tot
-  105 procent FTP — en halveert alleen zijn blokduur van 18 naar 10 minuten, precies M76. Wat niet
-  klopt is de verdeling eromheen, en de lange rit blijft juist staan omdat de dag weekend heet.
-  Staat als **M79 (HEURISTIEK)** en **M80 (BEVINDING)** in `docs/TRAININGSMODEL.md`.
-- **TWEE EIGEN FOUTEN, allebei door Daan gevangen, en de les staat in `docs/WERKWIJZE-LESSEN.md`.**
-  De chat noemde de herstelweek "grijs rijden" terwijl er nul minuten Z3 in staat, en daarna
-  "het karakter verandert" terwijl de kwaliteitsdag zijn zone gewoon behoudt. Beide oordelen
-  rustten op `voorgesteldType`; de `blokken` met hun `pctLo`/`pctHi` stonden in dezelfde
-  meetuitvoer en zijn niet gelezen.
-- **M78 REPRODUCEERT NIET.** Over mesoweek 1 tot 4 staan de blokpercentages stil (99, 100, 98,
-  95-99 en 89-92 procent FTP) en beweegt alleen de duur: 5/7/9/12 naar 5/8/10/13 naar 6/8/10/14
-  naar 3/4/5. Op DEZE as schaalt `mesoFactor` dus duur en geen %FTP. ÉÉN AS — dat is een
-  aanleiding tot hertoetsing en GEEN intrekking. Staat als punt 42.
-- **DE TID-BRUG, en die legt het meetgat bloot.** Het app-plan omgerekend naar het Seiler-3-zone-
-  model (Z1 onder 80 procent FTP, Z2 80 tot 100, Z3 daarboven), doel FTP in Base: 3,0u 62/38/0 ·
-  4,75u 70/24/6 · 5,0u 69/31/0 · 8,0u 76/15/9 · 12,0u 84/12/3. Het plan is piramidaal en wordt dat
-  sterker met de uren; er is GEEN polarisatie-kanteling op 8 à 10 uur, en anaeroob verschijnt
-  alleen bij 8,0u om bij 10, 12 en 15 uur weer op nul te staan. Maar de uitspraak is niet
-  toetsbaar zolang het app-label `drempel` zowel sweetspot (89-92) als bovendrempel (98-105)
-  draagt en dus dwars door LT2 loopt. Dat is punt 40, en het blokkeert punt 39 en punt 41.
-- **DE PLAN-KANT IS SPLITSBAAR ZONDER NIEUWE DATABRON**, want elk blok draagt `pctLo` en `pctHi`.
-  De GELEVERDE kant niet: de zonegrenzen komen uit intervals `power_zones` en staan op
-  55/75/90/105 procent (`apps/web/src/lib/zonemunt.ts:41`), waardoor LT2 midden in de vierde
-  bucket valt. Punt 40 vraagt dus geen intervals-werk, geen custom zones en geen streams.
-- **WAT DAAN MERKT: NIETS.** Er verandert geen letter aan de app.
-- **VLOEREN NU: vitest-totaal 975 over 76 bestanden · engine-selftest-assert-count 1652 ·
-  lint-waarschuwingen 20**, alle vier afgelezen uit de gate van DEZE ronde. Onbewogen: docs-only,
-  geen test geraakt. Lees ze zelf uit de suite; neem ze niet over uit dit blok.
-- **OPENSTAAND, elk item opnieuw gegrept in `docs/ROADMAP.md`:** 16 · 32 · 34 · 35 · 39 · 40 · 41 ·
-  42. Punt 19 hoort er niet meer bij.
-
-FOCUS VOLGENDE CHAT: ROADMAP punt 40 — het drempel-label loopt dwars door de LT2-grens. Item 6 uit
-*De volgorde* in `docs/ROADMAP.md`, dus GEEN afwijking van de reeks: punt 19 stond daar en is
-vervangen omdat de meting het tot symptoom maakte. NORM-NEUTRAAL: er verandert geen enkele
-training, alleen de zichtbaarheid — sweetspot en bovendrempel krijgen ieder hun eigen label zodat
-een methodiek-uitspraak überhaupt toetsbaar wordt. ENGINE, dus RECON-FIRST met een
-stop-en-verifieer voordat er één regel engine wordt aangeraakt; een echte engine-bug wordt
-geflagd, nooit stilzwijgend gepatcht. GEEN intervals-werk nodig: de plan-kant is splitsbaar uit
-`pctLo`/`pctHi`. Punt 40 deblokkeert punt 41 (de weekmix-meting) en punt 39 (de herstelweek).
-Verse chat.
 
 De oudere STAND-blokken en de historische projectsecties staan in `docs/HANDOFF-ARCHIEF.md`.
 Dit bestand draagt de TWAALF nieuwste blokken; komt er een dertiende bij, dan schuift het oudste in
