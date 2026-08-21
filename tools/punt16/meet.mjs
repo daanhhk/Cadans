@@ -56,6 +56,16 @@ const ALS_JSON = ARGS.includes("--json");
 
 const ANAEROOB_SCHAAL = Number(argVal("anaeroob") ?? "1") || 1;
 
+// ROADMAP punt 16 — de MATERIALITEITSVLOER in plan-minuten. Weggelaten → de constante uit
+// `apps/web/src/lib/blok.ts`. `--materialiteit=0` moet expliciet 0 kunnen zetten, dus geen `||`.
+const _mat = argVal("materialiteit");
+const MATERIALITEIT = _mat == null ? undefined : Number(_mat);
+// `--n-ijking` draait de hele as in één run en print alleen de vier getallen per N.
+const N_IJKING = ARGS.includes("--n-ijking");
+// De ACTIEVE anaerobe schaal. Mutabel omdat de N-ijking hem per doorloop verzet; buiten die modus
+// staat hij op de waarde van `--anaeroob` en beweegt hij niet.
+let SCHAAL_NU = ANAEROOB_SCHAAL;
+
 /** `--prikkel=8@105-120` → één blok van 8 minuten op 105-120 %FTP. Leeg = geen prikkel. */
 function parsePrikkel(spec) {
   if (!spec) return [];
@@ -284,7 +294,7 @@ function ritMet_(datumISO, z) {
   const row = new Array(17).fill(null);
   row[0] = new RealDate(y, m - 1, d, 9, 0, 0);
   row[1] = "Ride";
-  const anaeroob = (Number(z.anaeroob) || 0) * ANAEROOB_SCHAAL;
+  const anaeroob = (Number(z.anaeroob) || 0) * SCHAAL_NU;
   const delen = {
     rust: Number(z.rust) || 0,
     z2: Number(z.z2) || 0,
@@ -324,6 +334,10 @@ function meetVorm(v) {
     wellness: [],
     rpe: [],
     todayISO: iso(dagOffset),
+    // ROADMAP punt 16 — de IJKING meet de PRIKKELLOZE basislijn, net als `weekvormAs.test.ts`
+    // zelf. Zou de bereik-prikkel hier meedoen, dan verschuift het ijkpunt mee met elke latere
+    // wijziging aan die prikkel en ijkt dit instrument zichzelf niet meer.
+    prikkelUit: true,
   });
   let kwal = 0;
   let tss = 0;
@@ -391,7 +405,7 @@ const isVuldag = (entry) =>
 const draagtWerkzone = (entry) =>
   werkzoneLabelsVan_(blokkenVan(entry)).length > 0;
 
-function cel(doel, vorm, offset) {
+function cel(doel, vorm, offset, matMin = MATERIALITEIT) {
   const doelStart = iso(offset);
   const blokStart = iso(0);
   const weekplans = [];
@@ -442,6 +456,8 @@ function cel(doel, vorm, offset) {
     todayISO: schuif_(blokStart, 28),
     grenzen: ZONE5_GRENZEN_DEFAULT,
     weekplans,
+    // ROADMAP punt 16 — de N-as. Weggelaten op de commandoregel → `MATERIALITEIT_MIN_MINUTEN`.
+    materialiteitMin: matMin,
   });
   const uit = ref ? blokUitvoering(ref) : null;
 
@@ -495,7 +511,14 @@ function cel(doel, vorm, offset) {
       gelijkspel = winnaars.length > 1;
     }
 
-    weken.push({ maandag, vuldagen, kandidaat, gelijkspel });
+    // ROADMAP punt 16 — LANDDE DE SPRINTSET? De set is herkenbaar aan zijn eigen band: blokken
+    // op precies 150 %FTP komen nergens anders vandaan. Zo is "gevuurd" van buitenaf te tellen,
+    // zonder de vlag door de client-laag heen te hoeven exporteren.
+    const metSprints = inWeek.some((e) =>
+      blokkenVan(e).some((b) => b?.pctLo === 150 && b?.pctHi === 150),
+    );
+
+    weken.push({ maandag, vuldagen, kandidaat, gelijkspel, metSprints });
   }
 
   const alleVuldagen = weken.flatMap((w) => w.vuldagen);
@@ -506,6 +529,18 @@ function cel(doel, vorm, offset) {
     fase: Object.keys(FASE_OFFSET).find((k) => FASE_OFFSET[k] === offset),
     geleverd: uit ? uit.geleverd : null,
     beoordeeldeWeken: ref ? ref.weeks.filter((w) => w.telt).length : 0,
+    // ROADMAP punt 16 — de twee poort-getallen van de N-as: hoeveel BEOORDEELDE weken dragen
+    // anaeroob in hun poortset, en hoeveel zone-cellen staan er in totaal open.
+    anaeroobWeken: ref
+      ? ref.weeks.filter(
+          (w) => w.telt && (w.zonesVoorgeschreven ?? []).includes("anaeroob"),
+        ).length
+      : 0,
+    zoneCellen: ref
+      ? ref.weeks
+          .filter((w) => w.telt)
+          .reduce((a, w) => a + (w.zonesVoorgeschreven ?? []).length, 0)
+      : 0,
     weken,
     // (c) uit blok 1 blijft op de EERSTE week staan, zodat die uitslag vergelijkbaar blijft.
     vuldagen: weken[0].vuldagen.length,
@@ -514,13 +549,40 @@ function cel(doel, vorm, offset) {
   };
 }
 
-function nulmeting() {
+function nulmeting(matMin = MATERIALITEIT) {
   const cellen = [];
   for (const doel of DOELEN)
     for (const vorm of MEETAS)
       for (const offset of Object.values(FASE_OFFSET))
-        cellen.push(cel(doel, vorm, offset));
+        cellen.push(cel(doel, vorm, offset, matMin));
   return cellen;
+}
+
+// ── DE N-IJKING ──────────────────────────────────────────────────────────────────────────────
+// Per N vier getallen: geleverde cellen bij uitvoeringsschaal 1,00 en bij 0,95 (de schaal
+// UITSLUITEND op de anaerobe minuten — alles schalen meet een globaal tekort in plaats van de
+// anaerobe poort), plus het aantal weken met anaeroob in de poortset en het totale aantal
+// zone-cellen. Het PLATEAU is de breedste aaneengesloten reeks waarover alle vier stilstaan.
+if (N_IJKING) {
+  const AS = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 10];
+  console.log("N ; geleverd@1,00 ; geleverd@0,95 ; anaeroobWeken ; zoneCellen");
+  for (const N of AS) {
+    SCHAAL_NU = 1;
+    const a = nulmeting(N);
+    SCHAAL_NU = 0.95;
+    const b = nulmeting(N);
+    SCHAAL_NU = ANAEROOB_SCHAAL;
+    console.log(
+      [
+        N,
+        a.filter((c) => c.geleverd === true).length,
+        b.filter((c) => c.geleverd === true).length,
+        a.reduce((s, c) => s + c.anaeroobWeken, 0),
+        a.reduce((s, c) => s + c.zoneCellen, 0),
+      ].join(" ; "),
+    );
+  }
+  process.exit(0);
 }
 
 // ── UITVOER ──────────────────────────────────────────────────────────────────────────────────
@@ -583,10 +645,20 @@ function inventaris(sel) {
   const uniek = meerdere.filter((w) => w.gelijkspel === false).length;
   const gelijk = meerdere.filter((w) => w.gelijkspel === true).length;
 
+  // BEREIKBAARHEID van een ingreep in `renderVariant_`: die functie is de ENIGE producent die
+  // `variantId` zet (`planner.ts:1430`), dus alleen een vuldag MET variantId is daar te raken.
+  // Een week zonder zo'n vuldag ligt per constructie buiten het bereik.
+  const metVariant = weken.filter((w) =>
+    w.vuldagen.some((v) => v.variantId != null),
+  ).length;
+  const metSprints = weken.filter((w) => w.metSprints).length;
+
   return {
     cellen: sel.length,
     weken: weken.length,
     vuldagen: vuldagen.length,
+    metVariant,
+    metSprints,
     perWeek,
     afstand,
     perWeekdag,
@@ -631,6 +703,12 @@ function drukInventaris(kop, inv) {
   );
   console.log(
     `  (f) weken met meer dan een vuldag: ${inv.meerdere} - keuze uniek ${inv.uniek}, gelijkspel ${inv.gelijk}`,
+  );
+  console.log(
+    `  BEREIK renderVariant_: ${inv.metVariant} van de ${inv.weken} weken dragen minstens een vuldag MET variantId`,
+  );
+  console.log(
+    `  PRIKKEL GELAND: ${inv.metSprints} van de ${inv.weken} weken dragen een sprintset (blok op 150 %FTP)`,
   );
 }
 

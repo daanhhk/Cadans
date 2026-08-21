@@ -43,6 +43,17 @@ import {
  * zij zijn vulling om de sleutelsessies heen (DOELEN-SPEC §2A, residu). */
 export const WERKZONES: readonly Zone5Key[] = ["tempo", "drempel", "anaeroob"];
 
+/**
+ * ROADMAP PUNT 16 — DE MATERIALITEITSVLOER, in plan-minuten per week en per zone.
+ *
+ * Een werkzone telt pas mee in de poortset als het PLAN er minstens zoveel minuten van
+ * voorschrijft. HERKOMST: GEIJKT op een plateau, niet gekozen — zie het N-ijkingsblok in het
+ * CC-rapport van punt 16 en `tools/punt16/meet.mjs`, dat de as 0 tot 10 minuten doorrekent over
+ * 105 blok-cellen en per stap telt hoeveel cellen als geleverd lezen bij uitvoeringsschaal 1,00
+ * en 0,95.
+ */
+export const MATERIALITEIT_MIN_MINUTEN = 4;
+
 /** Vaste bloklengte: drie opbouwweken plus een deload. VAST — een blok dat zichzelf verlengt is niet
  * uit te leggen en maakt het plan onvoorspelbaar (DOELEN-SPEC §2A). */
 export const BLOK_WEKEN = 4;
@@ -402,6 +413,8 @@ export interface BlokReferent {
 function poortsetVoorWeek_(
   weekplans: unknown[] | null | undefined,
   weekMonday: string,
+  grenzen: readonly number[],
+  materialiteitMin: number,
 ): Zone5Key[] {
   if (!Array.isArray(weekplans)) return [];
   const zondag = shiftIso_(weekMonday, 6);
@@ -412,7 +425,16 @@ function poortsetVoorWeek_(
     if (o.datum < weekMonday || o.datum > zondag) continue;
     for (const z of werkzoneLabelsVan_(o.blokken)) gezien.add(z);
   }
-  return WERKZONES.filter((z) => gezien.has(z));
+  // ROADMAP PUNT 16 — DE MATERIALITEITSVLOER. Een werkzone komt pas in de poortset als het PLAN
+  // er minstens `materialiteitMin` minuten van voorschrijft. Zonder die vloer opent één enkele
+  // minuut in een zone een volwaardige norm-eis, en dan laat een prikkel van drie minuten de
+  // gebruiker zakken op een zone die het plan nauwelijks vraagt.
+  //
+  // DE VLOER STAAT HIER EN NIET BIJ EEN AANROEPER, en dat is dragend: deze functie heeft er TWEE
+  // — de blokpoort op `:550` en de eigen weekpoort op `:592`. Een vloer op één van beide bijt
+  // maar half, en dan hangt het oordeel ervan af welke poort die week toevallig wint.
+  const plan = planZonesVoorWeek_(weekplans, weekMonday, grenzen);
+  return WERKZONES.filter((z) => gezien.has(z) && plan[z] >= materialiteitMin);
 }
 
 /** ROADMAP punt 17 — HET OORDEEL VALT OP DE GETOONDE HELE MINUUT. Er is dus geen tolerantie
@@ -491,6 +513,10 @@ export function buildBlokReferent(input: {
   dosisTrede?: number | null;
   /** ROADMAP punt 6 fase 2 — de zone-grenzen; weggelaten → ZONE5_GRENZEN_DEFAULT. */
   grenzen?: readonly number[];
+  /** ROADMAP punt 16 — de MATERIALITEITSVLOER in plan-minuten per zone per week. Weggelaten →
+   * `MATERIALITEIT_MIN_MINUTEN`. Zelfde idioom als `grenzen` en `dosisTrede`: een expliciete,
+   * optionele term, zodat de N-ijking hem kan variëren zonder de constante aan te raken. */
+  materialiteitMin?: number;
   /** ROADMAP punt 14 fase 1 — de BEWAARDE weekplan-entries. Hieruit komt per week de poortset:
    * welke werkzone-labels het plan van die week voorschreef. Weggelaten → lege poortset → `telt`
    * false, want een week zonder bewaard plan is een DATAGAT en geen misser. */
@@ -547,7 +573,12 @@ export function buildBlokReferent(input: {
     let metPlan = 0;
     for (let i = 0; i < BLOK_OPBOUWWEKEN; i++) {
       const m = shiftIso_(input.startMonday, i * 7);
-      const poort = poortsetVoorWeek_(input.weekplans, m);
+      const poort = poortsetVoorWeek_(
+        input.weekplans,
+        m,
+        input.grenzen ?? ZONE5_GRENZEN_DEFAULT,
+        input.materialiteitMin ?? MATERIALITEIT_MIN_MINUTEN,
+      );
       if (poort.length === 0) continue;
       metPlan++;
       for (const z of poort) gezien.add(z);
@@ -589,7 +620,12 @@ export function buildBlokReferent(input: {
     //
     // FASE 1b — een EIGEN bewaard plan wint altijd: dat is specifieker dan de blokpoort. Pas als
     // die er niet is valt de week terug op het blok.
-    const eigenPoort = poortsetVoorWeek_(input.weekplans, weekMonday);
+    const eigenPoort = poortsetVoorWeek_(
+      input.weekplans,
+      weekMonday,
+      input.grenzen ?? ZONE5_GRENZEN_DEFAULT,
+      input.materialiteitMin ?? MATERIALITEIT_MIN_MINUTEN,
+    );
     const zonesVoorgeschreven = eigenPoort.length > 0 ? eigenPoort : blokPoort;
     const poortHerkomst: "week" | "blok" | "geen" =
       eigenPoort.length > 0 ? "week" : blokPoort.length > 0 ? "blok" : "geen";

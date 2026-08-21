@@ -100,6 +100,11 @@ function meet(
     wellness: [],
     rpe: [],
     todayISO: iso(dagOffset),
+    // ROADMAP punt 16 — DEZE AS IS DE PRIKKELLOZE BASISLIJN, en dat is de hele reden dat de
+    // schakelaar bestaat. `tools/punt16/meet.mjs` ijkt zich op deze reeks; zou de bereik-prikkel
+    // hier meedoen, dan verschuift het ijkpunt mee met een latere wijziging aan die prikkel en
+    // meet de as zichzelf niet meer. De reeks hieronder is daarom ONGEWIJZIGD gebleven.
+    prikkelUit: true,
   } as never);
   let kwal = 0;
   let tss = 0;

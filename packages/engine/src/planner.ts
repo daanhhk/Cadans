@@ -1025,6 +1025,89 @@ export function assignWorkouts(
       }
     });
   }
+
+  // ROADMAP PUNT 16 — DE GOEDKOPE BEREIK-PRIKKEL: KIES DE DAG.
+  //
+  // Deze pass BESLIST alleen; aanhechten gebeurt in `renderVariant_`. De scheiding is nodig
+  // omdat `assignWorkouts` geen blokken produceert — hij zet types, en de blokken ontstaan pas
+  // stroomafwaarts. Het veld `d.prikkelSprints` reist mee zoals `d.archetypeId` dat doet.
+  //
+  // STAAT DE VLAG NERGENS AAN, dan is de uitvoer byte-identiek aan vóór dit punt: `renderVariant_`
+  // laat de parameter dan weg en verandert niets. Dat is hetzelfde idioom als `dosisTrede`.
+  //
+  // WAAROM HELEMAAL AAN HET EIND, ná de wellness-pass: die pass kan een kwaliteitsdag alsnog naar
+  // recovery demoten en zijn `archetypeId` wissen. Kiezen vóór die pass zou de ankerverzameling
+  // op een verouderde stand baseren, en dan landt de prikkel naast een dag die er niet meer is.
+  prikkelSelectie_(days, doel, quotaPlan, allocActive);
+}
+
+/**
+ * ROADMAP PUNT 16 — de weekselectie voor de bereik-prikkel. Zet `prikkelSprints` op HOOGSTENS ÉÉN
+ * dag per week, of op geen enkele.
+ *
+ * DE VULDAG is de dag die traint, van de week-allocator GEEN werkprikkel kreeg en ook geen
+ * archetype draagt — dus de dag die door de tussenruimte-regel als kale Z2 overblijft. Afgeleid
+ * uit `quotaPlan` en `archetypeId`; de tussenruimte-regel zelf wordt NIET nagebouwd, want een
+ * tweede exemplaar daarvan zou onvermijdelijk uit de pas gaan lopen met het origineel.
+ *
+ * HET ANKER is een dag die wél een werkprikkel kreeg. Beide allocator-rollen die werk dragen
+ * tellen mee: `quality` en `longride_efforts`. Die laatste hoort erbij omdat zo'n dag sinds punt
+ * 15 zijn efforts declareert en dus werkzone-minuten draagt — hem als vuldag behandelen zou de
+ * prikkel naast bestaande efforts leggen. `longride` en `endurance` zijn kaal duurwerk en tellen
+ * niet als anker.
+ *
+ * GEEN ANKER, GEEN PRIKKEL. Zonder werkdag is er geen tussenruimte te beschermen en geen zwaarste
+ * dag om afstand van te nemen. GEMETEN over 420 weken: 31 van de 657 vuldagen liggen in zo'n week.
+ */
+function prikkelSelectie_(
+  days: any,
+  doel: any,
+  quotaPlan: any,
+  allocActive: any,
+): void {
+  // ONDERHOUD KRIJGT NOOIT EEN PRIKKEL, en dat is een norm-grens en geen implementatiedetail.
+  // GEMETEN over 108 Onderhoud-vuldagen: ALLE 108 liggen op afstand 1 van een werkzone-dag — daar
+  // is de marge het kleinst, en de coach-canon zegt niets over een sprintset op één dag van een
+  // drempeldag. Tot die regel er staat, blijft dit doel erbuiten.
+  const ONDERHOUD_UITGESLOTEN = doel === "Onderhoud";
+  if (ONDERHOUD_UITGESLOTEN || !allocActive || !days?.length) return;
+
+  const rolVan = (d: any) => quotaPlan?.[d.dagIdx]?.role ?? null;
+  const WERKROLLEN = ["quality", "longride_efforts"];
+
+  const trainDagen = days
+    .filter((d: any) => d.train && d.voorgesteldType)
+    .sort((a: any, b: any) => a.dagIdx - b.dagIdx);
+  const ankers = trainDagen.filter((d: any) =>
+    WERKROLLEN.includes(rolVan(d) as any),
+  );
+  if (ankers.length === 0) return;
+
+  const vuldagen = trainDagen.filter(
+    (d: any) => !WERKROLLEN.includes(rolVan(d) as any) && !d.archetypeId,
+  );
+  if (vuldagen.length === 0) return;
+
+  // AFSTAND IN TRAININGSDAGEN, niet in kalenderdagen: twee trainingsdagen met een rustdag ertussen
+  // liggen op 1, niet op 2. De tussenruimte die beschermd moet worden is die van het plan.
+  const index = new Map<any, number>(
+    trainDagen.map((d: any, i: number) => [d.dagIdx, i]),
+  );
+  const zwaarste = ankers.reduce((best: any, d: any) =>
+    (Number(d.minuten) || 0) > (Number(best.minuten) || 0) ? d : best,
+  );
+  const afstand = (d: any) =>
+    Math.abs((index.get(d.dagIdx) ?? 0) - (index.get(zwaarste.dagIdx) ?? 0));
+
+  // GELIJKSPEL VALT OP DE LAAGSTE dagIdx. Deterministisch, want een plan mag tussen twee runs op
+  // dezelfde invoer niet wisselen. GEMETEN: 14 van de 193 meerkeuze-weken eindigen op gelijkspel.
+  let keuze = vuldagen[0];
+  for (const d of vuldagen) {
+    const v = afstand(d);
+    const b = afstand(keuze);
+    if (v > b || (v === b && d.dagIdx < keuze.dagIdx)) keuze = d;
+  }
+  keuze.prikkelSprints = true;
 }
 
 // ── Wellness signal + demotion ─────────────────────────────
@@ -1224,6 +1307,9 @@ export function renderVariant_(
   // parameter en NIET via settings: settings is config uit D1, de trede is runtime-state die in
   // fase 2 op sync_state landt. Zelfde idioom als `leg` hierboven en als mesoWeekOverride.
   dosisTrede?: any,
+  // ROADMAP punt 16 — DE BEREIK-PRIKKEL, optioneel: weggelaten of false → byte-identiek. De
+  // keuze valt in `assignWorkouts`; deze functie hecht alleen aan. Zie de tak vóór de cooldown.
+  prikkelSprints?: any,
 ): any {
   const ftp = settings.ftp,
     lthr = settings.lthr;
@@ -1302,6 +1388,56 @@ export function renderVariant_(
         }
       });
       if (nomWork > 0) workScale = f;
+    }
+  }
+
+  // ROADMAP PUNT 16 — DE RUIMTE VOOR DE SPRINTSET, gereserveerd VÓÓR de opbouw.
+  //
+  // De set mag de opgegeven ruimte NIET overschrijden. Aanhechten zonder reserveren gaf gemeten
+  // 555,5 geplande weekminuten tegen 530 — 25,5 minuten boven wat de gebruiker opgaf, en de
+  // parkeerlijst draagt al een item dat het plan die ruimte nooit hoort te overschrijden.
+  //
+  // DE BRONVOLGORDE IS DIE VAN DE KWALITEITS-RAMP hierboven: eerst de endurance-fill, dan de
+  // cooldown tot 5, dan de warmup tot 8. Dezelfde volgorde en dezelfde vloeren, want twee
+  // verschillende regels voor hetzelfde probleem lopen onvermijdelijk uit elkaar.
+  //
+  // PAST HET NIET, DAN VUURT DE PRIKKEL NIET. Dat is een structurele ondergrens en geen getal: op
+  // een dag die al vol staat is er geen ruimte te vinden zonder iets anders te slopen.
+  const PRIKKEL_REPS = 6;
+  const PRIKKEL_ONMIN = 0.5;
+  const PRIKKEL_OFFMIN = 4.5;
+  const PRIKKEL_PCT = 150;
+  // Vijf rustblokken bij zes herhalingen: het herstel ligt ERTUSSEN.
+  const PRIKKEL_NODIG =
+    PRIKKEL_REPS * PRIKKEL_ONMIN + (PRIKKEL_REPS - 1) * PRIKKEL_OFFMIN;
+  let prikkelMin = 0;
+  if (prikkelSprints && mins) {
+    let nomWork = 0,
+      nomRest = 0;
+    blocks.forEach((b: any) => {
+      if (b.kind === "int") {
+        const onM = b.onMin != null ? b.onMin : b.onSec / 60;
+        const offM = b.offMin != null ? b.offMin : b.offSec / 60;
+        nomWork += b.reps * onM;
+        nomRest += b.reps * offM;
+      } else {
+        nomWork += b.durMin;
+      }
+    });
+    const effWork = nomWork * workScale;
+    const fillBeschikbaar = mins - (warm + effWork + nomRest + cool);
+    const coolTrimMax = Math.max(0, cool - 5);
+    const warmTrimMax = Math.max(0, warm - 8);
+    const room = Math.max(0, fillBeschikbaar) + coolTrimMax + warmTrimMax;
+    if (room >= PRIKKEL_NODIG) {
+      prikkelMin = PRIKKEL_NODIG;
+      let rem =
+        PRIKKEL_NODIG - Math.min(PRIKKEL_NODIG, Math.max(0, fillBeschikbaar));
+      const coolTrim = Math.min(rem, coolTrimMax);
+      rem -= coolTrim;
+      const warmTrim = Math.min(rem, warmTrimMax);
+      warm -= warmTrim;
+      cool -= coolTrim;
     }
   }
 
@@ -1390,7 +1526,9 @@ export function renderVariant_(
   // (A) Endurance-fill: lange dag → vul de restduur met Z2 i.p.v. onder-vullen.
   // Vaste harde set (scaleBlocksToFit_ schaalt reps NIET omhoog) + Z2-rest.
   if (mins) {
-    const gap = mins - warm - cool - mainMin;
+    // ROADMAP punt 16 — `prikkelMin` is hierboven al gereserveerd en hoort dus NIET meer in de
+    // fill. Zonder deze aftrek vult de fill de dag tot `mins` en komt de sprintset er bovenop.
+    const gap = mins - warm - cool - mainMin - prikkelMin;
     if (gap >= 5) {
       structuur.push([
         "Z2 endurance",
@@ -1403,6 +1541,54 @@ export function renderVariant_(
       mainMin += gap;
       intent.low += gap; // helper telt deze als low (0.7) → IF daalt
     }
+  }
+
+  // ROADMAP PUNT 16 — DE GOEDKOPE BEREIK-PRIKKEL: HECHT HEM AAN.
+  //
+  // Weggelaten of false → deze tak vuurt niet en de uitvoer is BYTE-IDENTIEK aan vóór dit punt.
+  // Zelfde idioom als `dosisTrede` hierboven: een expliciete, optionele term, geen veld op
+  // `settings`. De KEUZE valt in `assignWorkouts` (`prikkelSelectie_`); die reist hierheen als
+  // `d.prikkelSprints` via `buildWorkout`.
+  //
+  // DE VORM: 6 herhalingen van 30 seconden op 150 %FTP met 4,5 minuut volledig herstel ERTUSSEN,
+  // dus vijf rustblokken en geen zesde — een rust van 4,5 minuut pal vóór de cooldown draagt
+  // niets. 6 x 0,5 = 3,0 anaerobe werkminuten. DERTIG en niet vijftien seconden: dat is de vorm
+  // uit de literatuur waarop de herstelclaim rust, en 3,0 kent geen afrondingsval — Math.round
+  // van 1,5 is 2 en zou 33 procent boven plan eisen, Math.round van 3,0 is 3.
+  //
+  // NA het hoofddeel en VOOR de cooldown, zodat de sprints op verse benen na het duurwerk vallen.
+  // `prikkelMin` is nul zodra de vlag uit staat OF de set niet paste; in beide gevallen vuurt deze
+  // tak niet en is de uitvoer byte-identiek aan vóór dit punt.
+  if (prikkelMin > 0) {
+    structuur.push([
+      "Sprints",
+      PRIKKEL_REPS + "x 30 sec",
+      wattsRange(ftp, PRIKKEL_PCT, PRIKKEL_PCT),
+      "—",
+      PRIKKEL_OFFMIN + " min volledig herstel ertussen",
+    ]);
+    for (let rr = 0; rr < PRIKKEL_REPS; rr++) {
+      blokken.push({
+        minuten: PRIKKEL_ONMIN,
+        zone: pctZoneBucket_(PRIKKEL_PCT),
+        pctLo: PRIKKEL_PCT,
+        pctHi: PRIKKEL_PCT,
+        coreWork: true,
+      });
+      // Vijf rustblokken bij zes herhalingen: het herstel ligt ERTUSSEN.
+      if (rr < PRIKKEL_REPS - 1)
+        blokken.push({
+          minuten: PRIKKEL_OFFMIN,
+          zone: "rust",
+          pctLo: 45,
+          pctHi: 55,
+        });
+    }
+    const werkMin = PRIKKEL_REPS * PRIKKEL_ONMIN;
+    const rustMin = (PRIKKEL_REPS - 1) * PRIKKEL_OFFMIN;
+    intent.anaerobic += werkMin;
+    intent.low += rustMin;
+    mainMin += werkMin + rustMin;
   }
 
   structuur.push([
@@ -1786,6 +1972,10 @@ export function buildWorkout(
   // DOSIS-TREDE, optioneel: weggelaten of 0 → factor 1 → byte-identiek. Runtime-state, dus een
   // EXPLICIETE parameter en niet iets op `settings`. Gaat door naar BEIDE work-scale-plekken.
   dosisTrede?: any,
+  // ROADMAP punt 16 — DE BEREIK-PRIKKEL, optioneel. Deze functie BESLIST niets en HECHT niets
+  // aan: ze geeft de vlag uitsluitend DOOR aan `renderVariant_`. De keuze valt in
+  // `assignWorkouts`, het aanhechten in `renderVariant_`.
+  prikkelSprints?: any,
 ): any {
   // FASE 1 deel 2b.2 — een gekozen archetype expandeert direct (overrulet de type-dispatch).
   // LIVE (niet inert): keyIntensity zet de archetypeId op :859 en de week-allocator via
@@ -1843,6 +2033,7 @@ export function buildWorkout(
         macroFase,
         mins,
         dosisTrede,
+        prikkelSprints,
       );
   }
 

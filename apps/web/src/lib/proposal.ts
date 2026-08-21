@@ -156,6 +156,14 @@ export interface BuildProposalInput {
    * Reist door naar buildWorkout én buildOverrideWorkout_, zodat een handmatig gekozen sessie
    * dezelfde dosis draagt als een geplande. */
   dosisTrede?: number | null;
+  /** ROADMAP punt 16 — ZET DE BEREIK-PRIKKEL UIT. Weggelaten of false → de prikkel doet gewoon
+   * mee, want hij is onderdeel van het plan en geen opt-in.
+   *
+   * DIT IS EEN MEET-SCHAKELAAR EN GEEN FEATURE-VLAG. Hij bestaat omdat een BASISLIJN-fixture de
+   * prikkelloze uitvoer moet kunnen meten: de weekvorm-as is het ijkpunt van
+   * `tools/punt16/meet.mjs` en punt 43 T4 gaat over duur-sessies. Zonder deze schakelaar zouden
+   * die hun verwachting moeten ophogen, en dan meten ze niet meer waarvoor ze bestaan. */
+  prikkelUit?: boolean;
 }
 
 // Intern mutabel dag-element — de vorm die assignWorkouts leest (d.type = dagtype,
@@ -172,6 +180,11 @@ interface GridDay {
   reden: string | null;
   redenCode: string | null;
   archetypeId: string | null;
+  // ROADMAP punt 16 — de bereik-prikkel. `assignWorkouts` zet dit veld op HOOGSTENS één dag per
+  // week; `renderVariant_` hecht de sprints aan. Ontbreekt het, dan is het plan byte-identiek aan
+  // vóór dit punt. Reist mee zoals `archetypeId`, en om dezelfde reden op de dag en niet op
+  // settings: het is een keuze PER DAG, geen configuratie.
+  prikkelSprints?: boolean;
 }
 
 /** weekplans-blob (opaque unknown[]) → per-datum beoogde minuten (aggIntent).
@@ -715,6 +728,12 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
           sessieArch,
           leg,
           dosisTrede,
+          // ROADMAP punt 16 — de vlag reist mee zoals `archetypeId`: `assignWorkouts` zet hem op
+          // de dag, `renderVariant_` hecht aan. Op een pendeldag alleen op de LAATSTE rit, net
+          // als bij `sessieArch` — anders krijgt de heenrit de sprints er ook bij.
+          input.prikkelUit || (isPendel && !last)
+            ? undefined
+            : d.prikkelSprints,
         ) as ProposalWorkout | null;
         if (wo) sessions.push(wo);
       }
@@ -760,6 +779,10 @@ export function buildWeekProposal(input: BuildProposalInput): ProposalWeek {
             d.archetypeId,
             "heen",
             dosisTrede,
+            // ROADMAP punt 16 — ook hier mee: dit is de RECONSTRUCTIE van het plan voor een
+            // voorbije dag, en die voedt de voltooid-vergelijking. Zonder de vlag zou een dag
+            // die de sprints wél gepland kreeg, worden vergeleken met een plan zonder.
+            input.prikkelUit ? undefined : d.prikkelSprints,
           ) as ProposalWorkout | null) ?? null;
       }
     }

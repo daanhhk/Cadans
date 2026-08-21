@@ -114,6 +114,11 @@ function kwalMinuten(trede: number): number[] {
       rpe: [],
       todayISO: iso(off),
       dosisTrede: trede,
+      // ROADMAP punt 16 — BASISLIJN. Deze ladder meet wat de DOSIS-TREDE doet; de bereik-prikkel
+      // is een tweede, onafhankelijke term en hoort er niet in mee te lopen. Trede 0 moet
+      // bovendien de weekvorm-as reproduceren, en die is zelf prikkelloos. De verwachtingen
+      // hieronder zijn daarom ONGEWIJZIGD.
+      prikkelUit: true,
     } as never);
     let k = 0;
     for (const d of (r as { days: unknown[] }).days) {

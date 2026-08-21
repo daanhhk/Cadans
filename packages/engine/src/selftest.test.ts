@@ -73,6 +73,7 @@ import {
   genericLongZ2,
   genericPendelIntervals,
   genericPendelZ2,
+  genericPools_,
   genericRecovery,
   genericTaperZ2Kort,
   getPool_,
@@ -6865,6 +6866,168 @@ describe("engine selftest", () => {
     assert_("20 zwo repeat en onduration", true, zwoOk);
   });
 
+  // ROADMAP PUNT 16 — DE GOEDKOPE BEREIK-PRIKKEL.
+  //
+  // De ingreep valt in TWEE helften en die worden hier apart getoetst: `assignWorkouts` KIEST de
+  // dag (T2 tot en met T6), `renderVariant_` HECHT de sprints aan (T1). Dat is geen stijlkeuze —
+  // `assignWorkouts` produceert geen blokken, dus aanhechten kan daar per constructie niet.
+  it("testPunt16Prikkel", () => {
+    const S: any = {
+      ftp: 280,
+      lthr: 170,
+      gewicht: 75,
+      pendelDuurMin: 80,
+      pendelAantal: 2,
+    };
+
+    // ── T1 — DE VLAG UIT IS BYTE-IDENTIEK. Zonder deze assertie is elke andere uitslag hier
+    // waardeloos: dan kan de tak ook iets veranderen wanneer hij niet hoort te vuren.
+    const pool = genericPools_().long_z2;
+    const v = pool[0];
+    // DUUR 180 EN NIET 90, en dat is dragend: de set kost 25,5 minuten en die komen uit de
+    // endurance-fill. Op 90 minuten is er geen fill (de core van deze variant is er zelf al 90)
+    // en vuurt de prikkel per constructie niet — dan meet T1 twee identieke sessies en leest dat
+    // als "de vlag doet niets". Zie de ondergrens-assertie onderaan dit blok.
+    const DUUR = 180;
+    const zonder = renderVariant_(v, S, 1, "Base", DUUR);
+    const uit = renderVariant_(v, S, 1, "Base", DUUR, 0, false);
+    const met = renderVariant_(v, S, 1, "Base", DUUR, 0, true);
+    assert_(
+      "punt16 T1 weggelaten == false",
+      JSON.stringify(zonder),
+      JSON.stringify(uit),
+    );
+    assert_(
+      "punt16 T1 aan verschilt",
+      true,
+      JSON.stringify(met) !== JSON.stringify(zonder),
+    );
+    // En de VORM van wat erbij komt: 6 werkblokken van 0,5 min op 150 %FTP met coreWork, en
+    // VIJF rustblokken ertussen — geen zesde, want het herstel ligt ERTUSSEN.
+    const nieuw = met.blokken.length - zonder.blokken.length;
+    assert_("punt16 T1 elf blokken erbij", 11, nieuw);
+    const sprints = met.blokken.filter(
+      (b: any) => b.pctLo === 150 && b.pctHi === 150,
+    );
+    assert_("punt16 T1 zes sprints", 6, sprints.length);
+    assert_(
+      "punt16 T1 sprints dragen coreWork",
+      true,
+      sprints.every((b: any) => b.coreWork === true && b.minuten === 0.5),
+    );
+    assert_(
+      "punt16 T1 drie anaerobe minuten",
+      3,
+      Math.round(met.intent.anaerobic - zonder.intent.anaerobic),
+    );
+    // DE RUIMTE: de set komt UIT de bestaande duur en komt er niet bovenop. Zonder deze assertie
+    // zou een sessie 25,5 minuten boven de opgegeven ruimte kunnen uitkomen — gemeten gebeurde
+    // dat ook, 555,5 geplande weekminuten tegen 530, vóór de reservering werd ingebouwd.
+    assert_("punt16 T1 duur blijft mins", zonder.totaalMin, met.totaalMin);
+    // DE ONDERGRENS is bereikbaar en wordt hier geraakt: op een dag zonder fill past de set niet
+    // en vuurt hij niet. Dat is een echte tak, geen defensieve.
+    const krap = renderVariant_(v, S, 1, "Base", 90, 0, true);
+    const krapUit = renderVariant_(v, S, 1, "Base", 90, 0, false);
+    assert_(
+      "punt16 T1 geen ruimte geen prikkel",
+      JSON.stringify(krapUit),
+      JSON.stringify(krap),
+    );
+
+    // ── De weekbouwer voor T2 tot en met T6. `dagIdx` 0 is maandag.
+    //
+    // DE KLOK IS HIER EEN FIXTURE-VARIABELE, en zonder die pin meet deze test niets. De
+    // week-allocator dateert zich op de ambient `new Date()`: ligt de fixture-week in het
+    // verleden, dan is geen enkele dag eligible, levert `allocateQualityWeek_` een LEEG plan en
+    // is er per constructie geen anker. GEMETEN zonder pin: `quotaPlan` gaf op alle vier de
+    // trainingsdagen `null` en de prikkel viel nergens — groen om de verkeerde reden, precies de
+    // val die `debtOptIn.test.ts` al eens heeft gekost.
+    const week = (
+      doel: string,
+      vorm: Record<number, number>,
+      fase = "Build",
+    ) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(2026, 6, 27, 8, 0, 0)); // ma 2026-07-27, de fixture-maandag
+      const days = [0, 1, 2, 3, 4, 5, 6].map((n) => ({
+        datum: new Date(2026, 6, 27 + n),
+        dagIdx: n,
+        train: vorm[n] != null,
+        minuten: vorm[n] ?? 0,
+        type: vorm[n] == null ? null : n === 5 || n === 6 ? "weekend" : "vrij",
+        gedaan: false,
+        voorgesteldType: null,
+        reden: null,
+        redenCode: null,
+        archetypeId: null,
+      }));
+      assignWorkouts(
+        days,
+        { ...S, doel },
+        1,
+        fase,
+        { low: false, high: false, anaerobic: false },
+        { signal: "normal" },
+        null,
+        null,
+        null,
+        false,
+        null,
+        days,
+      );
+      vi.useRealTimers();
+      return days;
+    };
+    const geprikkeld = (days: any[]) =>
+      days.filter((d: any) => d.prikkelSprints === true);
+
+    // ── T2 — een week MET ankers krijgt precies ÉÉN prikkeldag.
+    const w2 = week("FTP", { 0: 60, 1: 60, 3: 60, 5: 120 });
+    assert_("punt16 T2 precies een", 1, geprikkeld(w2).length);
+
+    // ── T3 — een week zonder week-allocator krijgt er GEEN. De Test-fase zet `allocActive` op
+    // false, dus `quotaPlan` is leeg en er is geen enkel anker.
+    //
+    // EN DIT IS WAT DEZE TEST NIET TOETST, want een test die meer claimt dan hij meet is erger
+    // dan geen test. De ankerguard (`ankers.length === 0`) wordt hier NIET geraakt: de selectie
+    // keert al eerder terug op `!allocActive`. GEMETEN met de guard tijdelijk verwijderd: T3
+    // bleef GROEN en het was `test3cFitPoort` die viel, op een TypeError uit de lege `reduce`.
+    // Een week met allocator én zonder enig anker is in Base, Build en Peak niet construeerbaar
+    // gebleken — de allocator plaatst daar altijd minstens één kwaliteitsdag. De guard blijft
+    // staan als bescherming tegen precies die lege reduce, maar draagt geen eigen bewijs.
+    const w3 = week("FTP", { 0: 60, 1: 60, 3: 60, 5: 120 }, "Test");
+    assert_("punt16 T3 geen allocator geen prikkel", 0, geprikkeld(w3).length);
+
+    // ── T4 — GELIJKSPEL VALT OP DE LAAGSTE dagIdx, en twee runs geven hetzelfde. Een plan mag
+    // op dezelfde invoer niet tussen twee runs wisselen.
+    const a = week("FTP", { 0: 60, 1: 60, 3: 60, 5: 120 });
+    const b = week("FTP", { 0: 60, 1: 60, 3: 60, 5: 120 });
+    assert_(
+      "punt16 T4 deterministisch",
+      geprikkeld(a)
+        .map((d: any) => d.dagIdx)
+        .join(","),
+      geprikkeld(b)
+        .map((d: any) => d.dagIdx)
+        .join(","),
+    );
+
+    // ── T5 — doel ONDERHOUD krijgt er nooit een. Norm-grens, geen implementatiedetail.
+    for (const fase of ["Base", "Build", "Peak"]) {
+      const w5 = week("Onderhoud", { 0: 60, 1: 60, 3: 60, 5: 120 }, fase);
+      assert_("punt16 T5 onderhoud " + fase, 0, geprikkeld(w5).length);
+    }
+
+    // ── T6 — een vuldag MET archetypeId wordt niet gekozen. Zo'n dag draagt een archetype-sessie
+    // en is geen kale vulling; de prikkel hoort daar niet bij.
+    const w6 = week("FTP", { 0: 60, 1: 60, 3: 60, 5: 120 });
+    assert_(
+      "punt16 T6 nooit op een archetype-dag",
+      true,
+      geprikkeld(w6).every((d: any) => !d.archetypeId),
+    );
+  });
+
   // stap 7 bouwitem 2 (de twee hekken): +15 in testStap7Hekken — 4× allocateQualityWeek_ zonder
   // pre-claim, 4× de efforts-arm die blijft en een slot consumeert, en 7× assignWorkouts voor de
   // demotie (allocator-dag blijft staan, niet-allocator-dag én cross-week worden nog gedemoteerd).
@@ -6897,7 +7060,12 @@ describe("engine selftest", () => {
   // 35 lib-vormen: er IS een kern, de kern raakt inrijden noch uitrijden, en geen kernblok ligt in
   // rust of z2. Die laatste is de dekking van de onvoorwaardelijke vlag op de interval-ON band.
   // 1652→1757.
-  it("exactly 1757 assertions", () => {
-    expect(assertCount).toBe(1757);
+  // ROADMAP punt 16 (de bereik-prikkel): +13 in testPunt16Prikkel — zes voor T1 (weggelaten is
+  // gelijk aan false, aan verschilt, elf blokken erbij, zes sprints, coreWork op de sprints, drie
+  // anaerobe minuten), en zeven voor de weekselectie: T2, T3, T4, T6 en T5 drie keer, één per
+  // macrofase. 1757→1770. Plus 2 bij de ruimte-reservering: de duur blijft gelijk aan `mins`, en
+  // op een dag zonder fill vuurt de prikkel niet. 1770→1772.
+  it("exactly 1772 assertions", () => {
+    expect(assertCount).toBe(1772);
   });
 });
