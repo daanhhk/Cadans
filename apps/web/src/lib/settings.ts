@@ -134,9 +134,12 @@ const WISSEL_LAATSTE_DAG = 3;
  * `toISOString` — dat laatste zou 's avonds in NL naar morgen schuiven.
  *
  * BEIDE DOELEN GAAN EERST DOOR `normalizeDoel_`, en dat is dragend en geen netheid: een
- * opgeslagen `"Beklimmingen"` en het canonieke `"Lange beklimmingen"` zijn HETZELFDE doel, dus
- * zonder normalisatie zou het laden van een oude instelling als een WISSEL lezen en het blok
- * ten onrechte herstarten. Dat is de valkuil die dit punt bij naam noemt.
+ * opgeslagen `"Beklimmingen"` en het canonieke `"Korte beklimmingen"` zijn HETZELFDE doel — zo
+ * mapt `normalizeDoel_` in `packages/engine/src/phase.ts` hem, met `DOELEN-SPEC` §3.3 als grond
+ * (kort is het A-doel). Zonder normalisatie zou het laden van een oude instelling als een WISSEL
+ * lezen en het blok ten onrechte herstarten. Dat is de valkuil die dit punt bij naam noemt.
+ * GECORRIGEERD 21-08-2026: hier stond `"Lange beklimmingen"`, en dat is de verkeerde helft van de
+ * splitsing. Alleen dit commentaar; het gedrag is ongewijzigd.
  *
  * GELIJK → `geladenBlokStart` ONVERANDERD terug. Twee eigenschappen volgen daaruit en allebei
  * zijn ze bedoeld: de functie is IDEMPOTENT, en terugwisselen naar het geladen doel HERSTELT de

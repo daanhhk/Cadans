@@ -403,7 +403,14 @@ raakvlak per punt. Deze paragraaf blijft de inhoudelijke onderbouwing.
 1. Onderhoud-profiel (quotum 3, tussenruimte 1, meso-uitzondering). Klein, gemeten, winterfix. **AF** — commit `09e6a07`, precedentie-test `ea567e5`.
 1b. Onderhoud-herstelroute op DAGniveau (§3.2 VASTGESTELD): bij een doel zonder mesocyclus vuurt de WEEK-BREDE vermoeidheidskaart niet; de bestaande PER-DAG Verlicht-kaart blijft en dekt "vandaag kapot". Het eerder ontworpen mechanisme — de twee deload-klemmen in `allocateQualityWeek_` overslaan plus een week-brede duurcap — is GESCHRAPT: gemeten levert het weghalen van de klemmen TSS 184 naar 179 bij ongewijzigd volume, een kaart die verlichting belooft en niets levert. **AF** — client-side gate op de profiel-vlag `mesoCyclus === false` in `apps/web/src/lib/fatigue.ts` + `schema.ts`, GEEN engine-wijziging.
 2. Archetypes 33-68 erbij. Zonder deze stap wordt stap 1 monotoon. **AF** — commit `0bb79ee`, bibliotheek 23 naar 35.
-3. Doel-lijst herzien: VO2max eruit, Beklimmingen splitsen in kort en lang.
+3. Doel-lijst herzien: VO2max eruit, Beklimmingen splitsen in kort en lang. **AF** — gemeten
+   21-08-2026 en niet aangenomen: `DOEL_OPTIONS` in `packages/engine/src/phase.ts` draagt FTP,
+   Conditie, Korte beklimmingen, Lange beklimmingen en Onderhoud; `normalizeDoel_` mapt daar een
+   opgeslagen `"Beklimmingen"` op Korte en `"VO2max"` op FTP; `profileForDoel_` in
+   `packages/engine/src/niveau.ts` levert twee aparte profielen `klim_kort` en `klim_lang`; en de
+   dode tak `climbTypeWorkout_` is met ROADMAP punt 7 uit `planner.ts` verwijderd. Op één weekvorm
+   doorgerekend geven de vijf doelen vijf VERSCHILLENDE weekplannen, en Korte en Lange zijn daarin
+   niet identiek. Wat hier stond — dat dit nog moest gebeuren — was achterhaald.
 4. Duurvermogen-meetlat, samen met prikkel-in-de-rit fase 2. Onafhankelijk van stap 5; de nummering is geen volgorde tussen deze twee.
 5. Blok-object en de twee vragen (de weeklus). Uitvoerings-referent EERST: het venster van de
    uitvoeringsmaat van week naar blok. Daarna pas de effect-referent per doel. Dit KEERT de

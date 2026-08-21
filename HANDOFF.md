@@ -13,6 +13,77 @@ live tot cutover.
 
 ## Stand
 
+STAND 2026-08-21 — PUNT 34 IS VIER RONDES LANG GEMETEN EN DRIE KEER OMGEKEERD; ER IS GEEN REGEL
+GEBOUWD. Docs-only: geen code op één commentaarregel na, geen engine, geen migratie, geen deploy,
+geen remote-D1-mutatie. Prod en D1 staan waar het blok hieronder ze noemt.
+- **DEZE RONDE WAS VOLLEDIG MEETROND.** Vier CC-rondes, alle vier read-only op de gecommitte boom
+  plus read-only SELECTs op remote D1 (elke query `changed_db: false`). Er is geen enkele
+  bouwbeslissing uitgevoerd; wat er ligt is een herschreven punt 34 met een bouwlijst, drie nieuwe
+  punten, en drie correcties op documenten die achterliepen op de code.
+- **DE DIAGNOSE IS DRIE KEER DOOR EEN METING OMGEKEERD, en dat is de kern van dit blok.** (1) De
+  aanname dat de effect-uitkomst de DOSIS stuurt is onjuist: `dosisTerm` komt in `apps/web/src`
+  in precies drie bestanden voor en geen ervan is `blok.ts`, `proposal.ts` of `schema.ts` — de
+  trede komt uit de bewaarde rij `sync_state.dosis_trede` en de kaart hangt aan `check.uitkomst`,
+  niet aan `effect`. Over 22 gemeten cellen bewoog GEEN ENKELE trede. (2) De gevreesde `gezakt`-tak
+  uit de wat-als vuurt op Daans echte reeks in **0 van de 49** blokken; het meest negatieve
+  blokverschil over een jaar is **−2 W** tegen een drempel van 3, omdat `blokMaximum` het maximum
+  BINNEN het blok neemt en de trage decay daarmee absorbeert. (3) Symmetrie — de gelegenheid-eis
+  ook voor `gestegen` — maakt **49 van de 49** blokken `niet_meetbaar` en is daarmee verworpen.
+- **WAT ER WÉL STAAT, is de omgekeerde poortvolgorde.** `isStijging` wordt getoetst vóór de
+  gelegenheid-poort, dus **8 van de 49** blokken lezen `gestegen` zonder enige gelegenheid — de
+  blokken rond de twee sprongdagen 2026-01-13 en 2026-05-21. In een jaar waarin de meter van 291
+  naar 260 watt zakte staan er 8 winst-uitspraken en 0 verlies-uitspraken. De oplossing is COPY,
+  niet logica: op de tak `gestegen` splitst de tekst op de vraag of het blok een gelegenheid droeg.
+- **DAANS PREMISSE OVER ROLLING FTP KLOPT, GEMETEN OP ZIJN EIGEN REEKS.** 243 activiteiten sinds
+  2025-08-01, 203 met een geldige waarde (alleen `Ride` en `VirtualRide` dragen er een). 44 stappen
+  omlaag van hoogstens −2 W, en precies TWEE sprongen in twaalf maanden. Drie aaneengesloten
+  periodes zonder sprong, alle drie dalend: −20 W in 143 dagen, −16 W in 125 dagen, −12 W in 75
+  dagen. Er staan 2 events in de database (beide 2027) en 0 test-overrides, dus `blokGelegenheid`
+  geeft over de hele historie null en de tak `niet_gestegen` heeft nooit gevuurd.
+- **DE CHECK VALT IN TWEE — nieuw punt 47, Daan-besluit.** IJKING (klopt mijn FTP nog, zodat de
+  zones kloppen) geldt bij ELK doel, want elk plan doseert op %FTP. DOELCHECK (is dit doel
+  vooruitgegaan) verschilt per doel. Bij FTP en Onderhoud vallen ze samen in de 20-minutentest;
+  bij Conditie en beide klimdoelen niet.
+- **GEEN TESTAANBOD ROND EEN A- OF B-EVENT — nieuw punt 48, Daan-besluit.** Een event is zelf de
+  betere meting, en een 20-minuten-all-out kost twee tot drie dagen herstel — in een taper
+  vernietigt dat precies wat de taper opbouwt. Eén conditie erbij in `buildTestVoorstel`; de app
+  kent A en B al via `isMaximaalEvent_`. Geen prioriteitsvertakking, geen taper-uitzondering.
+- **DE DOELCHECK OP DE RIT-KORREL — nieuw punt 49, en de uitkomst is GESPLITST.** Uit D1 is de
+  intervalstructuur NIET af te lezen: `zone_times_json` draagt over alle 209 ritten precies 8
+  totalen per zone, zonder tijdas en zonder volgorde. Uit de live fetch WEL: `GET
+  /activity/{id}/intervals` is aangesloten en levert per blok label, zone, duur, %FTP en watts in
+  volgorde. `ride.ts` is expliciet stateless, dus dit is een PERSISTENTIE-vraag die het D1-schema
+  raakt. Eerste stap, nog niet gedaan: meten of `icu_intervals` voor Daans ritten gevuld is.
+- **DRIE DOCUMENTEN LIEPEN ACHTER OP DE CODE.** De klim-splitsing en het vervallen van VO2max zijn
+  GEBOUWD (punt 7), maar `DOELEN-SPEC` §6 stap 3 zei nog dat het moest gebeuren — gecorrigeerd met
+  de meting als grond. Punt 35 citeerde twee regelnummers die bij de eerstvolgende commit kunnen
+  liegen — vervangen door bestand plus symboolnaam. En het commentaar in
+  `apps/web/src/lib/settings.ts` noemde `"Beklimmingen"` en `"Lange beklimmingen"` hetzelfde doel
+  terwijl `normalizeDoel_` op Korte mapt — dat is de ENIGE code-raking van deze ronde en het is
+  een commentaarregel.
+- **DE CHAT HEEFT ZICHZELF TWEE KEER GECORRIGEERD OP GROND VAN EEN CC-METING, en dat hoort hier.**
+  Eerst "een M55-schending die vandaag draait" — dat stond op een fixture MÉT wedstrijd, en op de
+  echte data vuurt die tak nooit. Daarna de vrees dat een `gezakt`-tak vals zou vuren in de
+  winterweken — 0 van de 17 winterblokken. Beide keren kwam de omkering uit een meting die CC
+  leverde en niet uit een aanname. **DE ROLREGEL "DE CHAT MEET NIET ZELF" HEEFT IN DEZE EERSTE
+  RONDE ONDER DE NIEUWE OPENER GEHOUDEN.**
+- **WAT DAAN MERKT: NIETS AAN DE APP.** Geen enkel gedrag is gewijzigd. Wat er ligt is een
+  bouwlijst waarvan de grond gemeten is in plaats van beredeneerd.
+- **VLOEREN NU: vitest-totaal 986 over 78 bestanden · engine-selftest-assert-count 1772 ·
+  lint-waarschuwingen 20**, alle vier afgelezen uit de gate van DEZE ronde. Onbewogen: docs-only.
+  Lees ze zelf uit de suite; neem ze niet over uit dit blok.
+- **OPENSTAAND, elk item opnieuw te greppen in `docs/ROADMAP.md`:** 32 · 34 · 35 · 47 · 48 · 49.
+
+FOCUS VOLGENDE CHAT: PUNT 34 BOUWEN — bouwlijst (a) tot en met (e), die staat voluit bij het punt
+in `docs/ROADMAP.md`. BEGIN MET EEN RECON OP `blokCheckEnabled`: wat hangt er aan die poort, en
+gaan de dosis-ramp, de `mesoFactor` of een kalender-deload mee open als je hem verzet. Dat antwoord
+beslist of (d) meekan. Zonder dat antwoord bouw je (a), (b), (c) en (e), en laat je (d) staan.
+CONTEXT DIE NERGENS ANDERS STAAT: Daan is geopereerd en fietst zeker een maand niet; de
+beschikbaarheid blijft voorlopig 0. Er komt dus GEEN nieuwe data binnen om op te meten, de
+planner-week is leeg vanaf 2026-08-09, en het huidige blok sluit zonder ijkpunt. Dat is geen
+defect. En terug op de fiets is een 20-minutentest het slechtste eerste ding — de test-vraag speelt
+pas als hij weer rijdt. Verse chat.
+
 STAND 2026-08-21 — DE WERKWIJZE IS OMGEKEERD: DE PROCESCANON STAAT NU AAN CC'S KANT EN DE
 OPENER DRAAGT ROL EN ARCHITECTUUR IN PLAATS VAN REGELS. Vier commits: `9912d23` (doorloop),
 `9047381` (checks), `15f88af` (architectuurkaart), `499f20b` (verhuizing plus nieuwe opener).
@@ -71,66 +142,6 @@ een RECON-prompt, read-only, die het punt uit `docs/ROADMAP.md` haalt en de staa
 LEVER DE RECON EN STOP: een meting en een voorstel komen niet in dezelfde beurt. Raakt de ronde
 daarna een MECHANISME, dan komt er een WAT-ALS vóór de bouw met de verwachting er expliciet in.
 Verse chat.
-
-STAND 2026-08-21 — PUNT 16 IS GEBOUWD EN STAAT IN MAIN, MAAR VUURT IN 4 PROCENT VAN DE WEKEN
-(item 7). Commit `5f8a63c3050511bd786720432008cd621647ff77`, CI success, run
-https://github.com/daanhhk/Cadans/actions/runs/32455214216. NIET GEDEPLOYD — prod en D1 staan waar
-het blok hieronder ze noemt.
-- **DE PRIKKEL.** 6 herhalingen van 30 seconden op 150 procent FTP, samen **3,0 anaerobe
-  werkminuten**, met 4,5 minuut herstel ertussen. Hij landt op ÉÉN vuldag per week, gekozen op de
-  grootste afstand in trainingsdagen tot het zwaarste anker; gelijkspel valt op de laagste
-  `dagIdx`, deterministisch. ANKERS ZIJN `quality` ÉN `longride_efforts` — die tweede draagt sinds
-  punt 15 zijn eigen efforts, en hem als vuldag behandelen zou de sprints naast bestaand werk
-  leggen. Doel **Onderhoud krijgt er nooit een**: daar ligt de vuldag in alle 108 gemeten gevallen
-  op afstand 1 van een werkzone-dag.
-- **HET GEMETEN BEREIK IS 15 VAN DE 420 WEKEN, en dat is geen schuld die stil blijft.** Zonder de
-  ruimte-ondergrens zouden het er **294** zijn: de set kost 25,5 minuten inclusief herstel en die
-  passen niet in de endurance-fill van een typische vuldag. De reservering komt uit de bestaande
-  bronnen in de volgorde van de kwaliteits-ramp — eerst de fill, dan de cooldown tot 5, dan de
-  warmup tot 8 — zodat de sessieduur exact `mins` blijft. Zonder die reservering kwam het plan
-  gemeten **25,5 minuten boven de opgegeven ruimte** uit (555,5 tegen 530 weekminuten). De ingreep
-  is dus correct begrensd en nauwelijks werkzaam.
-- **DE VLOER.** `MATERIALITEIT_MIN_MINUTEN` op `apps/web/src/lib/blok.ts:46`, toegepast IN
-  `poortsetVoorWeek_` (`:415`) zodat beide aanroepers gedekt zijn — een vloer bij één aanroeper
-  bijt maar half. **N gepind op 4.** Over de hele as 0 tot 10 verandert GEEN ENKELE N het
-  geleverd-oordeel: 105 van de 105 bij uitvoeringsschaal 1,00 en 78 bij 0,95, overal. Wat N wél
-  doet is de anaerobe poort dichthouden waar alleen de prikkel anaerobe minuten levert: 9 weken en
-  9 zone-cellen tussen N 3 en 3,5. Een POORT-effect, geen oordeel-effect.
-- **ARCHITECTUURFEIT DAT DE ENGINE ALLEEN NIET TOONT.** De prikkel-vlag reist van `assignWorkouts`
-  via `apps/web/src/lib/proposal.ts` (`:719` en `:771`) naar `buildWorkout` en `renderVariant_`. De
-  engine produceert niet zelfstandig een prikkel — `assignWorkouts` maakt geen blokken, hij zet
-  types; de CLIENT geeft door. Wie de keten alleen in `packages/engine` zoekt, vindt hem niet.
-- **`prikkelUit` op `BuildProposalInput` IS EEN MEET-SCHAKELAAR, GEEN FEATURE-VLAG.** Hij bestaat
-  omdat een BASISLIJN-fixture de prikkelloze uitvoer moet kunnen meten. Vier gebruikers:
-  `weekvormAs.test.ts`, `dosisTrede.test.ts` (twee gevallen) en de ijking in
-  `tools/punt16/meet.mjs`. Hun verwachtingen zijn ONGEWIJZIGD gebleven.
-- **HET INSTRUMENT STAAT IN DE REPO.** `tools/punt16/meet.mjs` — blok 1 `a94edd8`, uitgebreid in
-  blok 2 `3cdd785`. Geijkt op de weekvorm-as, **21 van de 21**, met een zelfcontrole die stopt
-  zodra die reeks in `weekvormAs.test.ts` herijkt wordt en het script niet. Het parkeerlijst-item
-  dat elke ronde zijn eigen esbuild-instrument opnieuw bouwde, is daarmee VERVALLEN en verwijderd.
-- **VLOEREN NU: vitest-totaal 986 over 78 bestanden · engine-selftest-assert-count 1772 ·
-  lint-waarschuwingen 20**, alle vier afgelezen uit de gate van DEZE ronde. Lees ze zelf uit de
-  suite; neem ze niet over uit dit blok.
-- **TWEE OPEN VERVOLGVRAGEN OP PUNT 16, coach-canon en niet door een chat te beslissen:** (1) moet
-  de set korter of moet de ruimte anders gevonden worden, gegeven een bereik van 15 van de 420;
-  (2) blijft de vloer staan nu vaststaat dat hij geen oordeel raakt.
-- **OPENSTAAND, elk item opnieuw gegrept in `docs/ROADMAP.md`:** 32 · 34 · 35. Punt 16 hoort er
-  niet meer bij. Het eerstvolgende open item in *De volgorde* is **item 8 — punt 34**, de
-  effect-referent die het doel niet kent.
-
-FOCUS VOLGENDE CHAT: DE WERKWIJZE ZELF, en dat is een BEWUSTE AFWIJKING van de volgorde — het
-eerstvolgende open item is punt 34 en dat blijft wachten. DE REDEN STAAT IN DEZE SESSIE. Ze leverde
-in de PLAN-laag — de stap tussen punt kiezen en prompt schrijven, waar geen enkele poort staat —
-vijf fouten: drie verzonnen faseringen ("fase 1" en "blok 2/3" bestonden niet in de ROADMAP), een
-bouwspec op `assignWorkouts` terwijl die functie geen blokken produceert, een setvorm die de
-beschikbare ruimte met 25,5 minuten overschreed, en een vloer gebouwd op een defect dat de gekozen
-setvorm zelf al wegnam. Alle vijf zijn gevangen door CC of door Daan; GEEN ENKELE door een
-bestaande regel. De engine-autorisatie-regel vuurde daarentegen voor het eerst en werkte wél — hij
-stopte een bouw op de verkeerde functie vóór er een letter geschreven was. MATERIAAL VOOR DIE
-RONDE, en bewust nog NIET tot regel gemaakt: hoort de plan-laag poorten te krijgen naar het model
-van de vijf promptcontroles, of moet er juist iets WEG — die tweede richting is nooit onderzocht.
-Overweeg te TELLEN wat de close-outs al noemen: overtredingen per ronde plus de laag waarin ze
-vielen, zodat er na vijf rondes een getal ligt in plaats van een gevoel. Verse chat.
 
 De oudere STAND-blokken en de historische projectsecties staan in `docs/HANDOFF-ARCHIEF.md`.
 Dit bestand draagt de TWEE nieuwste blokken; komt er een derde bij, dan schuiven de oudste in

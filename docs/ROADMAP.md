@@ -1187,30 +1187,60 @@ punten staat onder *Gesloten — vindplaats*.
     prod voor en na: 9 van de 16 identiek, 16 vergeleken, 0 uitgesloten, en de zeven bewegende
     shots verschillen uitsluitend op `Laatst gesynct`.
 
-34. **De effect-referent kent het doel niet** — open · CLIENT plus norm. GEGREPT:
-    `apps/web/src/lib/effect.ts` geeft op case-SENSITIVE "doel" 0 treffers en
-    case-insensitief precies 1, en dat is `DOELEN-SPEC` in de kopregel 4. De call-site in
-    `apps/web/src/lib/blok.ts` geeft `buildEffectReferent` geen doel mee. De referent is dus
-    doel-agnostisch, en dat is geen omissie in de uitvoering maar in de VRAAG die hij stelt.
-    GEVOLG: de meter is `rolling_ftp` voor ALLE VIJF doelen, terwijl `DOELEN-SPEC` §3.5 voor
-    Conditie en §3.3 voor Korte beklimmingen dezelfde durability-maat aanwijzen, en §3.4 voor
-    Lange beklimmingen het vermogen op dag twee van een back-to-back.
-    DE CLAIM IS DE EIGENLIJKE SCHENDING. `blokEffectRegel` in
-    `apps/web/src/lib/coachNarrative.ts` zegt op de tak "gestegen" dat de rolling FTP precies
-    de winst is waar het blok voor bedoeld was. Bij DRIE van de vijf doelen draagt de meter
-    die uitspraak niet. M5 verbiedt een bewering die de regel niet dekt; M33 en M39 zeggen dat
-    de app niet doet alsof.
-    BEREIKBAARHEID, eerlijk: bij doel FTP is dit per constructie INERT — de effect-referent
-    vuurt alleen bij fase "afgerond" én een GELEVERDE uitvoering, en daar is `rolling_ftp` de
-    juiste meter. Het wordt onwaar zodra het doel naar Korte beklimmingen gaat, vroegst
-    2027-02-22. Dat maakt het niet minder waar, wel minder dringend.
-    RICHTING NIET VASTGELEGD: ZWIJGEN bij een doel waarvan de meter ontbreekt is de
-    voorzichtige vorm, de COPY doel-specifiek maken de andere. Dat is een bouwbeslissing en
-    hoort bij het punt zelf, niet hier.
+34. **De effect-referent kent het doel niet** — open · CLIENT plus norm. HERSCHREVEN 21-08-2026
+    na vier meetrondes; de oude tekst stelde de diagnose te smal en op één punt te sterk.
+    DE REFERENT IS DOEL-BLIND. `apps/web/src/lib/effect.ts` noemt het woord `doel` nul keer, en
+    de call-site in `apps/web/src/lib/blok.ts` geeft `buildEffectReferent` geen doel mee. De
+    meter is `rolling_ftp` voor alle vijf doelen. Gemeten over vijf doelen maal drie scenario's:
+    uitkomst, dosis-term en de coach-zin zijn 5 van de 5 identiek per scenario, en de seed van
+    de copy noemt het doel niet eens.
+    NIET DRIE MAAR VIER DOELEN, EN DE VIERDE DRAAGT HET TEKEN OMGEKEERD. `DOELEN-SPEC` §3.5
+    (Conditie), §3.3 (Korte beklimmingen) en §3.4 (Lange beklimmingen) wijzen alle drie een maat
+    aan die de app niet kan uitrekenen — durability, respectievelijk dag twee tegen dag een.
+    Maar bij **Onderhoud** is de opdracht NIET-ZAKKEN (§3.2), dus een gelijkblijvende rolling FTP
+    IS daar het doel bereikt — terwijl de app "niet gestegen" leest en tijd-in-zone aanbiedt. Dat
+    is geen ontbrekende meter maar een omgekeerd teken.
+    DE TAK `niet_gestegen` HEEFT NOG NOOIT GEVUURD EN KAN DAT NIET. Gemeten op de echte database:
+    0 races in het hele verleden (de twee events staan in 2027), 0 test-overrides, en 0 van de 49
+    vierweekse blokken draagt een gelegenheid. `blokGelegenheid` geeft overal null, dus de tak die
+    "ik kan de tijd-in-zone verhogen" draagt is live in de code en onbereikbaar in de praktijk.
+    Een eerdere formulering hier noemde dit "een M55-schending die vandaag draait"; die stond op
+    een FIXTURE mét wedstrijd en was daarmee te sterk gesteld.
+    HET ECHTE GAT ZIT IN DE VOLGORDE VAN DE POORT. `isStijging` wordt getoetst VÓÓR de
+    gelegenheid-poort (`apps/web/src/lib/effect.ts:370`), dus een stijging telt zonder dat er een
+    meetmoment was. Gemeten: **8 van de 49 blokken lezen `gestegen` zonder enige gelegenheid** —
+    precies de blokken waarvan het venster een van de twee sprongdagen bevat (2026-01-13, +10 W
+    in één dag; 2026-05-21). Over een jaar waarin de meter van 291 naar 260 watt zakte staan er
+    dus 8 winst-uitspraken en 0 verlies-uitspraken. Die sprong is de SCHATTER die bijtrekt na
+    maanden decay, niet winst uit dát blok.
+    SYMMETRIE IS GEEN OPLOSSING — VERWORPEN, met de meting erbij. De gelegenheid-eis ook voor
+    `gestegen` laten gelden maakt 49 van de 49 blokken `niet_meetbaar`; de app zwijgt dan over
+    haar hele historie. `apps/web/src/lib/effect.test.ts:258` pint bovendien het tegendeel
+    ("stijging zonder bekende gelegenheid telt WEL — bewijs mag niet onderdrukt") en
+    `docs/EFFECT-REFERENT-5B-ONTWERP.md` §4 motiveert het: gestegen is aantoonbaar, gedaald niet.
+    DE OPLOSSING IS COPY, GEEN LOGICA. Op de tak `gestegen` splitst de TEKST op de vraag of het
+    blok een gelegenheid droeg. Was er geen test en geen wedstrijd, dan noemt de coach de
+    stijging wel maar schrijft hij hem niet aan dit blok toe. Dat geldt bij ALLE doelen, ook FTP.
+    BOUWLIJST — (a) de gelegenheid-splitsing in de `gestegen`-copy, inclusief de getalsrij op
+    `apps/web/src/components/schema/BlokReviewCard.tsx:343`, die vandaag `instap → maximum` toont
+    zodra er een referent is; (b) drie takken op het doel — stijging voor FTP, behoud voor
+    Onderhoud, meter_ontbreekt voor Conditie en beide klimdoelen — met `normalizeDoel_` VÓÓR de
+    tak-keuze, want `buildBlokReview` krijgt `settings?.doel` RAUW mee
+    (`apps/web/src/lib/schema.ts:1549`) en `"Beklimmingen"`, `"VO2max"`, leeg en onzin vallen
+    anders buiten elke tak; (c) een eigen `gestegen`-variant voor Onderhoud, want "de winst die
+    dit blok moest opleveren" is onwaar bij een behoud-opdracht; (d) de Onderhoud-poort
+    `blokCheckEnabled`, en UITSLUITEND als een recon aantoont dat er niets anders aan hangt;
+    (e) de kleine letter aan het zinsbegin in `apps/web/src/lib/coachNarrative.ts:603` en `:609`,
+    waar de gelegenheid-naam aan het begin van de zin wordt geïnterpoleerd.
+    DE BEHOUD-TAK ERFT `ROLLING_FTP_STIJGING_W` = 3 W, SYMMETRISCH TOEGEPAST — geen tweede getal.
+    Maar noteer erbij wat dat leent: het plateau +1 tot en met +8 is alleen OMHOOG geijkt, en de
+    min-richting is ONGEIJKT. Gemeten kantelt een verschil van −6 van `gezakt` naar `behouden`
+    zodra de drempel op 7 staat. Wie de behoud-tak bouwt, ijkt die richting apart of verantwoordt
+    waarom niet.
 
-35. **Een event draagt geen duur** — open · DATA plus ENGINE. `EventItem`
-    (`packages/shared/src/weekgen.ts:38`) en de D1-tabel `events`
-    (`workers/api/src/db/schema.ts:147`) dragen precies EEN `datum`, geen einddatum en geen
+35. **Een event draagt geen duur** — open · DATA plus ENGINE. De interface `EventItem`
+    (`packages/shared/src/weekgen.ts`) en de D1-tabel `events` (de export `events` in
+    `workers/api/src/db/schema.ts`) dragen precies EEN `datum`, geen einddatum en geen
     duur. Voor de TAPER is dat juist — die meet naar de startdag toe. Voor HERSTEL is het
     blokkerend: een venster van N dagen na het event meet bij een meerdaagse vanaf de
     STARTdag, dus het verloopt voor de trip afgelopen is. GEVOLG: de herstelregel van punt 13
@@ -1734,6 +1764,56 @@ punten staat onder *Gesloten — vindplaats*.
     voorstelde is gemeten en afgevallen: "nog dragend voor een openstaand punt" snijdt niet — 89
     van de 144 lessen noemen geen puntnummer, 50 van de 55 die er wél een noemen doen dat binnen de
     aanleiding, en inkorten levert 2,1 procent.
+47. **De check valt in twee: IJKING en DOELCHECK** — open · norm plus CLIENT. Daan-besluit
+    21-08-2026. De app kent vandaag één vraag aan het eind van een blok, en dat zijn er twee.
+    **IJKING** — klopt mijn FTP nog, zodat de zones kloppen — geldt bij ELK doel zonder
+    uitzondering, want élk plan doseert op %FTP en een verlopen FTP verschuift stilzwijgend elke
+    zonegrens en daarmee elke norm. **DOELCHECK** — is dit doel vooruitgegaan — verschilt per
+    doel. Bij FTP en bij Onderhoud vallen die twee samen: daar IS het 20-minutenvermogen de maat,
+    bij het eerste omhoog en bij het tweede niet-omlaag. Bij Conditie en bij beide klimdoelen
+    vallen ze uit elkaar, want `DOELEN-SPEC` §3.3 t/m §3.5 wijzen daar een durability- of
+    dag-twee-maat aan die met een 20-minutentest niet te meten is. GEVOLG voor de code: de poort
+    `blokCheckEnabled` in `apps/web/src/lib/blok.ts` sluit Onderhoud vandaag uit van het
+    testaanbod met als reden "geen effect-meter", en dat is precies het doel waar ijking en
+    doelcheck wél samenvallen. Dit punt legt de splitsing vast; punt 34 bouwlijst (d) beslist of
+    die poort ook opengaat.
+48. **Geen testaanbod rond een A- of B-event** — open · CLIENT. Daan-besluit 21-08-2026. Een
+    event is een event: daar geef je alles, en het event is zelf de betere meting. Een
+    20-minuten-all-out kost twee tot drie dagen herstel, en in een taper vernietigt hij precies
+    wat die taper opbouwt. De app kent A en B al — `isMaximaalEvent_` in
+    `apps/web/src/lib/effect.ts` toetst `type` race en prioriteit A of B — dus dit is een
+    CONDITIE ERBIJ in `buildTestVoorstel` (`apps/web/src/lib/testvoorstel.ts`), geen nieuw
+    begrip en geen nieuw getal. Er staat vandaag al een horizon-poort van
+    `WEDSTRIJD_HORIZON_DAGEN` dagen vóór een A/B-wedstrijd; wat dit punt toevoegt is dat het
+    besluit expliciet vastligt en niet als bijvangst van die ene constante blijft leven. GEEN
+    prioriteitsvertakking (C telt niet mee, zoals nu) en GEEN taper-uitzondering.
+49. **De doelcheck aflezen uit een sleutelsessie** — open · DATA plus CLIENT. Bij de drie doelen
+    zonder FTP-check (punt 47) is de check geen aparte test maar een SLEUTELSESSIE waarvan je de
+    uitkomst afleest: staat herhaling 5 en 6 nog op niveau, hoe lang was het langste aanhoudende
+    drempelblok, wat deed dag twee tegen dag een. GEMETEN 21-08-2026 wat dat vraagt.
+    UIT D1 NIET AF TE LEZEN: `zone_times_json` draagt over alle **209** ritten met een waarde
+    precies **8** totalen per zone (`Z1` t/m `Z7` plus `SS`, sleutels alleen `id` en `secs`),
+    zonder tijdas en zonder volgorde. 810 seconden in Z5 kan één blok van dertien minuten zijn of
+    zes van tweeënhalf, en de rij zegt niet welke. Geen enkele van de 19 kolommen van `activities`
+    draagt per-blok-data.
+    UIT DE LIVE FETCH WEL: `GET /activity/{id}/intervals` is AANGESLOTEN en levert per blok label,
+    zone, duur, %FTP en watts in volgorde — `buildRideDetailModel_` in
+    `workers/api/src/integrations/ride.ts` mapt het naar `RideInterval`
+    (`packages/shared/src/ride.ts`), en de client toont het al via `GET /api/ride/:id`.
+    DIT IS DUS EEN PERSISTENTIE-VRAAG, geen ontsluitingsvraag. `ride.ts` is expliciet stateless —
+    "geen cache, geen schema-touch" — en een doelcheck over twaalf weken vraagt opslag én
+    aggregatie. Dat raakt het D1-schema en hoort daarom een eigen bouw met een eigen migratie.
+    EERSTE STAP VAN DIT PUNT, en nog NIET gedaan: meten of `icu_intervals` voor Daans ritten
+    werkelijk gevuld is. Dat vraagt een HTTP-call naar intervals.icu, en die is in de meetronde
+    van 21-08 bewust niet gedaan.
+    PARITY: de bevroren GAS-app draaide dit al werkend — `rideIntervals_` in `src/WebApp.gs`
+    classificeerde blokken als werk op tempo, drempel en anaeroob. Die classificatie is bij de
+    port niet meegekomen; `RideInterval` draagt wel `pctFtp` en `watts`, dus ze is afleidbaar.
+    KLEIN EN APART, gemeten in dezelfde ronde — **de dode plek als een test wordt gepland maar
+    niet gereden.** De override blijft in `day_state` staan, poort (3) van `buildTestVoorstel`
+    ziet hem en geeft null, en `blokGelegenheid` geeft óók null omdat de gereden-toets faalt. Het
+    blok krijgt dan geen tweede aanbod én geen gelegenheid. Hoort bij dit punt omdat het dezelfde
+    wortel heeft: de app leest de UITVOERING van een geplande sessie niet terug.
 
 ## De tijdslijn
 
@@ -1981,13 +2061,22 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
    `docs/PUNT16-RECON.md` §5. **AFGEVINKT:** gebouwd in `5f8a63c`, drie blokken (harness, plek-recon,
    bouw). Bereik 15 van de 420 weken, vloer N = 4 en aantoonbaar zonder oordeel-effect; de twee
    vervolgvragen staan bij punt 16 in *De reeks*. **DE VOLGENDE IS 8 — punt 34.**
-8. **34** — de effect-referent kent het doel niet. M5-schending bij drie van de vijf doelen.
-9. **35** — een event draagt geen duur. Deblokkeert punt 13 fase B.
-10. **13 fase B** — de doelvraag na het event.
-11. **32** — de rit-beoordeling. M31 noemt het bedrading en geen nieuwe bouw.
-12. **11** — de duurvermogen-maat OPNIEUW ontwerpen. Achteraan met de juiste reden: de
+8. **34** — de effect-referent kent het doel niet. Na de meetrondes van 21-08-2026: VIER van de
+   vijf doelen, met Onderhoud omgekeerd van teken, plus 8 van de 49 blokken die `gestegen` lezen
+   zonder gelegenheid. De ingreep is COPY, niet logica — bouwlijst (a) t/m (e) bij het punt zelf.
+9. **47** — de check valt in twee: ijking bij elk doel, doelcheck per doel. Norm-besluit dat
+   vóór 49 moet liggen, want het bepaalt WAT die sleutelsessie moet aantonen.
+10. **48** — geen testaanbod rond een A- of B-event. Klein, één conditie in `buildTestVoorstel`,
+    en het staat hier zo vroeg omdat het goedkoop is en een echte schade voorkomt.
+11. **49** — de doelcheck aflezen uit een sleutelsessie. Vraagt opslag en aggregatie van de
+    interval-structuur, dus een migratie. Begint met één meting: is `icu_intervals` gevuld.
+12. **35** — een event draagt geen duur. Deblokkeert punt 13 fase B.
+13. **13 fase B** — de doelvraag na het event.
+14. **32** — de rit-beoordeling. M31 noemt het bedrading en geen nieuwe bouw.
+15. **11** — de duurvermogen-maat OPNIEUW ontwerpen. Achteraan met de juiste reden: de
     gemeten maat mat de RITKEUZE en niet het duurvermogen, dus dit is een afgekeurd ontwerp
-    en geen wachtende bouw. Tot dan blijft Conditie ongedekt (M33, M39).
+    en geen wachtende bouw. Tot dan blijft Conditie ongedekt (M33, M39). Punt 49 levert
+    hier het gereedschap voor: zonder per-blok-data uit de rit is deze maat niet te bouwen.
 
 De oude verantwoording van de gesloten punten 1 t/m 12 staat onder *Gesloten — vindplaats*.
 
