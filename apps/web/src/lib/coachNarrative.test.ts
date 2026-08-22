@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { BlokReview } from "./blok";
 import {
+  blokEffectRegel,
   blokReviewRegel,
   coachNarrative,
   faseOvergangRegel,
 } from "./coachNarrative";
+import type { EffectReferent } from "./effect";
 
 // De 3 warm-varianten van key_session (uit de pool) — voor de fallback-assert.
 const KEY_WARM = [
@@ -337,5 +339,193 @@ describe("blokReviewRegel — de vijf takken", () => {
 
   it("deterministisch: dezelfde review geeft dezelfde zin", () => {
     expect(blokReviewRegel(review())).toBe(blokReviewRegel(review()));
+  });
+});
+
+// ── ROADMAP punt 34 — DE EFFECT-COPY PER DOEL-TAK ────────────────────────────
+// De keuze valt in deze volgorde: eerst `doelTak`, dan `uitkomst`, dan `gelegenheid`. Deze suite
+// toetst wat de zinnen NIET meer beweren — een claim die de meter niet draagt is de schending die
+// punt 34 sluit (M5), en dat is met een afwezigheids-assertie te vangen en niet met een
+// gelijkheids-assertie op de hele zin.
+describe("blokEffectRegel — de doel-takken", () => {
+  function review(
+    effect: Partial<EffectReferent> & Pick<EffectReferent, "doelTak">,
+    o: Partial<BlokReview> = {},
+  ): BlokReview {
+    return {
+      startMonday: "2026-06-29",
+      eindMonday: "2026-07-20",
+      fase: "afgerond",
+      doel: null,
+      norm: 84,
+      normTempo: 24,
+      normDrempel: 47,
+      normAnaeroob: 13,
+      weekUren: 5,
+      weeks: [],
+      uitvoering: {
+        geleverd: true,
+        geleverdeWeken: 3,
+        beoordeeldeWeken: 3,
+        tekortZones: [],
+        verschuiving: false,
+      },
+      check: null,
+      ctlDelta: -5,
+      laatsteMeting: null,
+      effect: {
+        instap: 262,
+        maximum: 272,
+        verschil: 10,
+        gevuldeWeken: 4,
+        gelegenheid: { bron: null, datum: null },
+        uitkomst: "gestegen",
+        dosisTerm: null,
+        ...effect,
+      },
+      ...o,
+    };
+  }
+
+  const RACE = { bron: "race", datum: "2026-07-11" } as const;
+
+  /** De poolkeuze is deterministisch geseed op `startMonday`, dus welke van de twee varianten je
+   * krijgt hangt aan de datum. Deze reeks is breed genoeg dat élke pool zijn BEIDE varianten
+   * ergens oplevert; met vier maandagen viel één sleutel er per toeval buiten. */
+  const MAANDAGEN: string[] = Array.from({ length: 30 }, (_, i) => {
+    const d = new Date(2026, 0, 5 + i * 7);
+    const p = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  });
+
+  it("meter_ontbreekt: geen enkel watt-getal, geen oordeel", () => {
+    const r = blokEffectRegel(
+      review({ doelTak: "meter_ontbreekt", uitkomst: "niet_meetbaar" }),
+    );
+    expect(r).not.toBeNull();
+    // GEEN GETAL. Een watt-getal noemen is bij een ontbrekende maat al een uitspraak.
+    expect(r).not.toMatch(/\d/);
+    expect(r).toContain("geen uitspraak");
+  });
+
+  it("stijging + gestegen ZONDER gelegenheid: noemt de stijging maar claimt geen winst", () => {
+    const r = blokEffectRegel(review({ doelTak: "stijging" })) ?? "";
+    expect(r).toContain("272");
+    expect(r).not.toContain("winst");
+    expect(r).toContain("schatting");
+  });
+
+  it("stijging + gestegen MET gelegenheid: de bestaande winst-zin blijft ongewijzigd", () => {
+    const r =
+      blokEffectRegel(review({ doelTak: "stijging", gelegenheid: RACE })) ?? "";
+    expect(r).toContain("winst");
+  });
+
+  it("behoud + gestegen MET gelegenheid: een vloer, geen winst", () => {
+    const r =
+      blokEffectRegel(review({ doelTak: "behoud", gelegenheid: RACE })) ?? "";
+    expect(r).not.toContain("winst waar dit blok voor bedoeld was");
+    expect(r).not.toContain("de winst die dit blok moest opleveren");
+    expect(r).toMatch(/onderhoud/i);
+  });
+
+  it("behoud + gestegen ZONDER gelegenheid: dezelfde gedeelde schattings-pool als stijging", () => {
+    const zonder = blokEffectRegel(review({ doelTak: "behoud" })) ?? "";
+    const stijging = blokEffectRegel(review({ doelTak: "stijging" })) ?? "";
+    expect(zonder).toBe(stijging);
+    expect(zonder).toContain("schatting");
+  });
+
+  it("behoud + niet_gestegen: GEEN dosis-advies, ongeacht dosisTerm", () => {
+    for (const dosisTerm of ["tijd_in_zone", "volume", null] as const) {
+      const r =
+        blokEffectRegel(
+          review({
+            doelTak: "behoud",
+            uitkomst: "niet_gestegen",
+            gelegenheid: RACE,
+            dosisTerm,
+          }),
+        ) ?? "";
+      expect(r).not.toContain("tijd-in-zone");
+      expect(r).not.toContain("volume toevoegen");
+      // Beide varianten NOEMEN de dosis, en zeggen er allebei bij dat er niets bij gaat; de
+      // formulering verschilt ("gaat hier niet omhoog" tegen "er gaat niets bij de dosis"), dus de
+      // assertie gaat op de gedeelde term plus de afwezigheid van het advies.
+      expect(r).toContain("dosis");
+    }
+  });
+
+  it("de FTP-takken houden hun dosis-advies — punt 34 haalt het alleen bij BEHOUD weg", () => {
+    const tijdInZone =
+      blokEffectRegel(
+        review({
+          doelTak: "stijging",
+          uitkomst: "niet_gestegen",
+          gelegenheid: RACE,
+          dosisTerm: "tijd_in_zone",
+        }),
+      ) ?? "";
+    expect(tijdInZone).toContain("tijd-in-zone");
+  });
+
+  // ── bouwlijst (e) — DE HOOFDLETTER ────────────────────────────────────────
+  // De labelset `GELEGENHEID_NAAM_` draagt kleine letters ("de wedstrijd") omdat hij ook MIDDEN in
+  // een zin staat. De hoofdletter valt daarom op de gebruiksplek, niet op de constante.
+  it("de drie zinsbegin-varianten beginnen met een hoofdletter", () => {
+    // De pool-keuze is deterministisch geseed op `startMonday`; per tak wordt de maandag gezocht
+    // die variant 2 oplevert — de variant die met de gelegenheid-naam OPENT.
+    const zinsbegin = (o: Partial<EffectReferent>) => {
+      for (const maandag of MAANDAGEN) {
+        const r =
+          blokEffectRegel(
+            review({ gelegenheid: RACE, ...o } as never, {
+              startMonday: maandag,
+            }),
+          ) ?? "";
+        if (r.startsWith("De wedstrijd")) return r;
+      }
+      return null;
+    };
+    expect(
+      zinsbegin({
+        doelTak: "stijging",
+        uitkomst: "niet_gestegen",
+        dosisTerm: "tijd_in_zone",
+      }),
+    ).not.toBeNull();
+    expect(
+      zinsbegin({
+        doelTak: "stijging",
+        uitkomst: "niet_gestegen",
+        dosisTerm: "volume",
+      }),
+    ).not.toBeNull();
+    expect(
+      zinsbegin({ doelTak: "behoud", uitkomst: "niet_gestegen" }),
+    ).not.toBeNull();
+  });
+
+  it("de midden-in-de-zin-variant houdt zijn kleine letter", () => {
+    // Tegenkant: zou de hoofdletter in `GELEGENHEID_NAAM_` zijn gezet, dan zou hier "Bij De
+    // wedstrijd" staan en zou deze test vallen.
+    const gezien: string[] = [];
+    for (const maandag of MAANDAGEN) {
+      const r =
+        blokEffectRegel(
+          review(
+            {
+              doelTak: "stijging",
+              uitkomst: "niet_gestegen",
+              gelegenheid: RACE,
+              dosisTerm: "tijd_in_zone",
+            },
+            { startMonday: maandag },
+          ),
+        ) ?? "";
+      if (r.startsWith("Bij ")) gezien.push(r);
+    }
+    expect(gezien.length).toBeGreaterThan(0);
+    for (const r of gezien) expect(r).toContain("Bij de wedstrijd");
   });
 });

@@ -1199,6 +1199,10 @@ export function buildBlokReview(input: {
           startMonday: venster.startMonday,
           // Dezelfde ctlDelta die de caller al meegaf voedt de dosis-term: geen tweede signaal.
           ctlDelta: input.ctlDelta,
+          // ROADMAP punt 34 — de RAUWE doel-string, net als `blokCheck` en `buildBlokReferent`
+          // hem krijgen. `buildEffectReferent` normaliseert zelf; hier normaliseren zou een
+          // TWEEDE normalisatieplek maken en die twee kunnen uiteenlopen.
+          doel: input.doel,
         })
       : null;
 

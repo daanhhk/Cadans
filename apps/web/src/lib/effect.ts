@@ -15,7 +15,7 @@
 // namelijk zodra de oude topinspanning het venster uit valt. Een niet-stijging betekent dus
 // UITSLUITEND dat de beste inspanning van het vorige venster niet is overtroffen — vandaar de derde
 // uitkomst `niet_meetbaar`.
-import { CYCLING_TYPES } from "@cadans/engine";
+import { CYCLING_TYPES, DOEL_OPTIONS, normalizeDoel_ } from "@cadans/engine";
 import type { EventItem, OverrideEntry } from "@cadans/shared";
 import type { ActValuesRow } from "./activities";
 import { BLOK_WEKEN, isoFrom_, shiftIso_ } from "./blok";
@@ -297,6 +297,69 @@ export type EffectUitkomst = "gestegen" | "niet_gestegen" | "niet_meetbaar";
 export type EffectDosisTerm = "tijd_in_zone" | "volume";
 
 /**
+ * ROADMAP punt 34 — WELKE VRAAG STELT DE EFFECT-REFERENT VOOR DIT DOEL.
+ *
+ * `stijging` — `rolling_ftp` IS de maat en hij moet OMHOOG (DOELEN-SPEC §3.1).
+ * `behoud`   — `rolling_ftp` is de maat maar de opdracht is NIET-ZAKKEN (§3.2). Zelfde meter,
+ *              omgekeerd teken. De verdict-logica hiervoor komt in een later blok; deze ronde
+ *              draagt de tak alleen.
+ * `meter_ontbreekt` — het doel wijst een maat aan die de app niet kan uitrekenen: durability
+ *              (§3.5 en §3.3) of dag twee tegen dag een (§3.4). Dan zwijgt de app (M5).
+ */
+export type DoelTak = "stijging" | "behoud" | "meter_ontbreekt";
+
+// DE VIJF CANONIEKE DOELEN KOMEN UIT DE ENGINE-CONSTANTE, nooit met de hand overgetypt: een
+// hernoeming daar moet hier een stille val naar `meter_ontbreekt` geven en niet een tak die op
+// een verouderde letterlijke string blijft matchen.
+//
+// DE AFHANKELIJKHEID IS DE VOLGORDE, en die is niet gratis: `DOEL_OPTIONS` is een platte array,
+// dus index 0 t/m 4 dragen de betekenis. Index 0 wordt daarom GECONTROLEERD tegen een tweede
+// engine-feit: `normalizeDoel_` valt volgens `packages/engine/src/phase.ts` bij een onbekende of
+// lege waarde terug op de REFERENTIE, en dat is de FTP-optie. Klopt die kruiscontrole niet, dan is
+// de lijst herschikt en valt ALLES naar `meter_ontbreekt` — een verkeerd toegewezen tak is erger
+// dan geen uitspraak. De overige vier indexen blijven een aanname en horen door een test gepind.
+const FTP_OPTIE_ = DOEL_OPTIONS[0];
+const CONDITIE_OPTIE_ = DOEL_OPTIONS[1];
+const KLIM_KORT_OPTIE_ = DOEL_OPTIONS[2];
+const KLIM_LANG_OPTIE_ = DOEL_OPTIONS[3];
+const ONDERHOUD_OPTIE_ = DOEL_OPTIONS[4];
+const DOEL_LIJST_INTACT_ =
+  DOEL_OPTIONS.length === 5 && FTP_OPTIE_ === normalizeDoel_("");
+
+/**
+ * De doel-tak uit de RAUWE doel-string. `buildBlokReview` krijgt `settings.doel` ongenormaliseerd
+ * mee (vrije tekst in D1), dus de normalisatie hoort hier en niet bij de aanroeper.
+ *
+ * WAAROM ER NAAST `normalizeDoel_` NOG EEN HERKENNINGS-TOETS STAAT. `normalizeDoel_` FAIL-OPENT:
+ * leeg, null en onzin leveren alle drie de FTP-optie op, want voor het PLAN is een doel kiezen
+ * beter dan stilvallen. Voor een UITSPRAAK is dat precies verkeerd — dan zou een lege instelling
+ * een winst-of-verlies-oordeel over `rolling_ftp` opleveren. Daarom telt een genormaliseerde
+ * waarde alleen als de rauwe string zichzelf al was, óf als de normalisatie hem op een ANDERE
+ * optie dan de fallback bracht (zo wordt een opgeslagen `"Beklimmingen"` wél herkend).
+ *
+ * PRIJS, EXPLICIET: een opgeslagen `"VO2max"` normaliseert naar de fallback en is daarmee niet te
+ * onderscheiden van onzin, dus die valt op `meter_ontbreekt` in plaats van op `stijging`. Dat is
+ * de conservatieve kant — VO2max is als DOEL vervallen (§3.6) en de app zwijgt dan liever.
+ */
+export function doelTakVan_(doel: string | null | undefined): DoelTak {
+  if (!DOEL_LIJST_INTACT_) return "meter_ontbreekt";
+  const rauw = typeof doel === "string" ? doel : "";
+  const genormaliseerd = normalizeDoel_(rauw);
+  const herkend = rauw === genormaliseerd || genormaliseerd !== FTP_OPTIE_;
+  if (!herkend) return "meter_ontbreekt";
+  if (genormaliseerd === FTP_OPTIE_) return "stijging";
+  if (genormaliseerd === ONDERHOUD_OPTIE_) return "behoud";
+  if (
+    genormaliseerd === CONDITIE_OPTIE_ ||
+    genormaliseerd === KLIM_KORT_OPTIE_ ||
+    genormaliseerd === KLIM_LANG_OPTIE_
+  ) {
+    return "meter_ontbreekt";
+  }
+  return "meter_ontbreekt";
+}
+
+/**
  * Welke dosis-term mag omhoog bij een niet-stijging? DE DOSIS-TERM VOLGT DE PROCESMETER
  * (ontwerp §9b, beslecht): steeg de CTL over het blok, dan bouwde de belasting wél op en was de
  * KWALITEITSdosis te licht → `tijd_in_zone`. Steeg de CTL niet, dan bouwde het blok geen belasting
@@ -322,6 +385,8 @@ export interface EffectReferent {
   gelegenheid: BlokGelegenheid;
   uitkomst: EffectUitkomst;
   dosisTerm: EffectDosisTerm | null;
+  /** ROADMAP punt 34 — welke vraag dit doel stelt. Zie `DoelTak`. */
+  doelTak: DoelTak;
 }
 
 /**
@@ -340,7 +405,13 @@ export function buildEffectReferent(input: {
   overrides: OverrideEntry[];
   startMonday: string;
   ctlDelta: number | null;
+  /** ROADMAP punt 34 — de RAUWE doel-string uit settings; `doelTakVan_` normaliseert zelf. */
+  doel: string | null;
 }): EffectReferent | null {
+  // VOOR ELKE ANDERE BESLISSING: welke vraag stelt dit doel. Staat de meter er niet, dan mag de
+  // rolling-FTP-verdict-logica hieronder niet eens gedraaid worden.
+  const doelTak = doelTakVan_(input.doel);
+
   const instap = instapNiveau(input.activities, input.startMonday);
   if (instap == null) return null;
 
@@ -358,11 +429,18 @@ export function buildEffectReferent(input: {
     startMonday: input.startMonday,
   });
 
-  const uitkomst: EffectUitkomst = isStijging(verschil)
-    ? "gestegen"
-    : gelegenheid.bron != null
-      ? "niet_gestegen"
-      : "niet_meetbaar";
+  // ROADMAP punt 34 — de doel-tak staat VOOR de verdict-logica. Bij `meter_ontbreekt` wordt
+  // `isStijging` niet eens aangeroepen: `rolling_ftp` beantwoordt de vraag van dit doel niet, dus
+  // er valt niets te wegen. `instap`, `maximum` en `gelegenheid` blijven gevuld — het zijn TERMEN,
+  // geen oordeel, en laag 2 verbergt ze.
+  const uitkomst: EffectUitkomst =
+    doelTak === "meter_ontbreekt"
+      ? "niet_meetbaar"
+      : isStijging(verschil)
+        ? "gestegen"
+        : gelegenheid.bron != null
+          ? "niet_gestegen"
+          : "niet_meetbaar";
 
   return {
     instap,
@@ -372,5 +450,6 @@ export function buildEffectReferent(input: {
     gelegenheid,
     uitkomst,
     dosisTerm: dosisTerm(uitkomst, input.ctlDelta),
+    doelTak,
   };
 }

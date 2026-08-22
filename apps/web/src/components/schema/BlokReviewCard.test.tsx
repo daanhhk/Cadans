@@ -2,6 +2,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it } from "vitest";
 import type { BlokReview, BlokWeek } from "../../lib/blok";
+import type { EffectReferent } from "../../lib/effect";
 import { BlokReviewCard } from "./BlokReviewCard";
 
 /**
@@ -159,5 +160,110 @@ describe("BlokReviewCard — punt 17, de kleur volgt het GETOONDE getal", () => 
       <BlokReviewCard review={review(6.4)} coachNaam={null} />,
     );
     expect(totaalWaarde(host, "VO2max").style.color).toBe("var(--warn)");
+  });
+});
+
+// ── ROADMAP punt 34 — DE GETALSRIJ IN DRIE GEVALLEN ──────────────────────────
+// De rij toonde `instap → maximum` zodra er een referent was. Dat zijn er nu drie: geen rij bij
+// een ontbrekende maat, de volle rij bij een gemeten gelegenheid, en alleen de huidige waarde als
+// er niets gemeten is. Een pijl van instap naar maximum SUGGEREERT een gemeten verschil, en dat is
+// er in het derde geval niet.
+describe("ROADMAP punt 34 — de rolling-FTP-rij", () => {
+  function metEffect(o: {
+    doelTak: EffectReferent["doelTak"];
+    bron: "race" | null;
+    uitkomst?: EffectReferent["uitkomst"];
+  }): BlokReview {
+    const r = review(8);
+    return {
+      ...r,
+      effect: {
+        instap: 262,
+        maximum: 272,
+        verschil: 10,
+        gevuldeWeken: 4,
+        gelegenheid:
+          o.bron === null
+            ? { bron: null, datum: null }
+            : { bron: "race", datum: "2026-07-11" },
+        uitkomst: o.uitkomst ?? "gestegen",
+        dosisTerm: null,
+        doelTak: o.doelTak,
+      },
+    };
+  }
+
+  /** De labeldiv van de rolling-FTP-rij, of null als de rij er niet is. */
+  function labelDiv(host: HTMLElement): HTMLElement | null {
+    const treffers = Array.from(host.querySelectorAll("div")).filter((d) =>
+      (d.textContent ?? "").startsWith("rolling FTP"),
+    );
+    return (treffers[treffers.length - 1] as HTMLElement) ?? null;
+  }
+
+  it("meter_ontbreekt: GEEN rij, geen badge, geen watt-getal", () => {
+    const host = render(
+      <BlokReviewCard
+        review={metEffect({
+          doelTak: "meter_ontbreekt",
+          bron: null,
+          uitkomst: "niet_meetbaar",
+        })}
+        coachNaam="Coach"
+      />,
+    );
+    expect(labelDiv(host)).toBeNull();
+    expect(host.textContent ?? "").not.toContain("272");
+    expect(host.textContent ?? "").not.toContain("262");
+  });
+
+  it("een meter MET gelegenheid: de rij zoals hij was — instap, pijl, maximum, badge", () => {
+    const host = render(
+      <BlokReviewCard
+        review={metEffect({ doelTak: "stijging", bron: "race" })}
+        coachNaam="Coach"
+      />,
+    );
+    const label = labelDiv(host);
+    expect(label).not.toBeNull();
+    expect(label?.textContent).toContain("wedstrijd");
+    const waarde = label?.nextElementSibling as HTMLElement;
+    expect(waarde.textContent).toContain("262");
+    expect(waarde.textContent).toContain("→");
+    expect(waarde.textContent).toContain("272");
+    // STAP 6b — groen mag hier: gestegen ÉN gemeten.
+    expect(waarde.style.color).toBe("var(--good)");
+  });
+
+  it("een meter ZONDER gelegenheid: geen pijl, geen instap, label 'schatting'", () => {
+    const host = render(
+      <BlokReviewCard
+        review={metEffect({ doelTak: "stijging", bron: null })}
+        coachNaam="Coach"
+      />,
+    );
+    const label = labelDiv(host);
+    expect(label?.textContent).toContain("rolling FTP · schatting");
+    const waarde = label?.nextElementSibling as HTMLElement;
+    expect(waarde.textContent).toContain("272");
+    expect(waarde.textContent).not.toContain("→");
+    expect(waarde.textContent).not.toContain("262");
+    // STAP 6b — GEEN groen: een groen getal is zelf een winst-claim en spreekt "schatting" tegen.
+    expect(waarde.style.color).toBe("var(--text-muted)");
+  });
+
+  it("behoud met gelegenheid maar NIET gestegen: gedempt, ook al is er gemeten", () => {
+    const host = render(
+      <BlokReviewCard
+        review={metEffect({
+          doelTak: "behoud",
+          bron: "race",
+          uitkomst: "niet_gestegen",
+        })}
+        coachNaam="Coach"
+      />,
+    );
+    const waarde = labelDiv(host)?.nextElementSibling as HTMLElement;
+    expect(waarde.style.color).toBe("var(--text-muted)");
   });
 });

@@ -340,7 +340,15 @@ export function BlokReviewCard({
         ))}
       </div>
       <BlokTotaal weeks={review.weeks} />
-      {review.effect && (
+      {/* ROADMAP punt 34 — DRIE GEVALLEN, niet één.
+          (1) `meter_ontbreekt`: geen rij. `rolling_ftp` beantwoordt de vraag van dit doel niet,
+              dus een getal tonen is een uitspraak doen die de meter niet draagt (M5).
+          (2) een meter ÉN een gelegenheid: de rij zoals hij was — instap, pijl, maximum, badge.
+          (3) een meter maar GEEN gelegenheid: alleen de huidige waarde, gelabeld als schatting.
+              Een pijl van instap naar maximum suggereert een GEMETEN verschil, en dat is er niet:
+              zonder test of wedstrijd is de sprong de schatter die bijtrekt, niet winst uit dit
+              blok. Markup, styles en de bron-badge blijven ongewijzigd. */}
+      {review.effect && review.effect.doelTak !== "meter_ontbreekt" && (
         <div
           style={{
             display: "flex",
@@ -358,7 +366,9 @@ export function BlokReviewCard({
               color: "var(--text-secondary)",
             }}
           >
-            rolling FTP
+            {review.effect.gelegenheid.bron
+              ? "rolling FTP"
+              : "rolling FTP · schatting"}
             {review.effect.gelegenheid.bron && (
               <span
                 style={{
@@ -382,15 +392,21 @@ export function BlokReviewCard({
               fontFamily: "var(--font-num)",
               fontSize: "var(--fs-label)",
               fontWeight: 600,
+              // ROADMAP punt 34 — GROEN IS ZELF EEN WINST-CLAIM. Zonder test of wedstrijd is de
+              // stijging een opgelopen schatting, en groen spreekt het label "schatting" dan
+              // tegen. Alleen de CONDITIE is gewijzigd; de twee kleurwaarden zijn dezelfde.
               color:
-                review.effect.uitkomst === "gestegen"
+                review.effect.uitkomst === "gestegen" &&
+                review.effect.gelegenheid.bron != null
                   ? "var(--good)"
                   : "var(--text-muted)",
             }}
           >
-            <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>
-              {review.effect.instap} →{" "}
-            </span>
+            {review.effect.gelegenheid.bron && (
+              <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>
+                {review.effect.instap} →{" "}
+              </span>
+            )}
             {review.effect.maximum}
           </div>
         </div>

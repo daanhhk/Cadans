@@ -560,6 +560,17 @@ const GELEGENHEID_NAAM_: Record<string, string> = {
   race: "de wedstrijd",
 };
 
+/** ROADMAP punt 34 (e) — eerste teken naar hoofdletter, lege string ongemoeid.
+ *
+ * NODIG omdat `GELEGENHEID_NAAM_` labels met kleine letter draagt ("de test", "de wedstrijd") en
+ * diezelfde labels zowel MIDDEN in een zin staan ("Bij de wedstrijd bleef …") als aan het
+ * ZINSBEGIN. De constante zelf aanpassen zou de midden-in-de-zin-varianten breken, dus de
+ * hoofdletter valt op de GEBRUIKSPLEK. Puur, geen locale-afhankelijkheid op de eerste positie:
+ * de labelset is Nederlands en ASCII. */
+function hoofdletter_(s: string): string {
+  return s.length > 0 ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+}
+
 /** "21 mei" — korte NL-datum uit een yyyy-MM-dd. */
 function datumKort_(iso: string): string {
   const maanden = [
@@ -592,25 +603,62 @@ export function blokEffectRegel(r: BlokReview): string | null {
         }`
       : "";
 
+  // ROADMAP punt 34 — DE VOLGORDE VAN DE KEUZE IS DRAGEND: eerst de DOEL-TAK, dan de UITKOMST,
+  // dan de GELEGENHEID. Staat de meter er niet, dan mag geen enkele rolling-FTP-zin bereikt
+  // worden; is er wél een meter maar geen test of wedstrijd, dan mag de zin de stijging niet aan
+  // dit blok toeschrijven. Zie `DoelTak` in `apps/web/src/lib/effect.ts`.
   let pool: string[];
   let key: string;
-  if (e.uitkomst === "gestegen") {
-    key = "gestegen";
+  if (e.doelTak === "meter_ontbreekt") {
+    // Geen watt-getal in deze pool: `rolling_ftp` beantwoordt de vraag van dit doel niet, dus een
+    // getal noemen zou al een uitspraak zijn (M5).
+    key = "meter_ontbreekt";
     pool = [
-      `Je rolling FTP ging van ${e.instap} naar ${e.maximum} watt. Dat is precies de winst waar dit blok voor bedoeld was.`,
-      `De rolling FTP staat op ${e.maximum} watt, ${e.verschil} boven de ${e.instap} waarmee je het blok inging — de winst die dit blok moest opleveren.`,
+      "Voor dit doel is je rolling FTP niet de maat, dus over het effect van dit blok doe ik hier geen uitspraak. De maat die er wel bij hoort zit nog niet in de app.",
+      "Je rolling FTP zegt niets over dit doel, dus over het effect van dit blok laat ik me hier niet uit. Dat is een ontbrekende maat, geen tegenvaller.",
+    ];
+  } else if (e.uitkomst === "gestegen") {
+    if (e.gelegenheid.bron == null) {
+      // GEDEELD door `stijging` en `behoud`: zonder meting valt er niets doel-specifieks te
+      // zeggen. Een rollend maximum kan ook oplopen doordat de schatter bijtrekt.
+      key = "gestegen_zonder_gelegenheid";
+      pool = [
+        `Je rolling FTP staat op ${e.maximum} watt, ${e.verschil} boven de ${e.instap} waarmee je het blok inging. Maar je ging dit blok nergens vol, dus dit is een schatting die is opgelopen — geen gemeten winst.`,
+        `De rolling FTP liep op van ${e.instap} naar ${e.maximum} watt. Zonder test of wedstrijd in dit blok is dat een schatting en geen resultaat; of het blok gewerkt heeft valt hier niet uit af te lezen.`,
+      ];
+    } else if (e.doelTak === "behoud") {
+      key = "behoud_gestegen";
+      pool = [
+        `Je rolling FTP ging van ${e.instap} naar ${e.maximum} watt. Bij onderhoud vraag ik alleen of je niet wegzakt — dat is ruim gehaald.`,
+        `De rolling FTP staat op ${e.maximum} watt tegen ${e.instap} bij de start. Onderhoud vraagt om een vloer, geen winst; die vloer staat.`,
+      ];
+    } else {
+      key = "gestegen";
+      pool = [
+        `Je rolling FTP ging van ${e.instap} naar ${e.maximum} watt. Dat is precies de winst waar dit blok voor bedoeld was.`,
+        `De rolling FTP staat op ${e.maximum} watt, ${e.verschil} boven de ${e.instap} waarmee je het blok inging — de winst die dit blok moest opleveren.`,
+      ];
+    }
+  } else if (e.doelTak === "behoud" && e.uitkomst === "niet_gestegen") {
+    // ONGEACHT `dosisTerm`. De twee bestaande niet-gestegen-varianten bieden een dosisverhoging
+    // aan, en bij een behoud-opdracht is dat onjuist: niet-stijgen IS daar het doel
+    // (DOELEN-SPEC §3.2).
+    key = "behoud_niet_gestegen";
+    pool = [
+      `Bij ${gelegenheid} stond je rolling FTP op ${e.maximum} watt, tegen ${e.instap} bij de start. Onderhoud vraagt vasthouden en geen winst, dus de dosis gaat hier niet omhoog.`,
+      `${hoofdletter_(gelegenheid)} leverde ${e.maximum} watt, tegen ${e.instap} bij de start. Bij onderhoud is dat geen tekort maar de opdracht; er gaat niets bij de dosis.`,
     ];
   } else if (e.uitkomst === "niet_gestegen" && e.dosisTerm === "tijd_in_zone") {
     key = "niet_gestegen_tijd_in_zone";
     pool = [
       `Bij ${gelegenheid} bleef je rolling FTP op ${e.maximum} watt staan, tegen ${e.instap} bij de start. Je belasting bouwde wél op, dus de kwaliteitsdosis was te licht — daar mag tijd-in-zone bij.`,
-      `${gelegenheid} leverde geen hogere rolling FTP op: ${e.maximum} watt tegen ${e.instap} bij de start. De belasting groeide wel, dus het zat niet in de opbouw maar in de prikkel; ik kan de tijd-in-zone verhogen.`,
+      `${hoofdletter_(gelegenheid)} leverde geen hogere rolling FTP op: ${e.maximum} watt tegen ${e.instap} bij de start. De belasting groeide wel, dus het zat niet in de opbouw maar in de prikkel; ik kan de tijd-in-zone verhogen.`,
     ];
   } else if (e.uitkomst === "niet_gestegen" && e.dosisTerm === "volume") {
     key = "niet_gestegen_volume";
     pool = [
       `Bij ${gelegenheid} bleef je rolling FTP op ${e.maximum} watt staan, tegen ${e.instap} bij de start. Je belasting bouwde ook niet op, dus méér drempeltijd is niet het antwoord — de ruimte zit in het volume, om te beginnen bij de lange rit.`,
-      `${gelegenheid} leverde geen hogere rolling FTP op: ${e.maximum} watt tegen ${e.instap}. De belasting stond stil, dus harder trainen lost dit niet op; ik kan beter volume toevoegen, te beginnen bij de lange rit.`,
+      `${hoofdletter_(gelegenheid)} leverde geen hogere rolling FTP op: ${e.maximum} watt tegen ${e.instap}. De belasting stond stil, dus harder trainen lost dit niet op; ik kan beter volume toevoegen, te beginnen bij de lange rit.`,
     ];
   } else {
     key = "niet_meetbaar";

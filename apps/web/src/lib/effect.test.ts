@@ -1,3 +1,4 @@
+import { DOEL_OPTIONS, normalizeDoel_ } from "@cadans/engine";
 import type { EventItem, OverrideEntry } from "@cadans/shared";
 import { describe, expect, it } from "vitest";
 import type { ActValuesRow } from "./activities";
@@ -6,6 +7,7 @@ import {
   blokGelegenheid,
   blokMaximum,
   buildEffectReferent,
+  doelTakVan_,
   dosisTerm,
   EFFECT_MIN_GEVULDE_WEKEN,
   instapNiveau,
@@ -18,6 +20,17 @@ import { NO_BUILD_CTL_DELTA } from "./fatigue";
 import { signatuurSeconden, ZONE5_GRENZEN_DEFAULT } from "./zonemunt";
 
 // Geen vi.setSystemTime nodig: elke datum is een parameter (effect.ts leest de klok nergens).
+
+/** De vijf doelen komen UIT de engine-constante, nooit met de hand overgetypt. De bestaande
+ * fixtures draaien op de FTP-optie: dat is de tak `stijging` en dus het gedrag waarop deze suite
+ * al geijkt was. ROADMAP punt 34 wijzigt de UITKOMST niet, alleen de copy en de kaart. */
+const [
+  FTP_DOEL,
+  CONDITIE_DOEL,
+  KLIM_KORT_DOEL,
+  KLIM_LANG_DOEL,
+  ONDERHOUD_DOEL,
+] = DOEL_OPTIONS;
 
 /** De ECHTE weekreeks uit docs/EFFECT-REFERENT-RECON.md §4, verbatim van schijf overgenomen:
  * laatste geldige rolling_ftp per kalenderweek. 2026-02-02 heeft daar geen rij — dat gat blijft
@@ -133,6 +146,7 @@ describe("ijking op de weekreeks uit EFFECT-REFERENT-RECON.md §4", () => {
         overrides: [],
         startMonday: start,
         ctlDelta: null,
+        doel: FTP_DOEL,
       })?.verschil;
     expect(v("2026-06-29")).toBe(-2);
     expect(v("2026-01-12")).toBe(9);
@@ -171,6 +185,7 @@ describe("plateau-toets — het raster van de app zelf (blokStartVoorWeek)", () 
         overrides: [],
         startMonday: start,
         ctlDelta: null,
+        doel: FTP_DOEL,
       });
       return r != null && isStijging(r.verschil, drempel);
     });
@@ -207,6 +222,7 @@ describe("plateau-toets — het raster van de app zelf (blokStartVoorWeek)", () 
         overrides: [],
         startMonday: start,
         ctlDelta: null,
+        doel: FTP_DOEL,
       })?.verschil;
     expect(verschil("2026-01-12")).toBe(9);
     expect(verschil("2026-05-04")).toBe(8);
@@ -232,6 +248,7 @@ describe("buildEffectReferent — poorten", () => {
         overrides: [],
         startMonday: "2026-06-29",
         ctlDelta: null,
+        doel: FTP_DOEL,
       }),
     ).toBeNull();
   });
@@ -251,6 +268,7 @@ describe("buildEffectReferent — poorten", () => {
         overrides: [],
         startMonday: "2026-06-29",
         ctlDelta: null,
+        doel: FTP_DOEL,
       }),
     ).toBeNull();
   });
@@ -262,6 +280,7 @@ describe("buildEffectReferent — poorten", () => {
       overrides: [],
       startMonday: "2026-01-05",
       ctlDelta: null,
+      doel: FTP_DOEL,
     });
     expect(r?.uitkomst).toBe("gestegen");
     expect(r?.gelegenheid.bron).toBeNull();
@@ -274,6 +293,7 @@ describe("buildEffectReferent — poorten", () => {
       overrides: [],
       startMonday: "2026-06-29",
       ctlDelta: -5,
+      doel: FTP_DOEL,
     });
     expect(r?.uitkomst).toBe("niet_meetbaar");
     expect(r?.dosisTerm).toBeNull();
@@ -391,6 +411,7 @@ describe("blokGelegenheid", () => {
       overrides: [],
       startMonday: "2026-06-29",
       ctlDelta: -5,
+      doel: FTP_DOEL,
     });
     expect(r?.uitkomst).toBe("niet_gestegen");
   });
@@ -734,5 +755,130 @@ describe("laatsteGelegenheid met de sprong-bron", () => {
         totISO: "2026-07-26",
       }),
     ).toEqual({ bron: "inspanning", datum: "2026-05-21" });
+  });
+});
+
+// ── ROADMAP punt 34 — DE DOEL-TAK ────────────────────────────────────────────
+// De referent was doel-BLIND: dezelfde rolling-FTP-vraag voor alle vijf doelen, terwijl
+// DOELEN-SPEC §3.3 t/m §3.5 voor drie ervan een maat aanwijzen die de app niet kan uitrekenen en
+// §3.2 bij Onderhoud het TEKEN omkeert. Deze suite pint de tak-keuze, niet de copy.
+describe("doelTakVan_ — de tak per doel", () => {
+  // DIT IS DE DRAGENDE TEST VAN DIT BLOK. `doelTakVan_` leest de vijf opties op INDEX uit
+  // `DOEL_OPTIONS`; herschikt de engine die lijst, dan wijst elke tak stilzwijgend het verkeerde
+  // doel aan en blijft alles groen. Deze assertie is de enige plek die dat vangt.
+  it("DOEL_OPTIONS draagt vijf opties IN VOLGORDE — herschikken breekt de tak-keuze", () => {
+    expect(DOEL_OPTIONS).toEqual([
+      "FTP",
+      "Conditie",
+      "Korte beklimmingen",
+      "Lange beklimmingen",
+      "Onderhoud",
+    ]);
+  });
+
+  it("elk van de vijf opties geeft zijn eigen tak", () => {
+    expect(doelTakVan_(FTP_DOEL)).toBe("stijging");
+    expect(doelTakVan_(ONDERHOUD_DOEL)).toBe("behoud");
+    expect(doelTakVan_(CONDITIE_DOEL)).toBe("meter_ontbreekt");
+    expect(doelTakVan_(KLIM_KORT_DOEL)).toBe("meter_ontbreekt");
+    expect(doelTakVan_(KLIM_LANG_DOEL)).toBe("meter_ontbreekt");
+  });
+
+  it('normalizeDoel_ draait VOOR de tak-keuze: "Beklimmingen" is Korte beklimmingen, dus meter_ontbreekt', () => {
+    expect(normalizeDoel_("Beklimmingen")).toBe(KLIM_KORT_DOEL);
+    expect(doelTakVan_("Beklimmingen")).toBe("meter_ontbreekt");
+  });
+
+  it("leeg, null en onzin vallen op meter_ontbreekt — de ZWIJGENDE tak, niet de FTP-fallback", () => {
+    // De grond: `normalizeDoel_` fail-opent naar de FTP-optie, want voor het PLAN is een doel
+    // kiezen beter dan stilvallen. Voor een UITSPRAAK is dat precies verkeerd.
+    expect(normalizeDoel_("")).toBe(FTP_DOEL);
+    expect(doelTakVan_("")).toBe("meter_ontbreekt");
+    expect(doelTakVan_(null)).toBe("meter_ontbreekt");
+    expect(doelTakVan_(undefined)).toBe("meter_ontbreekt");
+    expect(doelTakVan_("zomaar wat")).toBe("meter_ontbreekt");
+  });
+
+  it('"VO2max" geeft METER_ONTBREEKT, want hij normaliseert naar de FTP-FALLBACK en is daarmee niet van onzin te onderscheiden', () => {
+    // De engine draagt geen geëxporteerde alias-tabel en geen is-bekend-predicaat, dus buiten
+    // `normalizeDoel_` is een herkende legacy-waarde die op de fallback landt niet te scheiden van
+    // een typefout. VO2max is als DOEL vervallen (DOELEN-SPEC §3.6); zwijgen is hier de veilige
+    // kant. Verandert de engine dit, dan hoort deze test mee te bewegen.
+    expect(normalizeDoel_("VO2max")).toBe(FTP_DOEL);
+    expect(doelTakVan_("VO2max")).toBe("meter_ontbreekt");
+  });
+});
+
+describe("buildEffectReferent — de tak stuurt de uitkomst", () => {
+  const raceA = (datum: string): EventItem => ({
+    datum,
+    naam: "Ronde van Iets",
+    type: "race",
+    prioriteit: "A",
+    afstandKm: null,
+    hoogtemeters: null,
+    klimType: null,
+    notitie: null,
+  });
+  const metRace = [...REEKS_ACTS, act("2026-07-11", { minuten: 90 })];
+
+  const bouw = (
+    doel: string | null,
+    o: { start: string; ctlDelta: number | null; race?: boolean },
+  ) =>
+    buildEffectReferent({
+      activities: o.race ? metRace : REEKS_ACTS,
+      events: o.race ? [raceA("2026-07-11")] : [],
+      overrides: [],
+      startMonday: o.start,
+      ctlDelta: o.ctlDelta,
+      doel,
+    });
+
+  it("doel FTP houdt zijn drie bestaande uitkomsten — punt 34 wijzigt de copy, niet het oordeel", () => {
+    expect(
+      bouw(FTP_DOEL, { start: "2026-01-05", ctlDelta: null })?.uitkomst,
+    ).toBe("gestegen");
+    expect(
+      bouw(FTP_DOEL, { start: "2026-06-29", ctlDelta: -5 })?.uitkomst,
+    ).toBe("niet_meetbaar");
+    expect(
+      bouw(FTP_DOEL, { start: "2026-06-29", ctlDelta: -5, race: true })
+        ?.uitkomst,
+    ).toBe("niet_gestegen");
+  });
+
+  it("doel Onderhoud draagt tak behoud en houdt dezelfde drie uitkomsten — het TEKEN zit in de copy", () => {
+    for (const geval of [
+      { start: "2026-01-05", ctlDelta: null },
+      { start: "2026-06-29", ctlDelta: -5 },
+      { start: "2026-06-29", ctlDelta: -5, race: true },
+    ]) {
+      expect(bouw(ONDERHOUD_DOEL, geval)?.doelTak).toBe("behoud");
+    }
+    expect(
+      bouw(ONDERHOUD_DOEL, { start: "2026-01-05", ctlDelta: null })?.uitkomst,
+    ).toBe("gestegen");
+    expect(
+      bouw(ONDERHOUD_DOEL, { start: "2026-06-29", ctlDelta: -5, race: true })
+        ?.uitkomst,
+    ).toBe("niet_gestegen");
+  });
+
+  it("bij meter_ontbreekt wordt de verdict-logica NIET gedraaid: altijd niet_meetbaar, ook bij een stijging", () => {
+    // 2026-01-05 is een blok dat bij FTP "gestegen" oplevert — de TEGENKANT die deze test nodig
+    // heeft. Het verschil wordt niet gehardcodeerd maar tegen de stijging-tak gelegd: zo toetst
+    // de assertie dat alleen het OORDEEL vervalt en de term ongemoeid blijft.
+    const bijFtp = bouw(FTP_DOEL, { start: "2026-01-05", ctlDelta: null });
+    expect(bijFtp?.uitkomst).toBe("gestegen");
+    for (const doel of [CONDITIE_DOEL, KLIM_KORT_DOEL, KLIM_LANG_DOEL]) {
+      const r = bouw(doel, { start: "2026-01-05", ctlDelta: null });
+      expect(r?.doelTak).toBe("meter_ontbreekt");
+      expect(r?.uitkomst).toBe("niet_meetbaar");
+      expect(r?.dosisTerm).toBeNull();
+      expect(r?.verschil).toBe(bijFtp?.verschil);
+      expect(r?.instap).toBe(bijFtp?.instap);
+      expect(r?.maximum).toBe(bijFtp?.maximum);
+    }
   });
 });
