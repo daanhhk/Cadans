@@ -1802,7 +1802,20 @@ punten staat onder *Gesloten — vindplaats*.
     van de 144 lessen noemen geen puntnummer, 50 van de 55 die er wél een noemen doen dat binnen de
     aanleiding, en inkorten levert 2,1 procent.
 47. **De check valt in twee: IJKING en DOELCHECK** — open · norm plus CLIENT. Daan-besluit
-    21-08-2026. De app kent vandaag één vraag aan het eind van een blok, en dat zijn er twee.
+    21-08-2026. **HET NORM-BESLUIT IS GENOMEN op 22-08-2026 en WOONT IN `docs/TRAININGSMODEL.md`
+    §13 — M89, M90 en M91.** M89 legt de twee vragen vast, M90 hangt de ijking aan de doelblokgrens
+    en maakt haar een VOORSTEL (met de één-per-doelblok-cadans als HEURISTIEK), en M91 zegt dat een
+    afwijzing geen meting is en dat de ONGEIJKT-staat gedragen en gezegd moet worden. De canon
+    hieronder blijft staan als de aanleiding; de norm zelf leest men voortaan in het model.
+    DE RECON DIE ERBIJ HOORT staat in `docs/PUNT47-RECON.md` (22-08-2026, read-only op `ad10bf7`).
+    Twee verwachtingen VIELEN daar: er BESTAAT een twaalfweekse blokgrens die zelfs een datum
+    levert (`doelTestWeken_` in `packages/engine/src/niveau.ts`), en `doelStart` WORDT bij een
+    doelwissel herschreven (`blokStartBijDoel` in `apps/web/src/lib/settings.ts`) — hij schuift
+    alleen niet automatisch op als een blok afloopt. Ook vastgesteld: de canon-tegenspraak die het
+    STAND-blok van 22-08 noemde BESTAAT NIET; dit punt weerlegt zijn eigen samenvallen-formulering
+    twee alinea's verder. Wat wél openstaat is de MAAT uit `DOELEN-SPEC` §3.2, en dat is een
+    bouwvraag.
+    De app kent vandaag één vraag aan het eind van een blok, en dat zijn er twee.
     **IJKING** — klopt mijn FTP nog, zodat de zones kloppen — geldt bij ELK doel zonder
     uitzondering, want élk plan doseert op %FTP en een verlopen FTP verschuift stilzwijgend elke
     zonegrens en daarmee elke norm. **DOELCHECK** — is dit doel vooruitgegaan — verschilt per

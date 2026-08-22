@@ -613,4 +613,12 @@ constructie het ruimste van de twee.
 M9 BLIJFT GELDEN: dit is een continue eigenschap over de hele volume-as en geen aparte modus vanaf
 acht uur.
 
+## §13 — IJking en doelcheck
+
+**M89 (NORM) - Aan het eind van een blok staan TWEE vragen, niet een.** IJKING: klopt de drempelwaarde waarop dit plan doseert nog. Die vraag geldt bij ELK doel zonder uitzondering, want elk plan doseert op een percentage van die waarde, en een verlopen drempel verschuift stilzwijgend elke zonegrens en daarmee elke norm waarop de app oordeelt. DOELCHECK: is dit doel vooruitgegaan. Die vraag verschilt per doel en draagt per doel een eigen maat. Bij sommige doelen delen de twee dezelfde meting met een verschillend criterium: bij een behoud-doel is de ijking een schaalvraag en de doelcheck een vloer. Dezelfde meting, twee vragen. Een app die er een van maakt, beantwoordt de andere niet.
+
+**M90 (NORM plus HEURISTIEK) - De ijking hangt aan de doelblokgrens en is een VOORSTEL.** Drie delen met verschillende herkomst. (a) NORM. De ijkinspanning valt op de grens van een doelblok: daar sluit zij de doelcheck van het aflopende blok en zet zij de zones voor het volgende. Een moment, twee opbrengsten. De ijking rijdt daarmee de doelblok-klok en niet de dosis-klok; dat zijn twee klokken met verschillend werk. (b) HEURISTIEK. Een ijkinspanning per doelblok, niet meer. De klassieke leer test elke vier a zes weken, maar die cadans bestaat om een BEWEGENDE drempel bij te houden; bij een doel dat op behoud stuurt is er geen beweging om te volgen, en kost elke extra test frequentie - precies de grootheid die zo'n doel beschermt. Coachconventie, geen bevinding. (c) NORM. De ijking volgt M10 en M11: de app STELT VOOR, de gebruiker bevestigt of wijst af, en het staande plan blijft staan tot hij kiest.
+
+**M91 (NORM) - Een afwijzing is geen meting.** Wijst de gebruiker de ijkinspanning af, dan is de drempelwaarde niet bevestigd maar ONGEIJKT. De app draagt die staat en zegt haar; een afgewezen ijking mag nooit als een geslaagde worden behandeld (M5). Drie afwijzingen op rij is een drempel die drie blokken oud is, en dat hoort zichtbaar te zijn. Een proxy vervangt de ijking niet: de koppeling tussen hartslag en vermogen informeert over grove afbraak, maar haar ruis ligt boven de enkele procenten waarop een behoud-vloer oordeelt. Zij is informant (M17, M30) en mag het aanbod niet onderdrukken.
+
 <!-- EINDE docs/TRAININGSMODEL.md -->
