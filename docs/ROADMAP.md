@@ -1814,6 +1814,18 @@ punten staat onder *Gesloten — vindplaats*.
     testaanbod met als reden "geen effect-meter", en dat is precies het doel waar ijking en
     doelcheck wél samenvallen. Dit punt legt de splitsing vast; punt 34 bouwlijst (d) beslist of
     die poort ook opengaat.
+    **BIJ ONDERHOUD LOPEN DE TWEE HELFTEN UIT ELKAAR, en juist dat maakt het het ontwerpgeval.**
+    Herkomst: BESLUIT. De IJKING is er WÉL nodig — sterker nog, daar is ze het hardst nodig: een
+    onderhoudsblok loopt een hele winter, élk plan doseert op %FTP, en een FTP die ondertussen
+    verloopt verschuift stilzwijgend elke zonegrens en daarmee elke norm waarop de app oordeelt.
+    De DOELCHECK is er tegelijk iets ANDERS: een VLOER, geen stijging (`DOELEN-SPEC` §3.2 — niet
+    meer dan enkele procenten zakken). Hierboven staat dat ijking en doelcheck bij Onderhoud
+    "samenvallen" omdat ze dezelfde METER delen; dat is waar over de meter en onwaar over de
+    VRAAG. Dezelfde 20 minuten beantwoorden twee verschillende vragen — klopt mijn schaal nog, en
+    heb ik vastgehouden — en alleen de tweede is doel-specifiek. Elk ander doel laat die twee
+    ofwel volledig samenvallen (FTP) ofwel volledig uiteenlopen (Conditie en beide klimdoelen);
+    Onderhoud is het enige geval waar ze dezelfde meting delen met een verschillend criterium, en
+    daarom is het het geval waarop deze splitsing zich laat ontwerpen in plaats van beredeneren.
 48. **Geen testaanbod rond een A- of B-event** — open · CLIENT. Daan-besluit 21-08-2026. Een
     event is een event: daar geef je alles, en het event is zelf de betere meting. Een
     20-minuten-all-out kost twee tot drie dagen herstel, en in een taper vernietigt hij precies
@@ -1871,6 +1883,13 @@ punten staat onder *Gesloten — vindplaats*.
     bleef). RAAKT punt 47 en 48 inhoudelijk — 47 beslist wat een check bij Onderhoud überhaupt
     moet aantonen — maar WACHT ER NIET OP: dit is een onware zin die vandaag draait, en die kan
     zonder dat besluit al waar gemaakt worden.
+    **SCOPE-GRENS, EN DIE IS DRAGEND.** Dit punt haalt UITSLUITEND de niet-inbare belofte weg. De
+    vraag wát een Onderhoud-blok dan afsluit — welke check daar hoort, en of er überhaupt een
+    meetmoment nodig is — valt onder punt 47 en wordt hier NIET beantwoord. Zonder deze grens
+    groeit 50 vanzelf uit tot de ijking-vraag: wie de zin gaat herschrijven moet iets in de plaats
+    zetten, en het eerste wat zich aandient is een uitspraak over wat er wél gemeten wordt. Dat is
+    precies het besluit dat 47 draagt. De toets op dit punt is dus smal en negatief: de app belooft
+    niets meer wat ze niet doet. Meer is winst voor een volgend punt, niet voor dit.
 
 ## De tijdslijn
 
