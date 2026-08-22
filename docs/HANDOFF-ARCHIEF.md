@@ -11,6 +11,65 @@ of uit de publieke repo.
 De levende projectstand staat in `HANDOFF.md`. Dat bestand droeg tot 21-08-2026 de twaalf nieuwste
 STAND-blokken; sindsdien draagt het er TWEE, en schuift het oudste bij elke close-out hierheen.
 
+STAND 2026-08-21 — DE WERKWIJZE IS OMGEKEERD: DE PROCESCANON STAAT NU AAN CC'S KANT EN DE
+OPENER DRAAGT ROL EN ARCHITECTUUR IN PLAATS VAN REGELS. Vier commits: `9912d23` (doorloop),
+`9047381` (checks), `15f88af` (architectuurkaart), `499f20b` (verhuizing plus nieuwe opener).
+Docs-only, geen code, geen engine, geen migratie, geen deploy. Prod en D1 staan waar het blok
+hieronder ze noemt.
+- **DE DIAGNOSE, GEMETEN.** 144 logregels in één maand over 21 actieve dagen. De vorige poort
+  — de vijf promptcontroles van 03-08 — dempte de groei niet: 6,40 logregels per actieve dag
+  ervoor, 7,27 erna. 13 van de 149 lessen dragen een tweede of derde aanleiding, en 54 van de
+  149 openen met "zelfde familie als" een bestaande les. De canon herkende zijn patronen wel
+  en voorkwam ze niet.
+- **DE WORTEL: DE CANON KON ALLEEN GROEIEN.** 149 lessen, NUL ooit ingetrokken, 99 toevoegingen
+  tegen 4 intrekkingen. `TRAININGSMODEL.md` trekt wél in (M60, M61, M78); de werkwijze-kant
+  nooit. Elke ronde had een toevoegknop en geen wegknop.
+- **DE DOORLOOP.** Alle 149 lessen geclassificeerd in `docs/LESSEN-DOORLOOP.md` op VORM
+  (mechanisch 81 · oordeel 62 · onbeslist 6) en DRAGER (chat 77 · CC 46 · beide 24 · onbeslist
+  2). De kruistabel weerlegde de eerste opzet: "lessen horen bij CC" is onjuist — 101 van de
+  149 bijten bij chat.
+- **DE OMZETTING.** De 53 mechanische CC-lessen staan als 38 checks in `docs/CC-CHECKS.md`,
+  met conditie, toets, uitkomst en herkomst. 53 van de 53 gedekt, 1 niet omzetbaar met reden
+  in plaats van een verzonnen check eromheen. Verdeling: ALTIJD 3 · METING 12 · HARNESS 5 ·
+  DEPLOY 1 · COMMIT 2 · ENGINE 14.
+- **DE KAART.** `docs/ARCHITECTUUR.md` is nieuw en is het oriëntatiedocument voor de chat-kant:
+  lagen, grenzen, de keten van een weekvoorstel, wat de app kan zien en meten, wat het
+  meetgereedschap wel en niet bewijst, en waar welk soort besluit valt. Bestands- en
+  functienamen mogen, regelnummers niet. GROND: 75 van de 149 lessen noemden een concreet
+  bestand of functie — dat was architectuurkennis, vermomd als bewijslast.
+- **TWEE REGELS INGETROKKEN, NIET GESCHRAPT.** "De chat leest zelf" in
+  `docs/WERKWIJZE-LESSEN-GEREEDSCHAP.md` en de kloon-instructie in *Bronhiërarchie voor parity*
+  staan er nog, met status en reden. GROND: de chat kan de levende staat per constructie niet
+  zien, dus elke zelfmeting produceert aannames die CC daarna corrigeert.
+- **DE NIEUWE OPENER DRAAGT VIER URL'S**: `HANDOFF.md`, `docs/ARCHITECTUUR.md`,
+  `docs/TRAININGSMODEL.md`, `docs/DOELEN-SPEC.md` — plus tien genummerde rolregels in de opener
+  zelf. `WERKWIJZE.md` en beide lessenbestanden zijn eruit; CC draagt ze en citeert ze verbatim
+  op verzoek.
+- **TWEE EISEN ERBIJ OP ELK CC-PROMPT.** Elk getal draagt zijn herkomst — RECON <hash>, GEPIND
+  <document>, of BESLUIT. En CC leidt zijn eigen conditie af en draait de bijbehorende checks;
+  de chat schrijft die conditie niet voor. Het rapport meldt welke condities golden en welke
+  checks gedraaid zijn — daaruit ontstaat vanzelf welke checks dood zijn en eruit kunnen.
+- **DE CHAT MAAKTE DEZE SESSIE TWEE KEER DEZELFDE FOUT, EN DAT HOORT HIER.** Hij haalde de
+  cutover en FASE-C uit een gepind STAND-blok als openstaand werk, terwijl de overstap al lang
+  gemaakt is en de Garmin-push via intervals gewoon werkt. Beide keren was het een aanname uit
+  een document in plaats van een meting, en beide keren ving Daan het. Dat is precies wat de
+  recon-eerst-regel moet wegnemen.
+- **WAT DAAN MERKT: NIETS AAN DE APP.** Wat verandert is de opener: vier URL's in plaats van
+  zes, een rolinstructie, en een chat die niet meer zelf meet.
+- **VLOEREN NU: vitest-totaal 986 over 78 bestanden · engine-selftest-assert-count 1772 ·
+  lint-waarschuwingen 20**, alle vier afgelezen uit de gate van DEZE ronde. Onbewogen:
+  docs-only. Lees ze zelf uit de suite; neem ze niet over uit dit blok.
+- **OPENSTAAND, elk item opnieuw te greppen in `docs/ROADMAP.md`:** 32 · 34 · 35.
+
+FOCUS VOLGENDE CHAT: ROADMAP punt 34 — de effect-referent die het doel niet kent. Eerstvolgend
+open item in *De volgorde*, dus GEEN afwijking van de reeks. DIT IS DE EERSTE RONDE ONDER DE
+NIEUWE OPENER, en de rol wordt daar getoetst en niet beweerd: de chat MEET NIET ZELF. Begin met
+een RECON-prompt, read-only, die het punt uit `docs/ROADMAP.md` haalt en de staat eromheen meet
+— welke effect-maat er vandaag staat, waar hij woont, en waar het doel wel of niet in meeweegt.
+LEVER DE RECON EN STOP: een meting en een voorstel komen niet in dezelfde beurt. Raakt de ronde
+daarna een MECHANISME, dan komt er een WAT-ALS vóór de bouw met de verwachting er expliciet in.
+Verse chat.
+
 STAND 2026-08-21 — PUNT 16 IS GEBOUWD EN STAAT IN MAIN, MAAR VUURT IN 4 PROCENT VAN DE WEKEN
 (item 7). Commit `5f8a63c3050511bd786720432008cd621647ff77`, CI success, run
 https://github.com/daanhhk/Cadans/actions/runs/32455214216. NIET GEDEPLOYD — prod en D1 staan waar

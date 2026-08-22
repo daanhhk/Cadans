@@ -1187,7 +1187,8 @@ punten staat onder *Gesloten — vindplaats*.
     prod voor en na: 9 van de 16 identiek, 16 vergeleken, 0 uitgesloten, en de zeven bewegende
     shots verschillen uitsluitend op `Laatst gesynct`.
 
-34. **De effect-referent kent het doel niet** — open · CLIENT plus norm. HERSCHREVEN 21-08-2026
+34. **De effect-referent kent het doel niet** — AF 22-08-2026 MET ÉÉN UITZONDERING: (d) blijft
+    open, en zijn eigen voorwaarde is weerlegd · CLIENT plus norm. HERSCHREVEN 21-08-2026
     na vier meetrondes; de oude tekst stelde de diagnose te smal en op één punt te sterk.
     DE REFERENT IS DOEL-BLIND. `apps/web/src/lib/effect.ts` noemt het woord `doel` nul keer, en
     de call-site in `apps/web/src/lib/blok.ts` geeft `buildEffectReferent` geen doel mee. De
@@ -1237,6 +1238,42 @@ punten staat onder *Gesloten — vindplaats*.
     min-richting is ONGEIJKT. Gemeten kantelt een verschil van −6 van `gezakt` naar `behouden`
     zodra de drempel op 7 staat. Wie de behoud-tak bouwt, ijkt die richting apart of verantwoordt
     waarom niet.
+    **AF per 22-08-2026 — (a), (b), (c) en (e) gebouwd in `8a95f52`; (d) NIET.** Wat er landde:
+    de doel-tak als een EIGEN veld `doelTak` op `EffectReferent`, met de uitkomst-union
+    ONGEMOEID — `gestegen`, `niet_gestegen` en `niet_meetbaar` staan er nog precies zo, want punt
+    34 wijzigde de copy en de kaart en niet het oordeel. `doelTakVan_` normaliseert de rauwe
+    doel-string en vergelijkt tegen `DOEL_OPTIONS` zelf, nooit tegen uitgetypte literals; leeg,
+    null en onbekend vallen op `meter_ontbreekt`, de ZWIJGENDE tak, omdat `normalizeDoel_`
+    fail-opent naar FTP en een fail-open naar een uitspraak hier verkeerd is. Verder: de
+    gelegenheid-splitsing in de `gestegen`-copy, een eigen behoud-variant voor Onderhoud, de
+    hoofdletter aan het zinsbegin, en in de kaart staan nu de pijl, de instap ÉN de kleur achter
+    een gelegenheid-toets — groen is zelf een winst-claim.
+    **DE WAT-ALS HIELD OP ALLE DRIE DE PUNTEN, en dat is de opbrengst van de vorm.** De uitkomst
+    kantelde niet; de twee betwiste asserties — "stijging zonder bekende gelegenheid telt WEL" en
+    "gelegenheid zonder stijging → niet_gestegen" — werden groen ZONDER één letter wijziging; en
+    `niet_gestegen` bleek per constructie onbereikbaar zonder gelegenheid, want die uitkomst is de
+    middelste arm van een ternary die alleen bij een niet-lege bron wordt bereikt. De vrees dat de
+    twee `${gelegenheid}`-varianten vandaag stuk zouden staan was dus ongegrond.
+    **(d) BLIJFT DICHT, EN ZIJN EIGEN VOORWAARDE IS WEERLEGD.** De bouwlijst zei "uitsluitend als
+    een recon aantoont dat er niets anders aan hangt". Er hangt wél iets aan: de DOSIS-RAMP gaat
+    mee. De hele schrijfweg naar `sync_state.dosis_trede` ligt achter de poort —
+    `blokCheckEnabled` → `blokCheck` geeft null → `BlokReview.check` null → `dosisTredeVoorstel`
+    valt op `!r.check` → geen `DosisTredeCard` → `putDosisTrede` en `writeDosisTrede` draaien
+    nooit. `mesoFactor` en de kalender-deload gaan NIET mee: die lopen via `weekFatigueEnabled` en
+    `effectiveMesoWeek_`, die dezelfde profielvlag lezen met hun EIGEN `profileForDoel_`-aanroep.
+    Broers, geen afstammelingen.
+    **TWEE LEZINGEN VAN (d), MET VERSCHILLENDE STRAAL — die stonden nergens en horen hier.**
+    (i) De FUNCTIE `blokCheckEnabled` of haar aanroepplekken verzetten raakt precies TWEE
+    leesplekken (`blokCheck` in `blok.ts` en poort (2) in `testvoorstel.ts`) en beweegt alleen de
+    dosis-ramp. (ii) `mesoCyclus: false` omzetten op `PROFILES.onderhoud` in
+    `packages/engine/src/archetypes.ts` beweegt VIER consumenten tegelijk, slaat alle drie de
+    buren om naar JA, en is een ENGINE-wijziging met een eigen autorisatie. Wie (d) ooit opent,
+    zegt eerst WELKE van de twee hij bedoelt.
+    **TWEEDE GROND, EN DIE IS INHOUDELIJK.** Ook als de straal acceptabel was, blijft (d) fout:
+    de blok-check levert `geleverd_niet_gestegen` → "het plan was te licht, de dosis mag omhoog",
+    en dat is bij een BEHOUD-opdracht precies het verkeerde voorstel. De poort openzetten zou de
+    dosis-ramp aan een doel hangen dat geen progressie vraagt (`DOELEN-SPEC` §3.2). (d) is dus
+    geen wachtende bouw maar een ontwerpvraag die eerst een antwoord nodig heeft op punt 47.
 
 35. **Een event draagt geen duur** — open · DATA plus ENGINE. De interface `EventItem`
     (`packages/shared/src/weekgen.ts`) en de D1-tabel `events` (de export `events` in
@@ -1814,6 +1851,26 @@ punten staat onder *Gesloten — vindplaats*.
     ziet hem en geeft null, en `blokGelegenheid` geeft óók null omdat de gereden-toets faalt. Het
     blok krijgt dan geen tweede aanbod én geen gelegenheid. Hoort bij dit punt omdat het dezelfde
     wortel heeft: de app leest de UITVOERING van een geplande sessie niet terug.
+50. **De coach belooft bij Onderhoud een test die hij daar nooit voorstelt** — open · CLIENT plus
+    norm. GEMETEN 22-08-2026 op commit `8a95f52`, met een wegwerp-opstelling buiten de repo-tree.
+    DE ZIN EN DE POORT SPREKEN ELKAAR TEGEN. Doel Onderhoud, geen stijging en geen gelegenheid
+    levert `doelTak` `behoud` met `uitkomst` `niet_meetbaar`, en die valt op de bestaande
+    `niet_meetbaar`-pool in `apps/web/src/lib/coachNarrative.ts`. Die pool eindigt op "Loopt dat
+    richting drie maanden, dan stel ik in een rustweek een test voor" — terwijl
+    `buildTestVoorstel` in `apps/web/src/lib/testvoorstel.ts` voor Onderhoud op poort (2)
+    (`blokCheckEnabled`) null geeft en er dus in geen enkele rustweek een testvoorstel komt.
+    DIT IS DE STANDAARD VOOR ONDERHOUD, GEEN RANDGEVAL. In de levende database staan 0 races en 0
+    test-overrides, dus `blokGelegenheid` geeft over de hele historie null. Zodra het doel op
+    Onderhoud staat is `niet_meetbaar` daarmee de normale uitkomst en is de onware belofte de
+    normale zin — niet een tak die zelden vuurt.
+    SCHENDING VAN M55 (`docs/TRAININGSMODEL.md`): de coach claimt een HANDELING die niet bestaat.
+    Dat is hetzelfde patroon als de al gesloten "zullen we een test inplannen?" zonder knop en als
+    de dosis-belofte zonder mechanisme — een aanbod dat geen mechanisme heeft.
+    RICHTING NIET VASTGELEGD, en dat hoort bij het punt zelf: de zin doel-afhankelijk maken is de
+    goedkope kant, de poort openzetten de dure (zie punt 34 (d), dat om een andere reden dicht
+    bleef). RAAKT punt 47 en 48 inhoudelijk — 47 beslist wat een check bij Onderhoud überhaupt
+    moet aantonen — maar WACHT ER NIET OP: dit is een onware zin die vandaag draait, en die kan
+    zonder dat besluit al waar gemaakt worden.
 
 ## De tijdslijn
 
@@ -2061,19 +2118,26 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
    `docs/PUNT16-RECON.md` §5. **AFGEVINKT:** gebouwd in `5f8a63c`, drie blokken (harness, plek-recon,
    bouw). Bereik 15 van de 420 weken, vloer N = 4 en aantoonbaar zonder oordeel-effect; de twee
    vervolgvragen staan bij punt 16 in *De reeks*. **DE VOLGENDE IS 8 — punt 34.**
-8. **34** — de effect-referent kent het doel niet. Na de meetrondes van 21-08-2026: VIER van de
-   vijf doelen, met Onderhoud omgekeerd van teken, plus 8 van de 49 blokken die `gestegen` lezen
-   zonder gelegenheid. De ingreep is COPY, niet logica — bouwlijst (a) t/m (e) bij het punt zelf.
-9. **47** — de check valt in twee: ijking bij elk doel, doelcheck per doel. Norm-besluit dat
-   vóór 49 moet liggen, want het bepaalt WAT die sleutelsessie moet aantonen.
-10. **48** — geen testaanbod rond een A- of B-event. Klein, één conditie in `buildTestVoorstel`,
+8. **34** — AF (22-08-2026) MET ÉÉN UITZONDERING — de effect-referent kent het doel niet.
+   **AFGEVINKT:** (a), (b), (c) en (e) gebouwd in `8a95f52`; de doel-tak staat als `doelTak` op
+   `EffectReferent` en de uitkomst-union bleef ongemoeid. De WAT-ALS hield op alle drie de punten.
+   **(d) BLIJFT OPEN en zijn eigen voorwaarde is weerlegd:** er hangt wél iets aan de poort — de
+   dosis-ramp gaat mee, `mesoFactor` en de kalender-deload niet. Bovendien is de dosis-verhoging
+   die de blok-check voorstelt bij een behoud-opdracht inhoudelijk fout. Zie het punt zelf voor de
+   twee lezingen van (d) met hun verschillende straal. **DE VOLGENDE IS 9 — punt 50.**
+9. **50** — de coach belooft bij Onderhoud een test die hij daar nooit voorstelt. VÓÓR 47 en 48
+   met reden: die twee zijn ONTWERPVRAGEN, en dit is een ONWARE ZIN die vandaag draait — bij doel
+   Onderhoud zelfs als normale uitkomst.
+10. **47** — de check valt in twee: ijking bij elk doel, doelcheck per doel. Norm-besluit dat
+    vóór 49 moet liggen, want het bepaalt WAT die sleutelsessie moet aantonen.
+11. **48** — geen testaanbod rond een A- of B-event. Klein, één conditie in `buildTestVoorstel`,
     en het staat hier zo vroeg omdat het goedkoop is en een echte schade voorkomt.
-11. **49** — de doelcheck aflezen uit een sleutelsessie. Vraagt opslag en aggregatie van de
+12. **49** — de doelcheck aflezen uit een sleutelsessie. Vraagt opslag en aggregatie van de
     interval-structuur, dus een migratie. Begint met één meting: is `icu_intervals` gevuld.
-12. **35** — een event draagt geen duur. Deblokkeert punt 13 fase B.
-13. **13 fase B** — de doelvraag na het event.
-14. **32** — de rit-beoordeling. M31 noemt het bedrading en geen nieuwe bouw.
-15. **11** — de duurvermogen-maat OPNIEUW ontwerpen. Achteraan met de juiste reden: de
+13. **35** — een event draagt geen duur. Deblokkeert punt 13 fase B.
+14. **13 fase B** — de doelvraag na het event.
+15. **32** — de rit-beoordeling. M31 noemt het bedrading en geen nieuwe bouw.
+16. **11** — de duurvermogen-maat OPNIEUW ontwerpen. Achteraan met de juiste reden: de
     gemeten maat mat de RITKEUZE en niet het duurvermogen, dus dit is een afgekeurd ontwerp
     en geen wachtende bouw. Tot dan blijft Conditie ongedekt (M33, M39). Punt 49 levert
     hier het gereedschap voor: zonder per-blok-data uit de rit is deze maat niet te bouwen.
