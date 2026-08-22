@@ -1826,6 +1826,40 @@ punten staat onder *Gesloten — vindplaats*.
     ofwel volledig samenvallen (FTP) ofwel volledig uiteenlopen (Conditie en beide klimdoelen);
     Onderhoud is het enige geval waar ze dezelfde meting delen met een verschillend criterium, en
     daarom is het het geval waarop deze splitsing zich laat ontwerpen in plaats van beredeneren.
+    **ZES BEVINDINGEN UIT DE RECON VAN 22-08-2026, die dit punt moet meewegen.** Herkomst voor alle
+    zes: RECON `ffc6d9ab682f689c92b374b66fdf7681b5d2441f`.
+    (i) DE POORT BEROEPT ZICH OP EEN PARAGRAAF DIE HET TEGENDEEL ZEGT. `blokCheckEnabled` is poort
+    (2) van `buildTestVoorstel` in `apps/web/src/lib/testvoorstel.ts`, en zijn commentaar luidt
+    "Onderhoud heeft geen effect-meter (DOELEN-SPEC §3.2)" — terwijl §3.2 daar juist wél een
+    effect-maat vastlegt, en punt 34 er inmiddels een `behoud`-tak op gebouwd heeft. Onder het
+    besluit van dít punt — de IJKING geldt bij ELK doel — blokkeert die poort niet alleen een
+    doelcheck maar ook de ijking, en dat is de helft die bij Onderhoud juist nodig is.
+    (ii) DE BEHOUD-VLOER BESTAAT AL EN IS NIET AANGESLOTEN. `ONDERHOUD_VLOER_PCT` (0,95) en
+    `onderhoudVloerW` staan in `apps/web/src/lib/niveau.ts` en rekenen `instapNiveau() * 0,95` in
+    watt — dus op `rolling_ftp`. De enige aanroeper is `apps/web/src/pages/Niveau.tsx`; de
+    blok-terugblik gebruikt hem NIET. Er ligt dus al een vloer-mechanisme dat een doelcheck bij
+    Onderhoud zou kunnen dragen, op een andere plek en op een andere meter dan §3.2 noemt.
+    (iii) DE MAAT UIT §3.2 BESTAAT NIET IN CODE. Het beste 20-minutenvermogen over zes weken wordt
+    nergens berekend en nergens tegen een procentuele vloer gelegd. De power-curve kent een
+    20-minuten-marker (`PC_MARKERS_` in `packages/engine/src/niveau.ts`) maar alleen de vensters
+    `90d` en `1y` (`PowerCurveWindow` in `workers/api/src/integrations/powercurve.ts`), en hij
+    voedt uitsluitend het rijdersprofiel via `pcNormalize_`. Wie §3.2 letterlijk wil bouwen, bouwt
+    een nieuwe afgeleide; wie hem via (ii) benadert, gebruikt een andere grootheid en zegt dat.
+    (iv) ER STAAN TWEE DEFINITIES VAN "METING" NAAST ELKAAR. `blokGelegenheid` telt uitsluitend een
+    A/B-race-event of een door de app ingeplande test mee en sluit de intensiteits-heuristiek
+    expliciet uit; `laatsteGelegenheid` leest een SPRONG in de reeks wél als recente meting, en
+    voedt daarmee poort (7). Dezelfde rit is dus voor het ene mechanisme geen meetmoment en voor
+    het andere wel. Dat is vandaag verdedigd (een sprong als gelegenheid zou circulair zijn), maar
+    het is wel de tweede plek waar "meting" iets anders betekent.
+    (v) HET SPIEGELBEELD VAN PUNT 50, EN HET IS DEZE CONFLATIE ZELF. Bij Conditie, Korte en Lange
+    beklimmingen zegt de effect-copy dat rolling FTP niet de maat is voor dit doel, terwijl
+    `buildTestVoorstel` op diezelfde invoer een 20-minuten-FTP-test AANBIEDT — gemeten, niet
+    beredeneerd. Punt 50 haalt de tegenspraak weg aan de kant waar de app iets belooft; deze kant
+    belooft niets maar biedt wél iets aan, en precies daar zit het verschil tussen ijking en
+    doelcheck: die test is als IJKING volkomen zinnig en als DOELCHECK zinloos.
+    (vi) DE BELOFTE EN HET AANBOD RENDEREN NOOIT IN DEZELFDE WEEK. De terugblik staat in blokweek 1
+    en het testaanbod in blokweek 4, achter poort (1). Wie de twee helften ontwerpt, ontwerpt dus
+    ook WANNEER elke helft zich meldt — en kan niet aannemen dat de gebruiker ze naast elkaar ziet.
 48. **Geen testaanbod rond een A- of B-event** — open · CLIENT. Daan-besluit 21-08-2026. Een
     event is een event: daar geef je alles, en het event is zelf de betere meting. Een
     20-minuten-all-out kost twee tot drie dagen herstel, en in een taper vernietigt hij precies

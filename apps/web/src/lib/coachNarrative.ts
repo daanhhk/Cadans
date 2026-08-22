@@ -671,10 +671,30 @@ export function blokEffectRegel(r: BlokReview): string | null {
         ? ` Je ging voor het laatst vol op ${datumKort_(r.laatsteMeting.datum)}; je rolling FTP sprong daar omhoog.`
         : ` Je ging voor het laatst vol tijdens je ${r.laatsteMeting.bron === "test" ? "test" : "wedstrijd"} van ${datumKort_(r.laatsteMeting.datum)}.`
       : " Ik heb nog geen maximale inspanning van je gezien.";
-    pool = [
-      `Er stond in dit blok geen test of wedstrijd, dus over je vorm doe ik hier geen uitspraak. Dat is geen slecht nieuws — het is een ontbrekende meting.${laatstZin} Loopt dat richting drie maanden, dan stel ik in een rustweek een test voor.`,
-      `Geen test en geen wedstrijd dit blok, dus je rolling FTP zakt vanzelf; daar valt niets uit af te lezen. Geen tegenvaller, wel een gat in de meting.${laatstZin} Zit daar straks zo'n drie maanden tussen, dan kom ik in een rustweek met een testvoorstel.`,
-    ];
+    // ROADMAP punt 50 — DE BEHOUD-TAK BELOOFT GEEN TEST, want daar KOMT er geen.
+    // `buildTestVoorstel` valt voor Onderhoud op poort (2) (`blokCheckEnabled`), dus de belofte
+    // "in een rustweek een test" kan daar per constructie niet ingelost worden — een geclaimde
+    // handeling die niet bestaat (M55). GEMETEN: dit is bij doel Onderhoud niet de randtak maar de
+    // NORMALE uitkomst, want zonder race-event en zonder ingeplande test geeft `blokGelegenheid`
+    // over de hele historie null.
+    //
+    // DE TWEE VARIANTEN ZIJN WOORD-VOOR-WOORD DE BOVENSTAANDE, MINUS DE LAATSTE ZIN. En `key`
+    // blijft bewust `niet_meetbaar` voor beide takken: `seedIndex` kiest dan in beide pools
+    // dezelfde index, zodat de behoud-zin aantoonbaar dezelfde zin is met de belofte eraf en niet
+    // stilzwijgend de andere variant.
+    //
+    // SCOPE-GRENS (punt 50): dit haalt de belofte WEG en zet er niets voor in de plaats. Wat een
+    // Onderhoud-blok dan afsluit is punt 47 en wordt hier niet beantwoord.
+    pool =
+      e.doelTak === "behoud"
+        ? [
+            `Er stond in dit blok geen test of wedstrijd, dus over je vorm doe ik hier geen uitspraak. Dat is geen slecht nieuws — het is een ontbrekende meting.${laatstZin}`,
+            `Geen test en geen wedstrijd dit blok, dus je rolling FTP zakt vanzelf; daar valt niets uit af te lezen. Geen tegenvaller, wel een gat in de meting.${laatstZin}`,
+          ]
+        : [
+            `Er stond in dit blok geen test of wedstrijd, dus over je vorm doe ik hier geen uitspraak. Dat is geen slecht nieuws — het is een ontbrekende meting.${laatstZin} Loopt dat richting drie maanden, dan stel ik in een rustweek een test voor.`,
+            `Geen test en geen wedstrijd dit blok, dus je rolling FTP zakt vanzelf; daar valt niets uit af te lezen. Geen tegenvaller, wel een gat in de meting.${laatstZin} Zit daar straks zo'n drie maanden tussen, dan kom ik in een rustweek met een testvoorstel.`,
+          ];
   }
   return (
     pool[seedIndex(`${r.startMonday}|effect|${key}`, pool.length)] ??

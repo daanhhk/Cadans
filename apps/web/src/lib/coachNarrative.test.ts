@@ -528,4 +528,61 @@ describe("blokEffectRegel — de doel-takken", () => {
     expect(gezien.length).toBeGreaterThan(0);
     for (const r of gezien) expect(r).toContain("Bij de wedstrijd");
   });
+
+  // ── ROADMAP punt 50 — DE TESTBELOFTE OP DE BEHOUD-TAK ─────────────────────
+  // `buildTestVoorstel` valt voor Onderhoud op poort (2), dus de belofte "in een rustweek een
+  // test" kan daar niet ingelost worden. BEIDE varianten worden getoetst en niet de ene die de
+  // seed toevallig kiest: een pool-splitsing die maar één variant raakt is half werk, en de
+  // rotatie zou dat pas maanden later zichtbaar maken.
+  /** Alle DISTINCTE varianten die deze combinatie over de seed-as oplevert. */
+  const varianten = (o: Partial<EffectReferent>) => [
+    ...new Set(
+      MAANDAGEN.map(
+        (maandag) =>
+          blokEffectRegel(review(o as never, { startMonday: maandag })) ?? "",
+      ),
+    ),
+  ];
+
+  it("behoud + niet_meetbaar zonder gelegenheid: GEEN variant belooft een test", () => {
+    const v = varianten({ doelTak: "behoud", uitkomst: "niet_meetbaar" });
+    expect(v.length).toBe(2); // beide varianten daadwerkelijk gezien
+    for (const r of v) {
+      expect(r).not.toContain("rustweek");
+      expect(r).not.toContain("testvoorstel");
+    }
+  });
+
+  it("stijging + niet_meetbaar zonder gelegenheid: de belofte staat er WEL nog", () => {
+    // TEGENKANT. Zonder deze assertie zou het weghalen van de belofte op ÁLLE takken ook slagen,
+    // en dat is een andere ingreep dan punt 50 vraagt.
+    const v = varianten({ doelTak: "stijging", uitkomst: "niet_meetbaar" });
+    expect(v.length).toBe(2);
+    expect(v.some((r) => r.includes("rustweek"))).toBe(true);
+    expect(
+      v.every((r) => r.includes("rustweek") || r.includes("testvoorstel")),
+    ).toBe(true);
+  });
+
+  it("de behoud-variant is de stijging-variant MINUS de laatste zin", () => {
+    // De `key` blijft aan beide kanten `niet_meetbaar`, dus `seedIndex` kiest dezelfde index in
+    // beide pools. Daarmee is per maandag aantoonbaar dezelfde zin met de belofte eraf, en niet
+    // stilzwijgend de andere variant.
+    for (const maandag of MAANDAGEN) {
+      const behoud =
+        blokEffectRegel(
+          review({ doelTak: "behoud", uitkomst: "niet_meetbaar" } as never, {
+            startMonday: maandag,
+          }),
+        ) ?? "";
+      const stijging =
+        blokEffectRegel(
+          review({ doelTak: "stijging", uitkomst: "niet_meetbaar" } as never, {
+            startMonday: maandag,
+          }),
+        ) ?? "";
+      expect(stijging.startsWith(behoud)).toBe(true);
+      expect(stijging.length).toBeGreaterThan(behoud.length);
+    }
+  });
 });
