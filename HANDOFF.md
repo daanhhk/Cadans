@@ -13,6 +13,60 @@ live tot cutover.
 
 ## Stand
 
+STAND 2026-08-22 (TWEEDE BLOK VAN DEZE DAG) — PUNT 50 IS AF EN LIVE: DE COACH BELOOFT BIJ ONDERHOUD
+GEEN TEST MEER DIE ER NOOIT KOMT. Code-commit `3a9d5458`, CI success. NIET GEDEPLOYD — prod en D1
+staan waar het blok hieronder ze noemt.
+- **WAT ER GEBOUWD IS.** De `niet_meetbaar`-pool in `blokEffectRegel`
+  (`apps/web/src/lib/coachNarrative.ts`) splitst op `doelTak`; de `behoud`-tak draagt dezelfde twee
+  varianten met UITSLUITEND de belofte-zin eraf. `key` blijft aan beide kanten `niet_meetbaar`
+  zodat `seedIndex` in beide pools dezelfde index kiest — daarmee is het aantoonbaar dezelfde zin
+  met de belofte eraf en niet stilzwijgend de andere variant. Geen oordeelswijziging, geen poort
+  geraakt, geen engine. Drie bestanden, +28/−4 in de bron.
+- **ALLE DRIE DE WAT-ALS-VERWACHTINGEN HIELDEN.** Precies één cel bewoog — `Onderhoud` x
+  `niet_meetbaar` x gelegenheid=nee, `belooftTest` van true naar false — en de teller ging van 1
+  van de 14 naar 0 van de 14. `noemtTest` blijft daar `true`, want "geen test of wedstrijd" is een
+  CONSTATERING en geen belofte; dat is precies het onderscheid dat punt 50 maakt.
+- **DE NOEMER HOORT ERBIJ, EN HET ZIJN ER TWEE.** 1 van de 30 matrix-cellen, maar 100 procent van
+  de ECHTE Onderhoud-blokken: er staan 0 races en 0 test-overrides in de database, dus
+  `blokGelegenheid` geeft over de hele historie null. Wie alleen de eerste noemer rapporteert,
+  meldt een randgeval; wie alleen de tweede noemt, overdrijft de reikwijdte.
+- **NUL ASSERTIES BRAKEN, NIET TWEE — en de misrekening is leerzaam.** De chat verwachtte er twee,
+  op grond van een telling van 34 copy-asserties in `coachNarrative.test.ts`. De vier treffers op
+  de verwijderde zin bleken alle vier COMMENTAAR. Een assertie-telling per BESTAND is geen
+  blast-radius-maat voor één string; die vraag hoort op de ZIN geteld te worden. Staat als les in
+  `docs/WERKWIJZE-LESSEN.md`. De verwachting was conservatief en de stop-conditie zat aan de veilige
+  kant, dus het kostte niets — maar hij was op het verkeerde predicaat gemeten.
+- **DE POORT BLIJFT DICHT EN ZIJN GROND STAAT NU OPGESCHREVEN.** Poort (2) in
+  `apps/web/src/lib/testvoorstel.ts` ÍS `blokCheckEnabled` — dezelfde poort als punt 34 (d) — en
+  zijn commentaar beroept zich op `DOELEN-SPEC` §3.2 met "Onderhoud heeft geen effect-meter",
+  terwijl §3.2 daar juist wél een effect-maat vastlegt. Zes recon-bevindingen staan nu bij punt 47.
+- **DE CANON-TEGENSPRAAK DIE PUNT 47 EERST MOET OPLOSSEN, en die nergens stond.** De
+  punt-47-formulering zegt dat ijking en doelcheck bij FTP en Onderhoud SAMENVALLEN in de
+  20-minutentest. `DOELEN-SPEC` §3.2 legt als Onderhoud-effectmaat het beste 20-minutenvermogen
+  over ZES WEKEN vast — afgelezen, niet getest — en die maat bestaat NIET in code. DOELEN-SPEC gaat
+  vóór HANDOFF, dus vandaag wint §3.2. Punt 47 is niet te ontwerpen zonder een expliciet
+  Daan-besluit: §3.2 BEVESTIGEN en de maat bouwen, of §3.2 AMENDEREN. Stilzwijgend één van beide
+  volgen is drift.
+- **HET SPIEGELBEELD DRAAIT VANDAAG AL.** Bij Conditie, Korte en Lange beklimmingen zegt de copy
+  dat rolling FTP niet de maat is voor dat doel, terwijl de poort op diezelfde invoer een
+  20-minuten-FTP-test AANBIEDT. Gemeten, niet beredeneerd. Dat raakt Daan zodra hij naar Korte
+  beklimmingen schakelt.
+- **WAT DAAN MERKT.** Bij doel Onderhoud zonder test of wedstrijd belooft de coach geen test meer.
+  Verder niets — het doel staat op FTP.
+- **VLOEREN NU: vitest-totaal 1010 over 78 bestanden · engine-selftest-assert-count 1772 ·
+  lint-waarschuwingen 20**, afgelezen uit de gate van de bouwronde zelf. Het totaal steeg van 1007
+  door 3 nieuwe asserties — dekking, geen regressie. De selftest-vloer is ONBEWOGEN bij een lege
+  `git diff` op `packages/engine`. Lees ze zelf uit de suite; neem ze niet over uit dit blok.
+- **OPENSTAAND, elk item opnieuw te greppen in `docs/ROADMAP.md`:** 32 · 34 (alleen (d)) · 35 · 47 ·
+  48 · 49.
+
+FOCUS VOLGENDE CHAT: ROADMAP punt 47 — de blok-check valt in twee, ijking tegenover doelcheck.
+BEGIN BIJ DE CANON-TEGENSPRAAK hierboven; zonder dat besluit is er niets te ontwerpen, want het punt
+en `DOELEN-SPEC` §3.2 zeggen vandaag iets anders over dezelfde maat. Daarna pas de zes bevindingen
+die bij het punt staan. CONTEXT: Daan is geopereerd en fietst voorlopig niet, de beschikbaarheid
+blijft 0, en de planner-week is leeg vanaf 2026-08-09 — **dat is geen defect.** Er komt GEEN nieuwe
+ritdata binnen; elke meting draait op de bestaande historie of op een fixture. Verse chat.
+
 STAND 2026-08-22 — PUNT 34 IS GEBOUWD EN LIVE IN MAIN, MET ÉÉN UITZONDERING: (d) BLIJFT DICHT EN
 ZIJN EIGEN VOORWAARDE IS WEERLEGD. Code-commit `8a95f52`, CI success. NIET GEDEPLOYD — prod en D1
 staan waar het blok hieronder ze noemt.
@@ -72,77 +126,6 @@ gronden dicht gebleven. CONTEXT DIE JE MOET WETEN: Daan is geopereerd en fietst 
 beschikbaarheid blijft 0, en de planner-week is leeg vanaf 2026-08-09. **Dat is geen defect.** Er
 komt dus GEEN nieuwe ritdata binnen om op te meten — elke meting deze ronde draait op de bestaande
 historie of op een fixture, en een ronde die nieuwe data nodig heeft kan niet. Verse chat.
-
-STAND 2026-08-21 — PUNT 34 IS VIER RONDES LANG GEMETEN EN DRIE KEER OMGEKEERD; ER IS GEEN REGEL
-GEBOUWD. Docs-only: geen code op één commentaarregel na, geen engine, geen migratie, geen deploy,
-geen remote-D1-mutatie. Prod en D1 staan waar het blok hieronder ze noemt.
-- **DEZE RONDE WAS VOLLEDIG MEETROND.** Vier CC-rondes, alle vier read-only op de gecommitte boom
-  plus read-only SELECTs op remote D1 (elke query `changed_db: false`). Er is geen enkele
-  bouwbeslissing uitgevoerd; wat er ligt is een herschreven punt 34 met een bouwlijst, drie nieuwe
-  punten, en drie correcties op documenten die achterliepen op de code.
-- **DE DIAGNOSE IS DRIE KEER DOOR EEN METING OMGEKEERD, en dat is de kern van dit blok.** (1) De
-  aanname dat de effect-uitkomst de DOSIS stuurt is onjuist: `dosisTerm` komt in `apps/web/src`
-  in precies drie bestanden voor en geen ervan is `blok.ts`, `proposal.ts` of `schema.ts` — de
-  trede komt uit de bewaarde rij `sync_state.dosis_trede` en de kaart hangt aan `check.uitkomst`,
-  niet aan `effect`. Over 22 gemeten cellen bewoog GEEN ENKELE trede. (2) De gevreesde `gezakt`-tak
-  uit de wat-als vuurt op Daans echte reeks in **0 van de 49** blokken; het meest negatieve
-  blokverschil over een jaar is **−2 W** tegen een drempel van 3, omdat `blokMaximum` het maximum
-  BINNEN het blok neemt en de trage decay daarmee absorbeert. (3) Symmetrie — de gelegenheid-eis
-  ook voor `gestegen` — maakt **49 van de 49** blokken `niet_meetbaar` en is daarmee verworpen.
-- **WAT ER WÉL STAAT, is de omgekeerde poortvolgorde.** `isStijging` wordt getoetst vóór de
-  gelegenheid-poort, dus **8 van de 49** blokken lezen `gestegen` zonder enige gelegenheid — de
-  blokken rond de twee sprongdagen 2026-01-13 en 2026-05-21. In een jaar waarin de meter van 291
-  naar 260 watt zakte staan er 8 winst-uitspraken en 0 verlies-uitspraken. De oplossing is COPY,
-  niet logica: op de tak `gestegen` splitst de tekst op de vraag of het blok een gelegenheid droeg.
-- **DAANS PREMISSE OVER ROLLING FTP KLOPT, GEMETEN OP ZIJN EIGEN REEKS.** 243 activiteiten sinds
-  2025-08-01, 203 met een geldige waarde (alleen `Ride` en `VirtualRide` dragen er een). 44 stappen
-  omlaag van hoogstens −2 W, en precies TWEE sprongen in twaalf maanden. Drie aaneengesloten
-  periodes zonder sprong, alle drie dalend: −20 W in 143 dagen, −16 W in 125 dagen, −12 W in 75
-  dagen. Er staan 2 events in de database (beide 2027) en 0 test-overrides, dus `blokGelegenheid`
-  geeft over de hele historie null en de tak `niet_gestegen` heeft nooit gevuurd.
-- **DE CHECK VALT IN TWEE — nieuw punt 47, Daan-besluit.** IJKING (klopt mijn FTP nog, zodat de
-  zones kloppen) geldt bij ELK doel, want elk plan doseert op %FTP. DOELCHECK (is dit doel
-  vooruitgegaan) verschilt per doel. Bij FTP en Onderhoud vallen ze samen in de 20-minutentest;
-  bij Conditie en beide klimdoelen niet.
-- **GEEN TESTAANBOD ROND EEN A- OF B-EVENT — nieuw punt 48, Daan-besluit.** Een event is zelf de
-  betere meting, en een 20-minuten-all-out kost twee tot drie dagen herstel — in een taper
-  vernietigt dat precies wat de taper opbouwt. Eén conditie erbij in `buildTestVoorstel`; de app
-  kent A en B al via `isMaximaalEvent_`. Geen prioriteitsvertakking, geen taper-uitzondering.
-- **DE DOELCHECK OP DE RIT-KORREL — nieuw punt 49, en de uitkomst is GESPLITST.** Uit D1 is de
-  intervalstructuur NIET af te lezen: `zone_times_json` draagt over alle 209 ritten precies 8
-  totalen per zone, zonder tijdas en zonder volgorde. Uit de live fetch WEL: `GET
-  /activity/{id}/intervals` is aangesloten en levert per blok label, zone, duur, %FTP en watts in
-  volgorde. `ride.ts` is expliciet stateless, dus dit is een PERSISTENTIE-vraag die het D1-schema
-  raakt. Eerste stap, nog niet gedaan: meten of `icu_intervals` voor Daans ritten gevuld is.
-- **DRIE DOCUMENTEN LIEPEN ACHTER OP DE CODE.** De klim-splitsing en het vervallen van VO2max zijn
-  GEBOUWD (punt 7), maar `DOELEN-SPEC` §6 stap 3 zei nog dat het moest gebeuren — gecorrigeerd met
-  de meting als grond. Punt 35 citeerde twee regelnummers die bij de eerstvolgende commit kunnen
-  liegen — vervangen door bestand plus symboolnaam. En het commentaar in
-  `apps/web/src/lib/settings.ts` noemde `"Beklimmingen"` en `"Lange beklimmingen"` hetzelfde doel
-  terwijl `normalizeDoel_` op Korte mapt — dat is de ENIGE code-raking van deze ronde en het is
-  een commentaarregel.
-- **DE CHAT HEEFT ZICHZELF TWEE KEER GECORRIGEERD OP GROND VAN EEN CC-METING, en dat hoort hier.**
-  Eerst "een M55-schending die vandaag draait" — dat stond op een fixture MÉT wedstrijd, en op de
-  echte data vuurt die tak nooit. Daarna de vrees dat een `gezakt`-tak vals zou vuren in de
-  winterweken — 0 van de 17 winterblokken. Beide keren kwam de omkering uit een meting die CC
-  leverde en niet uit een aanname. **DE ROLREGEL "DE CHAT MEET NIET ZELF" HEEFT IN DEZE EERSTE
-  RONDE ONDER DE NIEUWE OPENER GEHOUDEN.**
-- **WAT DAAN MERKT: NIETS AAN DE APP.** Geen enkel gedrag is gewijzigd. Wat er ligt is een
-  bouwlijst waarvan de grond gemeten is in plaats van beredeneerd.
-- **VLOEREN NU: vitest-totaal 986 over 78 bestanden · engine-selftest-assert-count 1772 ·
-  lint-waarschuwingen 20**, alle vier afgelezen uit de gate van DEZE ronde. Onbewogen: docs-only.
-  Lees ze zelf uit de suite; neem ze niet over uit dit blok.
-- **OPENSTAAND, elk item opnieuw te greppen in `docs/ROADMAP.md`:** 32 · 34 · 35 · 47 · 48 · 49.
-
-FOCUS VOLGENDE CHAT: PUNT 34 BOUWEN — bouwlijst (a) tot en met (e), die staat voluit bij het punt
-in `docs/ROADMAP.md`. BEGIN MET EEN RECON OP `blokCheckEnabled`: wat hangt er aan die poort, en
-gaan de dosis-ramp, de `mesoFactor` of een kalender-deload mee open als je hem verzet. Dat antwoord
-beslist of (d) meekan. Zonder dat antwoord bouw je (a), (b), (c) en (e), en laat je (d) staan.
-CONTEXT DIE NERGENS ANDERS STAAT: Daan is geopereerd en fietst zeker een maand niet; de
-beschikbaarheid blijft voorlopig 0. Er komt dus GEEN nieuwe data binnen om op te meten, de
-planner-week is leeg vanaf 2026-08-09, en het huidige blok sluit zonder ijkpunt. Dat is geen
-defect. En terug op de fiets is een 20-minutentest het slechtste eerste ding — de test-vraag speelt
-pas als hij weer rijdt. Verse chat.
 
 De oudere STAND-blokken en de historische projectsecties staan in `docs/HANDOFF-ARCHIEF.md`.
 Dit bestand draagt de TWEE nieuwste blokken; komt er een derde bij, dan schuiven de oudste in

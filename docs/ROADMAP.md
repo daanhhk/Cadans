@@ -1897,8 +1897,9 @@ punten staat onder *Gesloten — vindplaats*.
     ziet hem en geeft null, en `blokGelegenheid` geeft óók null omdat de gereden-toets faalt. Het
     blok krijgt dan geen tweede aanbod én geen gelegenheid. Hoort bij dit punt omdat het dezelfde
     wortel heeft: de app leest de UITVOERING van een geplande sessie niet terug.
-50. **De coach belooft bij Onderhoud een test die hij daar nooit voorstelt** — open · CLIENT plus
-    norm. GEMETEN 22-08-2026 op commit `8a95f52`, met een wegwerp-opstelling buiten de repo-tree.
+50. **De coach belooft bij Onderhoud een test die hij daar nooit voorstelt** — AF 22-08-2026 EN
+    LIVE · CLIENT plus norm. GEMETEN op commit `8a95f52`, met een wegwerp-opstelling buiten de
+    repo-tree.
     DE ZIN EN DE POORT SPREKEN ELKAAR TEGEN. Doel Onderhoud, geen stijging en geen gelegenheid
     levert `doelTak` `behoud` met `uitkomst` `niet_meetbaar`, en die valt op de bestaande
     `niet_meetbaar`-pool in `apps/web/src/lib/coachNarrative.ts`. Die pool eindigt op "Loopt dat
@@ -1924,6 +1925,27 @@ punten staat onder *Gesloten — vindplaats*.
     zetten, en het eerste wat zich aandient is een uitspraak over wat er wél gemeten wordt. Dat is
     precies het besluit dat 47 draagt. De toets op dit punt is dus smal en negatief: de app belooft
     niets meer wat ze niet doet. Meer is winst voor een volgend punt, niet voor dit.
+    **AF per 22-08-2026, gebouwd in `3a9d5458`.** De `niet_meetbaar`-pool in `blokEffectRegel`
+    (`apps/web/src/lib/coachNarrative.ts`) splitst op `doelTak`; de `behoud`-tak draagt dezelfde
+    twee varianten met UITSLUITEND de belofte-zin eraf. `key` blijft aan beide kanten
+    `niet_meetbaar`, zodat `seedIndex` in beide pools dezelfde index kiest — daarmee is het
+    aantoonbaar dezelfde zin met de belofte eraf en niet stilzwijgend de andere variant. Geen
+    oordeelswijziging, geen poort geraakt, geen engine: `apps/web/src/lib/testvoorstel.ts` en
+    `blokCheckEnabled` hebben een lege diff.
+    DE WAT-ALS HIELD OP ALLE DRIE DE VERWACHTINGEN. Precies ÉÉN cel bewoog — `Onderhoud` x
+    `niet_meetbaar` x gelegenheid=nee — en de teller ging van 1 van de 14 naar **0 van de 14**. De
+    dertien andere bereikte cellen zijn byte-identiek. Nul asserties braken, waar er twee verwacht
+    werden; de vier treffers op de verwijderde zin bleken alle vier COMMENTAAR. Die misrekening is
+    als les vastgelegd: een assertie-telling per BESTAND is geen blast-radius-maat voor één string.
+    DE NOEMER HOORT ER IN TWEEVOUD BIJ. 1 van de 30 matrix-cellen klinkt klein, maar het is 100
+    procent van de ECHTE Onderhoud-blokken: er staan 0 races en 0 test-overrides in de database,
+    dus `blokGelegenheid` geeft over de hele historie null en `niet_meetbaar` is daar de normale
+    uitkomst. `noemtTest` blijft op die cel `true` — "geen test of wedstrijd" is een constatering
+    en geen belofte, en dat is precies het onderscheid dat dit punt maakt.
+    WAT NIET IS OPGELOST EN BIJ 47 LIGT: de poort blijft dicht, de vraag wat een Onderhoud-blok
+    dan afsluit is niet beantwoord, en het SPIEGELBEELD draait vandaag nog — bij Conditie, Korte en
+    Lange zegt de copy dat rolling FTP niet de maat is terwijl de poort op diezelfde invoer een
+    20-minuten-FTP-test aanbiedt.
 
 ## De tijdslijn
 
@@ -2177,12 +2199,17 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
    **(d) BLIJFT OPEN en zijn eigen voorwaarde is weerlegd:** er hangt wél iets aan de poort — de
    dosis-ramp gaat mee, `mesoFactor` en de kalender-deload niet. Bovendien is de dosis-verhoging
    die de blok-check voorstelt bij een behoud-opdracht inhoudelijk fout. Zie het punt zelf voor de
-   twee lezingen van (d) met hun verschillende straal. **DE VOLGENDE IS 9 — punt 50.**
-9. **50** — de coach belooft bij Onderhoud een test die hij daar nooit voorstelt. VÓÓR 47 en 48
-   met reden: die twee zijn ONTWERPVRAGEN, en dit is een ONWARE ZIN die vandaag draait — bij doel
-   Onderhoud zelfs als normale uitkomst.
+   twee lezingen van (d) met hun verschillende straal.
+9. **50** — AF (22-08-2026) EN LIVE — de coach belooft bij Onderhoud een test die hij daar nooit
+   voorstelt. Stond VÓÓR 47 en 48 met reden: die twee zijn ONTWERPVRAGEN, en dit was een ONWARE ZIN
+   die draaide — bij doel Onderhoud zelfs als normale uitkomst. **AFGEVINKT:** gebouwd in
+   `3a9d5458`, één cel bewoog, nul asserties braken, geen poort geraakt.
+   **DE VOLGENDE IS 10 — punt 47.**
 10. **47** — de check valt in twee: ijking bij elk doel, doelcheck per doel. Norm-besluit dat
-    vóór 49 moet liggen, want het bepaalt WAT die sleutelsessie moet aantonen.
+    vóór 49 moet liggen, want het bepaalt WAT die sleutelsessie moet aantonen. BEGIN BIJ DE
+    CANON-TEGENSPRAAK: dit punt zegt dat ijking en doelcheck bij Onderhoud samenvallen in de
+    20-minutentest, terwijl `DOELEN-SPEC` §3.2 daar het beste 20-minutenvermogen over ZES WEKEN
+    vastlegt — een maat die niet in code bestaat. Zonder Daan-besluit is er niets te ontwerpen.
 11. **48** — geen testaanbod rond een A- of B-event. Klein, één conditie in `buildTestVoorstel`,
     en het staat hier zo vroeg omdat het goedkoop is en een echte schade voorkomt.
 12. **49** — de doelcheck aflezen uit een sleutelsessie. Vraagt opslag en aggregatie van de

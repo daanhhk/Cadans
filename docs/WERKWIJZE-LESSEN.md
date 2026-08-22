@@ -545,5 +545,15 @@ hier — met in dezelfde close-out een gedateerde regel in `docs/WERKWIJZE-LOG.m
   `packages/engine/src/zones.ts` de drempelzone op 91 tot 105 procent zet; met de eigen zonegrens
   van de engine verdween het grootste deel van het verschijnsel en sloot het punt zonder bouw.
   HET PREDICAAT HOORT BIJ ELK GETAL GENOEMD, en bij twijfel meet je op twee.
+- **Een assertie-telling PER BESTAND is geen blast-radius-maat voor ÉÉN STRING.** Wil je weten wat
+  er breekt als je een zin wijzigt, dan is de vraag welke asserties op DÍE letterlijke zin staan —
+  geteld op de zin, niet op het bestand. Een bestandstelling meet hoe druk het bestand is, en dat
+  correleert niet met de ene string die je aanraakt. Aanleiding: bij punt 50 leidde "34
+  copy-asserties in `coachNarrative.test.ts`" tot de verwachting dat er TWEE zouden breken; het
+  waren er NUL, want de vier treffers op de verwijderde zin bleken alle vier COMMENTAAR. Zelfde
+  familie als de geërfde meetlat hierboven: het getal klopte, het predicaat niet. DAT HET NIETS
+  KOSTTE IS GEEN VRIJBRIEF — de verwachting was conservatief en de stop-conditie zat aan de veilige
+  kant, dus een kanteling zou zijn opgevallen. Was hij de andere kant op geweest, dan had een te
+  lage verwachting een bouw laten doorlopen die meer omgooide dan bedoeld.
 
 <!-- EINDE docs/WERKWIJZE-LESSEN.md -->
