@@ -692,8 +692,14 @@ export function blokEffectRegel(r: BlokReview): string | null {
             `Geen test en geen wedstrijd dit blok, dus je rolling FTP zakt vanzelf; daar valt niets uit af te lezen. Geen tegenvaller, wel een gat in de meting.${laatstZin}`,
           ]
         : [
-            `Er stond in dit blok geen test of wedstrijd, dus over je vorm doe ik hier geen uitspraak. Dat is geen slecht nieuws — het is een ontbrekende meting.${laatstZin} Loopt dat richting drie maanden, dan stel ik in een rustweek een test voor.`,
-            `Geen test en geen wedstrijd dit blok, dus je rolling FTP zakt vanzelf; daar valt niets uit af te lezen. Geen tegenvaller, wel een gat in de meting.${laatstZin} Zit daar straks zo'n drie maanden tussen, dan kom ik in een rustweek met een testvoorstel.`,
+            // M55, EN DE VERHUIZING VAN 23-08-2026 MAAKTE OOK DEZE TWEE ONWAAR. Beide zinnen
+            // beloofden een test "in een rustweek". Dat klopte toen het aanbod in vierweekse
+            // blokweek 4 stond — de deload, `MESO_MOD[4]` is 0,6. Sinds M92 valt het aanbod in de
+            // OPENING van een doelblok, en die is vierweekse blokweek 1 met `MESO_MOD[1]` = 1,0:
+            // een volle opbouwweek. De belofte noemt nu het moment dat de poort werkelijk
+            // produceert.
+            `Er stond in dit blok geen test of wedstrijd, dus over je vorm doe ik hier geen uitspraak. Dat is geen slecht nieuws — het is een ontbrekende meting.${laatstZin} Loopt dat richting drie maanden, dan stel ik bij de start van een nieuw blok een test voor.`,
+            `Geen test en geen wedstrijd dit blok, dus je rolling FTP zakt vanzelf; daar valt niets uit af te lezen. Geen tegenvaller, wel een gat in de meting.${laatstZin} Zit daar straks zo'n drie maanden tussen, dan kom ik bij de start van een nieuw blok met een testvoorstel.`,
           ];
   }
   return (
@@ -719,7 +725,12 @@ export function testAanbodRegel(o: {
     o.laatsteMeting && maanden != null
       ? `${metingZin_(o.laatsteMeting, maanden)} `
       : "Ik heb nog geen maximale inspanning van je gezien, dus ik heb geen ijkpunt. ";
-  return `Dit blok loopt af. ${sinds}Ik kan er op ${o.weekdag} een 20-minutentest van maken: een uur totaal, rustig inrijden, twintig minuten alles geven, uitrijden. Dan weet het volgende blok waarop het doseert.`;
+  // M55, EN DE VERHUIZING VAN 23-08-2026 MAAKTE DE OUDE OPENING ONWAAR. Tot die datum begon deze
+  // regel met "Dit blok loopt af." — het aanbod stond toen in week 12. Sinds M92 staat het in week
+  // 1, de OPENING, dus dat blok liep juist niet af maar begon. Om dezelfde reden ijkt de test niet
+  // "het volgende blok" maar DIT blok: de drempel die hij oplevert is de waarde waarop de komende
+  // twaalf weken doseren.
+  return `Er begint een nieuw blok. ${sinds}Ik kan er op ${o.weekdag} een 20-minutentest van maken: een uur totaal, rustig inrijden, twintig minuten alles geven, uitrijden. Dan weet dit blok waarop het doseert.`;
 }
 
 /** Primaire actieknop. */
@@ -741,7 +752,9 @@ export function testBadgeLabel(): string {
 
 /** Resultaat-regel op de override-kaart ná akkoord — FEITELIJK, geen belofte over de uitkomst. */
 export function testResultaatRegel(weekdag: string): string {
-  return `FTP-test op ${weekdag} — twintig minuten alles geven; die waarde ijkt je volgende blok.`;
+  // "dit blok" en niet "je volgende blok": sinds M92 valt de test in de OPENING van het blok dat hij
+  // ijkt, niet aan het eind van het blok ervoor.
+  return `FTP-test op ${weekdag} — twintig minuten alles geven; die waarde ijkt dit blok.`;
 }
 
 /** De volledige blok-uitspraak: uitvoering eerst, dan effect. Zonder effect blijft het de

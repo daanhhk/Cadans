@@ -548,7 +548,11 @@ describe("blokEffectRegel — de doel-takken", () => {
     const v = varianten({ doelTak: "behoud", uitkomst: "niet_meetbaar" });
     expect(v.length).toBe(2); // beide varianten daadwerkelijk gezien
     for (const r of v) {
-      expect(r).not.toContain("rustweek");
+      // BIJGESTELD 23-08-2026 met M92: de belofte noemde een RUSTWEEK toen het aanbod in
+      // vierweekse blokweek 4 stond (de deload). Sinds de verhuizing naar de doelblok-OPENING —
+      // blokweek 1, `MESO_MOD[1]` is 1,0 en dus een volle opbouwweek — luidt zij "bij de start van
+      // een nieuw blok". De EIS is ongewijzigd: op de behoud-tak staat geen enkele testbelofte.
+      expect(r).not.toContain("start van een nieuw blok");
       expect(r).not.toContain("testvoorstel");
     }
   });
@@ -558,10 +562,15 @@ describe("blokEffectRegel — de doel-takken", () => {
     // en dat is een andere ingreep dan punt 50 vraagt.
     const v = varianten({ doelTak: "stijging", uitkomst: "niet_meetbaar" });
     expect(v.length).toBe(2);
-    expect(v.some((r) => r.includes("rustweek"))).toBe(true);
+    expect(v.some((r) => r.includes("start van een nieuw blok"))).toBe(true);
     expect(
-      v.every((r) => r.includes("rustweek") || r.includes("testvoorstel")),
+      v.every(
+        (r) =>
+          r.includes("start van een nieuw blok") || r.includes("testvoorstel"),
+      ),
     ).toBe(true);
+    // En de oude belofte staat er NIET meer: die noemde een moment dat de poort niet produceert.
+    for (const r of v) expect(r).not.toContain("rustweek");
   });
 
   it("de behoud-variant is de stijging-variant MINUS de laatste zin", () => {

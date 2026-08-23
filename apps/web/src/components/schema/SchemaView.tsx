@@ -150,7 +150,7 @@ export function SchemaView({
   /** ROADMAP punt 6 fase 2 — de zone-grenzen. VERPLICHT: een default hier zou de
    * gesynchroniseerde zones stil kunnen maskeren. */
   grenzen: readonly number[];
-  /** 5b-ii — testvoorstel voor de doelblok-testweek, of null. */
+  /** 5b-ii — testvoorstel voor de doelblok-opening, of null. */
   testVoorstel?: TestVoorstel | null;
   /** Maandag van de getoonde week (sleutel van de goedkeuring); default = view.weekMonday. */
   weekMonday?: string;
@@ -360,7 +360,7 @@ export function SchemaView({
         />
       )}
 
-      {/* 5b-ii — TESTVOORSTEL (doelblok-testweek). Staat VÓÓR de terugblik: een
+      {/* 5b-ii — TESTVOORSTEL (doelblok-opening). Staat VÓÓR de terugblik: een
           actievragend voorstel hoort boven een terugblik. ONDERDRUKT zolang er een fatigue-
           voorstel OPEN staat — twee vragende kaarten tegelijk is geen coach. Bij state "applied"
           is de vraag al beantwoord en mag hij wel. */}

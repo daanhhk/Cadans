@@ -1,7 +1,9 @@
+import { DOEL_BLOK_WEKEN } from "@cadans/engine";
 import type { EventItem, OverrideEntry, PlannerDay } from "@cadans/shared";
 import { describe, expect, it } from "vitest";
 import type { ActValuesRow } from "./activities";
 import { BLOK_WEKEN, blokWeekVanWeek } from "./blok";
+import { blokStartBijDoel } from "./settings";
 import {
   buildTestVoorstel,
   TEST_DUUR_MIN,
@@ -13,29 +15,30 @@ import {
 
 const DOELSTART = "2026-06-29";
 /**
- * DE DOELBLOK-TESTWEEK: week 12 van het twaalfweekse doelblok, weekindex 11 sinds `doelStart`.
+ * DE DOELBLOK-OPENING: week 1 van het twaalfweekse doelblok. Weekindex 12 sinds `doelStart`, dus
+ * de TWEEDE opening — de eerste valt op `doelStart` zelf en is minder handig als fixture.
  *
- * VERPLAATST 23-08-2026 van `2026-08-17` naar `2026-09-14`. Poort (1) toetst sinds die datum
- * `computeMacroPhase(...).isTestWeek` in plaats van de vierweekse blokweek. `2026-08-17` is óók een
- * vierweekse opening (blokweek 4) maar doelblokweek 8, en daar vuurt het aanbod dus niet meer —
- * dat is precies de versmalling, en er staat een eigen test op.
+ * TWEE KEER VERPLAATST OP 23-08-2026. Eerst van de vierweekse rustweek `2026-08-17` naar de
+ * doelblok-testweek `2026-09-14` (poort (1) ging van blokweek 4 naar `isTestWeek`), en daarna
+ * hierheen: poort (1) toetst sinds M92 `computeMacroPhase(...).week === 1`, de OPENING. De
+ * drempelwaarde doet zijn werk vooruit, dus zij hoort aan het begin van het blok dat zij doseert.
  */
-const TESTWEEK = "2026-09-14";
-/** Vierweekse openingen (blokweek 4) die GEEN doelblok-testweek zijn — hier hoort niets te vuren. */
-const OPENING_GEEN_TESTWEEK = ["2026-07-20", "2026-08-17", "2026-10-12"];
-/** Weekindex 0 t/m 10 sinds `doelStart` — doelblokweek 1 t/m 11. */
-const ELF_WEKEN_VOOR_DE_TESTWEEK = [
-  "2026-06-29",
-  "2026-07-06",
-  "2026-07-13",
-  "2026-07-20",
-  "2026-07-27",
-  "2026-08-03",
-  "2026-08-10",
-  "2026-08-17",
-  "2026-08-24",
-  "2026-08-31",
-  "2026-09-07",
+const OPENING = "2026-09-21";
+/** Doelblok-TESTWEKEN (week 12). Tot M92 vuurde het aanbod juist hier; nu hoort er niets te komen. */
+const TESTWEEK_GEEN_OPENING = ["2026-09-14", "2026-12-07"];
+/** Weekindex 13 t/m 23 — doelblokweek 2 t/m 12, de elf weken NA de opening. */
+const ELF_WEKEN_NA_DE_OPENING = [
+  "2026-09-28",
+  "2026-10-05",
+  "2026-10-12",
+  "2026-10-19",
+  "2026-10-26",
+  "2026-11-02",
+  "2026-11-09",
+  "2026-11-16",
+  "2026-11-23",
+  "2026-11-30",
+  "2026-12-07",
 ];
 
 function pday(datum: string, o: Partial<PlannerDay> = {}): PlannerDay {
@@ -52,16 +55,16 @@ function pday(datum: string, o: Partial<PlannerDay> = {}): PlannerDay {
   };
 }
 
-/** De doelblok-testweek 14-09 t/m 20-09: alleen zaterdag draagt genoeg tijd. */
+/** De doelblok-opening 21-09 t/m 27-09: alleen zaterdag draagt genoeg tijd. */
 function week(o: Partial<PlannerDay>[] = []): PlannerDay[] {
   const basis = [
-    pday("2026-09-14", { train: false, minuten: null }),
-    pday("2026-09-15", { minuten: 45 }),
-    pday("2026-09-16", { train: false, minuten: null }),
-    pday("2026-09-17", { minuten: 45 }),
-    pday("2026-09-18", { train: false, minuten: null }),
-    pday("2026-09-19", { minuten: 90 }),
-    pday("2026-09-20", { train: false, minuten: null }),
+    pday("2026-09-21", { train: false, minuten: null }),
+    pday("2026-09-22", { minuten: 45 }),
+    pday("2026-09-23", { train: false, minuten: null }),
+    pday("2026-09-24", { minuten: 45 }),
+    pday("2026-09-25", { train: false, minuten: null }),
+    pday("2026-09-26", { minuten: 90 }),
+    pday("2026-09-27", { train: false, minuten: null }),
   ];
   return basis.map((d, i) => ({ ...d, ...(o[i] ?? {}) }));
 }
@@ -142,16 +145,15 @@ function bouw(
     activities: o.activities ?? OUDE_METING.acts,
     doel: o.doel ?? "FTP",
     doelStart: o.doelStart === undefined ? DOELSTART : o.doelStart,
-    weekMondayISO: o.weekMondayISO ?? TESTWEEK,
-    todayISO: o.todayISO ?? TESTWEEK,
+    weekMondayISO: o.weekMondayISO ?? OPENING,
+    todayISO: o.todayISO ?? OPENING,
   });
 }
 
 describe("buildTestVoorstel — de poorten", () => {
-  it("alleen in de DOELBLOK-TESTWEEK: de elf weken ervoor geven null", () => {
-    // Weekindex 0 t/m 10 sinds doelStart — doelblokweek 1 t/m 11. Twee ervan zijn óók een
-    // vierweekse opening (index 3 en 7), en juist die twee vuurden vóór de versmalling wél.
-    for (const maandag of ELF_WEKEN_VOOR_DE_TESTWEEK) {
+  it("alleen in de DOELBLOK-OPENING: de elf weken erna geven null", () => {
+    // Weekindex 13 t/m 23 — doelblokweek 2 t/m 12.
+    for (const maandag of ELF_WEKEN_NA_DE_OPENING) {
       expect(
         bouw({
           weekMondayISO: maandag,
@@ -160,26 +162,25 @@ describe("buildTestVoorstel — de poorten", () => {
         }),
       ).toBeNull();
     }
-    expect(ELF_WEKEN_VOOR_DE_TESTWEEK).toHaveLength(11);
+    expect(ELF_WEKEN_NA_DE_OPENING).toHaveLength(11);
     expect(bouw()).not.toBeNull();
   });
 
-  it("een vierweekse OPENING die geen doelblok-testweek is geeft null", () => {
-    // DIT IS DE VERSMALLING VAN 23-08-2026. Alle drie zijn blokweek 4 — vóór die datum vuurde het
-    // aanbod hier — maar hun doelblokweek is 4, 8 en 4, niet 12.
-    for (const ma of OPENING_GEEN_TESTWEEK) {
-      expect(blokWeekVanWeek(DOELSTART, ma)).toBe(BLOK_WEKEN);
+  it("de doelblok-TESTWEEK geeft null — daar stond het aanbod tot M92", () => {
+    // DIT IS DE VERHUIZING VAN 23-08-2026. Week 12 was het moment; nu is het week 1.
+    for (const ma of TESTWEEK_GEEN_OPENING) {
       expect(
         bouw({ weekMondayISO: ma, todayISO: ma, plannerDays: weekVanaf(ma) }),
       ).toBeNull();
     }
   });
 
-  it("de doelblok-testweek IS per constructie ook een vierweekse opening", () => {
+  it("de doelblok-opening IS per constructie ook vierweekse blokweek 1", () => {
     // Dragend: daarom mogen poort (3) en de afwijs-sleutel op de VIERWEEKSE klok blijven staan.
-    // Vier opeenvolgende doelblok-testweken, elk 12 weken na de vorige.
-    for (const ma of ["2026-09-14", "2026-12-07", "2027-03-01", "2027-05-24"]) {
-      expect(blokWeekVanWeek(DOELSTART, ma)).toBe(BLOK_WEKEN);
+    // Week 1 is weekindex ≡ 0 (mod 12), en 0 mod 4 is 0 → blokweek 1. Vier opeenvolgende openingen.
+    for (const ma of ["2026-06-29", "2026-09-21", "2026-12-14", "2027-03-08"]) {
+      expect(blokWeekVanWeek(DOELSTART, ma)).toBe(1);
+      expect(BLOK_WEKEN).toBe(4);
     }
   });
 
@@ -211,10 +212,155 @@ describe("buildTestVoorstel — de poorten", () => {
     }
   });
 
+  it("een DOELWISSEL levert een aanbod in de wisselweek zelf — het geval dat M92 draagt", () => {
+    // blokStartBijDoel zet doelStart bij een wissel op een VERSE maandag, en die is per constructie
+    // week 1: de OPENING. Tot M92 eiste poort (1) week 12, dus leverde een wisselweek nooit een
+    // aanbod en begon het nieuwe blok twaalf weken lang op een onbevestigde drempel.
+    const nieuweStart = blokStartBijDoel(
+      "FTP",
+      DOELSTART,
+      "Conditie",
+      "2026-08-05",
+    );
+    expect(nieuweStart).toBe("2026-08-03");
+    const v = buildTestVoorstel({
+      plannerDays: weekVanaf(nieuweStart),
+      overrides: [],
+      events: [race("2026-01-15")],
+      activities: [act("2026-01-15")],
+      doel: "Conditie",
+      doelStart: nieuweStart,
+      weekMondayISO: nieuweStart,
+      todayISO: nieuweStart,
+    });
+    expect(v?.datum).toBe("2026-08-08");
+    expect(v?.blokStart).toBe(nieuweStart);
+  });
+
+  it("een weekmaandag VÓÓR doelStart geeft null — de geklemde weekteller", () => {
+    // REGRESSIE-TEST, gevonden in de weerleggingspas van 23-08-2026. computeMacroPhase klemt zijn
+    // absolute weekteller met `if (absWeek < 1) absWeek = 1;`, dus ELKE weekmaandag op of vóór
+    // doelStart leest week 1 — precies de waarde waar poort (1) sinds M92 op staat. De OUDE poort
+    // stond daar dicht (geklemde weken geven isTestWeek false). GEMETEN vóór de reparatie: over
+    // weekindex −26 t/m 26 vuurde de poort 29 keer, waarvan 26 buiten een echte opening.
+    for (const ma of [
+      "2026-06-22",
+      "2026-06-15",
+      "2026-06-08",
+      "2026-05-18",
+      "2026-01-05",
+    ]) {
+      expect(
+        bouw({
+          weekMondayISO: ma,
+          todayISO: ma,
+          plannerDays: weekVanaf(ma),
+          events: [],
+          activities: [],
+        }),
+      ).toBeNull();
+    }
+    // En de opening zelf vuurt nog wel.
+    expect(
+      bouw({
+        weekMondayISO: DOELSTART,
+        todayISO: DOELSTART,
+        plannerDays: weekVanaf(DOELSTART),
+        events: [],
+        activities: [],
+      }),
+    ).not.toBeNull();
+  });
+
+  it("een doelwissel op DONDERDAG legt doelStart in de toekomst en mag geen dubbel aanbod geven", () => {
+    // blokStartBijDoel legt de nieuwe doelStart op de VOLGENDE maandag zodra de wissel op donderdag
+    // t/m zondag valt — vier van de zeven dagen — en de app rendert altijd de HUIDIGE week. Zonder
+    // poort (1b) gaf dat TWEE aanbiedingen, zeven dagen uit elkaar, met VERSCHILLENDE
+    // afwijs-sleutels, zodat een afwijzing op de eerste de tweede niet onderdrukte.
+    const nieuweStart = blokStartBijDoel(
+      "FTP",
+      DOELSTART,
+      "Conditie",
+      "2026-08-06",
+    );
+    expect(nieuweStart).toBe("2026-08-10"); // donderdag -> volgende maandag
+    const huidigeWeek = "2026-08-03";
+    const inHuidigeWeek = buildTestVoorstel({
+      plannerDays: weekVanaf(huidigeWeek),
+      overrides: [],
+      events: [race("2026-01-15")],
+      activities: [act("2026-01-15")],
+      doel: "Conditie",
+      doelStart: nieuweStart,
+      weekMondayISO: huidigeWeek,
+      todayISO: "2026-08-06",
+    });
+    expect(inHuidigeWeek).toBeNull();
+    // In de ECHTE openingsweek komt het aanbod wél.
+    const inOpening = buildTestVoorstel({
+      plannerDays: weekVanaf(nieuweStart),
+      overrides: [],
+      events: [race("2026-01-15")],
+      activities: [act("2026-01-15")],
+      doel: "Conditie",
+      doelStart: nieuweStart,
+      weekMondayISO: nieuweStart,
+      todayISO: nieuweStart,
+    });
+    expect(inOpening?.datum).toBe("2026-08-15");
+  });
+
+  it("een doelStart die geen maandag is vuurt precies ÉÉN keer", () => {
+    // doelStart is een vrij datumveld; oudere waarden staan op een willekeurige dag (zie de
+    // docstring van weekMondayVan_ in blok.ts). Bij een woensdag lazen DRIE opeenvolgende maandagen
+    // week 1: twee geklemd en één echt.
+    const woensdag = "2026-07-01";
+    const uitslagen = [
+      "2026-06-22",
+      "2026-06-29",
+      "2026-07-06",
+      "2026-07-13",
+    ].map(
+      (ma) =>
+        bouw({
+          doelStart: woensdag,
+          weekMondayISO: ma,
+          todayISO: ma,
+          plannerDays: weekVanaf(ma),
+          events: [],
+          activities: [],
+        }) !== null,
+    );
+    expect(uitslagen).toEqual([false, false, true, false]);
+  });
+
+  it("een doelwissel KORT NA een meting levert GEEN aanbod — de vloer doet daar zijn werk", () => {
+    // De tegenhanger van de test hierboven, en samen leggen ze de rolverdeling vast: poort (1)
+    // bewaakt de FREQUENTIE, de vloer bewaakt de NABIJHEID van een reeds gedane inspanning.
+    const nieuweStart = blokStartBijDoel(
+      "FTP",
+      DOELSTART,
+      "Conditie",
+      "2026-08-05",
+    );
+    const kortGeleden = "2026-07-16"; // 23 dagen vóór de kandidaat-testdag 2026-08-08
+    const v = buildTestVoorstel({
+      plannerDays: weekVanaf(nieuweStart),
+      overrides: [],
+      events: [race(kortGeleden)],
+      activities: [act(kortGeleden)],
+      doel: "Conditie",
+      doelStart: nieuweStart,
+      weekMondayISO: nieuweStart,
+      todayISO: nieuweStart,
+    });
+    expect(v).toBeNull();
+  });
+
   it("een GELDIGE maar afwijkend geschreven doelStart gedraagt zich als voorheen", () => {
     // Tegenproef bij de regressie hierboven: "2026/06/29" parseert wél naar een geldige datum, en
     // daar hoort het aanbod gewoon te vuren. De vang mag niet te breed zijn.
-    expect(bouw({ doelStart: "2026/06/29" })?.datum).toBe("2026-09-19");
+    expect(bouw({ doelStart: "2026/06/29" })?.datum).toBe("2026-09-26");
   });
 
   it("doel Onderhoud → null (geen effect-meter)", () => {
@@ -223,12 +369,12 @@ describe("buildTestVoorstel — de poorten", () => {
 
   it("er staat al een test in dit blok → null", () => {
     // Het vierweekse blok van de testweek 2026-09-14 begint op 2026-08-24 en eindigt vóór
-    // 2026-09-21. 2026-08-26 valt daarbinnen, maar in een andere week.
-    expect(bouw({ overrides: [testOverride("2026-08-26")] })).toBeNull();
+    // 2026-09-21. 2026-10-01 valt daarbinnen, maar in een andere week.
+    expect(bouw({ overrides: [testOverride("2026-10-01")] })).toBeNull();
   });
 
   it("A- of B-wedstrijd binnen de horizon → null (die wedstrijd IS de meting)", () => {
-    const binnen = "2026-10-03"; // 19 dagen na 14-09
+    const binnen = "2026-10-10"; // 19 dagen na 14-09
     for (const p of ["A", "B"]) {
       expect(
         bouw({ events: [...OUDE_METING.events, race(binnen, p)] }),
@@ -238,12 +384,12 @@ describe("buildTestVoorstel — de poorten", () => {
 
   it("C-wedstrijd binnen de horizon → WEL een aanbod", () => {
     expect(
-      bouw({ events: [...OUDE_METING.events, race("2026-10-03", "C")] }),
+      bouw({ events: [...OUDE_METING.events, race("2026-10-10", "C")] }),
     ).not.toBeNull();
   });
 
   it("A-wedstrijd BUITEN de horizon → wel een aanbod", () => {
-    const buiten = "2026-10-18"; // 34 dagen na 14-09, voorbij de horizon
+    const buiten = "2026-10-25"; // 34 dagen na 14-09, voorbij de horizon
     expect(WEDSTRIJD_HORIZON_DAGEN).toBe(28);
     expect(
       bouw({ events: [...OUDE_METING.events, race(buiten)] }),
@@ -256,11 +402,11 @@ describe("buildTestVoorstel — de poorten", () => {
   });
 
   it("interval nog niet vol → null", () => {
-    // Wedstrijd op 2026-08-29: 21 dagen vóór de testdatum 2026-09-19.
+    // Wedstrijd op 2026-09-05: 21 dagen vóór de testdatum 2026-09-26.
     expect(
       bouw({
-        events: [race("2026-08-29")],
-        activities: [act("2026-08-29")],
+        events: [race("2026-09-05")],
+        activities: [act("2026-09-05")],
       }),
     ).toBeNull();
   });
@@ -273,9 +419,9 @@ describe("buildTestVoorstel — de poorten", () => {
   });
 
   it("een NIET gereden wedstrijd telt niet als meting → interval blijft open", () => {
-    // Wedstrijd van 2026-08-29 zonder rit die dag: geen gelegenheid, dus wél aanbieden.
+    // Wedstrijd van 2026-09-05 zonder rit die dag: geen gelegenheid, dus wél aanbieden.
     expect(
-      bouw({ events: [race("2026-08-29")], activities: [] }),
+      bouw({ events: [race("2026-09-05")], activities: [] }),
     ).not.toBeNull();
   });
 });
@@ -283,8 +429,8 @@ describe("buildTestVoorstel — de poorten", () => {
 describe("de INTERVALGRENS als dimensie, niet als vaste waarde", () => {
   // Nieuw 23-08-2026. De vorige twee bouwrondes strandden allebei op een gestipuleerde
   // beginconditie; deze toets loopt de dimensie AF in plaats van er één waarde uit te kiezen, en
-  // pint waar de omslag ligt: op de GEKOZEN TESTDAG (2026-09-19), niet op de weekmaandag.
-  const TESTDAG = "2026-09-19";
+  // pint waar de omslag ligt: op de GEKOZEN TESTDAG (2026-09-26), niet op de weekmaandag.
+  const TESTDAG = "2026-09-26";
   const MS = 86400000;
   function metingOp(datumISO: string) {
     return bouw({ events: [race(datumISO)], activities: [act(datumISO)] });
@@ -300,11 +446,21 @@ describe("de INTERVALGRENS als dimensie, niet als vaste waarde", () => {
   }
 
   it("de omslag ligt EXACT op TEST_INTERVAL_DAGEN vóór de gekozen testdag", () => {
-    // 2026-06-27 → 2026-09-19 is precies 84 dagen; 2026-06-28 is er 83.
-    expect(dagenTot("2026-06-27", TESTDAG)).toBe(TEST_INTERVAL_DAGEN);
-    expect(metingOp("2026-06-27")).not.toBeNull();
-    expect(dagenTot("2026-06-28", TESTDAG)).toBe(TEST_INTERVAL_DAGEN - 1);
-    expect(metingOp("2026-06-28")).toBeNull();
+    // 2026-07-11 → 2026-09-26 is precies 77 dagen; 2026-07-12 is er 76.
+    expect(dagenTot("2026-07-11", TESTDAG)).toBe(TEST_INTERVAL_DAGEN);
+    expect(metingOp("2026-07-11")).not.toBeNull();
+    expect(dagenTot("2026-07-12", TESTDAG)).toBe(TEST_INTERVAL_DAGEN - 1);
+    expect(metingOp("2026-07-12")).toBeNull();
+  });
+
+  it("de vloer is AFGELEID uit de meetkunde van poort (1), geen los getal", () => {
+    // DOEL_BLOK_WEKEN * 7 is de afstand tussen twee openingsMAANDAGEN; het aanbodvenster is zeven
+    // dagen breed, want poort (5) kandideert de hele openingsweek. GEMETEN: de afstand tussen twee
+    // gekozen testdagen ligt tussen 78 en 90, dus een vloer boven 78 onderdrukt natuurlijke
+    // openingen. 77 = 84 − 7 ligt daar met één structurele dag marge onder.
+    expect(DOEL_BLOK_WEKEN).toBe(12);
+    expect(TEST_INTERVAL_DAGEN).toBe(DOEL_BLOK_WEKEN * 7 - 7);
+    expect(TEST_INTERVAL_DAGEN).toBe(77);
   });
 
   it("de dimensie afgelopen: monotoon, precies één omslagpunt, en dat is de vloer", () => {
@@ -348,14 +504,14 @@ describe("buildTestVoorstel — de dagkeuze", () => {
 
   it("een dag in het VERLEDEN valt af", () => {
     // todayISO na de zaterdag → geen kandidaat meer.
-    expect(bouw({ todayISO: "2026-09-20" })).toBeNull();
+    expect(bouw({ todayISO: "2026-09-27" })).toBeNull();
   });
 
   it("een dag met een override valt af", () => {
     expect(
       bouw({
         overrides: [
-          { datum: "2026-09-19", override: { type: "rest" } } as OverrideEntry,
+          { datum: "2026-09-26", override: { type: "rest" } } as OverrideEntry,
         ],
       }),
     ).toBeNull();
@@ -363,29 +519,29 @@ describe("buildTestVoorstel — de dagkeuze", () => {
 
   it("de MEESTE minuten wint", () => {
     const w = week();
-    w[3] = { ...(w[3] as PlannerDay), minuten: 150 }; // donderdag 17-09
-    expect(bouw({ plannerDays: w })?.datum).toBe("2026-09-17");
+    w[3] = { ...(w[3] as PlannerDay), minuten: 150 }; // donderdag 24-09
+    expect(bouw({ plannerDays: w })?.datum).toBe("2026-09-24");
   });
 
   it("gelijkspel → de LAATSTE datum", () => {
     const w = week();
-    w[3] = { ...(w[3] as PlannerDay), minuten: 90 }; // do 17-09 gelijk aan za 19-09
-    expect(bouw({ plannerDays: w })?.datum).toBe("2026-09-19");
+    w[3] = { ...(w[3] as PlannerDay), minuten: 90 }; // do 24-09 gelijk aan za 26-09
+    expect(bouw({ plannerDays: w })?.datum).toBe("2026-09-26");
   });
 
   it("de dagkeuze kijkt NIET naar de vloer", () => {
     // Poort (6) kiest op MINUTEN; of die dag de intervalvloer haalt weegt niet mee. Deze test pint
     // dat gedrag vast — hij toont het op een week met TWEE kandidaten.
     //
-    // LET OP WAT DEZE TEST NIET ZEGT. Hij is NIET de oorzaak van het residu dat na de versmalling
-    // overblijft; die toeschrijving is in de weerleggingspas van 23-08-2026 weerlegd. GEMETEN
-    // (docs/PUNT47-BOUW.md §16): van de 176 gemiste doelblokgrenzen draagt de werkelijke week in
-    // 176 van de 176 gevallen precies ÉÉN kandidaat, dus daar valt niets te kiezen, en alle 176
-    // vuren alsnog zodra de vloer op 0 staat. Het residu komt dus van poort (7). Zie punt 58.
+    // LET OP WAT DEZE TEST NIET ZEGT. Hij is NIET de oorzaak van het residu dat de vorige ronde
+    // overhield; die toeschrijving is in de weerleggingspas van 23-08-2026 weerlegd. Sinds de
+    // verhuizing naar de opening en de afgeleide vloer is dat residu bovendien WEG — 440 van de 440
+    // openingen worden bediend. Deze test blijft staan omdat het GEDRAG bestaat, niet omdat het
+    // vandaag iets kost.
     const w = week();
-    // Dinsdag ruimer dan zaterdag: poort (6) kiest dinsdag 15-09.
+    // Dinsdag ruimer dan zaterdag: poort (6) kiest dinsdag 22-09.
     w[1] = { ...(w[1] as PlannerDay), minuten: 150 };
-    const laatste = "2026-06-25"; // 82 dagen vóór di 15-09, 86 vóór za 19-09
+    const laatste = "2026-07-09"; // 75 dagen vóór di 22-09, 79 vóór za 26-09
     const v = bouw({
       plannerDays: w,
       events: [race(laatste)],
@@ -397,58 +553,61 @@ describe("buildTestVoorstel — de dagkeuze", () => {
       events: [race(laatste)],
       activities: [act(laatste)],
     });
-    expect(zonder?.datum).toBe("2026-09-19");
+    expect(zonder?.datum).toBe("2026-09-26");
   });
 });
 
 describe("IJK-CASUS op echte getallen", () => {
   // Laatste gelegenheid: de gereden A-wedstrijd van 21-05-2026 (de sprong 261 → 272).
-  it("wedstrijd 21-05 → aanbod op 2026-09-19, 121 dagen ertussen", () => {
+  it("wedstrijd 21-05 → aanbod op 2026-09-26, 128 dagen ertussen", () => {
     const v = bouw();
-    expect(v?.datum).toBe("2026-09-19");
+    expect(v?.datum).toBe("2026-09-26");
     expect(v?.durMin).toBe(TEST_DUUR_MIN);
     expect(v?.beschikbaarMin).toBe(90);
-    expect(v?.blokStart).toBe("2026-08-24");
+    // De openingsweek IS vierweekse blokweek 1, dus de afwijs-sleutel is de openingsmaandag zelf.
+    // Tot M92 lag het aanbod in blokweek 4 en wees de sleutel drie weken terug.
+    expect(v?.blokStart).toBe("2026-09-21");
     expect(v?.laatsteMeting).toEqual({ bron: "race", datum: "2026-05-21" });
-    expect(v?.dagenSinds).toBe(121);
+    expect(v?.dagenSinds).toBe(128);
     expect(v?.dagenSinds as number).toBeGreaterThanOrEqual(TEST_INTERVAL_DAGEN);
   });
 
-  it("toetsen op de WEEKMAANDAG zou het aanbod ONDERDRUKKEN — 81 tegen 86 dagen", () => {
+  it("toetsen op de WEEKMAANDAG zou het aanbod ONDERDRUKKEN — 75 tegen 80 dagen", () => {
     // Dragend: daarom ligt de intervalpoort op de TESTDATUM en niet op de weekmaandag.
     //
-    // DE FIXTURE IS 23-08-2026 VERPLAATST, en niet de assertie verzwakt. Met de oude vloer van 90
-    // droeg de wedstrijd van 21-05 dit contrast (88 dagen tot de maandag, 93 tot de testdag). Onder
-    // de vloer van 84 liggen die twee ALLEBEI boven de vloer en toont die fixture niets meer. Een
-    // meting van 25-06 herstelt het contrast op de nieuwe vloer.
+    // DE FIXTURE IS DRIE KEER VERPLAATST OP 23-08-2026, en de assertie is nooit verzwakt. Met vloer
+    // 90 droeg de wedstrijd van 21-05 dit contrast (88 tot de maandag, 93 tot de testdag); onder
+    // vloer 84 lagen die twee beide boven de vloer, dus kwam er een meting van 25-06 (81 tegen 86);
+    // onder vloer 77 en de verhuisde openingsweek geldt dat opnieuw, en herstelt een meting van
+    // 08-07 het contrast. Elke keer verhuist de FIXTURE, nooit de eis.
     const MS = 86400000;
     const dagenTot = (mnd: number, dag: number) =>
       Math.round(
-        (new Date(2026, mnd, dag).getTime() - new Date(2026, 5, 25).getTime()) /
+        (new Date(2026, mnd, dag).getTime() - new Date(2026, 6, 8).getTime()) /
           MS,
       );
-    const naarMaandag = dagenTot(8, 14); // 2026-09-14
-    const naarTestdag = dagenTot(8, 19); // 2026-09-19
-    expect(naarMaandag).toBe(81);
-    expect(naarTestdag).toBe(86);
+    const naarMaandag = dagenTot(8, 21); // 2026-09-21
+    const naarTestdag = dagenTot(8, 26); // 2026-09-26
+    expect(naarMaandag).toBe(75);
+    expect(naarTestdag).toBe(80);
     expect(naarMaandag).toBeLessThan(TEST_INTERVAL_DAGEN);
     expect(naarTestdag).toBeGreaterThanOrEqual(TEST_INTERVAL_DAGEN);
     // En met de testdatum haalt hij het wél:
     expect(
-      bouw({ events: [race("2026-06-25")], activities: [act("2026-06-25")] }),
+      bouw({ events: [race("2026-07-08")], activities: [act("2026-07-08")] }),
     ).not.toBeNull();
   });
 });
 
 describe("de SPRONG als derde meetmoment", () => {
   it("een sprongdag binnen TEST_INTERVAL_DAGEN vóór de testdatum ONDERDRUKT het aanbod", () => {
-    // Geen test en geen wedstrijd, maar de rolling FTP sprong op 2026-08-29 (261 → 272):
-    // 21 dagen vóór de testdatum 2026-09-19, dus ruim binnen het interval.
+    // Geen test en geen wedstrijd, maar de rolling FTP sprong op 2026-09-05 (261 → 272):
+    // 21 dagen vóór de testdatum 2026-09-26, dus ruim binnen het interval.
     const v = bouw({
       events: [],
       activities: [
-        act("2026-08-22", 90, "Ride", 261),
-        act("2026-08-29", 90, "Ride", 272),
+        act("2026-08-29", 90, "Ride", 261),
+        act("2026-09-05", 90, "Ride", 272),
       ],
     });
     expect(v).toBeNull();
@@ -459,8 +618,8 @@ describe("de SPRONG als derde meetmoment", () => {
     const v = bouw({
       events: [],
       activities: [
-        act("2026-08-22", 90, "Ride", 261),
         act("2026-08-29", 90, "Ride", 261),
+        act("2026-09-05", 90, "Ride", 261),
       ],
     });
     expect(v).not.toBeNull();
@@ -479,6 +638,6 @@ describe("de SPRONG als derde meetmoment", () => {
       bron: "inspanning",
       datum: "2026-05-21",
     });
-    expect(v?.dagenSinds).toBe(121);
+    expect(v?.dagenSinds).toBe(128);
   });
 });

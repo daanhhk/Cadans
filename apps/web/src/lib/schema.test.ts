@@ -858,16 +858,20 @@ describe("testResultaat (5b-ii) — matcht alleen op het exacte badge-label", ()
   });
 
   it("weekdagNaam levert de VOLLE naam, en de zin leest voluit", () => {
-    // 2026-08-22 is de zaterdag die buildTestVoorstel in de eerste live rustweek kiest.
+    // 2026-07-04 is de zaterdag van de eerste doelblok-OPENING bij doelStart 2026-06-29.
     // `day.weekday` in de dagstrip is de KORTE vorm ("za"); de coachregel moet voluit lezen.
-    expect(weekdagNaam("2026-08-22")).toBe("zaterdag");
+    //
+    // BIJGESTELD 23-08-2026 met de verhuizing naar de opening (M92): de zin sloot af met "die
+    // waarde ijkt je VOLGENDE blok" toen de test aan het eind van een blok stond. Nu staat hij in
+    // de opening en ijkt hij DIT blok.
+    expect(weekdagNaam("2026-07-04")).toBe("zaterdag");
     expect(
       testResultaat(
         { ...basis, label: testBadgeLabel() },
-        weekdagNaam("2026-08-22"),
+        weekdagNaam("2026-07-04"),
       ),
     ).toBe(
-      "FTP-test op zaterdag — twintig minuten alles geven; die waarde ijkt je volgende blok.",
+      "FTP-test op zaterdag — twintig minuten alles geven; die waarde ijkt dit blok.",
     );
   });
 
