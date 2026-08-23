@@ -1966,8 +1966,22 @@ punten staat onder *Gesloten — vindplaats*.
     omdat 84 dagen tussen twee grenzen een vloer van 90 nooit haalt. Het resterende derde deel bij
     een wisselende weekvorm heeft een benoemde oorzaak — schuift de ruimste dag naar vroeger in de
     week dan hij vorige keer lag, dan haalt hij de vloer net niet — en dat is **punt 55**.
-    GEEN AUTORISATIE DEZE RONDE: de combinatie raakt poort (1), en dat verbood de prompt op de nu
-    weerlegde grond. Ronde 3 beslist.
+    GEEN AUTORISATIE IN RONDE 2: de combinatie raakt poort (1), en dat verbood die prompt op de nu
+    weerlegde grond.
+    **GEBOUWD IN RONDE 3, 23-08-2026 avond — DIT DEEL VAN PUNT 47 IS AF.** De versmalling van poort
+    (1) naar de doelblok-testweek en `TEST_INTERVAL_DAGEN` op 84 zijn SAMEN doorgevoerd als één
+    wijziging, in `apps/web/src/lib/testvoorstel.ts`; geen regel in `packages/engine`. Poort (1)
+    leest nu `computeMacroPhase(...).isTestWeek`, met een vroege uitgang op een ontbrekende
+    `doelStart` omdat die functie anders op `new Date()` terugvalt en deze laag geen ambient klok
+    mag hebben. NAGEMETEN op de gebouwde bron, zonder substitutie: de poort vuurt 21 van de 21 keer
+    in een doelblok-testweek en 0 keer daarbuiten, en de dekking reproduceert de voormeting teken
+    voor teken — **8419 van de 8421 (100,0%)** bij een vaste weekvorm en **5613 van de 8421
+    (66,7%)** bij een wisselende, tegen een baseline van 2033 van de 8421 (24,1%). Rood-meting per
+    plek: de vloer terug op 90 laat drie benoemde tests vallen, poort (1) geneutraliseerd drie
+    andere. Suite van 1010 naar 1016 over 78 bestanden.
+    WAT VAN 47 OPEN BLIJFT: de MAAT uit `DOELEN-SPEC` §3.2 (punt 54), de duurzame ONGEIJKT-staat
+    van M91 (punt 53), het verdwenen retry-venster (punt 55) en de dagkeuze van poort (6) die de
+    vloer niet kent (punt 58).
 48. **Geen testaanbod rond een A- of B-event** — open · CLIENT. Daan-besluit 21-08-2026. Een
     event is een event: daar geef je alles, en het event is zelf de betere meting. Een
     20-minuten-all-out kost twee tot drie dagen herstel, en in een taper vernietigt hij precies
@@ -2279,6 +2293,29 @@ punten staat onder *Gesloten — vindplaats*.
     terugvallen op twee prompts voor alles; wel de twee regels hierboven toevoegen. Zonder regel (2)
     is de gecombineerde vorm goedkoper dan de splitsing én minder betrouwbaar, en dat is de
     slechtste ruil die er is.
+    **AF — VERDICT NA RONDE 3 (23-08-2026): JA, ONDER VOORWAARDE.** Verantwoording in
+    `docs/PUNT47-BOUW.md` §18. Ronde 3 draaide de samengevoegde vorm MÉT beide regels en had als
+    eerste een echte bouw-helft, dus de vraag is nu op het juiste materiaal beantwoord.
+    REGEL (i) WERKTE MEETBAAR: de beginconditie is als dimensie afgelopen over 401 waarden, en dat
+    leverde een ander SOORT uitspraak — niet "de winst is 100 procent" maar "het minimum van de
+    gebouwde variant ligt over het hele bereik boven het maximum van de baseline".
+    REGEL (ii) REDDE DE RONDE, en dat is geen overdrijving. De weerleggingspas ving vier dingen die
+    alle vier al in de bron of in de documenten stonden: een docstring die het mechanisme van de
+    OUDE poort beschreef; een geautoriseerde constante die meetbaar de slechtste waarde in haar
+    eigen beweerde klasse is (punt 58); een residu dat twee keer achtereen aan de verkeerde poort
+    was toegeschreven; en **een echte regressie in nieuw geschreven code** — een bedorven
+    `doelStart` liet `isTestWeek` op `true` vallen, waardoor de ijkkaart ELKE week zou verschijnen.
+    Zonder die pas was dat alle vier gecommit.
+    HET VERDICT: de samengevoegde vorm is BRUIKBAAR voor rondes die een mechanisme raken, MITS regel
+    (i) en (ii) allebei draaien. Zonder (ii) is hij aantoonbaar slechter dan de splitsing; met (ii)
+    beter, want de pas toetst niet de volgende STAP maar de conclusie die er al ligt. De prijs is
+    reëel: vier lenzen plus een tweede meetronde bovenop de eerste.
+    **EEN DERDE REGEL IS ERBIJ GEKOMEN, en zij komt uit het falen van deze ronde zelf:** een
+    diagnose door interventie verandert per probe precies één ding. Staat in
+    `docs/WERKWIJZE-LESSEN.md`; twee van de vier vondsten gingen terug op één en dezelfde meetfout.
+    WAT NIET IS AANGETOOND: of de pas ook werkt wanneer de uitvoerder hem zelf opstelt zonder dat
+    een prompt hem voorschrijft, en of het feit dat vier van de vier lenzen raak schoten aan de
+    METHODE ligt of aan deze ene claim. Eén keer gedraaid is geen reeks.
 53. **De ONGEIJKT-staat van M91 heeft geen drager** — open · CLIENT plus DATA. Volgt uit de
     bouwronde van 23-08-2026 (`docs/PUNT47-BOUW.md`). M91 zegt dat een afwijzing geen meting is en
     dat de app de ONGEIJKT-staat moet DRAGEN en ZEGGEN. Vandaag draagt de app alleen een
@@ -2308,6 +2345,25 @@ punten staat onder *Gesloten — vindplaats*.
     BESLISSEN: blijft het venster één week, of wordt het een venster dat OPENBLIJFT tot de ijking
     plaatsvond of expliciet geweigerd is. Die tweede lezing raakt punt 53, want een openblijvend
     venster vraagt precies de staat die daar besproken wordt.
+    **DIT PUNT IS PER 23-08-2026 GEEN VOORUITZICHT MEER MAAR LIVE.** De versmalling van poort (1) is
+    gebouwd, dus de RETRY is weg: waar een gemist aanbod vier weken later terugkwam, wacht een
+    gemiste doelblokgrens nu twaalf. Dat staat als zodanig in de docstring bij `blokStart` in
+    `apps/web/src/lib/testvoorstel.ts`. GEMETEN kosten: bij een wisselende weekvorm mist 33,3
+    procent van de doelblokgrenzen (5613 van de 8421 bedeeld), en punt 58 wijst de oorzaak aan —
+    het is niet beschikbaarheid en niet de vloer, maar de dagkeuze. 55 en 58 horen daarom in
+    dezelfde ronde.
+    DE VRAAG DIE ERBIJ HOORT EN NOG NIET BESLIST IS: hoort een gemiste grens te HERKANSEN? Een
+    aanbod dat vier weken te laat komt is iets anders dan geen aanbod, en welk van die twee beter is
+    hangt aan de norm en niet aan de code — een ijking buiten de blokgrens meet de zones voor het
+    volgende blok pas als dat blok al loopt. Herkomst: OPEN, expliciet niet beslist tot de oorzaak
+    gemeten was; die is er nu (punt 58), dus deze vraag kan beslist worden.
+    **TWEEDE KOSTENPOST, gevonden in de weerleggingspas van 23-08-2026 en hier nieuw:** het EERSTE
+    aanbod na een verse `doelStart` schuift van **27 naar 83 dagen**. GEMETEN over vier
+    `doelStart`-waarden (`2026-01-05`, `2026-06-29`, `2026-09-07`, `2027-02-01`), met een ruime week
+    en zonder meethistorie: oud telkens 27 dagen, nieuw telkens 83. Wie vandaag een doel kiest heeft
+    dus acht weken langer geen enkel ijkpunt, terwijl dat juist het moment is waarop het volgende
+    blok een dosis-anker nodig heeft. Dit valt BUITEN de dekkingsmaat van punt 47 — die telt alleen
+    grenzen — en hoort bij de beslissing over het venster.
 56. **`TEST_MIN_BESCHIKBAAR_MIN` en `TEST_DUUR_MIN` dragen geen herkomst-etiket** — open · norm.
     Beide staan in `apps/web/src/lib/testvoorstel.ts` en beide staan op 60. Anders dan
     `TEST_INTERVAL_DAGEN` en `WEDSTRIJD_HORIZON_DAGEN` is nergens vastgelegd of ze uit de
@@ -2338,6 +2394,47 @@ punten staat onder *Gesloten — vindplaats*.
     is **punt 55** (een venster van één week dat niet openblijft), en 55 en 57 horen daarom in
     dezelfde ronde beslist te worden. Raakt ook punt 53: een venster dat openblijft moet ergens
     onthouden dat de ijking nog niet gedaan is.
+    **AF PER 23-08-2026, in ronde 3 van punt 47.** De roostercondititie is gebouwd: poort (1) leest
+    `computeMacroPhase(...).isTestWeek`, en `TEST_INTERVAL_DAGEN` staat op 84 met een docstring die
+    de trapfunctie `ceil(vloer / 28) × 28` benoemt en expliciet zegt dat `84 = 12 × 7` een samenval
+    is en geen mechanisme. Nagemeten op de gebouwde bron: 100,0 procent dekking bij een vaste
+    weekvorm, 66,7 procent bij een wisselende. WAT ER OPEN BLIJFT is niet de vloer maar de DAGKEUZE
+    — zie punt 58 — en het verdwenen retry-venster, punt 55.
+58. **`TEST_INTERVAL_DAGEN` staat zes dagen te hoog voor het venster dat hij moet toelaten** —
+    open · norm plus CLIENT. Daan-besluit nodig. GEMETEN 23-08-2026 in de weerleggingspas, zie
+    `docs/PUNT47-BOUW.md` §16. Dit is de ENIGE oorzaak van het residu dat na de bouw van punt 47
+    overblijft.
+    HET MECHANISME, en het is pas na de versmalling van poort (1) zichtbaar. De OPENINGEN liggen nu
+    84 dagen uit elkaar — één per doelblok — dus de afstand tussen twee AANBIEDINGEN is
+    `84 + (k − j)` dagen, met j en k de weekdag van de vorige en de volgende gekozen testdag. Poort
+    (6) kiest de ruimste dag, dus die weekdag wobbelt en `k − j` ligt tussen −6 en +6: de kortste
+    afstand is **78** dagen. Een vloer van 84 blokkeert dus precies de grenzen waarbij de ruimste
+    dag naar voren schuift.
+    GEMETEN OP DE GEBOUWDE BRON, vloer-sweep over één keten: 60, 66, 70, 74, 77, 78 en 79 geven
+    allemaal **21 van de 21** doelblokgrenzen bij zowel een vaste als een wisselende weekvorm; 80
+    geeft 20 van de 21, 82 geeft 15, **84 geeft 14**, 85 geeft 11 en 90 geeft 11. De waarde die
+    M90b uitdrukt zonder de grens te blokkeren die zij moet toelaten is `DOEL_BLOK_WEKEN × 7 − 6`
+    = **78**: één doelblok minus de breedte van het aanbodvenster.
+    DE WACHTTIJD MAAKT HET SCHERPER, en op dit getal is 84 een REGRESSIE. Gemiddelde afstand tussen
+    twee opeenvolgende aanbiedingen, over 30 zaden: oud (vierweeks, vloer 90) 111,5 dagen met een
+    grootste gat van 118; nieuw met vloer 84 **126,3 dagen** met een grootste gat van **173**; met
+    vloer 78 **84,0 dagen** met een grootste gat van 90. Bij een wisselende weekvorm wacht de
+    renner met 84 dus LANGER dan vóór de hele ingreep.
+    HET VERHOOGT DE TESTFREQUENTIE NIET, en dat is de reden dat het geen norm-verruiming is: poort
+    (1) laat per constructie hoogstens één aanbod per doelblok door, dus 78 zorgt er alleen voor dat
+    die ene niet wordt overgeslagen.
+    NIET GEBOUWD IN RONDE 3, met reden: sectie 2 van die prompt autoriseerde `TEST_INTERVAL_DAGEN`
+    op **84** en de meetfrequentie is een BELEIDSVRAAG die met Daan wordt herzien, niet door de
+    uitvoerder. De waarde staat dus op 84 met deze meting in de docstring ernaast. **DIT PUNT IS EEN
+    BESLUIT VAN ÉÉN GETAL.**
+    LET OP BIJ HET METEN — dit residu is TWEE KEER verkeerd gediagnosticeerd. De eerste diagnose
+    schreef alle 176 op de BESCHIKBAARHEIDSPOORT: de poorten waren in een cascade getoetst en de
+    eerste stap verruimde de week, wat ook de dagkeuze verandert. De tweede schreef ze op de
+    DAGKEUZE van poort (6): de probe gaf de onderzochte dag 90 minuten en bouwde daarmee een week
+    die niet bestond. GEMETEN met onafhankelijke probes: de werkelijke week draagt in **176 van de
+    176** gemiste grenzen precies ÉÉN kandidaat — poort (6) heeft daar niets te kiezen — en **176
+    van de 176** vuren alsnog zodra de vloer op 0 staat. De null valt op poort (7). Toets poorten
+    ONAFHANKELIJK en verander per probe precies één ding.
 
 ## De tijdslijn
 
@@ -2606,36 +2703,34 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
     aflezingen open: agent-discovery plus tools-binding, en de rules-empirie. **(4) IS AFGEWAARDEERD**
     op de eigen runtime-meting (49s). Wat rest is (3), de SNOEI van de canon, en die heeft nu een
     maat en een intrekkings-criterium.
-10b. **52** — recon en bouw in ÉÉN ronde, als eenmalige PROEF op punt 47. Draait MET 47 mee en niet
-    ervoor: het is een vorm-experiment op een bestaande ronde, geen eigen bouw. Voorwaarde is de
-    aflezing bij de sessie-opening; faalt die, dan draait 47 gesplitst en verschuift de proef.
-    **TWEE KEER GEDRAAID op 23-08-2026, beide keren gestopt bij de recon (V1 en W2 vielen).** De
-    oorspronkelijke vraag — draagt één document ook de BOUW-helft — blijft onbeantwoord en het punt
-    kan niet worden afgevinkt. Wat er WEL uit kwam is een VERDICT over de vorm: hij verdunt, en de
-    plek is aangewezen (de voor-autorisatie stipuleert de te toetsen aanname). Er hoort één regel
-    bij vóór een derde poging. Zie het punt zelf.
-11. **47** — de check valt in twee: ijking bij elk doel, doelcheck per doel. **HET NORM-BESLUIT IS
-    GENOMEN (22-08-2026): M89 t/m M91 in `docs/TRAININGSMODEL.md` §13.** De BOUW is op 23-08-2026
-    TWEE KEER begonnen en twee keer gestopt vóór de eerste regel code; beide keren met opbrengst,
-    in `docs/PUNT47-BOUW.md`. Ronde 1: de omhanging naar de doelblok-klok raakt DRIE plekken die aan
-    elkaar hangen — poort (1), het onderdrukkings-venster van poort (3), en `blokStart` als
-    afwijs-sleutel buiten het bestand. Ronde 2: de afgeleide dag-vloer van 84 doet op de maat die
-    telt NIETS — het aandeel doelblokgrenzen met een ijking blijft 25,0%, of wordt 27,0% bij een
-    wisselende weekvorm. **MAAR RONDE 2 HEEFT OOK DE ROUTE GEMETEN DIE WÉL WERKT:** poort (1) op de
-    doelblok-testweek SAMEN met de vloer op 84 tilt die dekking naar 66,9% (wisselend) tot 99,9%
-    (vast). De vervallenverklaring van de omhanging uit ronde 1 is daarmee INGETROKKEN. 47 wacht nu
-    op **punt 57 plus 55**, en is een ontwerpvraag met een gemeten antwoord in plaats van een open
-    bouwronde. Wat NIET meer open is: de twaalfweekse teller leeft en wordt niet overschaduwd, er is
-    geen engine-wijziging nodig, de doelwissel-vraag is GEMETEN, en poort (3) is uitgeschreven — hij
-    bewaakt wat INGEPLAND staat waar poort (7) alleen ziet wat GEREDEN is. Wat wél openstaat is de
-    MAAT uit `DOELEN-SPEC` §3.2 — dat is punt 54.
-11b. **57 + 55 + 53** — de bouw van 47, nu met een gemeten ontwerp in plaats van een vermoeden. 57
-    draagt de meting: de roostercondititie SAMEN met de vloer op 84 haalt 66,9 tot 99,9% van de
-    doelblokgrenzen, waar elk onderdeel apart niets of de helft doet. 55 is het benoemde lek van
-    ongeveer een derde bij een wisselende weekvorm en hoort in DEZELFDE ronde beslist te worden; 53
-    komt eraan vast zodra het venster openblijft, en vraagt mogelijk nieuwe persistente staat en dus
-    een eigen autorisatie. **DEZE DRIE ZIJN SAMEN DE BOUW VAN 47** en de ingreep raakt poort (1),
-    poort (3) en de afwijs-sleutel — de drie plekken uit ronde 1.
+10b. **52** — AF (23-08-2026) — recon en bouw in ÉÉN ronde. DRIE KEER gedraaid: de eerste twee
+    stopten bij de recon (V1 en W2 vielen), de derde bouwde. VERDICT: **JA, onder voorwaarde** — de
+    vorm is bruikbaar voor rondes die een mechanisme raken, mits de twee regels uit het
+    ronde-2-verdict allebei draaien. Zonder de adversariële weerleggingspas is hij aantoonbaar
+    slechter dan de splitsing; die pas ving in ronde 3 vier fouten die al in de bron stonden,
+    waaronder een echte regressie. Er is een DERDE regel bijgekomen uit het falen van ronde 3 zelf
+    (één ding per probe). Zie het punt zelf.
+11. **47** — GROTENDEELS AF (23-08-2026) — de check valt in twee: ijking bij elk doel, doelcheck
+    per doel. **HET NORM-BESLUIT IS GENOMEN (22-08-2026): M89 t/m M91 in `docs/TRAININGSMODEL.md`
+    §13.** De BOUW kostte DRIE rondes, alle drie verantwoord in `docs/PUNT47-BOUW.md`. Ronde 1 en 2
+    stopten vóór de eerste regel code, elk met opbrengst: ronde 1 vond dat de vierweekse klok het
+    aanbod op DRIE samenhangende plekken bindt, ronde 2 weerlegde dat de vloer alleen iets doet én
+    mat de route die wél werkt. **RONDE 3 HEEFT GEBOUWD:** poort (1) versmald tot de
+    doelblok-testweek en `TEST_INTERVAL_DAGEN` op 84, SAMEN als één wijziging, geen engine geraakt.
+    Dekking van 24,1% naar 100,0% (vaste weekvorm) en 66,7% (wisselende), nagemeten op de gebouwde
+    bron. **WAT VAN 47 OPENSTAAT:** de MAAT uit `DOELEN-SPEC` §3.2 (punt 54), M91's ONGEIJKT-staat
+    (punt 53), het verdwenen retry-venster (punt 55) en de dagkeuze (punt 58).
+11b. **57** — AF (23-08-2026) — de roostercondititie plus de afgeleide vloer, als één wijziging.
+    Gebouwd in ronde 3 van punt 47; dekking van 24,1% naar 100,0% (vaste weekvorm) en 66,7%
+    (wisselende), nagemeten op de gebouwde bron. **DE VOLGENDE IS 11c.**
+11c. **58 + 55** — het residu en het verdwenen retry-venster, in ÉÉN ronde. 58 is de gemeten
+    oorzaak van al het residu (176 van de 176: poort (6) kiest de ruimste dag, niet een dag die de
+    vloer haalt) en de ingreep is klein — een voorkeursregel in poort (6). 55 is de kostenpost die
+    door de bouw van 57 LIVE is geworden: een gemiste doelblokgrens wacht nu twaalf weken in plaats
+    van vier, en de canon-vraag of een gemiste grens hoort te HERKANSEN kan nu beslist worden omdat
+    de oorzaak gemeten is. Ze horen samen omdat 58 het residu grotendeels wegneemt en 55 pas daarna
+    op zijn echte omvang te beoordelen is. **53 komt eraan vast** zodra er voor een openblijvend
+    venster staat onthouden moet worden, en vraagt dan een eigen autorisatie voor persistente staat.
 12. **48** — geen testaanbod rond een A- of B-event. Klein, één conditie in `buildTestVoorstel`,
     en het staat hier zo vroeg omdat het goedkoop is en een echte schade voorkomt.
 13. **49** — de doelcheck aflezen uit een sleutelsessie. Vraagt opslag en aggregatie van de

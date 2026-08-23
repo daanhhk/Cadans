@@ -96,6 +96,30 @@ is de ingreep een VERLIESLOZE splitsing en geen inkorting.
   verschuift de kandidaat naar een andere functie of een ander veld, dan vervalt ze en wordt ze
   opnieuw gevraagd.
 
+- **EEN WAT-ALS LEGT GEEN BEGINCONDITIE OP DIE DE TE TOETSEN AANNAME BEVAT.** Wat de aanname
+  raakt is een DIMENSIE die wordt afgelopen, geen waarde die wordt gezet. Wordt er toch een
+  beginwaarde voorgeschreven, dan meet de uitvoerder óók de vrijlopende variant en rapporteert hij
+  beide. VINDPLAATS, en zij veroordeelt de prompt-schrijver: ronde 2 van ROADMAP punt 47
+  (23-08-2026). Daar schreef de wat-als voor te meten "met de vorige maximale inspanning op de
+  vorige grens" — precies de aanname die getoetst moest worden. Onder die stipulatie HIELD de
+  verwachting met 28 van de 49 tegen 1 van de 49, en er was een constante gebouwd die op de
+  grootheid waar het om ging niets verandert. De val kwam pas boven water toen de keten vrij mocht
+  lopen, en dat was niet voorgeschreven. Een noemer die op de beslissende dimensie N=1 is, leest
+  als bewijs en is het niet.
+
+- **EEN RONDE DIE EEN HOOFDCLAIM DRAAGT, DOET VÓÓR DE COMMIT EEN ADVERSARIËLE WEERLEGGINGSPAS OP
+  DIE CLAIM.** Onafhankelijke lenzen, elk met de opdracht de claim ONDERUIT te halen en niet te
+  bevestigen, elk met eigen meetgereedschap. Hun bevindingen worden NAGEMETEN en niet overgenomen —
+  een lens kan zich vergissen. Blijft de uitkomst staan, dan wordt dat gezegd; kantelt er iets, dan
+  wordt vervangen wat eronder staat en heet dat een VONDST en geen correctie. Drie faalwijzen horen
+  expliciet langsgelopen: is de noemer op de beslissende dimensie groter dan één, staat er een term
+  of tak in de opstelling die per constructie dood is, en ligt de gemeten grens waar de claim zegt
+  of bij een grovere kwantisering eronder. VINDPLAATS: ronde 2 van punt 47, waar deze pas een
+  uitslag ving die al in twee documenten stond — met een noemer van 154 die N=1 was, een OR-term
+  van `laatsteGelegenheid` die per constructie dood stond, en een mechanisme dat aan de verkeerde
+  grootheid werd toegeschreven. Zonder deze pas is een samengevoegde recon-en-bouwronde goedkoper
+  dan een gesplitste én minder betrouwbaar, en dat is de slechtste ruil die er is.
+
 ## Vorm van een CC-prompt
 
 - **Eén plain code-blok**, zonder taal-tag — dat is de één-tap-kopie op mobiel. Nooit proza in het blok mengen; Claude's kader eromheen staat als gewone tekst.

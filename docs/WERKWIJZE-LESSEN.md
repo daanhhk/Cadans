@@ -556,4 +556,19 @@ hier — met in dezelfde close-out een gedateerde regel in `docs/WERKWIJZE-LOG.m
   kant, dus een kanteling zou zijn opgevallen. Was hij de andere kant op geweest, dan had een te
   lage verwachting een bouw laten doorlopen die meer omgooide dan bedoeld.
 
+- **EEN DIAGNOSE DOOR INTERVENTIE VERANDERT PER PROBE PRECIES ÉÉN DING, en de probe die één poort
+  onderzoekt mag de invoer van geen enkele andere poort raken.** Wie een keten van poorten wil
+  toewijzen, toetst ze ONAFHANKELIJK — niet in een cascade, want dan erft elke stap de verstoring
+  van de vorige. AANLEIDING, en het zijn er twee op één dag (23-08-2026, ROADMAP punt 47 ronde 3).
+  Eerst werd een residu van 176 gemiste gevallen volledig aan de BESCHIKBAARHEIDSPOORT toegeschreven
+  doordat de eerste cascadestap de week verruimde — wat niet alleen de beschikbaarheid verandert
+  maar ook de DAGKEUZE, en daarmee de dag-afstand die de volgende poort toetst. De correctie schreef
+  ze vervolgens volledig aan de DAGKEUZE toe, met een probe die de onderzochte dag 90 minuten gaf
+  terwijl die dag in de echte week 45 minuten droeg — dus opnieuw twee dingen tegelijk. Beide keren
+  luidde de uitslag "176 van de 176", allebei met volle overtuiging, en allebei fout: de werkelijke
+  week droeg in 176 van de 176 gevallen precies ÉÉN kandidaat, en alle 176 vuurden alsnog zodra de
+  vloer op nul stond. De tweede fout is gemaakt tijdens het opschrijven van de eerste. EEN NOEMER
+  VAN 176 VAN DE 176 IS GEEN BEWIJS VAN JUISTHEID — hij is even goed het teken van een probe die
+  stelselmatig hetzelfde verkeerde ding meet.
+
 <!-- EINDE docs/WERKWIJZE-LESSEN.md -->
