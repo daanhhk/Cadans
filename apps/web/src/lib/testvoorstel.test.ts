@@ -647,7 +647,7 @@ describe("de DRIE UITGANGEN en de bewaarde keuze (punt 59)", () => {
   it("een beantwoorde opening geeft GEEN tweede aanbod", () => {
     // POORT (2b). Bevestigen en niet-nu onderdrukken allebei; het verschil zit in wat de app erover
     // vertelt, niet in of de vraag terugkomt (M92: hoogstens één aanbod per opening).
-    // MEEGEGAAN 24-08-2026 (punt 64): de sleutel is blok PLUS doel, dus het doel hoort erbij.
+    // MEEGEGAAN 23-08-2026 (punt 64): de sleutel is blok PLUS doel, dus het doel hoort erbij.
     expect(
       bouw({ ijkingBeantwoordBlok: OPENING, ijkingBeantwoordDoel: "FTP" }),
     ).toBeNull();
@@ -655,7 +655,7 @@ describe("de DRIE UITGANGEN en de bewaarde keuze (punt 59)", () => {
 
   it("een antwoord op een ANDERE opening onderdrukt niet", () => {
     // Het antwoord van het vorige doelblok mag dit blok niet dichtzetten — anders zou één
-    // bevestiging voorgoed gelden. MEEGEGAAN 24-08-2026: het doel matcht hier telkens, zodat deze
+    // bevestiging voorgoed gelden. MEEGEGAAN 23-08-2026: het doel matcht hier telkens, zodat deze
     // test uitsluitend de BLOK-helft van de sleutel toetst.
     expect(
       bouw({ ijkingBeantwoordBlok: "2026-06-29", ijkingBeantwoordDoel: "FTP" }),
@@ -749,7 +749,7 @@ describe("de DRIE UITGANGEN en de bewaarde keuze (punt 59)", () => {
     expect(s.bevestigd).toBe(true);
     expect(s.ongeijkt).toBe(false);
     expect(s.laatsteMeting).toEqual({ bron: "race", datum: "2026-05-21" });
-    // MEEGEGAAN 24-08-2026 (besluit twee, punt 64): de eenheid is WEKEN, niet blokken.
+    // MEEGEGAAN 23-08-2026 (besluit twee, punt 64): de eenheid is WEKEN, niet blokken.
     // 2026-05-21 → 2026-09-21 is 123 dagen; 123 / 7 = 17 volle weken (was: 123 / 84 = 1 blok).
     expect(s.wekenOud).toBe(17);
   });
@@ -843,7 +843,7 @@ describe("de DRIE UITGANGEN en de bewaarde keuze (punt 59)", () => {
 
   it("de teller vraagt geen eigen opslag: hij volgt uit de laatste ECHTE meting", () => {
     // BESLUIT VIER, en dit is de vorm waarin hij gebouwd is — zonder dat er ergens een teller staat.
-    // MEEGEGAAN 24-08-2026 (besluit twee): de eenheid is WEKEN. Waar dit eerder 0/1/2/3 blokken las
+    // MEEGEGAAN 23-08-2026 (besluit twee): de eenheid is WEKEN. Waar dit eerder 0/1/2/3 blokken las
     // op 83/84/168/252 dagen, leest het nu 11/12/24/36 weken op dezelfde dagen.
     const mk = (dagenGeleden: number) => {
       const d = isoMin(OPENING, dagenGeleden);
@@ -1089,7 +1089,7 @@ describe("het venster van poort (3) is VERBREED, niet gedraaid (weerleggingspas 
 });
 
 describe("een DOELWISSEL in de beantwoorde openingsweek geeft een nieuw aanbod (punt 64)", () => {
-  // Vóór 24-08-2026 was de opgeslagen sleutel alleen de openingsmaandag, met als grond dat
+  // Vóór 23-08-2026 was de opgeslagen sleutel alleen de openingsmaandag, met als grond dat
   // `blokStartBijDoel` bij een wissel per constructie een verse `doelStart` schrijft. GEMETEN dat
   // die grond onwaar is: `WISSEL_LAATSTE_DAG = 3` klemt op maandag, dinsdag en woensdag naar de
   // maandag van DEZE week, dus 3 van de 7 wisseldagen leverden dezelfde maandag en daarmee GEEN

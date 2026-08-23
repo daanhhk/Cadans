@@ -793,7 +793,7 @@ export function ijkStaatRegel(o: {
   laatsteMeting: { bron: MetingBron; datum: string } | null;
   wekenOud: number | null;
 }): string | null {
-  // WEKEN EN GEEN BLOKKEN sinds 24-08-2026 (Daan-besluit, ROADMAP punt 64). Tot die dag stond hier
+  // WEKEN EN GEEN BLOKKEN sinds 23-08-2026 (Daan-besluit, ROADMAP punt 64). Tot die dag stond hier
   // `blokkenOud`, met "Je drempel is een blok oud." en "Je drempel is N blokken oud.". Een blok is
   // een teleenheid van de app; weken zijn wat de renner nodig heeft om te oordelen.
   //

@@ -157,7 +157,7 @@ export interface IjkStatus {
   /**
    * Hoeveel VOLLE WEKEN de drempelwaarde oud is, of null als er nooit gemeten is.
    *
-   * WEKEN EN GEEN BLOKKEN, per Daan-besluit van 24-08-2026 (ROADMAP punt 64). Dit veld heette tot
+   * WEKEN EN GEEN BLOKKEN, per Daan-besluit van 23-08-2026 (ROADMAP punt 64). Dit veld heette tot
    * die dag `blokkenOud` en droeg `Math.floor(dagen / (DOEL_BLOK_WEKEN * 7))`. De grond voor de
    * wissel: weken zijn wat de renner nodig heeft om te oordelen, "drie blokken" is een teleenheid
    * van de app. De ZICHTBAARHEIDSGRENS is onveranderd — `ijkStaatRegel` zwijgt onder
@@ -267,7 +267,7 @@ export function buildTestVoorstel(input: {
    *
    * HET GELDT VOOR EEN WISSEL TUSSEN TWEE EFFECT-DOELEN, en die precisering is een correctie op
    * mijn eigen eerste versie. Die noemde hier "Daans februari-scenario (onderhoud naar korte
-   * beklimmingen)" als het geval. GEMETEN in de weerleggingspas van 24-08-2026 dat dat scenario
+   * beklimmingen)" als het geval. GEMETEN in de weerleggingspas van 23-08-2026 dat dat scenario
    * juist DELTA NUL geeft: op Onderhoud staat poort (2) dicht (`blokCheckEnabled` is false), dus
    * daar komt nooit een aanbod en kan `TestVoorstelCard` — de enige schrijver van `ijking_*` —
    * voor die opening ook nooit een rij wegschrijven. Zonder rij onderdrukte de OUDE poort al
@@ -440,7 +440,7 @@ export function buildTestVoorstel(input: {
   //      hierboven), niet in of de vraag terugkomt.
   //
   //      "HOOGSTENS ÉÉN AANBOD PER OPENING" (M92) GELDT NU PER (OPENING, DOEL) EN NIET MEER PER
-  //      OPENING, en dat is een GEMETEN gevolg van het besluit van 24-08-2026 en geen slordigheid.
+  //      OPENING, en dat is een GEMETEN gevolg van het besluit van 23-08-2026 en geen slordigheid.
   //      `sync_state` draagt ÉÉN paar en geen verzameling, dus een beantwoord aanbod voor een NIEUW
   //      doel OVERSCHRIJFT het antwoord van het vorige. Wisselt de gebruiker binnen dezelfde
   //      openingsweek heen en weer tussen twee effect-doelen en beantwoordt hij telkens, dan komt
@@ -452,7 +452,7 @@ export function buildTestVoorstel(input: {
   //      dat is een andere kolomvorm dan `doel_passend` en `dosis_trede` gebruiken. Staat als
   //      nakijkpunt bij ROADMAP punt 64.
   //
-  //      HET DOEL HOORT IN DE SLEUTEL (ROADMAP punt 64, 24-08-2026). Een bevestiging geldt voor het
+  //      HET DOEL HOORT IN DE SLEUTEL (ROADMAP punt 64, 23-08-2026). Een bevestiging geldt voor het
   //      doel waarvoor zij gegeven is: wisselt het doel binnen de beantwoorde week, dan is het een
   //      nieuw blok met een nieuwe doelstelling en hoort de vraag terug te komen. Zonder deze
   //      tweede helft van de sleutel zette het antwoord van het OUDE doel het aanbod voor het

@@ -40,7 +40,7 @@ const put = (path: string, body: unknown) =>
     body: JSON.stringify(body),
   });
 
-// DRIE VELDEN SINDS 24-08-2026 (ROADMAP punt 64). Deze drie constanten pinden tot die dag een
+// DRIE VELDEN SINDS 23-08-2026 (ROADMAP punt 64). Deze drie constanten pinden tot die dag een
 // tweeledige sleutel; het DOEL is de derde helft geworden omdat een bevestiging geldt voor het doel
 // waarvoor zij gegeven is. Elke test hieronder ging daarin mee.
 const LEEG = { blok: null, doel: null, antwoord: null };
@@ -144,7 +144,7 @@ describe("GET/PUT /api/ijking", () => {
     // ALLE DRIE OF GEEN. De gevaarlijkste vorm is {blok, doel, antwoord: null}: poort (2b) leest
     // `ijkingAntwoord` niet, dus die rij onderdrukt het aanbod twaalf weken terwijl `ijkStatus`
     // zowel `bevestigd` als `ongeijkt` op false zet en de staat-regel niets zegt — onderdrukking
-    // zonder uitleg, wat M91 verbiedt. Gevonden in de weerleggingspas van 24-08-2026; tot die dag
+    // zonder uitleg, wat M91 verbiedt. Gevonden in de weerleggingspas van 23-08-2026; tot die dag
     // gaf de route hier 200.
     const halve = [
       { blok: "2026-09-21", doel: "FTP", antwoord: null },

@@ -299,13 +299,13 @@ export const syncState = sqliteTable("sync_state", {
    * voor het NIEUWE doel, en er is per besluit van 23-08-2026 geen retry: twaalf weken zonder
    * ijkaanbod. `dosisTredeDoel` en `doelPassendDoel` dragen precies daarvoor een tweede kolom.
    *
-   * GEREPAREERD OP 24-08-2026 (ROADMAP punt 64) met de kolom hieronder. Het antwoord telt sindsdien
+   * GEREPAREERD OP 23-08-2026 (ROADMAP punt 64) met de kolom hieronder. Het antwoord telt sindsdien
    * alleen als blok ÉN doel matchen; deze kolom alleen is dus niet meer de identiteit. */
   ijkingBlok: text("ijking_blok"),
   /** ROADMAP punt 64 — het GENORMALISEERDE doel waarvoor het ijkantwoord gegeven is. Spiegelt
    * `doelPassendDoel` en `dosisTredeDoel`, en om precies dezelfde reden.
    *
-   * BESLUIT VAN 24-08-2026: een bevestiging geldt voor het DOEL waarvoor zij gegeven is. Wisselt het
+   * BESLUIT VAN 23-08-2026: een bevestiging geldt voor het DOEL waarvoor zij gegeven is. Wisselt het
    * doel binnen de beantwoorde week, dan vervalt het antwoord en komt de vraag opnieuw. Het is dan
    * een nieuw blok met een nieuwe doelstelling, en één extra tik is goedkoper dan twaalf weken
    * doseren op een waarde die voor dát doel niemand heeft bevestigd.
@@ -313,7 +313,7 @@ export const syncState = sqliteTable("sync_state", {
    * ALLEEN EFFECT-DOELEN LANDEN HIER. De enige schrijver is `TestVoorstelCard`, en die stuurt
    * `voorstel.doel` — dus een waarde die `buildTestVoorstel` heeft teruggegeven. Poort (2) laat
    * `Onderhoud` niet door (`blokCheckEnabled` is false, DOELEN-SPEC §3.2), dus `"Onderhoud"` kan
-   * hier per constructie NOOIT in staan. Gemeten in de weerleggingspas van 24-08-2026; het maakt
+   * hier per constructie NOOIT in staan. Gemeten in de weerleggingspas van 23-08-2026; het maakt
    * de vier effect-doelen de enige bereikbare waarden.
    *
    * ÉÉN PAAR EN GEEN VERZAMELING, en dat heeft een prijs. Een beantwoord aanbod voor een nieuw doel

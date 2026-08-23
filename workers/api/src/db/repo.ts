@@ -762,7 +762,7 @@ export async function writeDoelPassend(
 // blok, 'niet_nu' laat de drempel ONGEIJKT (M91). Inplannen schrijft hier NIETS — dat loopt via de
 // override-keten.
 //
-// DE IDENTITEIT IS BLOK PLUS DOEL, en dat is sinds 24-08-2026 zo. De eerste versie hield de
+// DE IDENTITEIT IS BLOK PLUS DOEL, en dat is sinds 23-08-2026 zo. De eerste versie hield de
 // OPENINGSMAANDAG voor voldoende, met als grond dat een doelwissel per constructie een verse
 // `doelStart` schrijft. GEMETEN dat die grond onwaar is: `blokStartBijDoel` klemt op maandag,
 // dinsdag en woensdag naar de maandag van DEZE week, dus een wissel binnen de beantwoorde

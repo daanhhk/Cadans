@@ -223,6 +223,53 @@ STOP DE DEV-SERVERS VÓÓR `pnpm test`. Een draaiende `wrangler dev` maakt de ga
 
 Prod-acties zijn approval-gated en gaan nooit stilzwijgend: `wrangler deploy` **vanuit `workers/api`** (niet `pnpm deploy`), met **`pnpm build` ervoor** omdat de assets-binding naar `apps/web/dist` wijst. Remote-D1-mutaties idem, in strikte volgorde: migratie eerst, dan deploy. Nooit prod-D1 met de hand bewerken.
 
+### Migraties en deploys — TWEE GOEDKEURINGEN, NIET ÉÉN
+
+**EEN REMOTE MIGRATIE IS GEEN WORKER-DEPLOY, en ze horen apart te worden goedgekeurd.** Het risico
+verschilt fundamenteel. Een additieve migratie (`ALTER TABLE … ADD`) is het veiligste geval dat er
+is: oude code ziet de kolom niet, leest hem niet en schrijft hem niet, dus de draaiende applicatie
+merkt er niets van. Een deploy vervangt daarentegen de VOLLEDIGE draaiende applicatie in één keer.
+Wie ze op één hoop gooit, betaalt óf te veel voorzichtigheid voor de migratie óf te weinig voor de
+deploy.
+
+**STAAND BELEID, Daan-besluit van 23-08-2026: elke ronde die een migratie TOEVOEGT, past hem in
+DIEZELFDE ronde toe op remote D1.** Niet opsparen. GROND: opsparen maakt de uiteindelijke toepassing
+riskanter en niet veiliger — je past er dan meerdere tegelijk toe, op een prod-staat die
+ondertussen verder is gedreven, en een probleem is niet meer aan één migratie toe te wijzen.
+Dezelfde redenering die hieronder onder DEPLOYEN staat, en om dezelfde reden.
+
+**TOEPASSEN IS TWEE HANDELINGEN, `--local` ÉN `--remote`.** De lokale kant vraagt geen goedkeuring
+en hoort in dezelfde beweging. AANLEIDING, en zij is gemeten: op 23-08-2026 bleek de persistente
+miniflare-database `0011` en `0012` nooit toegepast te hebben gekregen, zodat `wrangler dev` en
+`tools/shots/shot.mjs` de bijbehorende routes twee rondes lang helemaal niet konden bedienen
+(`no such column: ijking_blok`). **De GATE dekt dit niet af:** `workers/api/vitest.config.ts` past
+alle migraties toe op een VERSE D1 per run, dus de suite draait altijd op het volle schema en staat
+groen terwijl de dev-omgeving stuk is. Wie een migratie toevoegt, controleert dus ook
+`wrangler d1 migrations list <db> --local`.
+
+DE VOLGORDE BINNEN ZO'N RONDE. Meet EERST de prod-staat en leg hem vast — welke migraties remote
+draagt, of de Worker gedeployd is en op welke versie, en wat de te raken tabel bevat — en pas
+daarna toe. Toepassen gaat UITSLUITEND via `wrangler d1 migrations apply <db> --remote` vanuit
+`workers/api`; met de hand SQL op prod-D1 is een harde grens en geen voorkeur.
+
+**WEET WAT DIE VÓÓR-STAAT WEL EN NIET BEWIJST.** Bij een PUUR ADDITIEVE migratie (`ADD COLUMN`) is
+zij ceremonie: de na-staat minus de nieuwe kolommen is per constructie gelijk aan de vóór-staat, dus
+de vergelijking kan niet falen. Wat daar bewijst is de DDL plus `d1_migrations` — SQLite laat
+`ADD COLUMN` falen op een bestaande naam, dus een geregistreerde geslaagde toepassing bewíjst dat de
+kolom er niet was. Bij een migratie die WÉL bestaande data raakt, is de vóór-snapshot het enige
+bewijs dat er is; bewaar hem dan met de RUWE `--json`-uitvoer erbij, inclusief de
+`meta.served_by`-marker die aantoont dat er remote gelezen is.
+
+**EN KIES HET MOMENT.** Prod is geen stille database: de Worker schrijft er zelf in via de
+sync-paden. `ADD COLUMN` is metadata-only en daarmee vrijwel risicoloos, maar alles wat een tabel
+herschrijft hoort een herstelpunt (D1 Time Travel) en een gekozen venster te krijgen.
+
+DE STAND HOORT IN `docs/PROD-STAND.md`. Dat document is het lopende logboek van wat er op remote
+staat, en het wordt bijgewerkt in de ronde die er iets aan verandert — niet een ronde later. "Wat
+staat er op prod" is precies het soort feit dat verdampt: tot 23-08-2026 stond het nergens, en toen
+het voor het eerst werd opgeschreven bleek de live Worker ruim twee weken achter te lopen op `main`
+zonder dat dat ergens genoteerd was.
+
 DEPLOY-VOLGORDE: BUILD VÓÓR DEPLOY, NIET ERNA. De Worker `cadans-api` draagt een
 assets-binding op `../../apps/web/dist`. `wrangler deploy` uploadt wat daar op dat moment
 staat, dus een deploy zonder verse `pnpm build` publiceert de VORIGE front-end-bundel bij een
