@@ -144,12 +144,25 @@ ze; ze kostten twee rondes.
 - **DE BRON-UITLEZING HOORT IN DE EERSTE VERSIE VAN EEN PROMPT, NIET IN DE OVERTYPRONDE.** Een prompt dat GROEIT bij het overtypen is een prompt dat te vroeg geschreven is: de correcties die er dan bij komen zijn geen aanscherping maar reparatie van wat er nooit in had mogen ontbreken. Aanleiding: het meet-prompt van punt 36 ronde 3 kreeg pas bij het overtypen drie correcties — de venster-splitsing tussen zaai-markers en de rest, het aantal settle-markers als instrumentcontrole, en de warmloop vóór het ijkpaar — en GÉÉN ervan kwam uit het CC-rapport. Ze kwamen alle drie uit een herlezing van `tools/shots/shot.mjs` die vóór de eerste versie had moeten gebeuren, en die laatste (de warmloop) had de meting zonder meer verpest. Lees de bron dus vóór je schrijft, niet vóór je verstuurt.
 - **ELK GETAL IN EEN PROMPT DRAAGT ZIJN HERKOMST, in één label achter het getal.** `RECON <hash>` als het uit een CC-rapport komt en bij welke commit, `GEPIND <document>` als het uit een gepind document komt, `BESLUIT` als het een keuze van Daan of van de chat is. Een getal zonder label is een AANNAME, en sinds de chat niet meer zelf meet is dat het enige onderscheid dat er nog is tussen een gemeten feit en een herinnering. Dit is dezelfde regel als de herkomst-eis op een voorstel, nu op de prompt zelf.
 - **CC LEIDT ZIJN EIGEN CONDITIE AF; de chat schrijft die niet voor.** Wat een ronde doet — ALTIJD, METING, HARNESS, DEPLOY, COMMIT of ENGINE — volgt uit de stappen, en CC draait de bijbehorende checks uit `docs/CC-CHECKS.md` en meldt in het rapport welke condities golden en welke checks hij gedraaid heeft. Een prompt die de conditie vóórschrijft zet de uitvoerder op een lijst in plaats van op zijn eigen oordeel, en dan valt een check weg zodra de chat er niet aan dacht.
+- **DE DELIVERABLE IS EEN DOCUMENT, NIET TERMINALUITVOER.** Recon landt in `docs/PUNTnn-RECON.md` of een gelijkwaardig document; het rapport draagt de gepinde RAW URL en niet de vondst zelf. GROND: verbatim in een terminal verdampt, en een claim die daarop rust wordt later uit geheugen gereconstrueerd. Precies zo ontstond de canon-tegenspraak in het HANDOFF-blok van 22-08-2026 — de claim dat punt 47 en `DOELEN-SPEC` §3.2 elkaar tegenspraken rustte op de EERSTE HELFT van punt 47, dat zichzelf twee alinea's verder weerlegt. Had de verbatim in een document gestaan, dan was de tweede helft meegelezen. Deze regel is bovendien een VOORWAARDE voor een recon-subagent (`ROADMAP` punt 51a): die draait in een eigen contextvenster en alleen zijn slotbericht keert terug, dus verbatim dat niet naar een document gaat, gaat verloren.
+- **EEN PROMPT IS VRAAG, RANDVOORWAARDE EN DELIVERABLE — GEEN STAPPENLIJST.** CC leidt zijn eigen methode af, net zoals hij dat al doet met zijn conditie. De chat schrijft stappen alleen waar de VOLGORDE zelf het onderwerp is: een gate vóór een commit, een STOP tussen twee blokken, een rotatie in dezelfde close-out. AMENDEERT DE REGEL HIERBOVEN dat "de prompt een stap-instructie in het Nederlands" is: die regel gaat over de VORM van de tekst — Nederlands proza en geen uitvoerbaar script — en dat blijft staan. Wat vervalt is de aanname dat elke prompt ook een genummerde methode moet voorschrijven. Een prompt die de methode dicteert, dicteert hem uit geheugen; CC staat in de repo en de chat niet.
+- **VERBATIM KRIJGT EEN SCOPE, GEEN BESTANDSDEEL.** Vraag de open punten, één regel per punt — niet een hele paragraaf. GEMETEN: een verbatim-verzoek om een paragraaf leverde negentig procent afgevinkte historie, en die historie kost rapportruimte zonder dat er een beslissing aan hangt. Dezelfde familie als de regel dat een claim zijn string draagt: het gaat om wat de beslissing DRAAGT, niet om wat er toevallig omheen staat.
+- **DE VERTAKKING GAAT VOORAF MEE, MET DE VERWACHTING VAN DE CHAT EROP.** Komt de meting op A uit, stop en rapporteer; op B, loop door. Zo staat de beslisregel vast vóór de uitslag bekend is, en is achteraf te zien of de verwachting hield. DIT IS EEN VERFIJNING VAN "een blok met een STOP-conditie is een beslismoment", niet een intrekking: de vertakking mag alleen vooraf mee waar zij VOORAF TE SCHRIJVEN is. Is de tweede tak pas te formuleren als de eerste uitslag binnen is, dan is het de bekende fout van blok twee schrijven voordat blok een terug is, en dan bestaat dat blok nog niet.
+- **CC DOET ZIJN EIGEN BOEKHOUDING.** ROADMAP-status, recon-document, nummertoekenning en commit hoeven niet stap voor stap voorgeschreven te worden. De chat noemt WAT er moet kloppen — punt op AF, nummer vrij, rotatie toegepast — en niet HOE. Dit is dezelfde lijn als de conditie-regel hierboven, nu op de administratie: een chat die de nummertoekenning voorschrijft, doet dat uit geheugen en kan er per constructie naast zitten.
 
 ## Vorm van een CC-rapport
 
 Platte tekst, **geen code-fences en geen tabellen** (breekt de mobiele kopie), ongeveer 200 woorden. Literals tellen niet mee en worden exact gegeven.
 
 Bevat: commit-hash; de gepinde RAW HANDOFF-URL op die hash; gate-uitslag; CI-conclusie met run-URL; bij code een lege `git diff --stat` op `packages/engine`; bevestiging dat training onaangeroerd is (HEAD `3e8090a`); en elke afwijking van de prompt.
+
+**EEN CLAIM DIE AAN EEN LETTERLIJKE STRING HANGT, DRAAGT DIE STRING IN HET RAPPORT.** Staat de
+string er niet, dan bestaat de claim niet — dan is er een samenvatting van bewijs in plaats van
+bewijs. Dat geldt ook wanneer het rapport er lang van wordt: literals tellen niet mee in het
+woordbudget, en dat is precies waarvoor die uitzondering bestaat. De regel snijdt aan twee kanten
+en dat is bedoeld — hij verplicht de string ERIN wanneer de claim eraan hangt, en hij houdt hem
+ERUIT wanneer dat niet zo is (zie *verbatim krijgt een scope* bij de promptvorm). Zonder die
+tweede helft groeit elk rapport naar een bestandsdump.
 
 EEN `git diff --stat <pad>` IS NÁ EEN COMMIT TRIVIAAL LEEG en bewijst dan niets: de wijziging zit in de commit, niet meer in de werkboom. Pin hem op `HEAD~1` of op de fase-basis, EN GEEF TWEE REFS: `git diff --stat HEAD~1 HEAD -- <pad>`. Met één ref (`git diff --stat HEAD~1 -- <pad>`) vergelijkt git de basis met de WERKBOOM in plaats van met de commit; bij een schone werkboom levert dat toevallig hetzelfde op, bij een vuile liegt het. Zelfde familie als de `head_sha`-regel bij CI: een controle die per constructie slaagt, is geen controle. Beide correcties kwamen binnen als CC-verbetering — de tweede op 6 augustus 2026, toen de één-ref-vorm `.claude/launch.json` toonde alsof die was meegecommit terwijl de commit uitsluitend docs bevatte.
 
@@ -276,6 +289,12 @@ en in de FOCUS-regel; wat hij daarnaast nodig heeft vraagt hij op bij CC. De oud
 niet weg — ze staan verbatim in het archief en git houdt sowieso alles.
 
 Na het close-out-rapport schrijft de chat de opener voor de volgende chat uit, verbatim uit *§ Opener-sjabloon*.
+
+DE FOCUS-REGEL NOEMT OOK HET SOORT RONDE: NORM, RECON of BOUW. Een verse chat weet dan binnen één
+regel wat hij moet LEVEREN — een besluit, een document of een commit met code — in plaats van dat
+af te leiden uit de staat van het punt. Dat afleiden ging eerder mis in beide richtingen: een
+punt met een genomen norm-besluit las als een ontwerpvraag, en een punt met een open maat las als
+een bouwronde. Het soort ronde staat vóór de naam van het punt.
 
 DE FOCUS-REGEL WORDT NIET VRIJ GEFORMULEERD. Hij wijst naar het eerstvolgende open punt uit
 de volgorde in `docs/ROADMAP.md`, en noemt dat punt bij naam. Wijkt een chat daarvan af —

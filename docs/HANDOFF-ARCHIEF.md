@@ -11,6 +11,66 @@ of uit de publieke repo.
 De levende projectstand staat in `HANDOFF.md`. Dat bestand droeg tot 21-08-2026 de twaalf nieuwste
 STAND-blokken; sindsdien draagt het er TWEE, en schuift het oudste bij elke close-out hierheen.
 
+STAND 2026-08-22 — PUNT 34 IS GEBOUWD EN LIVE IN MAIN, MET ÉÉN UITZONDERING: (d) BLIJFT DICHT EN
+ZIJN EIGEN VOORWAARDE IS WEERLEGD. Code-commit `8a95f52`, CI success. NIET GEDEPLOYD — prod en D1
+staan waar het blok hieronder ze noemt.
+- **WAT ER GEBOUWD IS, bouwlijst (a), (b), (c) en (e).** De doel-tak staat als een EIGEN veld
+  `doelTak` op `EffectReferent` — `stijging` voor FTP, `behoud` voor Onderhoud,
+  `meter_ontbreekt` voor Conditie en beide klimdoelen. De uitkomst-union is ONGEMOEID gebleven:
+  `gestegen`, `niet_gestegen` en `niet_meetbaar` staan er nog precies zo. Punt 34 wijzigde de
+  COPY en de KAART, niet het oordeel, en dat was de hele inzet.
+- **DE TAK-KEUZE LEEST DE ENGINE EN TYPT NIETS OVER.** `doelTakVan_` haalt de rauwe doel-string
+  door `normalizeDoel_` en vergelijkt tegen `DOEL_OPTIONS` zelf. Leeg, null en onbekend vallen op
+  `meter_ontbreekt` — de ZWIJGENDE tak — want `normalizeDoel_` fail-opent naar FTP, en een
+  fail-open naar een UITSPRAAK is verkeerd. Prijs, expliciet: een opgeslagen `"VO2max"`
+  normaliseert naar diezelfde fallback en is niet van onzin te onderscheiden, dus die zwijgt ook.
+  De engine draagt geen geëxporteerde alias-tabel en geen is-bekend-predicaat; er is er bewust
+  ook geen nagebouwd in `apps/web`, want een tweede kopie van engine-kennis rot los van de engine.
+- **DE COPY EN DE KAART.** `blokEffectRegel` kiest nu op `doelTak`, dan `uitkomst`, dan
+  `gelegenheid`. Nieuw: geen oordeel als de maat ontbreekt, geen winst-claim als er niets gemeten
+  is, een VLOER in plaats van winst bij Onderhoud, en geen dosis-advies waar vasthouden de
+  opdracht is. In de kaart staan de pijl, de instap ÉN de kleur achter een gelegenheid-toets —
+  groen is zelf een winst-claim en sprak het label "schatting" tegen.
+- **DE WAT-ALS HIELD OP ALLE DRIE DE PUNTEN, en dat is de opbrengst van de vorm.** De uitkomst
+  kantelde niet; de twee betwiste asserties werden groen ZONDER één letter wijziging; en
+  `niet_gestegen` bleek per constructie onbereikbaar zonder gelegenheid. De vrees dat twee
+  bestaande copy-varianten vandaag stuk stonden was ongegrond.
+- **(d) BLIJFT DICHT, OM TWEE GRONDEN.** Ten eerste is zijn eigen voorwaarde weerlegd: er hangt
+  wél iets aan `blokCheckEnabled`. De DOSIS-RAMP gaat mee — de hele schrijfweg naar
+  `sync_state.dosis_trede` ligt erachter. `mesoFactor` en de kalender-deload gaan NIET mee; die
+  lezen dezelfde profielvlag via hun eigen `profileForDoel_`-aanroep en zijn dus broers, geen
+  afstammelingen. Ten tweede, en inhoudelijk zwaarder: de blok-check levert "geleverd maar niet
+  gestegen → dosis omhoog", en dat is bij een BEHOUD-opdracht het verkeerde voorstel.
+- **TWEE LEZINGEN VAN (d), MET VERSCHILLENDE STRAAL — ze stonden nergens en staan nu bij het
+  punt.** De FUNCTIE verzetten raakt twee leesplekken en alleen de dosis-ramp; `mesoCyclus: false`
+  omzetten op `PROFILES.onderhoud` beweegt vier consumenten, slaat alle drie de buren om naar JA,
+  en is een ENGINE-wijziging met eigen autorisatie. Wie (d) opent, zegt eerst welke hij bedoelt.
+- **NIEUW PUNT 50 — DE TESTBELOFTE DIE BIJ ONDERHOUD NIET INGELOST KAN WORDEN.** Gemeten buiten
+  de repo-tree: doel Onderhoud zonder stijging en zonder gelegenheid geeft `behoud` plus
+  `niet_meetbaar`, en die pool belooft "in een rustweek een test" terwijl `buildTestVoorstel` voor
+  Onderhoud op poort (2) null geeft. Dat is de STANDAARD voor Onderhoud en geen randgeval — 0
+  races en 0 test-overrides in de database. Schending van M55: een geclaimde handeling die niet
+  bestaat. Staat in *De volgorde* VÓÓR 47 en 48, want die twee zijn ontwerpvragen en dit is een
+  onware zin.
+- **WAT DAAN MERKT.** Bij doel FTP zonder test of wedstrijd noemt de coach de stijging nog wel,
+  maar schrijft hij hem niet meer aan het blok toe, en het getal is niet meer groen. Verder niets,
+  want het doel staat op FTP en de andere takken raken hem vandaag niet.
+- **VLOEREN NU: vitest-totaal 1007 over 78 bestanden · engine-selftest-assert-count 1772 ·
+  lint-waarschuwingen 20**, alle vier afgelezen uit de gate van de bouwronde zelf. Het
+  vitest-totaal STEEG van 986 naar 1007 door 21 nieuwe tests in bestaande bestanden — dat is geen
+  regressie maar dekking. De selftest-vloer is ONBEWOGEN bij een lege `git diff` op
+  `packages/engine`. Lees ze zelf uit de suite; neem ze niet over uit dit blok.
+- **OPENSTAAND, elk item opnieuw te greppen in `docs/ROADMAP.md`:** 32 · 34 (alleen (d)) · 35 ·
+  47 · 48 · 49 · 50.
+
+FOCUS VOLGENDE CHAT: ROADMAP punt 50 — de testbelofte die bij Onderhoud niet ingelost kan worden.
+Dat is het eerstvolgende open item in *De volgorde*, dus geen afwijking van de reeks. De goedkope
+kant is de ZIN doel-afhankelijk maken; de dure kant is de poort, en die is bij punt 34 (d) om twee
+gronden dicht gebleven. CONTEXT DIE JE MOET WETEN: Daan is geopereerd en fietst voorlopig niet, de
+beschikbaarheid blijft 0, en de planner-week is leeg vanaf 2026-08-09. **Dat is geen defect.** Er
+komt dus GEEN nieuwe ritdata binnen om op te meten — elke meting deze ronde draait op de bestaande
+historie of op een fixture, en een ronde die nieuwe data nodig heeft kan niet. Verse chat.
+
 STAND 2026-08-21 — PUNT 34 IS VIER RONDES LANG GEMETEN EN DRIE KEER OMGEKEERD; ER IS GEEN REGEL
 GEBOUWD. Docs-only: geen code op één commentaarregel na, geen engine, geen migratie, geen deploy,
 geen remote-D1-mutatie. Prod en D1 staan waar het blok hieronder ze noemt.

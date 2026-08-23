@@ -1985,31 +1985,50 @@ punten staat onder *Gesloten — vindplaats*.
     deny-lijst in `.claude/settings.json` dwingt precies TWEE dingen machinaal af: de
     training-grens en `git push --force`. Al het andere — de engine-grens, de gate vóór de commit,
     de rapportvorm, de append-only nummering — hangt aan proza.
-    VIER INGREPEN, in oplopende prijs.
-    (a) EEN RECON-SUBAGENT. Verbatim hoort in een DOCUMENT te landen en niet in het rapport. De
-    laatste recon-rondes droegen zeven verbatim-blokken in één rapport; dat is precies het werk
-    waarvoor een subagent met eigen context bestaat. `--agents` en de settings-sleutel `agent` zijn
-    ondersteund (versie `2.1.208`).
-    (b) HOOKS VOOR DE GATE EN VOOR DE ENGINE-DENY. Het schema draagt 31 hook-events, waaronder
-    `PreToolUse` en `SessionStart`. Een `PreToolUse` op `git commit` die de gate afdwingt sluit het
-    gat dat CI NIET sluit: CI draait ná de push en kan een rode commit alleen melden, niet
-    tegenhouden. Een tweede `PreToolUse` op `Edit`/`Write` in `packages/engine` maakt van de
-    autorisatie-regel een deny in plaats van een belofte.
-    (c) PATH-SCOPED REGELS. Voor `packages/engine` (autorisatie vereist) en voor de append-only
-    nummering van `docs/TRAININGSMODEL.md`. LET OP DE VORM: een map `.claude/rules/` is in deze
-    ronde NIET vastgesteld — het settings-schema kent geen `rules`-sleutel en `claude --help` noemt
-    het woord niet. Wat het schema wél draagt is `claudeMdExcludes`, wat impliceert dat er
-    MEERDERE `CLAUDE.md`-bestanden per pad geladen worden. De vorm is dus vermoedelijk een geneste
-    `packages/engine/CLAUDE.md`, en die aanname hoort geverifieerd vóór de bouw.
-    (d) DE PROCEDURES UIT `CLAUDE.md` NAAR SKILLS. Gemeten is `CLAUDE.md` 5801 bytes over negen
-    secties, ruwweg 2600 bytes FEIT tegen 3200 bytes PROCEDURE, en vijf van de negen secties dragen
-    allebei. De procedures — close-out, HANDOFF-rotatie, recon-vorm, rapportvorm — zijn precies wat
-    een skill kan dragen: hij laadt wanneer hij nodig is in plaats van elke sessie.
+    VIER BOUWSTAPPEN, IN DEZE VOLGORDE. De volgorde is niet de prijs maar het RISICO: eerst wat
+    zelfstandig toetsbaar is en niets kan breken, dan wat eerst gemeten moet worden.
+    **(1) DE RECON-SUBAGENT in `.claude/agents/`.** EERST, om drie redenen. Hij is zelfstandig
+    toetsbaar aan een MEETBARE uitkomst — krimpt het rapport — hij raakt geen bestaande discipline,
+    en hij is de enige stap die vandaag al werkt zonder dat er iets geverifieerd hoeft te worden:
+    `claude --help` draagt `--agents`, het settings-schema draagt `agent`, en de Agent-tool
+    beschrijft zelf dat definities uit `.claude/agents/*.md`-frontmatter komen. DE DRAGENDE
+    EIGENSCHAP is tegelijk zijn eis: een subagent draait in een EIGEN contextvenster en alleen zijn
+    slotbericht keert terug. Verbatim dat niet naar een document gaat, gaat dus verloren — precies
+    wat *de deliverable is een document, niet terminaluitvoer* in `docs/WERKWIJZE.md` al eist. Die
+    regel is de voorwaarde voor deze stap en niet een gevolg ervan.
+    **(2) DE EMPIRISCHE RULES-TOETS.** Of `.claude/rules/` met een `paths`-frontmatter op versie
+    `2.1.208` werkt is NIET vastgesteld, en de recon van 23-08-2026 kon dat ook niet vaststellen.
+    LET OP DE REDENERING: het settings-schema kent geen `rules`-sleutel, maar rules zijn
+    BESTAND-gebaseerd en niet settings-gebaseerd, dus die afwezigheid is de VERWACHTE staat en
+    bewijst niets — in geen van beide richtingen. Toets daarom EMPIRISCH: leg een weggooi-regel
+    neer met een `paths`-scope op een pad, raak daarna een bestand op dat pad aan, en lees af of de
+    regel meekomt. Greppen naar het woord `rules` beantwoordt de vraag niet. Werkt het niet, dan is
+    de TERUGVAL een subdirectory-`CLAUDE.md`: het schema draagt `claudeMdExcludes` met de
+    beschrijving dat het glob-patronen zijn voor CLAUDE.md-bestanden die je in een monorepo wilt
+    OVERSLAAN, en dat impliceert dat meerdere CLAUDE.md-bestanden per pad geladen worden. Doelen
+    voor de scope: `packages/engine` (autorisatie vereist) en de append-only nummering van
+    `docs/TRAININGSMODEL.md`.
+    **(3) DE `CLAUDE.md`-HERSCHRIJVING, procedures naar skills.** DE DUURSTE STAP, en bewust NIET
+    eerst. Gemeten: `CLAUDE.md` is 5801 bytes over negen secties, ruwweg 2600 bytes FEIT tegen 3200
+    bytes PROCEDURE, en VIJF VAN DE NEGEN secties dragen allebei. Dat maakt dit HERSCHRIJVEN en
+    geen verhuizen — een sectie in tweeën knippen is een oordeel per zin. Bovendien is `CLAUDE.md`
+    juist het document dat WEL altijd laadt, dus een fout hier valt niet stil weg maar werkt elke
+    sessie door. EIS: een voor-en-na-controle dat er geen discipline stilzwijgend wegvalt. Zonder
+    die controle is de winst (een korter altijd-geladen document) niet te onderscheiden van verlies
+    (een regel die niemand meer leest).
+    **(4) HOOKS, EN PAS NA EEN RUNTIME-METING VAN DE VOLLE GATE.** Stel de diagnose scherp: de gate
+    ONTBREEKT NIET — hij draait in `.github/workflows/ci.yml`, alle vier de stappen. Wat ontbreekt
+    is BLOKKERING: CI draait ná de push en kan een rode commit alleen melden. De winst van een
+    `PreToolUse`-gate-hook vóór de commit is dus PROMPTZUINIGHEID — de gate hoeft niet meer in elk
+    prompt te staan — en niet veiligheid in de zin van "anders glipt er iets door", want CI vangt
+    het alsnog. Bij 1010 tests over 78 bestanden kan de looptijd die winst opeten: een hook die
+    elke commit minuten kost, wordt uitgezet of omzeild. METEN VÓÓR BOUWEN: klok de volle gate en
+    leg dat getal naast wat een prompt-regel kost. De engine-deny-hook staat hier los van en is wél
+    veiligheid: die maakt van de autorisatie-regel een `PreToolUse`-deny in plaats van een belofte,
+    en kost per constructie geen looptijd.
     WAT DIT PUNT NIET IS. Het is geen opruiming van de procesdocumenten. De vier documenten samen
     zijn 173156 bytes en laden GEEN VAN VIER automatisch; dat is een risico en geen sessieprijs, en
     het verkleinen ervan is een aparte vraag (zie punt 46 voor hoe die eerder liep).
-    EERSTE STAP: (b), want die is het goedkoopst en sluit het enige gat waar vandaag een rode
-    commit doorheen kan.
 
 ## De tijdslijn
 
@@ -2273,7 +2292,8 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
     ontbrekende vangnet, zodat elke ronde daarna goedkoper is. Het norm-besluit van 47 is al
     genomen (M89 t/m M91), dus 47 wacht op een BOUW en niet op een beslissing — en die bouw raakt
     een poort, een klok en de copy tegelijk. Precies de ronde waarin een engine-deny-hook en een
-    blokkerende gate hun geld opleveren. Gemeten in `docs/GEREEDSCHAP-RECON.md`.
+    blokkerende gate hun geld opleveren. Gemeten in `docs/GEREEDSCHAP-RECON.md`. VIER BOUWSTAPPEN
+    bij het punt zelf; **(1) en (2) horen in ÉÉN ronde**, (3) en (4) elk apart en daarna.
 11. **47** — de check valt in twee: ijking bij elk doel, doelcheck per doel. **HET NORM-BESLUIT IS
     GENOMEN (22-08-2026): M89 t/m M91 in `docs/TRAININGSMODEL.md` §13.** Wat rest is de BOUW, en
     die begint bij de open vraag over de doelwissel die bij het punt staat. De eerder genoemde
