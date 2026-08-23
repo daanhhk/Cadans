@@ -2138,16 +2138,28 @@ punten staat onder *Gesloten — vindplaats*.
     OVERSLAAN, en dat impliceert dat meerdere CLAUDE.md-bestanden per pad geladen worden. Doelen
     voor de scope: `packages/engine` (autorisatie vereist) en de append-only nummering van
     `docs/TRAININGSMODEL.md`.
-    **(2) IS BEANTWOORD DOOR DE DOCUMENTATIE, NIET DOOR DE EMPIRIE — en die twee blijven
-    GESCHEIDEN.** Zie `docs/PUNT51-RULES-VERDICT.md`, gemeten 23-08-2026. DE DOCUMENTATIE ZEGT JA:
-    `https://code.claude.com/docs/en/memory` draagt een eigen sectie over `.claude/rules/` met
-    `paths`-frontmatter, en de terugval naar een geneste `CLAUDE.md` is dus NIET nodig. Daarmee is
-    de verwachting van de chat omvergeworpen — de betere uitkomst. DE EMPIRIE IS NIET GEDAAN: de
-    weggooi-regel leverde geen merkstring op, maar die sessie was ouder dan de map en een
-    uitblijvende merkstring scheidt niet-geladen niet van geladen-maar-genegeerd. Het instrument
-    `claude -p` is bovendien VERVALLEN — `Failed to authenticate: OAuth session expired and could
-    not be refreshed` — dus de aflezing rijdt op een echte sessiegrens. Zolang die aflezing open
-    staat, geldt (2) als beantwoord-op-documentatie en niet als bevestigd.
+    **(2) IS NU OOK EMPIRISCH BEANTWOORD — AF (23-08-2026), en beide vormen VUREN.** De
+    documentatie zei al ja (`https://code.claude.com/docs/en/memory`, eigen sectie over
+    `.claude/rules/` met `paths`-frontmatter), maar de meting ontbrak omdat de hoofdsessie ouder was
+    dan de map en een uitblijvende merkstring niet-geladen niet scheidt van geladen-maar-genegeerd.
+    HET INSTRUMENT BLEEK EEN VERSE AGENT-SESSIE, niet `claude -p` (dat is vervallen op een
+    OAuth-fout). Agents starten vers en zijn dus JONGER dan de regelbestanden.
+    **DE REGEL ZONDER `paths` LAADT BIJ SESSIESTART.** Gemeten in de weerleggingspas van punt 64:
+    5 van de 6 agents gaven `RULESALTIJD-MERKSTRING-Q4XM7D` verbatim terug, terwijl die string 0
+    keer in hun opdracht stond (geteld in het workflow-script). Twee ervan meldden expliciet dat de
+    regel al bij de start in hun context stond.
+    **DE PAD-GESCOOPTE REGEL VUURT OP DE FILE-READ, en niet eerder.** Gemeten 23-08-2026 met één
+    agent die opdracht kreeg `packages/engine/src/zones.ts` te lezen en te rapporteren wát hij aan
+    instructies aantrof — de merkstring is hem NIET genoemd. Hij rapporteerde beide, met het
+    onderscheid erbij: de `paths`-loze regel stond er vanaf de start, en
+    `RULESPATHS-MERKSTRING-V9HB2K` verscheen **pas ná** het Read-resultaat, als system-reminder
+    daarachteraan. Vóór die read stond dat bestand nergens in zijn context.
+    GEVOLG VOOR (1): een geneste `CLAUDE.md` is niet nodig, en `paths`-scoping is een werkend
+    instrument om `packages/engine` en de append-only nummering van `docs/TRAININGSMODEL.md` te
+    bewaken. WAT OPEN BLIJFT: of een regel zonder `paths` ook in de HOOFDsessie laadt. Die vraag is
+    per constructie onbeantwoordbaar in een sessie die ouder is dan het bestand; een verse chat
+    beantwoordt hem gratis in haar openingszin. De twee weggooi-regels zijn gitignored en blijven
+    liggen tot iemand dat afleest.
     **(3) DE SNOEI VAN DE WERKWIJZE-CANON — GEEN HERVERDELING.** HERGEFORMULEERD 23-08-2026; de
     eerste versie ("procedures naar skills") beschreef een VERHUIZING, en dat is het niet.
     DE DIAGNOSE, RECON `aca1cfc5`. De vier procesdocumenten zijn samen **173156 bytes** en laden
@@ -2469,8 +2481,8 @@ punten staat onder *Gesloten — vindplaats*.
     plaats van aan het extremum van de verschuiving. Het residu is daarmee weg: dekking 100,0
     procent bij beide weekvormen.
 59. **De BEVESTIG-uitgang, de duurzame ONGEIJKT-staat en de bevestigings-teller** — **AF
-    (24-08-2026, ronde 6).** (a) en (b) zijn op 23-08-2026 gebouwd; (c), de teller van opeenvolgende
-    bevestigingen, is op 24-08-2026 **VERVALLEN met grond** en niet uitgesteld. Daan-besluit: de
+    (23-08-2026, ronde 6).** (a) en (b) zijn op 23-08-2026 gebouwd; (c), de teller van opeenvolgende
+    bevestigingen, is op 23-08-2026 **VERVALLEN met grond** en niet uitgesteld. Daan-besluit: de
     zichtbaarheid van een niet-gemeten drempel is de LEEFTIJD IN WEKEN, niet een teller van
     bevestigingen — weken zijn wat de renner nodig heeft om te oordelen, "drie blokken" is een
     teleenheid van de app en een teller van bevestigingen telt een handeling in plaats van een
@@ -2551,8 +2563,58 @@ punten staat onder *Gesloten — vindplaats*.
     338; bij één per 8 weken 420. En het tilt de frequentie NIET: met de sprong eruit geeft de bron
     bij alle drie de tempo's precies **440 van de 440 openingen één aanbod**, maximum 1 — poort (1)
     en de vloer bewaken M90b, niet de sprong.
+66. **De PLAN-uitgang verzet de LEEFTIJD van de drempelwaarde, en 15 minuten is geen ijking** —
+    open · CLIENT. **GEEF DIT GEWICHT: het raakt de betrouwbaarheid van de leeftijdsweergave die
+    ronde 6 net gebouwd heeft.** GEMETEN 23-08-2026 in de weerleggingspas van punt 64.
+    HET MECHANISME. `laatsteGelegenheid` telt een test-override als meetgelegenheid zodra er op die
+    dag minstens `GELEGENHEID_MIN_MINUTEN` (**15**) is gefietst. Vijftien minuten is geen maximale
+    inspanning en dus geen ijking. GEMETEN: met een laatste echte meting 123 dagen terug staat
+    `wekenOud` op 17 en zegt de app "Je drempel is 17 weken oud."; legt de gebruiker een
+    test-override op vandaag en rijdt hij er **20 minuten** op, dan valt `wekenOud` naar **0** en
+    zwijgt de regel. Met **14** minuten gebeurt er niets.
+    WAAROM DAT ERG IS. Naast de BEVESTIG-knop, die de teller bewust NIET mag verzetten (besluit twee
+    van punt 64, en dat is gemeten en getest), staat een knop die hem wél verzet — zonder dat er iets
+    gemeten is. De app zegt dan "gemeten" waar niets gemeten is, en dat is M5.
+    WAT DE INGREEP NIET MAG ZIJN: de vloer simpelweg optrekken. 15 minuten is een BELEIDSWAARDE met
+    een eigen herkomst; wie hem verhoogt raakt ook de race- en sprong-takken die er nu aan hangen.
+    Begin met METEN wat een echte testinspanning in Daans reeks aan duur en vermogen draagt, en
+    beslis pas daarna of de grens per BRON moet verschillen — een geplande test verdient een andere
+    drempel dan een gereden A-wedstrijd.
+
+67. **`d.gedaan !== true` in poort (5) is dode machinerie** — open · CLIENT, klein. GEMETEN
+    23-08-2026. Het filter kan per constructie nooit vals worden: `planner_days.gedaan` heeft één
+    schrijver in de worker en die zet hem altijd op 0, de PUT-route weigert het veld in de invoer,
+    en `buildTestVoorstel` krijgt de RAUWE rijen uit `schema.ts` zonder `derivePlannerDays` ertussen.
+    Een conditie die als levende beveiliging leest maar geen tak kan kiezen — CC-CHECKS CHECK 27.
+    Weghalen of aansluiten is een besluit; beide zijn goed te verdedigen, stilzwijgend laten staan
+    niet.
+
+68. **De per-blok-antwoorden dragen TWEE doel-kolommen, niet drie** — open · norm, administratief.
+    Een correctie op een premisse die in de prompt van punt 64 stond en die daar is rechtgezet:
+    `dosis_trede_doel` en `doel_passend_doel` bestaan, maar `event_overname` draagt een EVENT-kolom
+    (`event_overname_event`) in plaats van een doel-kolom. Dat is consistent — die vraag gaat over
+    een specifieke wedstrijd en niet over het doel — maar of die event-sleutel dezelfde blootstelling
+    heeft als `ijking_*` had vóór punt 64, is **NIET gemeten**. Eén meting volstaat: wisselt de
+    gebruiker van doel terwijl er een beantwoorde event-overname staat, telt dat antwoord dan nog?
+
+65. **DE TZ-SCHULD: de engine rekent lokaal, een gedeployde Worker draait UTC** — open · ENGINE plus
+    WORKER. **DIT PUNT GAAT VOORAF AAN ELKE WORKER-DEPLOY.** Zo vastgesteld op 23-08-2026 bij de
+    prod-migratieronde, en dat is de reden dat die ronde de migraties wél en de deploy NIET deed.
+    `docs/ARCHITECTUUR.md` draagt de schuld al verbatim: *"leunt op `TZ=Europe/Amsterdam`. Het
+    root-testscript zet die pin via `cross-env`. Een gedeployde Worker draait UTC; dat verschil
+    staat als openstaande schuld en niet als opgelost."* De engine formatteert met LOKALE getters,
+    en `workers/api/src/db/dates.ts` is de enige conversielaag en spiegelt diezelfde aanname.
+    WAT ER MOET GEBEUREN, in deze volgorde. (1) MEET het verschil in plaats van het te beredeneren:
+    draai de datumlaag onder `TZ=UTC` en leg naast de uitkomst onder `TZ=Europe/Amsterdam`. Doe dat
+    op de randen die er toe doen — een maandag-berekening rond middernacht, de DST-overgangen van
+    het lopende jaar, en `toD1Date` heen en terug. (2) Pas dan beslissen of de engine expliciet moet
+    worden gemaakt of de Worker gepind. NIET bouwen vóór (1) er ligt: welke van de twee routes goed
+    is, hangt af van hoe groot en waar het verschil werkelijk is.
+    HET IS GEEN ACUUT DEFECT: de live Worker draait sinds 10-08-2026 en niemand heeft een verkeerde
+    datum gemeld. Het is een gok die tot nu toe goed is uitgepakt, en dat is iets anders dan veilig.
+
 64. **Het ijk-antwoord heeft geen DOEL-kolom, en de openingsmaandag alleen volstaat niet** — **AF
-    (24-08-2026, ronde 6).** `sync_state.ijking_doel` erbij via
+    (23-08-2026, ronde 6).** `sync_state.ijking_doel` erbij via
     `workers/api/drizzle/0012_acoustic_living_mummy.sql` (één `ALTER TABLE ... ADD`, forward-only,
     0011 onaangeroerd). Poort (2b) en `ijkStatus` vergelijken sindsdien BLOK ÉN DOEL, genormaliseerd
     aan beide kanten, precies zoals `doelPassendVoorstel` stap 5 dat al deed.
@@ -2946,14 +3008,21 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
     één migratie, en de vluchtige module-`Set` is weg. Eerste ronde van deze reeks die de worker en
     een migratie raakte. Wat van 59 openbleef is de letterlijke bevestigings-teller; die is in 11d-2
     VERVALLEN.
-11d-2. **64 + 59(c)** — AF (24-08-2026, ronde 6), kleine ronde en de TWEEDE en LAATSTE keer dat deze
+11d-2. **64 + 59(c)** — AF (23-08-2026, ronde 6), kleine ronde en de TWEEDE en LAATSTE keer dat deze
     reeks D1 raakt. 64: `sync_state.ijking_doel` erbij met migratie 0012, zodat een bevestiging geldt
     voor het DOEL waarvoor zij gegeven is — gemeten van **4 van 7 naar 7 van 7** wisseldagen met een
     aanbod, terwijl een doorrollend blok op **0 van 7** blijft. 59(c): de bevestigings-teller is
     VERVALLEN met grond en vervangen door de LEEFTIJD IN WEKEN; punt 59 is daarmee helemaal af.
+11d-3. **PROD-MIGRATIE** — AF (23-08-2026). Migraties `0011` en `0012` toegepast op REMOTE D1 via
+    `wrangler d1 migrations apply cadans --remote`; W1, W2 en W3 hielden alle drie, zuiver additief,
+    0 gewijzigde waarden op de bestaande kolommen. GEEN worker-deploy, met grond: punt 65.
+    Sindsdien is het STAAND BELEID dat een migratie wordt toegepast in de ronde die hem toevoegt —
+    zie `docs/WERKWIJZE.md`, *Migraties en deploys*. De prod-stand staat vanaf nu in
+    `docs/PROD-STAND.md`, en daar bleek meteen iets uit dat nergens genoteerd stond: **de live
+    Worker draait sinds 10-08-2026** en mist dus het hele punt-47-blok.
     **DE VOLGENDE IS 11e.**
 11e. **61 (+ 54)** — de DOELCHECK aan het eind van het doelblok, de tweede helft van M89.
-    **DIT IS DE EERSTVOLGENDE RONDE**, bevestigd 24-08-2026. Het is het enige deel van punt 47 dat
+    **DIT IS DE EERSTVOLGENDE RONDE**, bevestigd 23-08-2026. Het is het enige deel van punt 47 dat
     nooit is aangeraakt.
     **NAAR VOREN GEHAALD op Daan-besluit van 23-08-2026, met een DATUM als grond:** in februari
     sluit het onderhoudsblok en dan is de vraag of de FTP het gehouden heeft, vóór de
