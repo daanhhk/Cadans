@@ -1888,6 +1888,34 @@ punten staat onder *Gesloten — vindplaats*.
     `BLOK_WEKEN`, terwijl M90a over de TWAALFWEEKSE doelblokgrens spreekt (`doelTestWeken_` in
     `packages/engine/src/niveau.ts`). Welke van de twee de ijking hoort te dragen is zelf een
     bouwbeslissing.
+    **DE BOUWRONDE VAN 23-08-2026 IS GESTOPT VÓÓR DE EERSTE REGEL CODE, en dat is de opbrengst.**
+    Volledige verantwoording in `docs/PUNT47-BOUW.md`. De ronde draaide als de proef van punt 52,
+    met vier verwachtingen als VOOR-AUTORISATIE. **V1 VIEL:** de vierweekse klok bindt het
+    ijkaanbod NIET op één plek, maar op DRIE, en die drie hangen aan elkaar. (a) Poort (1) zelf.
+    (b) Een tweede gebruik van dezelfde klok in hetzelfde bestand — `blokStartVoorWeek` plus
+    `BLOK_WEKEN * 7` bouwen het venster waarmee poort (3) een reeds ingeplande test onderdrukt.
+    (c) `blokStart` REIST HET BESTAND UIT als veld op de teruggegeven `TestVoorstel` en wordt buiten
+    `testvoorstel.ts` gelezen als de AFWIJS-SLEUTEL, in `SchemaView.tsx` (`isTestVoorstelAfgewezen`)
+    en in `TestVoorstelCard.tsx` (`afgewezen.add`). "Niet dit blok" betekent vandaag dus "niet dit
+    VIERWEEKSE blok". Alleen poort (1) omhangen laat de afwijzing over een ander blok gaan dan het
+    aanbod. DE OMHANGING IS DAARMEE GEEN CONDITIE MAAR EEN SAMENHANGENDE WIJZIGING VAN DRIE DINGEN:
+    de poort, het onderdrukkings-venster en de identiteit van het aanbod. Dat hoort in de
+    bouwprompt te staan vóórdat er iemand aan begint.
+    **V2, V3 EN V4 HIELDEN, alle drie gemeten met de echte functies.** V2: de twaalfweekse teller
+    leeft — 4 doelblok-testweken over 52 weekmaandagen vanaf `doelStart` `2026-06-29`
+    (2026-09-14, 2026-12-07, 2027-03-01, 2027-05-24), en **0 van de 4** wordt door de event-fase
+    overschaduwd; `effectiveMacroFase_` geeft in alle vier `Test`. `computeMacroPhase` is in
+    `apps/web/src/lib` al geïmporteerd door `blok.ts`, `faseOvergang.ts`, `proposal.ts` en
+    `schema.ts`, dus de omhanging vraagt GEEN engine-wijziging. V3: een doelwissel zet de nieuwe
+    `doelStart` op blokweek 1 (5 van de 5 gemeten wisseldagen), dus het gat is reëel — vandaag drie
+    weken, na een naïeve omhanging ELF. V4: `DOEL_BLOK_WEKEN * 7` is 84 dagen tegen
+    `TEST_INTERVAL_DAGEN` 90, dus de dag-vloer onderdrukt elke doelblokgrens die op de vorige ijking
+    volgt met precies 6 dagen.
+    **HET STRUCTURELE FEIT DAT DE PRIJS VERANDERT, en dat geen van beide kanten had opgeschreven:**
+    twaalf is een veelvoud van vier, dus elke twaalfweekse grens IS al een vierweekse blokweek 4
+    (gemeten: `blokweek4=4` bij alle vier de testweken). De omhanging is een VERSMALLING van dertien
+    openingen per jaar naar vier, niet een verschuiving naar andere weken. Er komt geen enkel nieuw
+    aanbodmoment bij.
 48. **Geen testaanbod rond een A- of B-event** — open · CLIENT. Daan-besluit 21-08-2026. Een
     event is een event: daar geef je alles, en het event is zelf de betere meting. Een
     20-minuten-all-out kost twee tot drie dagen herstel, en in een taper vernietigt hij precies
@@ -2132,6 +2160,66 @@ punten staat onder *Gesloten — vindplaats*.
     RAAKVLAK MET PUNT 51: dit is de toets op de maat die punt 51 zichzelf stelt — twee rondes tot
     één inklappen. Slaagt de proef, dan is die maat gehaald; slaagt zij niet, dan levert punt 51 een
     schoner venster op een even trage lus en is dat een bevinding en geen mislukking.
+    **UITSLAG 23-08-2026: DE PROEF IS GEDRAAID EN HEEFT ZIJN EIGEN VRAAG NIET BEREIKT — GEEN
+    OORDEEL, WÉL EEN OPBRENGST.** Verantwoording in `docs/PUNT47-BOUW.md`. Wat er gebeurde: V1 viel
+    tijdens de meting, de stop-conditie greep, en er is geen regel code geschreven. Daarmee draaide
+    de proef feitelijk als een RECON-ronde en is de vraag "draagt één rapport ook de BOUW-helft"
+    niet beantwoord — er was geen bouw-helft. WAT WÉL VASTGESTELD IS, in twee delen.
+    (a) DE RECON-HELFT VERDUNDE NIET: herkomst per getal, de vier opgedragen feiten hertoetst tegen
+    HEAD in plaats van overgenomen uit de prompt-hash, noemers mét uitsluitingen (4 van 4, 0
+    overschaduwd; 5 van 5 wisseldagen), letterlijke strings waar een claim eraan hing, en drie keer
+    "niet gemeten" expliciet gescheiden van "gemeten als afwezig".
+    (b) DE ZWAKKE PLEK ZIT IN DE ROL, NIET IN DE LENGTE. In deze vorm is de uitvoerder óók de
+    scheidsrechter over zijn eigen stop: bij de val van V1 was de eerste neiging doorlezen om te
+    zien of de bouw alsnog kon. In een gesplitste ronde had V1 een RAPPORT opgeleverd en was de
+    bouwprompt HERSCHREVEN met poort (3) en de afwijs-sleutel erin. Dat is precies de
+    kwaliteitswinst die de splitsing koopt, en zij is hier alleen behouden gebleven doordat de
+    stop-conditie streng en expliciet was.
+    BESLUIT: punt 52 NIET afvinken en NIET verwerpen. Draai de proef opnieuw op de eerstvolgende
+    ronde waarin de verwachtingen HOUDEN, en beoordeel dán — met `docs/PUNT47-BOUW.md` als nulmeting
+    voor hoe de recon-helft eruitziet als zij niet verdund is. Voorwaarde die BLIJFT staan en drie
+    rondes achtereen NIET gehaald is: de aflezing bij de sessie-opening. De recon-agent is opnieuw
+    niet ontdekt, verbatim `Agent type 'recon' not found. Available agents: claude,
+    claude-code-guide, Explore, general-purpose, Plan, statusline-setup`, dus de proef draaide
+    ZONDER het meetinstrument waarvoor punt 51 (1) gebouwd is — met de hand gemeten in een
+    wegwerp-opstelling buiten de repo-tree.
+53. **De ONGEIJKT-staat van M91 heeft geen drager** — open · CLIENT plus DATA. Volgt uit de
+    bouwronde van 23-08-2026 (`docs/PUNT47-BOUW.md`). M91 zegt dat een afwijzing geen meting is en
+    dat de app de ONGEIJKT-staat moet DRAGEN en ZEGGEN. Vandaag draagt de app alleen een
+    AFWIJZING, en die is per vierweeks blok gesleuteld op `blokStart` — zie punt 47, grond (c).
+    Zodra de ijking aan de doelblok-klok hangt, moet die staat ergens leven die een doelblok
+    overleeft. DE OPTIE-INVENTARIS, en geen daarvan is gekozen: (a) de bestaande afwijs-sleutel
+    omhangen naar de doelblokstart — goedkoopst, maar hij is client-lokaal en overleeft geen
+    apparaatwissel; (b) een veld op de bestaande settings-rij — geen migratie van een nieuwe tabel,
+    wel een schema-wijziging; (c) een eigen tabel met één rij per doelblok — draagt ook de HISTORIE
+    van geweigerde ijkingen, en dat is wat M91's "zeggen" op termijn vraagt. NIEUWE PERSISTENTE
+    STAAT VRAAGT EEN EIGEN AUTORISATIE en die is bij 47 uitdrukkelijk NIET gegeven; dit punt bestaat
+    om die beslissing niet in een bouwronde te laten wegzakken.
+54. **De doelcheck-maat per doel is nog niet gekozen** — open · norm plus CLIENT. Dit is de
+    bouwvraag die punt 47 open laat: M89 splitst de vraag, maar WELKE maat de doelcheck per doel
+    afleest staat nergens vast. Bij FTP is het 20-minutenvermogen. Bij Onderhoud noemt
+    `DOELEN-SPEC` §3.2 een maat die in code NIET BESTAAT (punt 47, recon-bevinding iii), terwijl er
+    een andere vloer wél ligt en niet is aangesloten (`ONDERHOUD_VLOER_PCT`, bevinding ii). Bij
+    Conditie en beide klimdoelen wijst §3.3 t/m §3.5 een durability- of dag-twee-maat aan die punt
+    11 en punt 49 nog moeten leveren. Dit punt is een ONTWERPRONDE en hoort achteraan; het staat
+    hier opgeschreven zodat de bouw van 47 niet stilzwijgend een maat kiest.
+55. **Het aanbodvenster is ÉÉN week breed en kan stil missen** — open · CLIENT. Volgt uit de
+    bouwronde van 23-08-2026. Poort (1) van `buildTestVoorstel` eist dat de weekmaandag EXACT de
+    laatste blokweek is; is de app die week niet geopend, of valt er een event of een lege
+    beschikbaarheid overheen, dan is het aanbod weg tot de volgende grens. Vandaag is dat elke vier
+    weken en dus goedkoop. Hangt de ijking om naar de twaalfweekse klok, dan kost één gemist venster
+    een KWARTAAL — en dat is de kostenverandering die punt 47 impliceert zonder ze te noemen. TE
+    BESLISSEN: blijft het venster één week, of wordt het een venster dat OPENBLIJFT tot de ijking
+    plaatsvond of expliciet geweigerd is. Die tweede lezing raakt punt 53, want een openblijvend
+    venster vraagt precies de staat die daar besproken wordt.
+56. **`TEST_MIN_BESCHIKBAAR_MIN` en `TEST_DUUR_MIN` dragen geen herkomst-etiket** — open · norm.
+    Beide staan in `apps/web/src/lib/testvoorstel.ts` en beide staan op 60. Anders dan
+    `TEST_INTERVAL_DAGEN` en `WEDSTRIJD_HORIZON_DAGEN` is nergens vastgelegd of ze uit de
+    GAS-bron komen, uit een Daan-besluit, of uit een keuze van een bouwronde. NIET RATEN wat die
+    herkomst is: dit punt vraagt om hem OP TE ZOEKEN — in de bevroren GAS-bron op schijf en in de
+    commit-historie van het bestand — en daarna te etiketteren zoals de canon eist. Blijkt hij
+    onvindbaar, dan is "herkomst onbekend, gekozen op <datum>" het eerlijke etiket en geen
+    verzonnen grond.
 
 ## De tijdslijn
 
@@ -2403,11 +2491,22 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
 10b. **52** — recon en bouw in ÉÉN ronde, als eenmalige PROEF op punt 47. Draait MET 47 mee en niet
     ervoor: het is een vorm-experiment op een bestaande ronde, geen eigen bouw. Voorwaarde is de
     aflezing bij de sessie-opening; faalt die, dan draait 47 gesplitst en verschuift de proef.
+    **GEDRAAID 23-08-2026, GEEN OORDEEL:** V1 viel, de stop-conditie greep, er is niet gebouwd, dus
+    de bouw-helft van de vraag is onbeantwoord. Blijft open en verschuift mee naar de eerstvolgende
+    ronde waarin de verwachtingen houden. Zie de uitslag bij het punt zelf.
 11. **47** — de check valt in twee: ijking bij elk doel, doelcheck per doel. **HET NORM-BESLUIT IS
-    GENOMEN (22-08-2026): M89 t/m M91 in `docs/TRAININGSMODEL.md` §13.** Wat rest is de BOUW, en
-    die begint bij de open vraag over de doelwissel die bij het punt staat. De eerder genoemde
-    canon-tegenspraak bestaat niet — zie `docs/PUNT47-RECON.md` §0c; wat wél openstaat is de MAAT
-    uit `DOELEN-SPEC` §3.2, en dat is een bouwvraag.
+    GENOMEN (22-08-2026): M89 t/m M91 in `docs/TRAININGSMODEL.md` §13.** De BOUW is op 23-08-2026
+    BEGONNEN EN GESTOPT vóór de eerste regel code, met de opbrengst in `docs/PUNT47-BOUW.md`: de
+    omhanging naar de doelblok-klok raakt DRIE plekken die aan elkaar hangen — poort (1), het
+    onderdrukkings-venster van poort (3), en `blokStart` als afwijs-sleutel buiten het bestand. De
+    volgende bouwprompt draagt die drie, en niet één. Wat NIET meer open is: de twaalfweekse teller
+    leeft en wordt niet overschaduwd, er is geen engine-wijziging nodig, en de doelwissel-vraag is
+    GEMETEN in plaats van vermoed. Wat wél openstaat is de MAAT uit `DOELEN-SPEC` §3.2 — dat is nu
+    punt 54 en het is een ontwerpronde.
+11b. **53 + 55** — de ONGEIJKT-drager en het aanbodvenster. Horen BIJ de bouw van 47 beslist te
+    worden en niet erna: de omhanging naar een twaalfweekse klok maakt één gemist venster een
+    kwartaal duur, en de afwijs-sleutel die dat venster vandaag draagt is precies de plek die 47
+    moet verzetten. 53 vraagt mogelijk nieuwe persistente staat en dus een eigen autorisatie.
 12. **48** — geen testaanbod rond een A- of B-event. Klein, één conditie in `buildTestVoorstel`,
     en het staat hier zo vroeg omdat het goedkoop is en een echte schade voorkomt.
 13. **49** — de doelcheck aflezen uit een sleutelsessie. Vraagt opslag en aggregatie van de
@@ -2415,7 +2514,13 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
 14. **35** — een event draagt geen duur. Deblokkeert punt 13 fase B.
 15. **13 fase B** — de doelvraag na het event.
 16. **32** — de rit-beoordeling. M31 noemt het bedrading en geen nieuwe bouw.
-17. **11** — de duurvermogen-maat OPNIEUW ontwerpen. Achteraan met de juiste reden: de
+16b. **56** — de twee constanten zonder herkomst-etiket. Klein, en het is een OPZOEKRONDE en geen
+    bouw: de GAS-bron op schijf plus de commit-historie van `apps/web/src/lib/testvoorstel.ts`.
+    Raden is hier expliciet verboden.
+17. **54** — de doelcheck-maat per doel. Achteraan met dezelfde reden als 11: bij Conditie en
+    beide klimdoelen is de maat pas te kiezen als punt 49 en punt 11 hun gereedschap geleverd
+    hebben. Bij FTP en Onderhoud kan het eerder, maar dan kiest men de helft van een norm.
+18. **11** — de duurvermogen-maat OPNIEUW ontwerpen. Achteraan met de juiste reden: de
     gemeten maat mat de RITKEUZE en niet het duurvermogen, dus dit is een afgekeurd ontwerp
     en geen wachtende bouw. Tot dan blijft Conditie ongedekt (M33, M39). Punt 49 levert
     hier het gereedschap voor: zonder per-blok-data uit de rit is deze maat niet te bouwen.

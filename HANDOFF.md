@@ -13,6 +13,85 @@ live tot cutover.
 
 ## Stand
 
+STAND 2026-08-23 (DERDE BLOK VAN DEZE DAG) — DE BOUW VAN PUNT 47 IS BEGONNEN EN GESTOPT VÓÓR DE
+EERSTE REGEL CODE, EN DAT IS DE OPBRENGST. Docs-only: geen code, geen engine, geen migratie, geen
+deploy, geen D1. Prod en D1 staan waar het blok hieronder ze noemt.
+- **V1 VIEL, EN DAAROM STAAT ER GEEN REGEL CODE.** De vierweekse klok bindt het ijkaanbod niet op
+  ÉÉN plek maar op DRIE, en die drie hangen aan elkaar. (a) Poort (1) van `buildTestVoorstel` in
+  `apps/web/src/lib/testvoorstel.ts`. (b) Een tweede gebruik van dezelfde klok in datzelfde
+  bestand: `blokStartVoorWeek` plus `BLOK_WEKEN * 7` bouwen het venster waarmee poort (3) een reeds
+  ingeplande test onderdrukt. (c) `blokStart` REIST HET BESTAND UIT als veld op de teruggegeven
+  `TestVoorstel` en wordt buiten `testvoorstel.ts` gelezen als de AFWIJS-SLEUTEL — in
+  `SchemaView.tsx` via `isTestVoorstelAfgewezen` en in `TestVoorstelCard.tsx` via `afgewezen.add`.
+  "Niet dit blok" betekent vandaag dus "niet dit VIERWEEKSE blok". **DE VOLGENDE BOUWPROMPT DRAAGT
+  DIE DRIE, NIET ÉÉN.**
+- **V2, V3 EN V4 HIELDEN — gemeten met de echte functies, niet beredeneerd.** V2: de twaalfweekse
+  teller leeft. Vier doelblok-testweken over 52 weekmaandagen vanaf `doelStart` `2026-06-29` —
+  `2026-09-14`, `2026-12-07`, `2027-03-01`, `2027-05-24` — en **0 van de 4** wordt door de
+  event-fase overschaduwd; `effectiveMacroFase_` geeft in alle vier `Test`. V3: een doelwissel zet
+  de nieuwe `doelStart` op blokweek 1 bij 5 van de 5 gemeten wisseldagen, dus het gat is REËEL:
+  vandaag drie weken, na een naïeve omhanging ELF. V4: `DOEL_BLOK_WEKEN * 7` is 84 dagen tegen
+  `TEST_INTERVAL_DAGEN` 90, dus de dag-vloer onderdrukt elke doelblokgrens die op een vorige ijking
+  volgt met precies 6 dagen.
+- **GEEN ENGINE-WIJZIGING NODIG, en dat is gemeten en niet aangenomen.** `computeMacroPhase` wordt
+  in `apps/web/src/lib` al geïmporteerd door `blok.ts`, `faseOvergang.ts`, `proposal.ts` en
+  `schema.ts`, en `buildTestVoorstel` draagt `input.doelStart` en `input.weekMondayISO` al — dat is
+  precies de invoer die de functie vraagt.
+- **DE OMHANGING IS EEN VERSMALLING, GEEN VERSCHUIVING — dit stond nergens en verandert de prijs.**
+  Twaalf is een veelvoud van vier, dus elke twaalfweekse grens IS al een vierweekse blokweek 4
+  (gemeten: `blokweek4=4` bij alle vier de testweken). Van dertien openingen per jaar naar vier. Er
+  komt geen enkel nieuw aanbodmoment bij.
+- **PUNT 52 — GEEN OORDEEL, EN DAT IS DE EERLIJKE UITSLAG.** De proef draaide, maar V1 viel tijdens
+  de meting en dus was er geen bouw-helft. De recon-helft verdunde NIET; de zwakke plek zit in de
+  ROL: in deze vorm is de uitvoerder óók de scheidsrechter over zijn eigen stop. In een gesplitste
+  ronde was de bouwprompt HERSCHREVEN met poort (3) en de afwijs-sleutel erin — dat is de winst die
+  de splitsing koopt. Het punt blijft OPEN en verschuift naar de eerstvolgende ronde waarin de
+  verwachtingen houden.
+- **DE DERDE GESTRANDE AFLEZING OP RIJ, en de oorzaak is nu structureel.** `recon` is opnieuw niet
+  ontdekt, verbatim: `Agent type 'recon' not found. Available agents: claude, claude-code-guide,
+  Explore, general-purpose, Plan, statusline-setup`. De sessie is 40 dagen OUDER dan het bestand dat
+  zij moet lezen (transcript 2026-07-14, het agent-bestand van 2026-08-23). Een sessie kan de
+  laadmachinerie die bij háár start draaide niet achteraf meten. **ZOLANG DEZELFDE SESSIE LOOPT IS
+  ELKE VOLGENDE POGING DEZELFDE NIET-METING.** De rules-probes gaven om dezelfde reden geen
+  uitslag; zij zijn opgeruimd en `.claude/rules/` bestaat niet meer. `.worktreeinclude` blijft
+  ONGETOETST: beide probes stonden er wél, maar alleen omdat dit de hoofdcheckout is waarin ze
+  gemaakt zijn.
+- **VIER NIEUWE PUNTEN, 53 t/m 56, met hun grond.** 53: de ONGEIJKT-staat van M91 heeft geen
+  drager — de optie-inventaris staat bij het punt en NIEUWE PERSISTENTE STAAT VRAAGT EEN EIGEN
+  AUTORISATIE. 54: de doelcheck-maat per doel is niet gekozen (de §3.2-vraag, nu een eigen
+  ontwerpronde). 55: het aanbodvenster is ÉÉN week breed en kan stil missen — vandaag kost dat vier
+  weken, na de omhanging een KWARTAAL. 56: `TEST_MIN_BESCHIKBAAR_MIN` en `TEST_DUUR_MIN` staan
+  allebei op 60 zonder herkomst-etiket; dat is een OPZOEKRONDE en raden is er verboden.
+- **VLOEREN: lees ze zelf uit de suite.** Onbewogen deze ronde — docs-only, geen bronbestand
+  geraakt. Het vorige blok noemt de stand waarop ze stonden; neem ze niet over uit een blok maar
+  toets ze tegen de suite.
+- **OPENSTAAND, elk item opnieuw te greppen in `docs/ROADMAP.md`:** 32 · 34 (alleen (d)) · 35 · 47
+  · 48 · 49 · 51 (alleen (3)) · 52 · 53 · 54 · 55 · 56.
+
+FOCUS VOLGENDE CHAT: **BOUW-ronde — ROADMAP punt 47, de omhanging naar de doelblok-klok, nu als
+DRIEDELIGE ingreep.** De recon is klaar en staat in `docs/PUNT47-BOUW.md`; die hoef je niet over te
+doen. Wat de prompt moet dragen: poort (1), het onderdrukkings-venster van poort (3), en de
+identiteit van het aanbod (`blokStart` als afwijs-sleutel, met twee lezers buiten het bestand).
+Beslis in dezelfde beweging punt 55 — blijft het venster één week breed of blijft het OPEN tot de
+ijking gedaan of geweigerd is — want de tweede lezing vraagt de staat uit punt 53, en die vraagt een
+eigen autorisatie die er nog niet is. De doelwissel uit V3 hoort erbij: zonder reparatie wordt het
+onderdrukkings-gat elf weken.
+
+**DE OMGEVINGSVERKLARING BLIJFT EEN STOP-CONDITIE, en zij werkte.** Deze ronde: pad
+`/c/Users/daan/Projects/cadans` vóór én ná de `cd`-regel, `git rev-parse --git-dir` en
+`--git-common-dir` allebei `.git` dus HOOFDCHECKOUT, branch `main`, 0 achter en 0 vooruit op
+`origin/main`, versie `2.1.208 (Claude Code)`. De `cd`-regel bleek hier een no-op; dat is één geval
+en geen vrijbrief.
+
+**DE HARNAS-AFLEZING HOORT NIET MEER IN EEN PROMPT.** Drie rondes lang is zij gevraagd en drie keer
+niet gelukt, telkens met een andere oorzaak: de sessiegrens, de authenticatie van `claude -p`, en
+opnieuw de sessiegrens. Zij hoort in de OPENINGSZIN van een sessie die aantoonbaar ná het
+agent-bestand opent, en daar heeft deze kant geen invloed op. Vraag hem niet nog eens als opdracht;
+neem hem mee als waarneming zodra hij zich vanzelf voordoet.
+
+CONTEXT: Daan fietst voorlopig niet, beschikbaarheid 0, planner leeg vanaf 2026-08-09 — **dat is
+geen defect.** Verse chat.
+
 STAND 2026-08-23 (TWEEDE BLOK VAN DEZE DAG) — PUNT 51 (1) EN (2) ZIJN AF, MAAR HET HARNAS IS NOG
 GEEN VANGNET: TWEE AFLEZINGEN STAAN OPEN EN DIE ZIJN JOUW EERSTE DAAD. Code-en-config-commit
 `e7c3e910`, CI success. NIET GEDEPLOYD — prod en D1 staan waar het blok hieronder ze noemt.
@@ -126,60 +205,6 @@ en NIET GEMETEN, dat een wissel het ijkaanbod drie weken onderdrukt.
 
 CONTEXT: Daan fietst voorlopig niet, beschikbaarheid 0, planner leeg vanaf 2026-08-09 — **dat is
 geen defect.** Verse chat.
-
-STAND 2026-08-23 — HET NORM-BESLUIT VAN PUNT 47 STAAT; DE BOUW STAAT OPEN; EN PUNT 51 SCHUIFT
-ERVOOR. Docs-only, geen code, geen engine, geen migratie, geen deploy. Prod en D1 staan waar het
-blok hieronder ze noemt.
-- **PUNT 47 — HET NORM-BESLUIT IS GENOMEN EN VASTGELEGD.** M89, M90 en M91 in
-  `docs/TRAININGSMODEL.md` §13, commit `18b749c4fbbb5086e0d1047002e8a2afb78ce811`. M89: aan het
-  eind van een blok staan TWEE vragen — IJKING (klopt de drempelwaarde nog) bij elk doel, DOELCHECK
-  (is dit doel vooruitgegaan) per doel. M90: de ijking hangt aan de doelblokgrens en is een
-  VOORSTEL, één per doelblok als heuristiek. M91: een afwijzing is geen meting — de app draagt de
-  ONGEIJKT-staat en zegt haar.
-- **DE CANON-TEGENSPRAAK UIT HET VORIGE BLOK BESTAAT NIET.** Dat blok stelde dat punt 47 en
-  `DOELEN-SPEC` §3.2 elkaar tegenspraken over de Onderhoud-maat. Punt 47 weerlegt zijn eigen
-  samenvallen-formulering TWEE ALINEA'S VERDER: daar staat dat "samenvallen" waar is over de METER
-  en onwaar over de VRAAG. De claim rustte dus op de EERSTE HELFT van het punt. HERKOMST-LES: die
-  zin was GEPIND HANDOFF en nooit GEPIND ROADMAP — een samenvatting die zichzelf als bron ging
-  gedragen. Wat wél openstaat is de MAAT uit §3.2, en dat is een bouwvraag. Zie
-  `docs/PUNT47-RECON.md` §0c.
-- **DE BOUW VAN 47 STAAT NOG OPEN**, met een open vraag die deze ronde is toegevoegd:
-  `blokStartBijDoel` herschrijft `doelStart` bij een doelwissel, terwijl poort (1) van
-  `buildTestVoorstel` blokweek gelijk aan `BLOK_WEKEN` eist. Vermoeden — herkomst CHAT, NIET
-  gemeten — dat een wissel het ijkaanbod drie weken onderdrukt, precies op het moment dat M90a het
-  vraagt. TE METEN in de bouw-recon, niet aan te nemen.
-- **PUNT 51 AANGEMAAKT EN VÓÓR 47 GEZET, als item 10 in *De volgorde*;** 47 en alles daarna schuift
-  één op. GROND: rangorde-principe (2) — eerst het ontbrekende vangnet, zodat elke ronde daarna
-  goedkoper is. Het punt draagt vier genummerde bouwstappen: de recon-subagent, de empirische
-  rules-toets, de `CLAUDE.md`-herschrijving en de hooks. De volgorde is op RISICO gezet en niet op
-  prijs.
-- **DE TWEE RECON-DOCUMENTEN, met hun gepinde RAW URL.**
-  `docs/PUNT47-RECON.md` op `18b749c4fbbb5086e0d1047002e8a2afb78ce811`:
-  https://raw.githubusercontent.com/daanhhk/Cadans/18b749c4fbbb5086e0d1047002e8a2afb78ce811/docs/PUNT47-RECON.md
-  `docs/GEREEDSCHAP-RECON.md` op `aca1cfc5f2720861b70101686c9bd1bac9a869c3`:
-  https://raw.githubusercontent.com/daanhhk/Cadans/aca1cfc5f2720861b70101686c9bd1bac9a869c3/docs/GEREEDSCHAP-RECON.md
-- **ZEVEN WERKWIJZE-REGELS ERBIJ** in `docs/WERKWIJZE.md`: de deliverable is een document en geen
-  terminaluitvoer; een claim die aan een letterlijke string hangt draagt die string; een prompt is
-  vraag, randvoorwaarde en deliverable en geen stappenlijst; verbatim krijgt een scope; de
-  vertakking gaat vooraf mee met de verwachting erop; CC doet zijn eigen boekhouding; en de
-  FOCUS-regel noemt het soort ronde. De derde AMENDEERT de bestaande regel dat een prompt een
-  "stap-instructie" is — die ging over de VORM (Nederlands proza, geen script) en dat blijft staan.
-- **VLOEREN NU: vitest-totaal 1010 over 78 bestanden · engine-selftest-assert-count 1772 ·
-  lint-waarschuwingen 20.** Herkomst RECON `aca1cfc5`. Onbewogen: docs-only. Lees ze zelf uit de
-  suite; neem ze niet over uit dit blok.
-- **OPENSTAAND, elk item opnieuw te greppen in `docs/ROADMAP.md`:** 32 · 34 (alleen (d)) · 35 · 47
-  · 48 · 49 · 51.
-
-FOCUS VOLGENDE CHAT: **BOUW-ronde — ROADMAP punt 51, stappen (1) en (2) in ÉÉN ronde.** De
-recon-subagent in `.claude/agents/`, en de empirische toets of `.claude/rules/` met een
-`paths`-frontmatter op versie `2.1.208` werkt. Die tweede is een TOETS en geen aanname: greppen
-beantwoordt de vraag niet, want rules zijn bestand-gebaseerd en hun afwezigheid in het
-settings-schema is de verwachte staat. Leg een weggooi-regel neer, raak een bestand op dat pad aan,
-lees af. Werkt het niet, dan is de terugval een subdirectory-`CLAUDE.md`. Stappen (3) en (4) komen
-daarna en elk apart — (4) pas ná een runtime-meting van de volle gate. CONTEXT: Daan is geopereerd
-en fietst voorlopig niet, de beschikbaarheid blijft 0, de planner-week is leeg vanaf 2026-08-09 —
-**dat is geen defect.** Er komt geen nieuwe ritdata binnen; elke meting draait op de bestaande
-historie of op een fixture. Verse chat.
 
 De oudere STAND-blokken en de historische projectsecties staan in `docs/HANDOFF-ARCHIEF.md`.
 Dit bestand draagt de TWEE nieuwste blokken; komt er een derde bij, dan schuiven de oudste in

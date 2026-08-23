@@ -11,6 +11,60 @@ of uit de publieke repo.
 De levende projectstand staat in `HANDOFF.md`. Dat bestand droeg tot 21-08-2026 de twaalf nieuwste
 STAND-blokken; sindsdien draagt het er TWEE, en schuift het oudste bij elke close-out hierheen.
 
+STAND 2026-08-23 — HET NORM-BESLUIT VAN PUNT 47 STAAT; DE BOUW STAAT OPEN; EN PUNT 51 SCHUIFT
+ERVOOR. Docs-only, geen code, geen engine, geen migratie, geen deploy. Prod en D1 staan waar het
+blok hieronder ze noemt.
+- **PUNT 47 — HET NORM-BESLUIT IS GENOMEN EN VASTGELEGD.** M89, M90 en M91 in
+  `docs/TRAININGSMODEL.md` §13, commit `18b749c4fbbb5086e0d1047002e8a2afb78ce811`. M89: aan het
+  eind van een blok staan TWEE vragen — IJKING (klopt de drempelwaarde nog) bij elk doel, DOELCHECK
+  (is dit doel vooruitgegaan) per doel. M90: de ijking hangt aan de doelblokgrens en is een
+  VOORSTEL, één per doelblok als heuristiek. M91: een afwijzing is geen meting — de app draagt de
+  ONGEIJKT-staat en zegt haar.
+- **DE CANON-TEGENSPRAAK UIT HET VORIGE BLOK BESTAAT NIET.** Dat blok stelde dat punt 47 en
+  `DOELEN-SPEC` §3.2 elkaar tegenspraken over de Onderhoud-maat. Punt 47 weerlegt zijn eigen
+  samenvallen-formulering TWEE ALINEA'S VERDER: daar staat dat "samenvallen" waar is over de METER
+  en onwaar over de VRAAG. De claim rustte dus op de EERSTE HELFT van het punt. HERKOMST-LES: die
+  zin was GEPIND HANDOFF en nooit GEPIND ROADMAP — een samenvatting die zichzelf als bron ging
+  gedragen. Wat wél openstaat is de MAAT uit §3.2, en dat is een bouwvraag. Zie
+  `docs/PUNT47-RECON.md` §0c.
+- **DE BOUW VAN 47 STAAT NOG OPEN**, met een open vraag die deze ronde is toegevoegd:
+  `blokStartBijDoel` herschrijft `doelStart` bij een doelwissel, terwijl poort (1) van
+  `buildTestVoorstel` blokweek gelijk aan `BLOK_WEKEN` eist. Vermoeden — herkomst CHAT, NIET
+  gemeten — dat een wissel het ijkaanbod drie weken onderdrukt, precies op het moment dat M90a het
+  vraagt. TE METEN in de bouw-recon, niet aan te nemen.
+- **PUNT 51 AANGEMAAKT EN VÓÓR 47 GEZET, als item 10 in *De volgorde*;** 47 en alles daarna schuift
+  één op. GROND: rangorde-principe (2) — eerst het ontbrekende vangnet, zodat elke ronde daarna
+  goedkoper is. Het punt draagt vier genummerde bouwstappen: de recon-subagent, de empirische
+  rules-toets, de `CLAUDE.md`-herschrijving en de hooks. De volgorde is op RISICO gezet en niet op
+  prijs.
+- **DE TWEE RECON-DOCUMENTEN, met hun gepinde RAW URL.**
+  `docs/PUNT47-RECON.md` op `18b749c4fbbb5086e0d1047002e8a2afb78ce811`:
+  https://raw.githubusercontent.com/daanhhk/Cadans/18b749c4fbbb5086e0d1047002e8a2afb78ce811/docs/PUNT47-RECON.md
+  `docs/GEREEDSCHAP-RECON.md` op `aca1cfc5f2720861b70101686c9bd1bac9a869c3`:
+  https://raw.githubusercontent.com/daanhhk/Cadans/aca1cfc5f2720861b70101686c9bd1bac9a869c3/docs/GEREEDSCHAP-RECON.md
+- **ZEVEN WERKWIJZE-REGELS ERBIJ** in `docs/WERKWIJZE.md`: de deliverable is een document en geen
+  terminaluitvoer; een claim die aan een letterlijke string hangt draagt die string; een prompt is
+  vraag, randvoorwaarde en deliverable en geen stappenlijst; verbatim krijgt een scope; de
+  vertakking gaat vooraf mee met de verwachting erop; CC doet zijn eigen boekhouding; en de
+  FOCUS-regel noemt het soort ronde. De derde AMENDEERT de bestaande regel dat een prompt een
+  "stap-instructie" is — die ging over de VORM (Nederlands proza, geen script) en dat blijft staan.
+- **VLOEREN NU: vitest-totaal 1010 over 78 bestanden · engine-selftest-assert-count 1772 ·
+  lint-waarschuwingen 20.** Herkomst RECON `aca1cfc5`. Onbewogen: docs-only. Lees ze zelf uit de
+  suite; neem ze niet over uit dit blok.
+- **OPENSTAAND, elk item opnieuw te greppen in `docs/ROADMAP.md`:** 32 · 34 (alleen (d)) · 35 · 47
+  · 48 · 49 · 51.
+
+FOCUS VOLGENDE CHAT: **BOUW-ronde — ROADMAP punt 51, stappen (1) en (2) in ÉÉN ronde.** De
+recon-subagent in `.claude/agents/`, en de empirische toets of `.claude/rules/` met een
+`paths`-frontmatter op versie `2.1.208` werkt. Die tweede is een TOETS en geen aanname: greppen
+beantwoordt de vraag niet, want rules zijn bestand-gebaseerd en hun afwezigheid in het
+settings-schema is de verwachte staat. Leg een weggooi-regel neer, raak een bestand op dat pad aan,
+lees af. Werkt het niet, dan is de terugval een subdirectory-`CLAUDE.md`. Stappen (3) en (4) komen
+daarna en elk apart — (4) pas ná een runtime-meting van de volle gate. CONTEXT: Daan is geopereerd
+en fietst voorlopig niet, de beschikbaarheid blijft 0, de planner-week is leeg vanaf 2026-08-09 —
+**dat is geen defect.** Er komt geen nieuwe ritdata binnen; elke meting draait op de bestaande
+historie of op een fixture. Verse chat.
+
 STAND 2026-08-22 (TWEEDE BLOK VAN DEZE DAG) — PUNT 50 IS AF EN LIVE: DE COACH BELOOFT BIJ ONDERHOUD
 GEEN TEST MEER DIE ER NOOIT KOMT. Code-commit `3a9d5458`, CI success. NIET GEDEPLOYD — prod en D1
 staan waar het blok hieronder ze noemt.
