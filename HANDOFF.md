@@ -13,6 +13,79 @@ live tot cutover.
 
 ## Stand
 
+STAND 2026-08-23 (TWEEDE BLOK VAN DEZE DAG) — PUNT 51 (1) EN (2) ZIJN AF, MAAR HET HARNAS IS NOG
+GEEN VANGNET: TWEE AFLEZINGEN STAAN OPEN EN DIE ZIJN JOUW EERSTE DAAD. Code-en-config-commit
+`e7c3e910`, CI success. NIET GEDEPLOYD — prod en D1 staan waar het blok hieronder ze noemt.
+- **HET AGENT-BESTAND STAAT, EN IS NOG GEEN VANGNET.** `.claude/agents/recon.md` draagt de
+  recon-helft van een ronde: `model: inherit`, `tools: Read, Glob, Grep, Bash, WebFetch`, en `Edit`
+  en `Write` er structureel UIT. DISCOVERY VRAAGT EEN HERSTART, en dat is gemeten, niet aangenomen.
+  De aanroep in dezelfde sessie gaf verbatim: `Agent type 'recon' not found. Available agents:
+  claude, claude-code-guide, Explore, general-purpose, Plan, statusline-setup`.
+- **DE TOOLS-BINDING EN HET BASH-RESTGAT ZIJN NIET GEMETEN — en dat is iets anders dan gemeten als
+  afwezig.** Of `Edit` en `Write` werkelijk ONBESCHIKBAAR zijn of slechts ontraden, en of `Bash`
+  het benoemde restgat werkelijk openlaat, is vanuit een sessie waarvan de registry ouder is dan
+  het bestand per constructie niet waarneembaar. **Lees dit niet als geregeld.** Het bestand
+  BESCHRIJFT de grens correct — `Edit` en `Write` structureel weg, `Bash` als discipline — maar
+  beschrijven is geen binden.
+- **DE FRONTMATTER IS AFGELEID, NIET GEGOKT.** Uit 24 echte agent-definities in de geïnstalleerde
+  plugins: `model: inherit` komt er zeven keer in voor, en de read-only tools-vorm bij drie
+  recon-achtige agents. `WebFetch` heet in drie definities zo en niet anders.
+- **RULES: DE DOCUMENTATIE ZEGT JA, DE EMPIRIE IS NIET GEDAAN.** Die twee mogen NERGENS tot één
+  uitspraak samenvouwen. Uit `https://code.claude.com/docs/en/memory`, verbatim: *"Rules can be
+  scoped to specific files using YAML frontmatter with the `paths` field. These conditional rules
+  only apply when Claude is working with files matching the specified patterns."* en *"Rules without
+  `paths` frontmatter are loaded at launch with the same priority as `.claude/CLAUDE.md`."* Twee
+  versiegrenzen staan er letterlijk bij — `v2.1.198` (symlink-matching) en `v2.1.211`
+  (`--setting-sources`) — en deze machine draait `2.1.208`, dus ertussen. DE IN-SESSIE AFLEZING WAS
+  NIET CONCLUSIEF: de merkstring verscheen niet, maar die sessie was ouder dan de map, en een
+  UITBLIJVENDE merkstring scheidt niet-geladen niet van geladen-maar-genegeerd. Verdict en
+  redenering staan in `docs/PUNT51-RULES-VERDICT.md`.
+- **HET INSTRUMENT `claude -p` IS VERVALLEN.** Verbatim: `Failed to authenticate: OAuth session
+  expired and could not be refreshed`. Een geneste sessie kan hier niet openen, dus de aflezing
+  rijdt op een ECHTE sessiegrens — dat wil zeggen: op jouw eerste bericht.
+- **DE WERKWIJZE-DIAGNOSE, en die mag niet verdampen.** RECON `aca1cfc5`: **173156 bytes** canon
+  over vier procesdocumenten, waarvan er feitelijk ÉÉN elke ronde gelezen wordt
+  (`docs/CC-CHECKS.md`, 17389 bytes), tegen **5801 bytes** die automatisch laden (`CLAUDE.md`). De
+  lessen zijn APPEND-ONLY en er is NOOIT een intrekkings-pas geweest; dat is de groeimotor en geen
+  incident. Punt 51 stap (3) is de plek waar dat gesnoeid wordt, en die stap draagt nu een maat
+  (wat blijft staan wordt ook gelezen) en een intrekkings-criterium.
+- **DE WANDKLOK VAN DE VOLLE GATE: 49 SECONDEN** — install 0s, lint 2s, typecheck 9s, test 25s,
+  build 13s. Op grond daarvan is stap (4) AFGEWAARDEERD: vijftig seconden blokkeren bij elke commit
+  terwijl CI hetzelfde vangt, koopt promptzuinigheid met wachttijd. De engine-deny-hook blijft wél
+  staan — die kost geen looptijd.
+- **NIEUW PUNT 52 — RECON EN BOUW IN ÉÉN RONDE, als eenmalige PROEF op punt 47.** Het
+  beoordelingscriterium is NIET "werkte het" maar of het ene rapport dezelfde bewijskracht draagt
+  nu het twee rondes werk draagt. Verdunt het, dan splitsen we terug, ook als de bouw slaagde.
+- **MEELIFTER GEDAAN.** `.gitignore` dekt nu `.claude/settings.local.json` en
+  `.claude/rules/_wegwerp-*.md` vanuit de REPO; `git check-ignore -v` wijst `.gitignore` aan en niet
+  de globale ignore van deze machine.
+- **DE TWEE WEGGOOI-REGELS LIGGEN KLAAR — hier staan hun literals, want jij leest dit blok en niet
+  het rapport.** Regel 1: `.claude/rules/_wegwerp-paths-probe.md`, merkstring
+  `RULESPATHS-MERKSTRING-K8T3WQ`, gescoopt op `packages/engine/src/zones.ts`. Regel 2:
+  `.claude/rules/_wegwerp-altijd-probe.md`, merkstring `RULESALTIJD-MERKSTRING-R5N9YB`, ZONDER
+  `paths`. Beide zijn genegeerd door de repo-regel en staan NIET in de commit.
+- **VLOEREN NU: vitest-totaal 1010 over 78 bestanden · engine-selftest-assert-count 1772 ·
+  lint-waarschuwingen 20.** Onbewogen: docs-en-config. Lees ze zelf uit de suite; neem ze niet over
+  uit dit blok.
+- **OPENSTAAND, elk item opnieuw te greppen in `docs/ROADMAP.md`:** 32 · 34 (alleen (d)) · 35 · 47
+  · 48 · 49 · 51 (alleen (3)) · 52.
+
+FOCUS VOLGENDE CHAT: **ROADMAP punt 47 — de blok-check valt in twee, ijking tegenover doelcheck.**
+BEGIN MET DE DRIELEDIGE AFLEZING ALS EERSTE DAAD, want die kost één bericht en geen ronde.
+**(a)** Wordt `.claude/agents/recon.md` nu wél ontdekt — staat `recon` in je lijst van agent-types?
+**(b)** BINDEN zijn tools: roep hem aan en laat hem rapporteren welke tools hij werkelijk heeft, of
+een `Write` ontbreekt dan wel faalt, en of `Bash` een schrijfpad blijft. **(c)** De rules-semantiek:
+verschijnt `RULESALTIJD-MERKSTRING-R5N9YB` aan het begin van je eerste antwoord (regel zonder
+`paths` laadt altijd), en verschijnt `RULESPATHS-MERKSTRING-K8T3WQ` zodra je
+`packages/engine/src/zones.ts` leest (path-scoped laadt op file-read)? Ruim beide regels daarna op.
+SLAAGT DIE AFLEZING, dan draait 47 als de EENMALIGE PROEF uit punt 52 — recon en bouw in één ronde,
+met een STRENGE stop-conditie. SLAAGT ZIJ NIET, dan draait 47 gesplitst en verschuift de proef.
+DE OPENSTAANDE MEETVRAAG VAN 47 staat bij het punt: `blokStartBijDoel` herschrijft `doelStart` bij
+een doelwissel terwijl poort (1) van `buildTestVoorstel` blokweek gelijk aan `BLOK_WEKEN` eist —
+VERMOEDEN, HERKOMST CHAT en NIET GEMETEN, dat een wissel het ijkaanbod drie weken onderdrukt.
+CONTEXT: Daan fietst voorlopig niet, beschikbaarheid 0, planner leeg vanaf 2026-08-09 — **dat is
+geen defect.** Verse chat.
+
 STAND 2026-08-23 — HET NORM-BESLUIT VAN PUNT 47 STAAT; DE BOUW STAAT OPEN; EN PUNT 51 SCHUIFT
 ERVOOR. Docs-only, geen code, geen engine, geen migratie, geen deploy. Prod en D1 staan waar het
 blok hieronder ze noemt.
@@ -66,60 +139,6 @@ daarna en elk apart — (4) pas ná een runtime-meting van de volle gate. CONTEX
 en fietst voorlopig niet, de beschikbaarheid blijft 0, de planner-week is leeg vanaf 2026-08-09 —
 **dat is geen defect.** Er komt geen nieuwe ritdata binnen; elke meting draait op de bestaande
 historie of op een fixture. Verse chat.
-
-STAND 2026-08-22 (TWEEDE BLOK VAN DEZE DAG) — PUNT 50 IS AF EN LIVE: DE COACH BELOOFT BIJ ONDERHOUD
-GEEN TEST MEER DIE ER NOOIT KOMT. Code-commit `3a9d5458`, CI success. NIET GEDEPLOYD — prod en D1
-staan waar het blok hieronder ze noemt.
-- **WAT ER GEBOUWD IS.** De `niet_meetbaar`-pool in `blokEffectRegel`
-  (`apps/web/src/lib/coachNarrative.ts`) splitst op `doelTak`; de `behoud`-tak draagt dezelfde twee
-  varianten met UITSLUITEND de belofte-zin eraf. `key` blijft aan beide kanten `niet_meetbaar`
-  zodat `seedIndex` in beide pools dezelfde index kiest — daarmee is het aantoonbaar dezelfde zin
-  met de belofte eraf en niet stilzwijgend de andere variant. Geen oordeelswijziging, geen poort
-  geraakt, geen engine. Drie bestanden, +28/−4 in de bron.
-- **ALLE DRIE DE WAT-ALS-VERWACHTINGEN HIELDEN.** Precies één cel bewoog — `Onderhoud` x
-  `niet_meetbaar` x gelegenheid=nee, `belooftTest` van true naar false — en de teller ging van 1
-  van de 14 naar 0 van de 14. `noemtTest` blijft daar `true`, want "geen test of wedstrijd" is een
-  CONSTATERING en geen belofte; dat is precies het onderscheid dat punt 50 maakt.
-- **DE NOEMER HOORT ERBIJ, EN HET ZIJN ER TWEE.** 1 van de 30 matrix-cellen, maar 100 procent van
-  de ECHTE Onderhoud-blokken: er staan 0 races en 0 test-overrides in de database, dus
-  `blokGelegenheid` geeft over de hele historie null. Wie alleen de eerste noemer rapporteert,
-  meldt een randgeval; wie alleen de tweede noemt, overdrijft de reikwijdte.
-- **NUL ASSERTIES BRAKEN, NIET TWEE — en de misrekening is leerzaam.** De chat verwachtte er twee,
-  op grond van een telling van 34 copy-asserties in `coachNarrative.test.ts`. De vier treffers op
-  de verwijderde zin bleken alle vier COMMENTAAR. Een assertie-telling per BESTAND is geen
-  blast-radius-maat voor één string; die vraag hoort op de ZIN geteld te worden. Staat als les in
-  `docs/WERKWIJZE-LESSEN.md`. De verwachting was conservatief en de stop-conditie zat aan de veilige
-  kant, dus het kostte niets — maar hij was op het verkeerde predicaat gemeten.
-- **DE POORT BLIJFT DICHT EN ZIJN GROND STAAT NU OPGESCHREVEN.** Poort (2) in
-  `apps/web/src/lib/testvoorstel.ts` ÍS `blokCheckEnabled` — dezelfde poort als punt 34 (d) — en
-  zijn commentaar beroept zich op `DOELEN-SPEC` §3.2 met "Onderhoud heeft geen effect-meter",
-  terwijl §3.2 daar juist wél een effect-maat vastlegt. Zes recon-bevindingen staan nu bij punt 47.
-- **DE CANON-TEGENSPRAAK DIE PUNT 47 EERST MOET OPLOSSEN, en die nergens stond.** De
-  punt-47-formulering zegt dat ijking en doelcheck bij FTP en Onderhoud SAMENVALLEN in de
-  20-minutentest. `DOELEN-SPEC` §3.2 legt als Onderhoud-effectmaat het beste 20-minutenvermogen
-  over ZES WEKEN vast — afgelezen, niet getest — en die maat bestaat NIET in code. DOELEN-SPEC gaat
-  vóór HANDOFF, dus vandaag wint §3.2. Punt 47 is niet te ontwerpen zonder een expliciet
-  Daan-besluit: §3.2 BEVESTIGEN en de maat bouwen, of §3.2 AMENDEREN. Stilzwijgend één van beide
-  volgen is drift.
-- **HET SPIEGELBEELD DRAAIT VANDAAG AL.** Bij Conditie, Korte en Lange beklimmingen zegt de copy
-  dat rolling FTP niet de maat is voor dat doel, terwijl de poort op diezelfde invoer een
-  20-minuten-FTP-test AANBIEDT. Gemeten, niet beredeneerd. Dat raakt Daan zodra hij naar Korte
-  beklimmingen schakelt.
-- **WAT DAAN MERKT.** Bij doel Onderhoud zonder test of wedstrijd belooft de coach geen test meer.
-  Verder niets — het doel staat op FTP.
-- **VLOEREN NU: vitest-totaal 1010 over 78 bestanden · engine-selftest-assert-count 1772 ·
-  lint-waarschuwingen 20**, afgelezen uit de gate van de bouwronde zelf. Het totaal steeg van 1007
-  door 3 nieuwe asserties — dekking, geen regressie. De selftest-vloer is ONBEWOGEN bij een lege
-  `git diff` op `packages/engine`. Lees ze zelf uit de suite; neem ze niet over uit dit blok.
-- **OPENSTAAND, elk item opnieuw te greppen in `docs/ROADMAP.md`:** 32 · 34 (alleen (d)) · 35 · 47 ·
-  48 · 49.
-
-FOCUS VOLGENDE CHAT: ROADMAP punt 47 — de blok-check valt in twee, ijking tegenover doelcheck.
-BEGIN BIJ DE CANON-TEGENSPRAAK hierboven; zonder dat besluit is er niets te ontwerpen, want het punt
-en `DOELEN-SPEC` §3.2 zeggen vandaag iets anders over dezelfde maat. Daarna pas de zes bevindingen
-die bij het punt staan. CONTEXT: Daan is geopereerd en fietst voorlopig niet, de beschikbaarheid
-blijft 0, en de planner-week is leeg vanaf 2026-08-09 — **dat is geen defect.** Er komt GEEN nieuwe
-ritdata binnen; elke meting draait op de bestaande historie of op een fixture. Verse chat.
 
 De oudere STAND-blokken en de historische projectsecties staan in `docs/HANDOFF-ARCHIEF.md`.
 Dit bestand draagt de TWEE nieuwste blokken; komt er een derde bij, dan schuiven de oudste in

@@ -1985,6 +1985,12 @@ punten staat onder *Gesloten — vindplaats*.
     deny-lijst in `.claude/settings.json` dwingt precies TWEE dingen machinaal af: de
     training-grens en `git push --force`. Al het andere — de engine-grens, de gate vóór de commit,
     de rapportvorm, de append-only nummering — hangt aan proza.
+    **WAARAAN DIT PUNT AF IS — GEHERFORMULEERD 23-08-2026, en de eerste formulering was te zwak.**
+    De opbrengst van de agent is NIET contextbesparing. Het knelpunt is het AANTAL HAND-OFFS PER
+    RONDE, niet de omvang van het contextvenster: een recon en een bouw kosten vandaag twee prompts,
+    twee wachtmomenten en twee keer opnieuw inlezen. De maat waaraan punt 51 af is, is dus of TWEE
+    RONDES TOT EEN INKLAPPEN. Levert het harnas een schoner venster op een even trage lus, dan is
+    het punt niet af maar duur. Zie het nieuwe proefpunt hieronder, dat precies dat toetst.
     VIER BOUWSTAPPEN, IN DEZE VOLGORDE. De volgorde is niet de prijs maar het RISICO: eerst wat
     zelfstandig toetsbaar is en niets kan breken, dan wat eerst gemeten moet worden.
     **(1) DE RECON-SUBAGENT in `.claude/agents/`.** EERST, om drie redenen. Hij is zelfstandig
@@ -1996,6 +2002,17 @@ punten staat onder *Gesloten — vindplaats*.
     slotbericht keert terug. Verbatim dat niet naar een document gaat, gaat dus verloren — precies
     wat *de deliverable is een document, niet terminaluitvoer* in `docs/WERKWIJZE.md` al eist. Die
     regel is de voorwaarde voor deze stap en niet een gevolg ervan.
+    **(1) IS GEDAAN per 23-08-2026, commit `e7c3e910` — MAAR HET IS NOG GEEN VANGNET.**
+    `.claude/agents/recon.md` staat er, met `model: inherit` en `tools: Read, Glob, Grep, Bash,
+    WebFetch`; `Edit` en `Write` zijn er bewust uit. De frontmatter is AFGELEID uit 24 echte
+    agent-definities in de geïnstalleerde plugins — `model: inherit` komt er zeven keer in voor, de
+    read-only tools-vorm bij drie recon-achtige agents — en dus niet gegokt. TWEE DINGEN BLIJVEN
+    STAAN. **Discovery vraagt een HERSTART:** de aanroep in dezelfde sessie gaf verbatim `Agent type
+    'recon' not found. Available agents: claude, claude-code-guide, Explore, general-purpose, Plan,
+    statusline-setup`. En **de tools-binding is NIET GEMETEN** — niet gemeten als afwezig, maar
+    onmeetbaar vanuit een sessie waarvan de registry ouder is dan het bestand. Of `Edit` en `Write`
+    werkelijk ONBESCHIKBAAR zijn of slechts ontraden, en of `Bash` het benoemde restgat werkelijk
+    openlaat, staat dus nog open. Beide worden afgelezen bij de opening van de volgende sessie.
     **(2) DE EMPIRISCHE RULES-TOETS.** Of `.claude/rules/` met een `paths`-frontmatter op versie
     `2.1.208` werkt is NIET vastgesteld, en de recon van 23-08-2026 kon dat ook niet vaststellen.
     LET OP DE REDENERING: het settings-schema kent geen `rules`-sleutel, maar rules zijn
@@ -2008,14 +2025,41 @@ punten staat onder *Gesloten — vindplaats*.
     OVERSLAAN, en dat impliceert dat meerdere CLAUDE.md-bestanden per pad geladen worden. Doelen
     voor de scope: `packages/engine` (autorisatie vereist) en de append-only nummering van
     `docs/TRAININGSMODEL.md`.
-    **(3) DE `CLAUDE.md`-HERSCHRIJVING, procedures naar skills.** DE DUURSTE STAP, en bewust NIET
-    eerst. Gemeten: `CLAUDE.md` is 5801 bytes over negen secties, ruwweg 2600 bytes FEIT tegen 3200
-    bytes PROCEDURE, en VIJF VAN DE NEGEN secties dragen allebei. Dat maakt dit HERSCHRIJVEN en
-    geen verhuizen — een sectie in tweeën knippen is een oordeel per zin. Bovendien is `CLAUDE.md`
-    juist het document dat WEL altijd laadt, dus een fout hier valt niet stil weg maar werkt elke
-    sessie door. EIS: een voor-en-na-controle dat er geen discipline stilzwijgend wegvalt. Zonder
-    die controle is de winst (een korter altijd-geladen document) niet te onderscheiden van verlies
-    (een regel die niemand meer leest).
+    **(2) IS BEANTWOORD DOOR DE DOCUMENTATIE, NIET DOOR DE EMPIRIE — en die twee blijven
+    GESCHEIDEN.** Zie `docs/PUNT51-RULES-VERDICT.md`, gemeten 23-08-2026. DE DOCUMENTATIE ZEGT JA:
+    `https://code.claude.com/docs/en/memory` draagt een eigen sectie over `.claude/rules/` met
+    `paths`-frontmatter, en de terugval naar een geneste `CLAUDE.md` is dus NIET nodig. Daarmee is
+    de verwachting van de chat omvergeworpen — de betere uitkomst. DE EMPIRIE IS NIET GEDAAN: de
+    weggooi-regel leverde geen merkstring op, maar die sessie was ouder dan de map en een
+    uitblijvende merkstring scheidt niet-geladen niet van geladen-maar-genegeerd. Het instrument
+    `claude -p` is bovendien VERVALLEN — `Failed to authenticate: OAuth session expired and could
+    not be refreshed` — dus de aflezing rijdt op een echte sessiegrens. Zolang die aflezing open
+    staat, geldt (2) als beantwoord-op-documentatie en niet als bevestigd.
+    **(3) DE SNOEI VAN DE WERKWIJZE-CANON — GEEN HERVERDELING.** HERGEFORMULEERD 23-08-2026; de
+    eerste versie ("procedures naar skills") beschreef een VERHUIZING, en dat is het niet.
+    DE DIAGNOSE, RECON `aca1cfc5`. De vier procesdocumenten zijn samen **173156 bytes** en laden
+    GEEN VAN VIER automatisch. In de praktijk wordt er feitelijk ÉÉN elke ronde gelezen —
+    `docs/CC-CHECKS.md`, 17389 bytes — omdat elk prompt erom vraagt; de andere drie worden zelden
+    of nooit geopend. Wat wél automatisch laadt is `CLAUDE.md`, 5801 bytes. **Een regel die niemand
+    leest, werkt niet**, en een canon die alleen kan groeien produceert die regels vanzelf: de
+    lessen zijn append-only en er is nooit een intrekkings-pas geweest. Dat is de groeimotor, geen
+    incident.
+    DE MAAT OM OP TE STUREN: de werkwijze die feitelijk IN FORCE is, past in wat een sessie ook
+    echt laadt. Niet "korter", maar: wat blijft staan wordt ook gelezen.
+    HET INTREKKINGS-CRITERIUM, want zonder pas is er geen snoei. Een regel gaat naar het archief
+    als (i) zij MECHANISCH is afgedwongen — een deny-regel, een hook, een test — en de proza-versie
+    dus niets meer toevoegt; of (ii) zij is OPGESLOKT door `docs/CC-CHECKS.md`, waar zij als
+    draaibare check staat; of (iii) zij in de laatste rondes NERGENS is aangeroepen. Archiveren, niet
+    schrappen: de aanleiding draagt het getal waarop de regel rust en dat gaat nooit weg.
+    DE VRAAG DIE DE PARTITIE BESLIST EN VANDAAG ONBEANTWOORD IS: **laadt een regel ZONDER `paths`
+    altijd?** De documentatie zegt van wel — "Rules without `paths` frontmatter are loaded at launch
+    with the same priority as `.claude/CLAUDE.md`" — maar dat is niet empirisch bevestigd. Klopt
+    het, dan is `.claude/rules/` vooral ORGANISATIE en is `paths` de zuinigheid; klopt het niet,
+    dan is `paths` de enige manier om iets in context te krijgen en verandert de hele partitie. Die
+    aflezing hoort bij de opening van de volgende sessie.
+    BLIJFT STAAN uit de eerste versie: `CLAUDE.md` draagt 5801 bytes over negen secties, ruwweg 2600
+    FEIT tegen 3200 PROCEDURE, en VIJF VAN DE NEGEN dragen allebei — dus een sectie knippen is een
+    oordeel per zin. EIS: een voor-en-na-controle dat er geen discipline stilzwijgend wegvalt.
     **(4) HOOKS, EN PAS NA EEN RUNTIME-METING VAN DE VOLLE GATE.** Stel de diagnose scherp: de gate
     ONTBREEKT NIET — hij draait in `.github/workflows/ci.yml`, alle vier de stappen. Wat ontbreekt
     is BLOKKERING: CI draait ná de push en kan een rode commit alleen melden. De winst van een
@@ -2026,9 +2070,42 @@ punten staat onder *Gesloten — vindplaats*.
     leg dat getal naast wat een prompt-regel kost. De engine-deny-hook staat hier los van en is wél
     veiligheid: die maakt van de autorisatie-regel een `PreToolUse`-deny in plaats van een belofte,
     en kost per constructie geen looptijd.
-    WAT DIT PUNT NIET IS. Het is geen opruiming van de procesdocumenten. De vier documenten samen
-    zijn 173156 bytes en laden GEEN VAN VIER automatisch; dat is een risico en geen sessieprijs, en
-    het verkleinen ervan is een aparte vraag (zie punt 46 voor hoe die eerder liep).
+    **(4) IS AFGEWAARDEERD per 23-08-2026, op de eigen meting.** RECON `e7c3e910`: de volle gate
+    kost **49 seconden** — install 0s, lint 2s, typecheck 9s, test 25s, build 13s. Vijftig seconden
+    blokkeren bij ELKE commit, terwijl CI hetzelfde al vangt en Daan de gate-uitvoer sowieso in het
+    rapport leest, is de zwakste van de vier stappen: hij koopt promptzuinigheid met wachttijd bij
+    elke commit, inclusief die van een docs-only ronde waar niets te breken valt. ADVIES —
+    HERKOMST CHAT, NIET GEMETEN: de gate-hook NIET bouwen, of hoogstens CONDITIONEEL op een
+    niet-lege bron-diff over `packages`, `apps` en `workers`. Die conditie is geen bedenksel: ze
+    draaide deze ronde al als handmatige controle en gaf leeg. DE ENGINE-DENY-HOOK BLIJFT WEL
+    STAAN en is niet afgewaardeerd — die kost geen looptijd en is echte veiligheid.
+    WAT DIT PUNT NIET IS. Het is geen opruiming van de procesdocumenten — dat is stap (3) hierboven
+    en die heeft zijn eigen maat en zijn eigen intrekkings-criterium. Zie punt 46 voor hoe een
+    eerdere ronde op ditzelfde materiaal liep.
+52. **Recon en bouw in ÉÉN ronde — een PROEF, eenmalig** — open · TOOLING plus norm. Daan-besluit
+    23-08-2026. DE VRAAG: kan een ronde die vandaag TWEE prompts kost er ÉÉN worden? De opstelling:
+    de recon-agent uit punt 51 (1) als read-only meetinstrument, en de WAT-ALS niet als voorspelling
+    maar als **VOOR-AUTORISATIE**. CC meet, leest zijn eigen bevindingen, en bouwt in dezelfde
+    sessie door zolang de verwachting HOUDT; valt zij om, dan stopt hij en rapporteert.
+    STATUS: PROEF, EENMALIG, OP PUNT 47. Niet als nieuwe werkwijze, niet uitgerold, en na afloop
+    beoordeeld. VOORWAARDE: de aflezing bij de opening van de volgende sessie moet EERST laten zien
+    dat de agent ontdekt wordt ÉN dat zijn tools binden. Lukt dat niet, dan draait 47 gewoon
+    gesplitst en verschuift de proef naar de eerstvolgende ronde die er geschikt voor is.
+    WAAROM DE PROEF NIETS KOST. Bij een strenge stop-conditie is het SLECHTSTE geval dat CC na de
+    recon stopt en rapporteert — en dat is precies de uitkomst van een gesplitste ronde. Er is dus
+    geen scenario waarin de proef duurder uitvalt dan wat er vandaag al gebeurt; er is alleen een
+    scenario waarin hij niets oplevert.
+    **HET BEOORDELINGSCRITERIUM, en het is NIET "werkte het".** Dat het lukt zegt niets: een ronde
+    die doorloopt kan een ronde zijn die zijn bewijslast heeft laten vallen. De vraag is of het ENE
+    rapport nog DEZELFDE BEWIJSKRACHT draagt nu het twee rondes werk moet dragen: herkomst per
+    getal, noemers mét hun uitsluitingen, letterlijke strings waar een claim eraan hangt, en "niet
+    gemeten" nog steeds gescheiden van "gemeten als afwezig". VERDUNT het rapport, dan splitsen we
+    terug — ook als de bouw geslaagd is. Dit criterium staat hier opgeschreven omdat het de ENIGE
+    manier is waarop deze proef kan mislukken zonder dat het opvalt: een dunner rapport leest als
+    een vlottere ronde.
+    RAAKVLAK MET PUNT 51: dit is de toets op de maat die punt 51 zichzelf stelt — twee rondes tot
+    één inklappen. Slaagt de proef, dan is die maat gehaald; slaagt zij niet, dan levert punt 51 een
+    schoner venster op een even trage lus en is dat een bevinding en geen mislukking.
 
 ## De tijdslijn
 
@@ -2293,7 +2370,13 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
     genomen (M89 t/m M91), dus 47 wacht op een BOUW en niet op een beslissing — en die bouw raakt
     een poort, een klok en de copy tegelijk. Precies de ronde waarin een engine-deny-hook en een
     blokkerende gate hun geld opleveren. Gemeten in `docs/GEREEDSCHAP-RECON.md`. VIER BOUWSTAPPEN
-    bij het punt zelf; **(1) en (2) horen in ÉÉN ronde**, (3) en (4) elk apart en daarna.
+    bij het punt zelf. **(1) EN (2) ZIJN AF per 23-08-2026, commit `e7c3e910`** — met twee
+    aflezingen open: agent-discovery plus tools-binding, en de rules-empirie. **(4) IS AFGEWAARDEERD**
+    op de eigen runtime-meting (49s). Wat rest is (3), de SNOEI van de canon, en die heeft nu een
+    maat en een intrekkings-criterium.
+10b. **52** — recon en bouw in ÉÉN ronde, als eenmalige PROEF op punt 47. Draait MET 47 mee en niet
+    ervoor: het is een vorm-experiment op een bestaande ronde, geen eigen bouw. Voorwaarde is de
+    aflezing bij de sessie-opening; faalt die, dan draait 47 gesplitst en verschuift de proef.
 11. **47** — de check valt in twee: ijking bij elk doel, doelcheck per doel. **HET NORM-BESLUIT IS
     GENOMEN (22-08-2026): M89 t/m M91 in `docs/TRAININGSMODEL.md` §13.** Wat rest is de BOUW, en
     die begint bij de open vraag over de doelwissel die bij het punt staat. De eerder genoemde

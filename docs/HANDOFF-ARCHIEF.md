@@ -11,6 +11,64 @@ of uit de publieke repo.
 De levende projectstand staat in `HANDOFF.md`. Dat bestand droeg tot 21-08-2026 de twaalf nieuwste
 STAND-blokken; sindsdien draagt het er TWEE, en schuift het oudste bij elke close-out hierheen.
 
+STAND 2026-08-22 (TWEEDE BLOK VAN DEZE DAG) — PUNT 50 IS AF EN LIVE: DE COACH BELOOFT BIJ ONDERHOUD
+GEEN TEST MEER DIE ER NOOIT KOMT. Code-commit `3a9d5458`, CI success. NIET GEDEPLOYD — prod en D1
+staan waar het blok hieronder ze noemt.
+- **WAT ER GEBOUWD IS.** De `niet_meetbaar`-pool in `blokEffectRegel`
+  (`apps/web/src/lib/coachNarrative.ts`) splitst op `doelTak`; de `behoud`-tak draagt dezelfde twee
+  varianten met UITSLUITEND de belofte-zin eraf. `key` blijft aan beide kanten `niet_meetbaar`
+  zodat `seedIndex` in beide pools dezelfde index kiest — daarmee is het aantoonbaar dezelfde zin
+  met de belofte eraf en niet stilzwijgend de andere variant. Geen oordeelswijziging, geen poort
+  geraakt, geen engine. Drie bestanden, +28/−4 in de bron.
+- **ALLE DRIE DE WAT-ALS-VERWACHTINGEN HIELDEN.** Precies één cel bewoog — `Onderhoud` x
+  `niet_meetbaar` x gelegenheid=nee, `belooftTest` van true naar false — en de teller ging van 1
+  van de 14 naar 0 van de 14. `noemtTest` blijft daar `true`, want "geen test of wedstrijd" is een
+  CONSTATERING en geen belofte; dat is precies het onderscheid dat punt 50 maakt.
+- **DE NOEMER HOORT ERBIJ, EN HET ZIJN ER TWEE.** 1 van de 30 matrix-cellen, maar 100 procent van
+  de ECHTE Onderhoud-blokken: er staan 0 races en 0 test-overrides in de database, dus
+  `blokGelegenheid` geeft over de hele historie null. Wie alleen de eerste noemer rapporteert,
+  meldt een randgeval; wie alleen de tweede noemt, overdrijft de reikwijdte.
+- **NUL ASSERTIES BRAKEN, NIET TWEE — en de misrekening is leerzaam.** De chat verwachtte er twee,
+  op grond van een telling van 34 copy-asserties in `coachNarrative.test.ts`. De vier treffers op
+  de verwijderde zin bleken alle vier COMMENTAAR. Een assertie-telling per BESTAND is geen
+  blast-radius-maat voor één string; die vraag hoort op de ZIN geteld te worden. Staat als les in
+  `docs/WERKWIJZE-LESSEN.md`. De verwachting was conservatief en de stop-conditie zat aan de veilige
+  kant, dus het kostte niets — maar hij was op het verkeerde predicaat gemeten.
+- **DE POORT BLIJFT DICHT EN ZIJN GROND STAAT NU OPGESCHREVEN.** Poort (2) in
+  `apps/web/src/lib/testvoorstel.ts` ÍS `blokCheckEnabled` — dezelfde poort als punt 34 (d) — en
+  zijn commentaar beroept zich op `DOELEN-SPEC` §3.2 met "Onderhoud heeft geen effect-meter",
+  terwijl §3.2 daar juist wél een effect-maat vastlegt. Zes recon-bevindingen staan nu bij punt 47.
+- **DE CANON-TEGENSPRAAK DIE PUNT 47 EERST MOET OPLOSSEN, en die nergens stond.** De
+  punt-47-formulering zegt dat ijking en doelcheck bij FTP en Onderhoud SAMENVALLEN in de
+  20-minutentest. `DOELEN-SPEC` §3.2 legt als Onderhoud-effectmaat het beste 20-minutenvermogen
+  over ZES WEKEN vast — afgelezen, niet getest — en die maat bestaat NIET in code. DOELEN-SPEC gaat
+  vóór HANDOFF, dus vandaag wint §3.2. Punt 47 is niet te ontwerpen zonder een expliciet
+  Daan-besluit: §3.2 BEVESTIGEN en de maat bouwen, of §3.2 AMENDEREN. Stilzwijgend één van beide
+  volgen is drift.
+  **[ACHTERHAALD 23-08-2026 — zie `docs/PUNT47-RECON.md` §0c: deze tegenspraak bestaat niet. Punt 47
+  weerlegt zijn eigen samenvallen-formulering twee alinea's verder; de claim rustte op de eerste
+  helft van het punt. Wat wél openstaat is de MAAT, en dat is een bouwvraag. Blok ongewijzigd
+  gelaten: een STAND-blok is een momentopname.]**
+- **HET SPIEGELBEELD DRAAIT VANDAAG AL.** Bij Conditie, Korte en Lange beklimmingen zegt de copy
+  dat rolling FTP niet de maat is voor dat doel, terwijl de poort op diezelfde invoer een
+  20-minuten-FTP-test AANBIEDT. Gemeten, niet beredeneerd. Dat raakt Daan zodra hij naar Korte
+  beklimmingen schakelt.
+- **WAT DAAN MERKT.** Bij doel Onderhoud zonder test of wedstrijd belooft de coach geen test meer.
+  Verder niets — het doel staat op FTP.
+- **VLOEREN NU: vitest-totaal 1010 over 78 bestanden · engine-selftest-assert-count 1772 ·
+  lint-waarschuwingen 20**, afgelezen uit de gate van de bouwronde zelf. Het totaal steeg van 1007
+  door 3 nieuwe asserties — dekking, geen regressie. De selftest-vloer is ONBEWOGEN bij een lege
+  `git diff` op `packages/engine`. Lees ze zelf uit de suite; neem ze niet over uit dit blok.
+- **OPENSTAAND, elk item opnieuw te greppen in `docs/ROADMAP.md`:** 32 · 34 (alleen (d)) · 35 · 47 ·
+  48 · 49.
+
+FOCUS VOLGENDE CHAT: ROADMAP punt 47 — de blok-check valt in twee, ijking tegenover doelcheck.
+BEGIN BIJ DE CANON-TEGENSPRAAK hierboven; zonder dat besluit is er niets te ontwerpen, want het punt
+en `DOELEN-SPEC` §3.2 zeggen vandaag iets anders over dezelfde maat. Daarna pas de zes bevindingen
+die bij het punt staan. CONTEXT: Daan is geopereerd en fietst voorlopig niet, de beschikbaarheid
+blijft 0, en de planner-week is leeg vanaf 2026-08-09 — **dat is geen defect.** Er komt GEEN nieuwe
+ritdata binnen; elke meting draait op de bestaande historie of op een fixture. Verse chat.
+
 STAND 2026-08-22 — PUNT 34 IS GEBOUWD EN LIVE IN MAIN, MET ÉÉN UITZONDERING: (d) BLIJFT DICHT EN
 ZIJN EIGEN VOORWAARDE IS WEERLEGD. Code-commit `8a95f52`, CI success. NIET GEDEPLOYD — prod en D1
 staan waar het blok hieronder ze noemt.
