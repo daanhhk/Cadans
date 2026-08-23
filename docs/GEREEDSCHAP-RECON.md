@@ -236,7 +236,12 @@ Vastgesteld uit de eigen CLI-hulp en het gepubliceerde settings-schema
   directory-gescopeerde skills noemt (`apps/web:deploy`) — maar het exacte projectpad is in DEZE
   ronde niet uit de documentatie bevestigd.
 - **Path-scoped rules in `.claude/rules/`: NIET VASTGESTELD, en waarschijnlijk niet de juiste
-  vorm.** Het woord `rules` komt in `claude --help` niet voor, en het settings-schema heeft geen
+  vorm.** **[ACHTERHAALD op 23-08-2026 — zie `docs/PUNT51-RULES-VERDICT.md`.** De grond hieronder
+  klopt en blijft staan, maar de conclusie eraan is WEERLEGD: `.claude/rules/` met een
+  `paths`-frontmatter is een ondersteunde, gedocumenteerde feature. De officiële documentatie op
+  `https://code.claude.com/docs/en/memory` draagt er een eigen sectie over. De alinea hieronder
+  blijft ONGEWIJZIGD staan omdat dit document op zijn eigen ronde gepind is; de correctie hoort bij
+  de ronde die haar mat en niet bij deze.] Het woord `rules` komt in `claude --help` niet voor, en het settings-schema heeft geen
   top-level `rules`-sleutel (142 sleutels gecontroleerd). Wat het schema WEL draagt is
   `claudeMdExcludes`, met de beschrijving *"Glob patterns for CLAUDE.md files to exclude from
   loading. Useful in monorepos to skip irrelevant instructions from other teams. Patterns match

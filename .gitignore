@@ -14,3 +14,10 @@ tools/shots/out-prod/
 tools/shots/out-prod-vorige/
 tools/shots/seed-backup.json
 tools/shots/.prod-auth
+
+# CC-harnas (ROADMAP punt 51). Per-machine permissie-state, 47878 bytes en groeiend: hoort niet in
+# de repo. Stond tot 23-08-2026 alleen in de GLOBALE git-ignore van één machine, dus op een verse
+# kloon zou `git add -A` hem gewoon meenemen. Deze regel staat er zodat de repo zichzelf dekt.
+.claude/settings.local.json
+# Weggooi-regels van de rules-toets: aanmaken, meten, verwijderen — nooit committen.
+.claude/rules/_wegwerp-*.md
