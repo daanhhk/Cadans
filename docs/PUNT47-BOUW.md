@@ -1540,4 +1540,370 @@ container op `2.1.241` lukte en op deze machine op `2.1.208` nog nooit.
 **GESLOTEN:** de herkansings-vraag bij punt 55, beantwoord met NEE. Punt **58** is afgesloten — de
 vloer is herafgeleid en staat niet meer zes dagen te hoog.
 
+---
+
+# RONDE 5 — 23-08-2026: de poortlaag dicht en de bevestig-uitgang erin
+
+Eerste ronde van deze reeks die de WORKER en een MIGRATIE raakt.
+
+## 26. Omgevingsverklaring
+
+Vóór alles gerapporteerd; er stond met opzet geen vaste `cd`-regel in de prompt en er is niet
+ge-`cd`'d.
+
+- **Werkpad:** `/c/Users/daan/Projects/cadans`. **Worktree:** NEE — `git rev-parse --git-dir` en
+  `--git-common-dir` geven allebei `.git`. **Branch:** `main`, remote
+  `https://github.com/daanhhk/Cadans.git`. **Achterstand:** `0` en `0`. **Versie:**
+  `2.1.208 (Claude Code)`. Boom schoon bij aanvang. Geen STOP-conditie geraakt.
+- **AGENT EN RULES-PROBES: NIET GEMETEN, en er is niet naar gezocht.** Deze sessie is ouder dan
+  `.claude/agents/recon.md` en ouder dan de probes; beide vragen zijn hier per constructie
+  onbeantwoordbaar.
+
+## 27. Wat er gebouwd is
+
+**(a) HET VENSTER VAN POORT (3) IS UITGELIJND OP DE OPENING.** Was `[blokStart, blokStart + 28)`,
+is nu vier weken die EINDIGEN met de aanbodweek:
+
+```
+  const vensterStart = shiftIso_(blokStart, -(BLOK_WEKEN - 1) * 7);
+  const vensterEind = shiftIso_(blokStart, 7);
+```
+
+`blokStart` blijft ongemoeid als afwijs-sleutel; die twee waren tot deze ronde dezelfde grootheid,
+en precies daarom sloeg de richting stilzwijgend om toen het aanbod in ronde 4 verhuisde. **Niet het
+hele doelblok als venster**, want dan zou een geaccepteerde en gereden test van de vorige opening —
+84 dagen terug — de volgende opening dichtzetten terwijl poort (7) hem juist correct doorlaat.
+
+**(b) DE SPRONG IS UIT DE IJK-POORT.** `laatsteGelegenheid` draagt een nieuwe optionele vlag
+`negeerSprong`, en poort (7) zet hem:
+
+```
+    negeerSprong: true,
+```
+
+**Een vlag en geen verwijdering, en dat is opzet.** `laatsteGelegenheid` heeft DRIE aanroepers
+(rechtgezet 23-08-2026, zie §31b punt 12; deze regel telde er twee en noemde een functie die niet
+bestaat): poort (7) en `ijkStatus`, allebei MET de vlag, én `buildBlokReview` in
+`apps/web/src/lib/blok.ts`, dat er de terugblik-copy mee voedt
+("je ging voor het laatst vol op X; je rolling FTP sprong daar omhoog"). Die tweede leest de functie
+ZONDER vlag en verandert dus niet. De sprong blijft INFORMANT — M91 verbiedt onderdrukken, niet
+informeren (M17, M30). `sprongDagen` zelf is onaangeroerd en houdt daarmee zijn consument, dus er is
+niets dood komen te staan.
+
+**(c) DE DRIE UITGANGEN, met een geheugen dat een herstart overleeft.** Twee kolommen op
+`sync_state` in het bestaande per-blok-idiom, naast `dosis_trede_blok`, `event_overname_blok` en
+`doel_passend_blok`: `ijking_blok` (de openingsmaandag) en `ijking_antwoord` (`'bevestigd'` of
+`'niet_nu'`). **Inplannen schrijft daar NIETS** — dat pad loopt via de bestaande override-keten, en
+een geplande test ziet poort (3) al. Alleen de twee antwoorden die géén override opleveren hebben
+een eigen geheugen nodig.
+
+De POORT staat in de PURE laag, als poort (2b) in `buildTestVoorstel`, en niet meer in de component:
+
+```
+  if (
+    input.ijkingBeantwoordBlok != null &&
+    input.ijkingBeantwoordBlok === blokStart
+  ) {
+    return null;
+  }
+```
+
+**DE VLUCHTIGE MODULE-SET IS WEG.** Zij stond in `TestVoorstelCard.tsx` als
+`const afgewezen = new Set<string>();` met `isTestVoorstelAfgewezen`, overleefde een remount na sync
+maar geen app-herstart, en `SchemaView.tsx` las haar in de render-guard. Alle drie zijn verdwenen;
+twee antwoorden op één vraag wonen nu op één plek.
+
+**(d) DE ZICHTBAARHEID.** `ijkStatus` in dezelfde pure laag levert vier velden: `bevestigd`,
+`ongeijkt`, `laatsteMeting` en `blokkenOud`. `ijkStaatRegel` in `coachNarrative.ts` maakt er een
+sobere regel van die NAAST het aanbod staat en blijft staan als het aanbod weg is — dat is de
+zichtbaarheid die M91 vraagt. Geen waarschuwing, geen tweede vraag.
+
+**DE TELLER VRAAGT GEEN EIGEN OPSLAG, en dat is een afwijking van de letter van besluit vier die
+hier verantwoord wordt.** Besluit vier vraagt om opeenvolgende bevestigingen te tellen en zichtbaar
+te maken dat de drempelwaarde meerdere blokken oud is. Het tweede is het doel, het eerste het
+middel. De LEEFTIJD volgt uit `laatsteGelegenheid` met `negeerSprong: true` — dagen sinds de laatste
+ECHTE maximale inspanning, gedeeld door de doelbloklengte — en die maat is beter dan een teller: hij
+telt óók de blokken waarin de gebruiker niets heeft geantwoord, en die zijn net zo goed ongemeten.
+Wil Daan een letterlijke bevestigings-teller, dan is dat één kolom erbij en een vervolgronde.
+
+**(e) DE NIEUWE EN GEWIJZIGDE STRINGS, verbatim.** Nieuw:
+`"Mijn waarde klopt nog"` (`testBevestigLabel`);
+`"Heb je je drempel zelf al bijgesteld? Dan hoef je niet te testen — bevestig 'm en ik reken dit blok daarmee."`
+(`testBevestigUitleg`); en de vier vormen van `ijkStaatRegel` —
+`"Je hebt je drempel bevestigd, niet gemeten."`, `"Je drempel is dit blok niet geijkt."`,
+`"Je drempel is een blok oud."` / `"Je drempel is N blokken oud."`,
+`"Ik heb je drempel nog nooit gemeten."` en het achtervoegsel
+`" Voor het laatst gemeten op <datum>."` GEWIJZIGD: geen. `testAanbodRegel`, `testAfwijsLabel`
+(`"Niet dit blok"`) en `testBadgeLabel` (`"FTP-test gepland"`) blijven ongemoeid. Alles Nederlands,
+alles voorwaardelijk: geen enkele string claimt een handeling die de app al gedaan heeft.
+
+**(f) ONAANGEROERD:** poort (1), poort (1b), `TEST_INTERVAL_DAGEN` (77),
+`WEDSTRIJD_HORIZON_DAGEN` (28), `sprongDagen`, de afwijs-sleutel, en de engine
+(`git diff --stat packages/engine` leeg). Geen deploy, geen remote-D1-mutatie.
+
+## 28. De migratie — binnen de grens
+
+`workers/api/drizzle/0011_handy_the_hunter.sql`, gegenereerd met `drizzle-kit generate`, forward-only
+en in zijn geheel:
+
+```
+ALTER TABLE `sync_state` ADD `ijking_blok` text;--> statement-breakpoint
+ALTER TABLE `sync_state` ADD `ijking_antwoord` text;
+```
+
+**Eén migratie, twee kolommen, geen nieuwe tabel, geen wijziging aan een bestaande kolom.** De
+schrijfkant is een `onConflictDoUpdate` die uitsluitend deze twee kolommen zet — geen volle rij op
+`sync_state`, want die rij is gedeeld. Er staan twee tests op die dat van beide kanten toetsen: de
+PUT laat `dosis_trede`, `power_zones_json` en `doel_passend_*` intact, en een schrijfactie op een
+buurman laat het ijkantwoord staan. Remote D1 is NIET aangeraakt; alles lokaal tegen miniflare.
+
+## 29. De vier verwachtingen
+
+**HET ORAKEL EN DE TAKKEN, want zonder die twee telt geen enkel getal.**
+
+Het orakel voor "is deze weekmaandag een doelblok-opening" is ONAFHANKELIJK van de poort. Ronde 4
+telde met `mp.week === 1` — hetzelfde predicaat als de poort — en zo'n teller kan per constructie
+niet oplopen. Hier komt het uit de KALENDER: het aantal hele weken tussen de maandag van `doelStart`
+en de weekmaandag, deelbaar door twaalf en niet negatief. `computeMacroPhase` komt er niet in voor.
+
+De takken zijn niet beweerd maar GEVERIFIEERD vóór elke meting: `sprongDagen` vindt 4 sprongen op de
+gebruikte reeks, `laatsteGelegenheid` geeft `{"bron":"race","datum":"2026-05-21"}` op de race-tak en
+`{"bron":"test","datum":"2026-05-21"}` op de test-tak. Alle drie LEVEN.
+
+### Z1 — HOUDT
+
+Over 20 ketens van 260 weken, 440 openingen per variant:
+
+```
+  VOOR (venster vooruit, sprong onderdrukt) : 271 aanbiedingen op 440 openingen = 0,616 per opening
+                                              MAX 1 · buiten een opening 0 · dekking  61,6% · gat 140,5
+  NA   (venster terug, sprong eruit)        : 440 aanbiedingen op 440 openingen = 1,000 per opening
+                                              MAX 1 · buiten een opening 0 · dekking 100,0% · gat  84,0
+```
+
+Hoogstens één aanbod per opening: het MAXIMUM is 1 in elke gemeten variant, en nul aanbiedingen
+vallen buiten een opening. Dekking en wachttijd verslechteren niet — ze verbeteren van 61,6 procent
+bij 140,5 dagen naar 100,0 procent bij 84,0.
+
+> **DRIE CORRECTIES OP DEZE TABEL, uit de weerleggingspas van 23-08-2026 (§31b).**
+> (i) De winst van 271 naar 440 komt **volledig van ingreep (b)**, de sprong uit de ijk-poort.
+> Apart gemeten geeft alleen (a) exact de VOOR-rij en alleen (b) exact de NA-rij; de twee ingrepen
+> repareren verschillende gevallen. (ii) "MAX 1" en "buiten een opening 0" staan óók in de
+> VOOR-rijen: ze worden gedragen door poort (1), die deze ronde niet is aangeraakt, en de meetlus
+> roept per weekmaandag één keer aan — beide getallen kunnen hier per constructie niet anders
+> uitvallen. De hoogstens-één-eigenschap ná een antwoord is apart gemeten op dagniveau (§31b punt
+> 10). (iii) Het orakel is code-onafhankelijk maar predikaat-identiek aan poort (1)+(1b), dus
+> "buiten een opening 0" is hier een tautologie en geen meting.
+
+**EN HET GEVAL DAT RONDE 4 OPENLIET, dicht.** Met een NIET-GEREDEN test 10 dagen vóór elke opening
+geeft de gebouwde bron **0 aanbiedingen op 440 openingen**; vóór de ingreep waren dat er 271. Dat is
+precies wat besluit één vraagt: een reeds ingepland maar niet gereden testaanbod onderdrukt een nieuw
+aanbod. Hier draagt (a) alles en (b) niets — de spiegel van de tabel hierboven.
+
+**EEN FIXTURE-KOPPELING DIE ERBIJ HOORT.** De rij "5 dagen vóór de opening" is uit deze paragraaf
+GESCHRAPT en dat is een correctie, geen verkorting. De achtergrondritten liggen op woensdag
+(`i * 7 + 2`) en `opening − 5` is óók een woensdag, dus die "niet-gereden" test was bij 21 van de 22
+openingen per keten WEL gereden — de rij toetste het tegenovergestelde van haar label en verklaart
+precies de 420 van 440 die er stond. `opening − 10` valt op vrijdag en is aantoonbaar niet gereden;
+de hermeting van 23-08-2026 telt de rit-botsingen expliciet en komt op **0**. Zie §31b punt 11.
+
+### Z2 — HOUDT
+
+Eén ding per probe: alleen de sprong-vlag verschilt, het venster staat in beide standen op NA.
+
+```
+  sprong ONDERDRUKT · elke 26 weken : 271 van de 440 = 0,616 per opening (MAX 1) · dekking  61,6%
+  sprong ONDERDRUKT · elke 13 weken : 102 van de 440 = 0,232 per opening (MAX 1) · dekking  23,2%
+  sprong ONDERDRUKT · elke  8 weken :  20 van de 440 = 0,045 per opening (MAX 1) · dekking   4,5%
+  sprong ERUIT      · elke 26 weken : 440 van de 440 = 1,000 per opening (MAX 1) · dekking 100,0%
+  sprong ERUIT      · elke 13 weken : 440 van de 440 = 1,000 per opening (MAX 1) · dekking 100,0%
+  sprong ERUIT      · elke  8 weken : 440 van de 440 = 1,000 per opening (MAX 1) · dekking 100,0%
+```
+
+De frequentie komt bij geen enkel sprongtempo boven één per opening: **poort (1) en de vloer houden
+M90b vast, niet de sprong.** Dat knoopt de twee ingrepen aan elkaar — had de sprong wél
+frequentiewerk gedaan, dan haalde besluit twee een bewaking weg die besluit één net aanbracht, en
+dat is meetbaar niet zo.
+
+**WAT DE SPRONG-INGREEP VRIJGEEFT:** bij Daans gemeten sprongtempo (één per ~182 dagen, dus elke 26
+weken) **169 van de 440 openingen** — 440 min 271. Bij één per 13 weken 338, bij één per 8 weken 420.
+
+### Z3 — HOUDT
+
+Eén migratie, twee kolommen, geen nieuwe tabel, geen gewijzigde kolom (§28). De teller volgt uit
+dezelfde drager plus `laatsteGelegenheid` en vraagt geen eigen opslag (§27d).
+
+### Z4 — HOUDT, met een vondst die de vorm van de ingreep bepaalde
+
+`sprongDagen` heeft precies één consument in de bron: de lus in `laatsteGelegenheid`. Maar
+`laatsteGelegenheid` zelf heeft er DRIE — poort (7) én `ijkStatus`, allebei in `testvoorstel.ts` en
+allebei mét de vlag, én `buildBlokReview` in `blok.ts` zónder, dat de terugblik-copy voedt. (Deze
+alinea schreef eerst "TWEE" en noemde `buildBlokReferent`, een functie die niet bestaat;
+rechtgezet 23-08-2026 na de weerleggingspas, §31b punt 12.) **Dat is de reden dat de ingreep een VLAG werd en geen
+verwijdering.** Met een verwijdering zou de terugblik zijn sprong-tak verliezen en zou
+`MetingBron`'s `"inspanning"`-variant in `coachNarrative.ts` dood komen te staan. Nu verandert die
+consument niet: hij roept de functie zonder vlag aan en krijgt exact wat hij kreeg. Er staat een test
+op die beide standen naast elkaar zet.
+
+## 30. De leesvraag voor de volgende ronde — read-only
+
+**DE GRONDSTOF VOOR DE §3.2-MAAT ONTBREEKT NOG STEEDS OP HEAD, en de dichtstbijzijnde route is het
+VERBREDEN VAN HET POWER-CURVE-VENSTER.** `DOELEN-SPEC` §3.2 vraagt het beste 20-minutenvermogen over
+ZES WEKEN. Dat getal bestaat al als marker — `PC_MARKERS_` in `packages/engine/src/niveau.ts` draagt
+`{ sec: 1200, label: "20m", key: true }` — maar alleen over de twee vensters die
+`workers/api/src/integrations/powercurve.ts` kent: `export type PowerCurveWindow = "90d" | "1y";`,
+met `normalizeWindow` die op `1y` terugvalt en een route-whitelist
+`const ALLOWED_WINDOWS = new Set<string>(["90d", "1y"]);`. Zes weken zit daar niet bij. De tweede
+route (per rit een 20-minutenpiek) vraagt een nieuwe kolom op `activities` — die tabel draagt
+vandaag `gemW`, `normW`, `ifPct`, `tss`, `rollingFtp` en `zoneTimesJson`, geen enkele piekwaarde —
+plus werk in de sync per rit. De derde (afleiden uit de per-rit-intervallen) vraagt opslag die er
+niet is: `workers/api/src/integrations/ride.ts` haalt `/activity/{id}/intervals` ON DEMAND op en
+bewaart niets, en dat is dezelfde afhankelijkheid die ROADMAP punt 49 beschrijft. WAT ER PRECIES
+ONTBREEKT VOOR ROUTE ÉÉN: een derde waarde in de tweewaardige union plus de route-whitelist, en —
+dit is het onbekende — VERIFICATIE dat intervals.icu die `curves`-waarde accepteert op
+`GET /athlete/{id}/power-curves?type=Ride&curves=<window>`. Dat laatste vraagt een echte
+API-aanroep en valt buiten deze leesvraag.
+
+## 31. Wat benoemd is en niet gebouwd
+
+Als ROADMAP-punt vastgelegd, in de volgorde die Daan heeft bepaald: **punt 61** — de DOELCHECK aan
+het eind van het doelblok, met de uitkomst van §30 erin, en met de grond voor die plek (in februari
+sluit het onderhoudsblok en dan is de vraag of de FTP het gehouden heeft, vóór de
+Amstel-Gold-voorbereiding begint). **Punt 63** — het ONDERWEG-SIGNAAL, met zijn drie
+randvoorwaarden en de afhankelijkheid van punt 49. **Punt 56** blijft open (het herkomst-etiket op
+`TEST_MIN_BESCHIKBAAR_MIN` en `TEST_DUUR_MIN`), en de vaststelling dat agent-discovery in de
+container op `2.1.241` lukte en op deze machine op `2.1.208` nog nooit.
+
+**GESLOTEN DEZE RONDE:** punt **62** (het dubbele aanbod) en punt **60** (het M91-verdict), allebei
+gebouwd. Punt **59** is gebouwd op de bevestigings-teller na, die als afwijking in §27d staat.
+
+## 31b. De weerleggingspas van ronde 5 — vijf lenzen, en de hoofdclaim ging onderuit
+
+Vijf onafhankelijke lenzen, elk met de opdracht te WEERLEGGEN, plus een synthese. Alle vijf kwamen
+terug met `weerlegd: true`. Elke bevinding hieronder is door mij HERMETEN voordat ik hem overnam;
+wat de hermeting niet bevestigde staat er ook, met wat er wél uitkwam.
+
+### Wat KANTELDE en gerepareerd is
+
+**1. De derde uitgang stond op de verkeerde klok — de zwaarste, door vier van de vijf lenzen los van
+elkaar gevonden.** `loadSchemaWeek` voedde `ijkStatus` met `blokStartVoorWeek(...)`, en dat is de
+VIERWEEKSE mesoteller (`blokWeekVanWeek`, modulo `BLOK_WEKEN`), terwijl `huidigeOpening` de
+twaalfweekse openingsmaandag is. In de OPENINGSWEEK vallen die twee samen — de opening is per
+constructie ook mesoblok-week 1 — en precies daardoor zag geen enkele test het verschil: alle vijf
+`ijkStatus`-tests gaven `huidigeOpening` met de hand mee. GEMETEN gevolg: `bevestigd` en `ongeijkt`
+golden alleen doelblokweek 1 t/m 4, en in week 5 t/m 8 rendeerde de staat-regel helemaal niets.
+Acht van de twaalf weken zonder de zichtbaarheid die M91 vraagt en die uitgang (c) motiveert.
+GEREPAREERD met `doelblokOpeningVoorWeek(doelStart, weekMondayISO)` — de opening volgt uit
+`computeMacroPhase(...).week`, dus uit de engine-grootheid zelf. Vijf nieuwe tests dekken hem, en
+één ervan ("wijkt af van de VIERWEEKSE mesoteller vanaf doelblokweek 5") valt om zodra iemand de
+oude teller terugzet.
+
+**2. Het venster was niet rechtgezet maar GEDRAAID.** Mijn eerste versie zette poort (3) op
+`[opening − 21, opening + 7)` met het argument "dezelfde span van vier weken, alleen de richting
+klopt weer". Dat is geen correctie. HERMETEN op de gebouwde bron, 20 ketens × 260 weken, sprong-vlag
+in beide armen gelijk: een niet-gereden test **14 dagen ná** elke opening werd door het OUDE venster
+onderdrukt (0 aanbiedingen op 440 openingen) en door het geroteerde NIET meer (440 op 440). Idem op
+21 dagen. Een blinde vlek ingeruild voor een andere. Het besluit zegt dat een geplande-maar-niet-
+gereden test ROND DEZELFDE OPENING het aanbod onderdrukt, en week 2 t/m 4 van het doelblok liggen
+daar net zo goed in. Het venster is nu strikt ADDITIEF: `[opening − 21, opening + 28)` — het oude
+venster plus de aanloop. Niets dat vóór 23-08-2026 werd onderdrukt, wordt dat nu niet meer.
+
+**3. De rechtvaardiging voor het weglaten van een doel-kolom was onwaar.** De docstring op
+`ijking_blok` schreef verbatim: "DE OPENINGSMAANDAG IS DE IDENTITEIT en niet het doel: bij een
+doelwissel schrijft `blokStartBijDoel` een verse `doelStart`, dus de VOLGENDE opening is per
+constructie een andere maandag". HERMETEN op de echte `blokStartBijDoel`, beantwoorde opening ma
+2026-09-21: een doelwissel op ma 21-09, di 22-09 óf wo 23-09 geeft opnieuw `doelStart` 2026-09-21 —
+**3 van de 7 wisseldagen**, want `WISSEL_LAATSTE_DAG = 3` klemt naar de maandag van deze week. Het
+antwoord van het OUDE doel zet dan poort (2b) dicht voor het NIEUWE doel, twaalf weken lang, zonder
+retry. NIET GEREPAREERD, met opzet: de reparatie is een derde kolom `ijking_doel` in het idiom van
+`doel_passend_doel`, en dat is een tweede migratie — die de prompt uitsluit. De docstring citeert nu
+zijn eigen weerlegde tekst en noemt de reparatie. Zie ook §31.
+
+**4. De bevestig-uitleg beloofde een berekening die niet bestaat (M55).** Zij eindigde op "bevestig
+'m en ik reken dit blok daarmee". In werkelijkheid schrijven bevestigen en niet-nu allebei alleen
+het kolommenpaar; het PLAN is na beide tikken identiek, en `IjkStatus.bevestigd` heeft precies één
+consument — de staat-regel. De app rekent inderdaad met de staande drempelwaarde, maar dat deed zij
+al. Nieuwe tekst: "… ik reken door met de waarde die er staat en vraag het dit blok niet nog eens."
+
+**5. Dezelfde datum stond twee keer op het scherm.** In de aanbodweek rendeerde de aanbodkaart "Je
+ging voor het laatst vol tijdens je wedstrijd van 20 mei" en de staat-regel er direct onder "Voor
+het laatst gemeten op 20 mei". De staat-regel is er voor de weken ZÓNDER aanbod; hij rendert nu
+alleen dan.
+
+**6. De staat-regel droeg geen doel-poort.** `buildTestVoorstel` valt voor Onderhoud op poort (2)
+(`blokCheckEnabled`) en zonder `doelStart` op poort (1); `ijkStaat` werd onvoorwaardelijk berekend.
+Gevolg: bij Onderhoud stond er permanent "Ik heb je drempel nog nooit gemeten." terwijl er per
+constructie nooit een aanbod kan komen om er iets aan te doen. `ijkStaat` is nu `null` achter
+dezelfde twee poorten.
+
+**7. Dode machinerie na de wijziging.** `setTestDismissed` in `SchemaView` bumpte een teller die de
+render-guard `!isTestVoorstelAfgewezen(...)` liet her-evalueren; die guard is deze ronde verdwenen,
+dus de teller forceerde een render die niets veranderde. Teller en `onDismiss`-prop zijn weg; de
+kaart verdwijnt via de herlaadronde die poort (2b) opnieuw laat vuren. Het kopcommentaar op
+`TestVoorstelCard` zei nog "Afwijzen is sessie-scoped, géén D1" — rechtgezet.
+
+### Wat KANTELDE en NIET gerepareerd is, omdat het een CLAIM was en geen bug
+
+**8. De winst was verkeerd TOEGEWEZEN, en dit is de belangrijkste correctie op mijn eigen rapport.**
+Z1 schreef "440 op 440 na (a) en (b), tegen 271 op 440 ervóór" en presenteerde dat als het gevolg van
+twee ingrepen. HERMETEN met de ingrepen APART, dezelfde 20 ketens × 260 weken:
+
+- alleen (a), het venster: **271/440 = 0,616**, dekking 61,6 procent, gem. gat 140,5 — exact de
+  VOOR-meting. Het venster draagt **NUL** bij aan de headline-getallen.
+- alleen (b), de sprong uit de ijk-poort: **440/440 = 1,000**, dekking 100,0 procent, gat 84,0 —
+  exact de NA-meting.
+
+De twee ingrepen repareren VERSCHILLENDE gevallen, en dat is de eerlijke formulering. Op het geval
+waarvoor (a) gebouwd is — een niet-gereden test 10 dagen vóór elke opening, op een vrijdag, dus
+aantoonbaar niet gereden — geeft VOOR 271 spurieuze aanbiedingen op 440 openingen en (a) alleen
+**0 van 440**; daar draagt (b) niets bij. (a) sluit een lek, (b) tilt de dekking.
+
+**9. Het orakel was op de fixture DEGENEREERD, en daarbuiten zelfs FOUT.** `isEchteOpening` is
+code-onafhankelijk (`computeMacroPhase` komt er niet in voor) maar herleidt hetzelfde predicaat als
+poort (1)+(1b), dus "0 aanbiedingen buiten een opening" KAN niet oplopen. Dat is dezelfde fout als
+de `mp.week === 1` van ronde 4, één laag dieper. Erger: het ankerde op `weekMaandagVan(doelStart)`
+terwijl `computeMacroPhase` op `doelStart` zélf ankert — bij een `doelStart` die geen maandag is
+scheelt dat een hele week en telde het orakel élke opening fout. HERMETEN met een gecorrigeerd
+orakel (de EERSTE maandag op of ná `doelStart`) en twee fixtures: `doelStart` 2026-06-29 (maandag)
+en 2026-07-01 (woensdag) geven **identieke getallen op alle twintig rijen**. De claims zijn dus niet
+maandag-gebonden — dat deel van de bevinding gold het orakel en niet de code. Maar "0 buiten een
+opening" blijft een eigenschap van poort (1), die deze ronde niet is aangeraakt, en het rapport zegt
+dat nu ook.
+
+**10. "MAXIMUM 1 per opening" was door de meetlus afgedwongen.** Eén aanroep per weekmaandag, en
+`ijkingBeantwoordBlok: null` bij élke aanroep — poort (2b), de enige poort die hoogstens-één
+werkelijk afdwingt, vuurde in de hele meting NUL keer. MAX 1 staat dan ook in alle vijf de armen,
+ook de VOOR-armen. HERMETEN op DAG-granulariteit, zeven dagen in dezelfde openingsweek: zonder
+bewaard antwoord vuurt de poort 7 keer maar biedt **één en dezelfde datum** aan (2026-09-27, 1
+unieke datum over 7 dagen) — dat is één kaart die zeven dagen blijft staan, geen zeven aanbiedingen.
+Mét het bewaarde antwoord: **0 van 7**. Dát is de meting die poort (2b) belast; de lus deed het niet.
+
+**11. Eén fixture toetste het tegenovergestelde van zijn label.** De rij "niet-gereden test 5 d vóór
+elke opening" legt de test op `opening − 5` = woensdag, en de achtergrondritten liggen op woensdag
+(`i * 7 + 2`). Bij 21 van de 22 openingen per keten was die test dus WEL gereden. Die rij bewees
+niets over (a). De hermeting gebruikt alleen offsets waarvan is nagerekend dat er geen rit op valt
+(−10 = vrijdag, +14 en +21 = maandagen) en telt de botsingen expliciet: **0**.
+
+**12. `laatsteGelegenheid` heeft DRIE aanroepers, niet twee, en de derde heette verkeerd.** Z4
+schreef "TWEE consumenten: de ijk-poort én `buildBlokReferent` in `blok.ts`". Er zijn er drie —
+`buildTestVoorstel` poort (7) en `ijkStatus`, allebei mét de vlag, en `blok.ts:1224` zonder — en die
+laatste zit in **`buildBlokReview`**; een functie `buildBlokReferent` bestaat niet in de repo. Geen
+gedragsgevolg (de nieuwe derde aanroep zet de vlag), wel een boekhoudfout die iemand later op de
+verkeerde plek laat zoeken. Rechtgezet in `effect.ts` en hierboven. Voor `sprongDagen` zélf houdt Z4
+onverkort: buiten `laatsteGelegenheid` geen enkele productie-consument.
+
+**13. Een dode tak die BLIJFT staan, als aparte beslissing.** De `"inspanning"`-tak van `metingZin_`
+is via `testAanbodRegel` onbereikbaar geworden: poort (7) leest met `negeerSprong: true`, dus
+`TestVoorstel.laatsteMeting.bron` kan nooit meer `"inspanning"` zijn. De tak blijft staan —
+`buildBlokReview` levert de sprong nog wél en heeft een eigen inline copy — met een docstring die
+zegt dat hij onbereikbaar is en waarom. Weghalen is niet de beslissing van deze ronde.
+
+### Wat NIET kantelde
+
+De reproductie van de getallen zelf. Twee lenzen draaiden `p47r5-meet.mjs` opnieuw en kregen
+byte-identieke uitvoer: NA 440/440, MAX 1, gat 84,0; VOOR 271/440 = 0,616, 61,6 procent, gat 140,5;
+Z2 met 271, 102 en 20. Z3 (één migratie, twee kolommen, `sync_state` verder onaangeroerd) hield bij
+alle vijf. De tien route-tests, de neighbour-isolatie in beide richtingen en de drie 400-gevallen
+hield niemand aan het wankelen.
+
 <!-- EINDE docs/PUNT47-BOUW.md -->

@@ -13,6 +13,132 @@ live tot cutover.
 
 ## Stand
 
+STAND 2026-08-23 (ZEVENDE BLOK VAN DEZE DAG) — DE POORTLAAG IS DICHT, DE BEVESTIG-UITGANG STAAT
+ERIN, EN DIT IS DE EERSTE RONDE DIE DE WORKER EN EEN MIGRATIE RAAKTE. Code plus norm plus docs plus
+ÉÉN migratie. Geen engine, geen deploy, GEEN remote-D1-mutatie — alles lokaal tegen miniflare. NIET
+GEDEPLOYD: prod draait nog zonder deze migratie, dus de kolommen bestaan daar NIET.
+- **DRIE INGREPEN, en ze horen bij elkaar.** (a) Het venster van poort (3) is VERBREED naar
+  `[blokStart − 21, blokStart + 28)` — het oude venster PLUS de aanloop van drie weken, strikt
+  additief. (b) Poort (7) roept `laatsteGelegenheid` aan met `negeerSprong: true`, dus een sprong in
+  `rolling_ftp` onderdrukt het ijkaanbod niet meer (M91). (c) Het antwoord op het aanbod staat op
+  `sync_state.ijking_blok` plus `sync_state.ijking_antwoord`, met `GET`/`PUT /api/ijking`.
+- **DE WEERLEGGINGSPAS HEEFT DEZE RONDE ECHT WERK GEDAAN — lees `docs/PUNT47-BOUW.md` §31b vóór je
+  op iets hierboven verder bouwt.** Vijf lenzen, alle vijf `weerlegd: true`, dertien bevindingen die
+  ik zelf heb HERMETEN. Zeven daarvan zijn gerepareerd vóór de commit, waaronder één echte
+  productiebug: `loadSchemaWeek` voedde `ijkStatus` met de VIERWEEKSE mesoteller
+  (`blokStartVoorWeek`) waar de TWAALFWEEKSE opening hoort, waardoor de bevestiging alleen
+  doelblokweek 1 t/m 4 gold en in week 5 t/m 8 de staat-regel helemaal wegviel. Nu
+  `doelblokOpeningVoorWeek`, met vijf tests. Ook gerepareerd: het venster was GEDRAAID en niet
+  rechtgezet (een niet-gereden test 14 of 21 dagen NA de opening werd niet meer onderdrukt); de
+  bevestig-uitleg beloofde een berekening die niet bestaat (M55); dezelfde datum stond twee keer op
+  het scherm; de staat-regel droeg geen doel-poort en klaagde bij Onderhoud eeuwig door;
+  `setTestDismissed` was dood komen te staan.
+- **DE WINST WAS VERKEERD TOEGEWEZEN, en dat is de belangrijkste correctie op het vorige blok.**
+  Apart gemeten geeft alleen ingreep (a) exact **271/440 = 0,616** — de VOOR-rij — en alleen (b)
+  exact **440/440 = 1,000**. Het venster draagt NUL bij aan de dekkingsgetallen; de hele winst komt
+  van de sprong. De twee ingrepen repareren VERSCHILLENDE gevallen: op een niet-gereden test 10
+  dagen vóór elke opening doet (a) alles (271 spurieuze aanbiedingen → 0) en (b) niets.
+- **DE MIGRATIE, en zij bleef binnen de grens.** `workers/api/drizzle/0011_handy_the_hunter.sql`:
+  twee `ALTER TABLE ... ADD`, geen nieuwe tabel, geen gewijzigde kolom, forward-only. De schrijfkant
+  is een `onConflictDoUpdate` die uitsluitend die twee kolommen zet — `sync_state` is een GEDEELDE
+  rij en een volle write zou andermans kolommen wissen. Twee tests toetsen dat van beide kanten.
+- **Z1, Z2, Z3 EN Z4 HIELDEN alle vier.** Z1: over 20 ketens van 260 weken, 440 openingen, geeft de
+  gebouwde bron **440 aanbiedingen op 440 openingen = 1,000 per opening, MAXIMUM 1**, nul buiten een
+  opening, dekking **100,0%**, gemiddeld gat **84,0 dagen**. VOOR de ingrepen: 271 op 440 = 0,616
+  per opening, dekking 61,6%, gat 140,5. En het gat dat ronde 4 openliet is dicht: met een
+  NIET-GEREDEN test 10 dagen vóór elke opening geeft de bron **0 aanbiedingen op 440 openingen**,
+  waar dat er 271 waren. (De rij "5 dagen" is geschrapt: `opening − 5` valt op de woensdag waarop de
+  fixture ook de achtergrondritten legt, dus die test was WEL gereden — zie §31b punt 11.)
+- **"MAX 1" EN "0 BUITEN EEN OPENING" DRAGEN MINDER DAN ZE LIJKEN, en het vorige blok zei dat niet.**
+  Beide staan óók in de VOOR-rijen: ze komen van poort (1), die deze ronde niet is aangeraakt, en de
+  meetlus roept per weekmaandag precies één keer aan — ze kunnen per constructie niet anders
+  uitvallen. Het orakel is code-onafhankelijk maar predikaat-IDENTIEK aan poort (1)+(1b), dus
+  "buiten een opening 0" is daar een tautologie. Het orakel was bovendien FOUT voor een `doelStart`
+  die geen maandag is (het ankerde op de maandag ervóór, `computeMacroPhase` op `doelStart` zelf).
+  Met een gecorrigeerd orakel gemeten op zowel een maandag- als een woensdag-`doelStart`: identieke
+  getallen op alle twintig rijen. De hoogstens-één-eigenschap ná een antwoord is apart gemeten op
+  DAGNIVEAU — zeven dagen in dezelfde openingsweek geven zonder antwoord één en dezelfde aangeboden
+  datum, mét antwoord **0 van 7**.
+- **WAT DE SPRONG-INGREEP VRIJGEEFT: 169 van de 440 openingen** bij Daans gemeten sprongtempo (één
+  per ~182 dagen); 338 bij één per 13 weken, 420 bij één per 8 weken. En hij tilt de frequentie
+  NIET: met de sprong eruit geeft de bron bij ALLE drie de tempo's precies 440 van de 440 openingen
+  één aanbod, maximum 1. **Poort (1) en de vloer bewaken M90b, niet de sprong** — dat is Z2, en het
+  knoopt de twee ingrepen aan elkaar.
+- **EEN VLAG EN GEEN VERWIJDERING, en de reden is gemeten.** `laatsteGelegenheid` heeft DRIE
+  aanroepers: poort (7) en `ijkStatus` MET de vlag, en **`buildBlokReview`** in `blok.ts` zonder,
+  dat de terugblik-copy ermee voedt. Die derde verandert niet, dus de sprong blijft INFORMANT (M17,
+  M30) en `sprongDagen` komt niet dood te staan. (Het vorige blok schreef "TWEE" en noemde
+  `buildBlokReferent` — die functie bestaat niet; rechtgezet na de weerleggingspas.)
+- **DE VLUCHTIGE MODULE-SET IS WEG.** `const afgewezen = new Set<string>();` en
+  `isTestVoorstelAfgewezen` in `TestVoorstelCard.tsx` bestaan niet meer, en `SchemaView.tsx` leest
+  ze niet meer. De poort staat als **poort (2b)** in de PURE laag van `buildTestVoorstel` en is
+  daarmee toetsbaar zonder DOM. Twee antwoorden op één vraag wonen nu op één plek.
+- **WAT ER NIET IS: een letterlijke teller van opeenvolgende bevestigingen** — en dat is een
+  AFWIJKING van de letter van besluit vier, verantwoord in `docs/PUNT47-BOUW.md` §27d. De LEEFTIJD
+  volgt uit `laatsteGelegenheid` met `negeerSprong`: dagen sinds de laatste ECHTE meting gedeeld
+  door de doelbloklengte. Die maat telt óók de blokken waarin niets is geantwoord, en die zijn net
+  zo goed ongemeten. Wil je de letterlijke teller, dan is dat één kolom erbij.
+- **EEN GAT DAT IK MELD EN NIET REPAREER, want de reparatie is een tweede migratie.** De docstring
+  op `ijking_blok` beweerde dat de openingsmaandag als identiteit volstaat omdat een doelwissel per
+  constructie een verse `doelStart` geeft. Dat is ONWAAR voor **3 van de 7 wisseldagen**: met
+  `WISSEL_LAATSTE_DAG = 3` klemt `blokStartBijDoel` op ma/di/wo naar de maandag van DEZE week, dus
+  een wissel in de beantwoorde openingsweek geeft dezelfde maandag terug en het antwoord van het
+  OUDE doel zet poort (2b) dicht voor het NIEUWE — twaalf weken, geen retry. Gemeten op de echte
+  bron met opening 2026-09-21. De reparatie is een derde kolom `ijking_doel` in het idiom van
+  `doel_passend_doel`; de prompt van deze ronde staat één kolommenpaar toe, dus dit is gemeld en
+  niet gebouwd. De docstring citeert nu zijn eigen weerlegde tekst.
+- **NIEUWE STRINGS, verbatim, want de vorige ronde bracht twee onware mee die pas in de
+  weerleggingspas boven kwamen.** `"Mijn waarde klopt nog"`;
+  `"Heb je je drempel zelf al bijgesteld? Dan hoef je niet te testen — ik reken door met de waarde die er staat en vraag het dit blok niet nog eens."`
+  (de eerste versie eindigde op `"bevestig 'm en ik reken dit blok daarmee"` en beloofde daarmee een
+  berekening die niet bestaat — M55);
+  en de vormen van `ijkStaatRegel`: `"Je hebt je drempel bevestigd, niet gemeten."`,
+  `"Je drempel is dit blok niet geijkt."`, `"Je drempel is een blok oud."` /
+  `"Je drempel is N blokken oud."`, `"Ik heb je drempel nog nooit gemeten."` en het achtervoegsel
+  `" Voor het laatst gemeten op <datum>."` GEWIJZIGD: geen enkele.
+- **DE LEESVRAAG VOOR DE VOLGENDE RONDE IS BEANTWOORD.** De grondstof voor de §3.2-maat (beste
+  20-minutenvermogen over ZES WEKEN) ontbreekt nog steeds op HEAD. De dichtstbijzijnde route is het
+  POWER-CURVE-VENSTER VERBREDEN: het 20-minutengetal bestaat al als marker
+  (`{ sec: 1200, label: "20m", key: true }`) maar alleen over `export type PowerCurveWindow = "90d" | "1y";`
+  met whitelist `const ALLOWED_WINDOWS = new Set<string>(["90d", "1y"]);`. Wat er precies mist: een
+  derde waarde in die union plus de whitelist, én VERIFICATIE dat intervals.icu die `curves`-waarde
+  accepteert — dat laatste vraagt een echte API-aanroep.
+- **DE AGENT EN DE RULES-PROBES BLIJVEN NIET GEMETEN**, en er is niet naar gezocht: deze sessie is
+  ouder dan `.claude/agents/recon.md` en ouder dan de probes. Agent-discovery lukte wél in een
+  remote container op `2.1.241` en op deze machine op `2.1.208` nog NOOIT; dat verschil is
+  onverklaard. De twee weggooi-regels liggen klaar:
+  `.claude/rules/_wegwerp-altijd-probe.md` met merkstring `RULESALTIJD-MERKSTRING-Q4XM7D` (ZONDER
+  `paths`) en `.claude/rules/_wegwerp-paths-probe.md` met merkstring `RULESPATHS-MERKSTRING-V9HB2K`
+  (gescoopt op `packages/engine/src/zones.ts`). **Verschijnt de eerste aan het begin van je eerste
+  antwoord, dan laadt een regel zonder `paths` altijd; verschijnt de tweede zodra je
+  `packages/engine/src/zones.ts` leest, dan vuurt een path-scoped regel op file-read. Verschijnt er
+  niets, dan is dat GEEN bewijs van het tegendeel** — niet-geladen en geladen-maar-genegeerd zijn
+  niet te scheiden. Meld het als vondst, ruim beide regels op, en meet in dezelfde beweging of
+  `recon` in je agent-types staat. Beide regels zijn gitignored en staan NIET in de commit.
+- **VLOEREN: lees ze zelf uit de suite.** De suite is deze ronde gegroeid met een nieuw
+  testBESTAND; neem geen getal over uit een blok.
+- **OPENSTAAND, elk item opnieuw te greppen in `docs/ROADMAP.md`:** 32 · 34 (alleen (d)) · 35 · 48 ·
+  49 · 51 (alleen (3)) · 53 · 54 · 56 · 59 (alleen de teller) · 61 · 63 · **64 (nieuw — de
+  ontbrekende `ijking_doel`-kolom, zie hierboven)**.
+
+FOCUS VOLGENDE CHAT: **ROADMAP punt 61 — de DOELCHECK aan het eind van het doelblok, de tweede helft
+van M89, samen met punt 54 (welke maat per doel).** Daan heeft deze ronde de volgorde vastgesteld en
+61 NAAR VOREN gehaald vóór 48, 49, 35 en 32, met een datum als grond: **in februari sluit het
+onderhoudsblok en dan is de vraag of de FTP het gehouden heeft, vóór de Amstel-Gold-voorbereiding
+begint.** M92 heeft de twee vragen van M89 ook in de TIJD gescheiden — de ijking staat nu vooraan en
+kijkt vooruit, de doelcheck hoort achteraan en kijkt terug — maar die tweede helft bestaat nog niet
+als eigen moment. 54 hangt eraan vast en wordt in dezelfde beweging beslist: wie 61 bouwt zonder 54
+kiest stilzwijgend een maat. Begin bij de leesvraag hierboven; de grondstof is er nog niet en de
+dichtstbijzijnde route is het power-curve-venster. DAARNA komt punt 63, het onderweg-signaal, en dat
+WACHT op punt 49.
+
+**DE OMGEVINGSVERKLARING BLIJFT EEN STOP-CONDITIE.** Deze ronde: pad `/c/Users/daan/Projects/cadans`,
+`git rev-parse --git-dir` en `--git-common-dir` allebei `.git` dus HOOFDCHECKOUT, branch `main`, 0
+achter en 0 vooruit op `origin/main`, versie `2.1.208 (Claude Code)`, boom schoon bij aanvang.
+
+CONTEXT: Daan fietst voorlopig niet, beschikbaarheid 0, planner leeg vanaf 2026-08-09 — **dat is
+geen defect.** Verse chat.
+
 STAND 2026-08-23 (ZESDE BLOK VAN DEZE DAG) — DE IJKING STAAT NU AAN HET BEGIN VAN EEN DOELBLOK IN
 PLAATS VAN AAN HET EIND, EN DAARMEE IS DE BOUW VAN PUNT 47 AF. Code plus docs plus norm. Geen
 engine, geen migratie, geen deploy, geen D1. NIET GEDEPLOYD — prod en D1 staan waar het blok
@@ -129,104 +255,6 @@ huidige afwijzing een module-lokale `Set` in `TestVoorstelCard.tsx` is die geen 
 `git rev-parse --git-dir` en `--git-common-dir` allebei `.git` dus HOOFDCHECKOUT, branch `main`, 0
 achter en 0 vooruit op `origin/main`, versie `2.1.208 (Claude Code)`, boom schoon bij aanvang. Er
 stond met opzet geen vaste `cd`-regel in de prompt en er is niet ge-`cd`'d.
-
-CONTEXT: Daan fietst voorlopig niet, beschikbaarheid 0, planner leeg vanaf 2026-08-09 — **dat is
-geen defect.** Verse chat.
-
-STAND 2026-08-23 (VIJFDE BLOK VAN DEZE DAG) — PUNT 47 IS GEBOUWD, PUNT 52 IS GESLOTEN MET EEN JA
-ONDER VOORWAARDE, EN DE WEERLEGGINGSPAS HEEFT EEN REGRESSIE IN MIJN EIGEN NIEUWE CODE GEVANGEN.
-Code plus docs. Geen engine, geen migratie, geen deploy, geen D1. NIET GEDEPLOYD — prod en D1 staan
-waar het blok hieronder ze noemt.
-- **WAT ER GEBOUWD IS, als ÉÉN wijziging in `apps/web/src/lib/testvoorstel.ts`.** Poort (1) toetst
-  niet langer de vierweekse blokweek maar `computeMacroPhase(...).isTestWeek` — de doelblok-testweek
-  — en `TEST_INTERVAL_DAGEN` ging van 90 naar 84. Geen regel in `packages/engine`; de grootheid
-  stond er al. Het aandeel doelblokgrenzen dat werkelijk een ijkaanbod krijgt gaat van **2033 van
-  de 8421 (24,1%)** naar **8419 van de 8421 (100,0%)** bij een vaste weekvorm en **5613 van de 8421
-  (66,7%)** bij een wisselende. Nagemeten op de gebouwde bron, zonder substitutie: dezelfde
-  getallen als de simulatie, en de poort vuurt 21 van de 21 keer in een doelblok-testweek en 0 keer
-  daarbuiten.
-- **X1 EN X2 HIELDEN, X3 VIEL.** X1: de beginconditie is als DIMENSIE afgelopen over 401 waarden
-  plus "nog nooit gemeten"; het minimum van de gebouwde variant (95,2% vast, 57,1% wisselend over
-  120 zaden) ligt overal boven het maximum van de baseline (28,6%). X2: elke doelblok-testweek is
-  PER CONSTRUCTIE ook een vierweekse opening — 86 van de 86 over 1040 weekmaandagen, 600 van de 600
-  over zestig `doelStart`-waarden, want 4 deelt 12 — dus poort (3) en de afwijs-sleutel konden op de
-  vierweekse klok blijven staan; 21 grenzen gaven 21 unieke sleutels. X3 viel, en zijn val staat
-  hieronder.
-- **DE WEERLEGGINGSPAS IS VERPLICHT GEWEEST EN HEEFT DE RONDE GERED.** Vier onafhankelijke lenzen,
-  alle vier weerlegden de hoofdclaim, alles zelf nagemeten. Wat zij vingen, en het stond alle vier
-  al in de bron of in de documenten: (1) mijn docstring beschreef het mechanisme van de OUDE poort —
-  na de versmalling liggen de openingen 84 dagen uit elkaar, niet 28; (2) daardoor is 84 meetbaar de
-  SLECHTSTE waarde in zijn eigen beweerde klasse; (3) het residu was twee keer aan de verkeerde
-  poort toegeschreven; (4) **een echte regressie in code die ik zelf schreef.**
-- **DE REGRESSIE, en zij is gerepareerd.** Mijn eerste poort (1) droeg alleen
-  `if (!input.doelStart) return null;`. `doelStart` is VRIJE TEKST in D1, en bij een bedorven waarde
-  geeft `parseLocalDate` een `Invalid Date` — die is TRUTHY, dus de vangregel in `computeMacroPhase`
-  vuurt niet, het dagverschil wordt `NaN`, en `NaN <= 4`, `NaN <= 8` en `NaN <= 11` zijn alle drie
-  onwaar. De keten valt door naar de else-tak en geeft **`isTestWeek: true`, élke week**. De app zou
-  bij één bedorven rij ELKE week de ijkkaart tonen met "Dit blok loopt af." — een M55-schending die
-  de OUDE poort per constructie niet had. Gerepareerd met een expliciete `Number.isNaN`-toets op
-  beide datums, met twee tests erop, inclusief de tegenproef dat `"2026/06/29"` (geldig, afwijkend
-  geschreven) gewoon moet blijven vuren.
-- **DE VLOER STAAT OP 84 EN DAT IS MEETBAAR ZES DAGEN TE HOOG — DIT IS EEN BESLUIT VAN ÉÉN GETAL,
-  PUNT 58.** Na de versmalling is de afstand tussen twee aanbiedingen `84 + (k − j)` met j en k de
-  weekdag van de vorige en volgende testdag; die wobbelt tussen −6 en +6, dus de kortste afstand is
-  **78**. GEMETEN vloer-sweep: 60, 66, 70, 74, 77, 78 en 79 geven alle **21 van de 21** grenzen bij
-  BEIDE weekvormen; 80 geeft 20, 82 geeft 15, **84 geeft 14**, 90 geeft 11. En de WACHTTIJD maakt
-  het scherper: gemiddeld gat tussen twee aanbiedingen is oud 111,5 dagen, met vloer 84 **126,3**
-  (grootste gat 173), met vloer 78 **84,0** (grootste gat 90). **Bij een wisselende weekvorm wacht
-  de renner met 84 dus LANGER dan vóór de hele ingreep.** 78 verruimt de norm niet, want poort (1)
-  laat per constructie hoogstens één aanbod per doelblok door. NIET GEBOUWD omdat de prompt 84
-  autoriseerde en meetfrequentie een beleidsvraag is die met Daan wordt herzien.
-- **PUNT 52 IS AF: JA, ONDER VOORWAARDE.** De samengevoegde recon-en-bouwvorm is bruikbaar voor
-  rondes die een mechanisme raken, MITS beide regels draaien — geen gestipuleerde beginconditie, en
-  een adversariële weerleggingspas vóór de commit. Zonder de pas is de vorm aantoonbaar slechter dan
-  de splitsing. Er is een DERDE regel bijgekomen uit het falen van deze ronde zelf: **een diagnose
-  door interventie verandert per probe precies één ding.** Twee van de vier vondsten gingen terug op
-  die ene meetfout, en de tweede maakte ik terwijl ik de eerste aan het uitleggen was.
-- **DRIE CANON-REGELS ERBIJ.** Twee in `docs/WERKWIJZE.md` (*Recon en bewijslast*): geen
-  gestipuleerde beginconditie in een wat-als, en de verplichte weerleggingspas. Eén in
-  `docs/WERKWIJZE-LESSEN.md`: één ding per probe, poorten onafhankelijk toetsen. Alle drie met
-  vindplaats en aanleiding; alle drie in `docs/WERKWIJZE-LOG.md`.
-- **TWEE DIMENSIES STONDEN IN DE VOORMETING PER CONSTRUCTIE LEEG — CHECK 23, alweer.** Geen enkele
-  fixture-rij zette `rolling_ftp`, dus de `sprongDagen`-bron van `laatsteGelegenheid` kon niet
-  vuren; en er zaten geen A- of B-wedstrijden in de reeks. GEMETEN met die takken levend: een sprong
-  elke 20 weken geeft 9 van de 21, elke 8 weken 0 van de 21; een A-race elke 180 dagen geeft 9 van
-  de 21. Een wedstrijd of sprong IS een meting, dus dat is geen misser — maar **het getal 100,0%
-  geldt alleen in een wereld zonder wedstrijden en zonder sprongen** en hoort nooit zonder die
-  clausule geciteerd te worden.
-- **DE AGENT EN DE RULES-PROBES BLIJVEN NIET GEMETEN**, en er is deze ronde niet naar gezocht: de
-  sessie is ouder dan `.claude/agents/recon.md` en ouder dan de probes, dus beide vragen zijn hier
-  per constructie onbeantwoordbaar. Agent-discovery lukte wél in een remote container op `2.1.241`
-  en hier op `2.1.208` nog NOOIT; dat verschil is onverklaard. De twee weggooi-regels liggen klaar:
-  `.claude/rules/_wegwerp-altijd-probe.md` met merkstring `RULESALTIJD-MERKSTRING-Q4XM7D` (ZONDER
-  `paths`) en `.claude/rules/_wegwerp-paths-probe.md` met merkstring `RULESPATHS-MERKSTRING-V9HB2K`
-  (gescoopt op `packages/engine/src/zones.ts`). **Verschijnt de eerste aan het begin van je eerste
-  antwoord, dan laadt een regel zonder `paths` altijd; verschijnt de tweede zodra je
-  `packages/engine/src/zones.ts` leest, dan vuurt een path-scoped regel op file-read. Verschijnt er
-  niets, dan is dat GEEN bewijs van het tegendeel** — niet-geladen en geladen-maar-genegeerd zijn
-  niet te scheiden. Meld het als vondst, ruim beide regels op, en meet in dezelfde beweging of
-  `recon` nu in je agent-types staat. Beide regels zijn gitignored en staan NIET in de commit.
-- **VLOEREN: lees ze zelf uit de suite.** De suite is deze ronde GEGROEID; neem geen getal over uit
-  een blok maar toets tegen de suite-uitvoer.
-- **OPENSTAAND, elk item opnieuw te greppen in `docs/ROADMAP.md`:** 32 · 34 (alleen (d)) · 35 · 47
-  (alleen 53/54/55/58) · 48 · 49 · 51 (alleen (3)) · 53 · 54 · 55 · 56 · 58.
-
-FOCUS VOLGENDE CHAT: **ROADMAP punt 58 plus punt 55, in ÉÉN ronde — en 58 is een besluit van één
-getal.** 58: gaat `TEST_INTERVAL_DAGEN` van 84 naar 78? De meting ligt er compleet (vloer-sweep,
-wachttijd, en het feit dat het de testfrequentie niet verruimt); wat ontbreekt is Daans akkoord,
-want meetfrequentie is beleid. 55 hoort er direct achteraan omdat 58 het residu grotendeels wegneemt
-en 55 pas daarna op zijn echte omvang te beoordelen is: het retry-venster is door deze bouw
-verdwenen (een gemiste grens wacht nu twaalf weken in plaats van vier) en het eerste aanbod na een
-verse `doelStart` schuift van 27 naar 83 dagen. De canon-vraag die daaronder ligt is of een gemiste
-grens hoort te HERKANSEN — een aanbod vier weken te laat tegenover geen aanbod — en die kan nu
-beslist worden omdat de oorzaak gemeten is. Raakt punt 53 zodra het venster openblijft; dat vraagt
-persistente staat en dus een eigen autorisatie die er nog niet is.
-
-**DE OMGEVINGSVERKLARING BLIJFT EEN STOP-CONDITIE.** Deze ronde: pad `/c/Users/daan/Projects/cadans`,
-`git rev-parse --git-dir` en `--git-common-dir` allebei `.git` dus HOOFDCHECKOUT, branch `main`, 0
-achter en 0 vooruit op `origin/main`, versie `2.1.208 (Claude Code)`, boom schoon bij aanvang. Er
-stond met opzet geen vaste `cd`-regel in de prompt en er is niet ge-`cd`'d; dat is de rustigste vorm
-en hij hoort zo te blijven.
 
 CONTEXT: Daan fietst voorlopig niet, beschikbaarheid 0, planner leeg vanaf 2026-08-09 — **dat is
 geen defect.** Verse chat.
