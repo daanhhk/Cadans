@@ -1873,6 +1873,21 @@ punten staat onder *Gesloten — vindplaats*.
     (vi) DE BELOFTE EN HET AANBOD RENDEREN NOOIT IN DEZELFDE WEEK. De terugblik staat in blokweek 1
     en het testaanbod in blokweek 4, achter poort (1). Wie de twee helften ontwerpt, ontwerpt dus
     ook WANNEER elke helft zich meldt — en kan niet aannemen dat de gebruiker ze naast elkaar ziet.
+    **OPEN VRAAG VOOR DE BOUW-RECON — ONDERDRUKT EEN DOELWISSEL HET IJKAANBOD?** Twee helften met
+    verschillende herkomst, en dat verschil is dragend. GEMETEN (RECON
+    `ffc6d9ab682f689c92b374b66fdf7681b5d2441f` en `18b749c`): `blokStartBijDoel` in
+    `apps/web/src/lib/settings.ts` HERSCHRIJFT `doelStart` bij een doelwissel naar een verse
+    maandag, en poort (1) van `buildTestVoorstel` eist `blokWeekVanWeek(...) === BLOK_WEKEN`, dus
+    blokweek 4. VERMOEDEN, herkomst CHAT en NIET gemeten: staat `doelStart` na een wissel op de
+    maandag van die week, dan leest `blokWeekVanWeek` daar 1, en duurt het drie weken voordat poort
+    (1) weer opengaat. Klopt dat, dan onderdrukt een doelwissel het ijkaanbod precies op het moment
+    dat M90a het vraagt — de grens van een doelblok is bij een wissel juist NU, en dat is het
+    moment waarop de zones voor het nieuwe doel gezet moeten worden. TE METEN, niet aan te nemen:
+    draai `blokWeekVanWeek` en `buildTestVoorstel` over een wissel heen en lees af wat er gebeurt.
+    Let er bij het meten op dat de twee klokken uiteenlopen: poort (1) hangt aan de VIERWEEKSE
+    `BLOK_WEKEN`, terwijl M90a over de TWAALFWEEKSE doelblokgrens spreekt (`doelTestWeken_` in
+    `packages/engine/src/niveau.ts`). Welke van de twee de ijking hoort te dragen is zelf een
+    bouwbeslissing.
 48. **Geen testaanbod rond een A- of B-event** — open · CLIENT. Daan-besluit 21-08-2026. Een
     event is een event: daar geef je alles, en het event is zelf de betere meting. Een
     20-minuten-all-out kost twee tot drie dagen herstel, en in een taper vernietigt hij precies
@@ -1959,6 +1974,42 @@ punten staat onder *Gesloten — vindplaats*.
     dan afsluit is niet beantwoord, en het SPIEGELBEELD draait vandaag nog — bij Conditie, Korte en
     Lange zegt de copy dat rolling FTP niet de maat is terwijl de poort op diezelfde invoer een
     20-minuten-FTP-test aanbiedt.
+51. **Het CC-harnas als vangnet** — open · TOOLING plus norm. GEMETEN 23-08-2026, zie
+    `docs/GEREEDSCHAP-RECON.md`. GROND: *De volgorde*, rangorde-principe (2) — eerst het
+    ontbrekende vangnet, zodat elke ronde daarna goedkoper is. Dat principe kostte eerder al de
+    render-testlaag van punt 33, en die betaalde zich terug bij elke kaart-ronde erna.
+    WAT ER VANDAAG STAAT, gemeten. `.claude/` draagt drie bestanden en GEEN ENKELE map: geen
+    `rules`, geen `skills`, geen `agents`, geen `commands`, geen `hooks`. Er draait geen enkele
+    hook — niet in `settings.json`, niet in `settings.local.json`, niet op gebruikersniveau, en
+    ook geen git-hook (`.husky` bestaat niet, `.git/hooks/` draagt alleen `.sample`-bestanden). De
+    deny-lijst in `.claude/settings.json` dwingt precies TWEE dingen machinaal af: de
+    training-grens en `git push --force`. Al het andere — de engine-grens, de gate vóór de commit,
+    de rapportvorm, de append-only nummering — hangt aan proza.
+    VIER INGREPEN, in oplopende prijs.
+    (a) EEN RECON-SUBAGENT. Verbatim hoort in een DOCUMENT te landen en niet in het rapport. De
+    laatste recon-rondes droegen zeven verbatim-blokken in één rapport; dat is precies het werk
+    waarvoor een subagent met eigen context bestaat. `--agents` en de settings-sleutel `agent` zijn
+    ondersteund (versie `2.1.208`).
+    (b) HOOKS VOOR DE GATE EN VOOR DE ENGINE-DENY. Het schema draagt 31 hook-events, waaronder
+    `PreToolUse` en `SessionStart`. Een `PreToolUse` op `git commit` die de gate afdwingt sluit het
+    gat dat CI NIET sluit: CI draait ná de push en kan een rode commit alleen melden, niet
+    tegenhouden. Een tweede `PreToolUse` op `Edit`/`Write` in `packages/engine` maakt van de
+    autorisatie-regel een deny in plaats van een belofte.
+    (c) PATH-SCOPED REGELS. Voor `packages/engine` (autorisatie vereist) en voor de append-only
+    nummering van `docs/TRAININGSMODEL.md`. LET OP DE VORM: een map `.claude/rules/` is in deze
+    ronde NIET vastgesteld — het settings-schema kent geen `rules`-sleutel en `claude --help` noemt
+    het woord niet. Wat het schema wél draagt is `claudeMdExcludes`, wat impliceert dat er
+    MEERDERE `CLAUDE.md`-bestanden per pad geladen worden. De vorm is dus vermoedelijk een geneste
+    `packages/engine/CLAUDE.md`, en die aanname hoort geverifieerd vóór de bouw.
+    (d) DE PROCEDURES UIT `CLAUDE.md` NAAR SKILLS. Gemeten is `CLAUDE.md` 5801 bytes over negen
+    secties, ruwweg 2600 bytes FEIT tegen 3200 bytes PROCEDURE, en vijf van de negen secties dragen
+    allebei. De procedures — close-out, HANDOFF-rotatie, recon-vorm, rapportvorm — zijn precies wat
+    een skill kan dragen: hij laadt wanneer hij nodig is in plaats van elke sessie.
+    WAT DIT PUNT NIET IS. Het is geen opruiming van de procesdocumenten. De vier documenten samen
+    zijn 173156 bytes en laden GEEN VAN VIER automatisch; dat is een risico en geen sessieprijs, en
+    het verkleinen ervan is een aparte vraag (zie punt 46 voor hoe die eerder liep).
+    EERSTE STAP: (b), want die is het goedkoopst en sluit het enige gat waar vandaag een rode
+    commit doorheen kan.
 
 ## De tijdslijn
 
@@ -2217,20 +2268,25 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
    voorstelt. Stond VÓÓR 47 en 48 met reden: die twee zijn ONTWERPVRAGEN, en dit was een ONWARE ZIN
    die draaide — bij doel Onderhoud zelfs als normale uitkomst. **AFGEVINKT:** gebouwd in
    `3a9d5458`, één cel bewoog, nul asserties braken, geen poort geraakt.
-   **DE VOLGENDE IS 10 — punt 47.**
-10. **47** — de check valt in twee: ijking bij elk doel, doelcheck per doel. Norm-besluit dat
-    vóór 49 moet liggen, want het bepaalt WAT die sleutelsessie moet aantonen. BEGIN BIJ DE
-    CANON-TEGENSPRAAK: dit punt zegt dat ijking en doelcheck bij Onderhoud samenvallen in de
-    20-minutentest, terwijl `DOELEN-SPEC` §3.2 daar het beste 20-minutenvermogen over ZES WEKEN
-    vastlegt — een maat die niet in code bestaat. Zonder Daan-besluit is er niets te ontwerpen.
-11. **48** — geen testaanbod rond een A- of B-event. Klein, één conditie in `buildTestVoorstel`,
+   **DE VOLGENDE IS 10 — punt 51.**
+10. **51** — het CC-harnas als vangnet. VÓÓR de bouw van 47, op rangorde-principe (2): eerst het
+    ontbrekende vangnet, zodat elke ronde daarna goedkoper is. Het norm-besluit van 47 is al
+    genomen (M89 t/m M91), dus 47 wacht op een BOUW en niet op een beslissing — en die bouw raakt
+    een poort, een klok en de copy tegelijk. Precies de ronde waarin een engine-deny-hook en een
+    blokkerende gate hun geld opleveren. Gemeten in `docs/GEREEDSCHAP-RECON.md`.
+11. **47** — de check valt in twee: ijking bij elk doel, doelcheck per doel. **HET NORM-BESLUIT IS
+    GENOMEN (22-08-2026): M89 t/m M91 in `docs/TRAININGSMODEL.md` §13.** Wat rest is de BOUW, en
+    die begint bij de open vraag over de doelwissel die bij het punt staat. De eerder genoemde
+    canon-tegenspraak bestaat niet — zie `docs/PUNT47-RECON.md` §0c; wat wél openstaat is de MAAT
+    uit `DOELEN-SPEC` §3.2, en dat is een bouwvraag.
+12. **48** — geen testaanbod rond een A- of B-event. Klein, één conditie in `buildTestVoorstel`,
     en het staat hier zo vroeg omdat het goedkoop is en een echte schade voorkomt.
-12. **49** — de doelcheck aflezen uit een sleutelsessie. Vraagt opslag en aggregatie van de
+13. **49** — de doelcheck aflezen uit een sleutelsessie. Vraagt opslag en aggregatie van de
     interval-structuur, dus een migratie. Begint met één meting: is `icu_intervals` gevuld.
-13. **35** — een event draagt geen duur. Deblokkeert punt 13 fase B.
-14. **13 fase B** — de doelvraag na het event.
-15. **32** — de rit-beoordeling. M31 noemt het bedrading en geen nieuwe bouw.
-16. **11** — de duurvermogen-maat OPNIEUW ontwerpen. Achteraan met de juiste reden: de
+14. **35** — een event draagt geen duur. Deblokkeert punt 13 fase B.
+15. **13 fase B** — de doelvraag na het event.
+16. **32** — de rit-beoordeling. M31 noemt het bedrading en geen nieuwe bouw.
+17. **11** — de duurvermogen-maat OPNIEUW ontwerpen. Achteraan met de juiste reden: de
     gemeten maat mat de RITKEUZE en niet het duurvermogen, dus dit is een afgekeurd ontwerp
     en geen wachtende bouw. Tot dan blijft Conditie ongedekt (M33, M39). Punt 49 levert
     hier het gereedschap voor: zonder per-blok-data uit de rit is deze maat niet te bouwen.
