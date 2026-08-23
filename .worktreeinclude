@@ -1,0 +1,20 @@
+# .worktreeinclude — welke GITIGNOREDE bestanden meereizen naar een nieuwe worktree.
+#
+# SYNTAXIS: gitignore-syntaxis, afgeleid uit https://code.claude.com/docs/en/worktrees, sectie
+# "Copy gitignored files into worktrees" — verbatim: "The file uses `.gitignore` syntax. Only files
+# that match a pattern and are also gitignored are copied, so tracked files are never duplicated."
+#
+# WAAROM DIT BESTAAT (ROADMAP punt 51). De desktop-app geeft ELKE nieuwe sessie een eigen worktree
+# — verbatim uit diezelfde pagina: "In the desktop app, every new session gets its own worktree
+# automatically." Een worktree is een verse checkout, dus gitignorede bestanden zijn er per
+# constructie NIET. De twee weggooi-regels van de rules-aflezing zijn gitignored en zouden dus
+# nooit meereizen; een verse sessie kon de vraag daardoor niet beantwoorden.
+#
+# DE REGEL WERKT ALLEEN OP GITIGNOREDE BESTANDEN. Een getrackt bestand in `.claude/rules/` staat al
+# in de worktree en hoeft hier niet te staan. Deze regel is er dus voor de WEGGOOI-regels, en voor
+# elke toekomstige lokale regel die bewust buiten de repo blijft.
+.claude/rules/
+
+# NIET OPGENOMEN, bewust: `.claude/settings.local.json`. Die zou hier kunnen — hij is gitignored en
+# meenemen zou schelen in permissie-prompts per worktree — maar het is 47878 bytes per-machine
+# state en dat kopiëren is een eigen besluit, geen bijvangst van deze ronde.

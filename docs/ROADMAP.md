@@ -2079,6 +2079,32 @@ punten staat onder *Gesloten — vindplaats*.
     niet-lege bron-diff over `packages`, `apps` en `workers`. Die conditie is geen bedenksel: ze
     draaide deze ronde al als handmatige controle en gaf leeg. DE ENGINE-DENY-HOOK BLIJFT WEL
     STAAN en is niet afgewaardeerd — die kost geen looptijd en is echte veiligheid.
+    **DRIE VONDSTEN OVER DE OPSTELLING ZELF, 23-08-2026 — en de eerste ligt onder de andere twee.**
+    (i) **DESKTOP-SESSIES DRAAIEN IN EEN PER-SESSIE WORKTREE, OP EEN EIGEN BRANCH.** Verbatim uit
+    `https://code.claude.com/docs/en/worktrees`: *"In the desktop app, every new session gets its own
+    worktree automatically."* De worktree komt onder `.claude/worktrees/<naam>/` in de repo-root, op
+    een branch `worktree-<naam>`. DIT IS EEN STRUCTUREEL FEIT OVER DE HELE OPSTELLING EN HET LAG
+    NERGENS VAST — niet in `CLAUDE.md`, niet in `docs/ARCHITECTUUR.md`, niet in `WERKWIJZE.md`.
+    GEVOLG dat deze ronde raakte: een worktree is een VERSE checkout, dus gitignorede bestanden zijn
+    er per constructie niet, en de twee weggooi-regels van de rules-aflezing reisden niet mee.
+    Gerepareerd met `.worktreeinclude` in de projectroot, dat volgens diezelfde pagina
+    gitignore-syntaxis draagt en geldt voor *"parallel sessions in the desktop app"*.
+    PRECIES ZIJN OVER DE OORZAAK, want hier is al eens te snel geconcludeerd: dit verklaart de
+    desktop-kant. Van ÉÉN gestrande aflezing is een ANDERE oorzaak GEMETEN — die sessie was zelf
+    ouder dan de bestanden (transcript aangemaakt 2026-07-14, commit `e7c3e910` van 2026-08-23), en
+    dat is geen worktree-probleem maar een sessiegrens. Twee oorzaken, niet één.
+    (ii) **`cd C:\Users\daan\Projects\cadans` ALS VASTE EERSTE PROMPTREGEL IS VERDACHT.** Draait een
+    sessie in haar eigen worktree, dan tilt die regel CC uit zijn werkmap naar de HOOFDCHECKOUT —
+    en dan meet, bouwt en commit hij op een andere branch dan waar de sessie hoort. HERKOMST CHAT,
+    **NIET GEMETEN**. Het staat hier als TE METEN en niet als vastgesteld. De meting is goedkoop:
+    laat een sessie haar eigen pad rapporteren vóór en ná die regel.
+    (iii) **ELK CC-RAPPORT DRAAGT VOORTAAN ZIJN OMGEVING** — pad, worktree ja of nee, branch en
+    versie. Aanleiding: een container-sessie gaf deze week bijna een vals verdict omdat nergens
+    stond waar zij draaide. De regel zelf woont bij de rapportvorm in `docs/WERKWIJZE.md`; hij staat
+    hier alleen als vondst genoteerd.
+    **`--print` BESTAAT NIET IN DE DESKTOP-APP**, dus `claude -p` is daar geen instrument. Dat sluit
+    de route die deze ronde al op authenticatie strandde ook aan de andere kant af: een geneste
+    sessie is geen aflees-instrument, en de aflezing hoort bij de OPENING van een echte sessie.
     WAT DIT PUNT NIET IS. Het is geen opruiming van de procesdocumenten — dat is stap (3) hierboven
     en die heeft zijn eigen maat en zijn eigen intrekkings-criterium. Zie punt 46 voor hoe een
     eerdere ronde op ditzelfde materiaal liep.

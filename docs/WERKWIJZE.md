@@ -156,6 +156,19 @@ Platte tekst, **geen code-fences en geen tabellen** (breekt de mobiele kopie), o
 
 Bevat: commit-hash; de gepinde RAW HANDOFF-URL op die hash; gate-uitslag; CI-conclusie met run-URL; bij code een lege `git diff --stat` op `packages/engine`; bevestiging dat training onaangeroerd is (HEAD `3e8090a`); en elke afwijking van de prompt.
 
+**ELK RAPPORT DRAAGT ZIJN OMGEVING: pad, worktree ja of nee, branch, en claude-versie.** Vier
+literals, één regel. GROND: de opstelling is niet meer één checkout. De desktop-app geeft ELKE
+sessie een eigen worktree — `https://code.claude.com/docs/en/worktrees`, verbatim: *"In the desktop
+app, every new session gets its own worktree automatically."* — onder `.claude/worktrees/<naam>/` op
+een branch `worktree-<naam>`. Een rapport zonder die vier getallen laat dus open OF de meting op de
+branch stond waar de lezer hem denkt, en dat is precies het soort onzichtbare aanname waar de rest
+van dit document tegen beschermt. AANLEIDING, 23-08-2026: een container-sessie gaf bijna een vals
+verdict omdat nergens stond waar zij draaide, en een gestrande aflezing bleek achteraf twee
+mogelijke oorzaken te hebben — een worktree zonder de gitignorede bestanden, én een sessie die
+ouder was dan de bestanden die zij moest lezen. Zonder de omgevingsregel zijn die twee niet uit
+elkaar te houden. De toets is goedkoop: `git rev-parse --git-dir` tegen `--git-common-dir` — gelijk
+is hoofdcheckout, ongelijk is worktree.
+
 **EEN CLAIM DIE AAN EEN LETTERLIJKE STRING HANGT, DRAAGT DIE STRING IN HET RAPPORT.** Staat de
 string er niet, dan bestaat de claim niet — dan is er een samenvatting van bewijs in plaats van
 bewijs. Dat geldt ook wanneer het rapport er lang van wordt: literals tellen niet mee in het

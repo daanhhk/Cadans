@@ -64,6 +64,33 @@ GEEN VANGNET: TWEE AFLEZINGEN STAAN OPEN EN DIE ZIJN JOUW EERSTE DAAD. Code-en-c
   `RULESPATHS-MERKSTRING-K8T3WQ`, gescoopt op `packages/engine/src/zones.ts`. Regel 2:
   `.claude/rules/_wegwerp-altijd-probe.md`, merkstring `RULESALTIJD-MERKSTRING-R5N9YB`, ZONDER
   `paths`. Beide zijn genegeerd door de repo-regel en staan NIET in de commit.
+- **DE WORKTREE-VONDST, en zij ligt onder de twee gestrande aflezingen.** De desktop-app geeft ELKE
+  sessie een eigen worktree, op een eigen branch. Verbatim uit
+  `https://code.claude.com/docs/en/worktrees`: *"In the desktop app, every new session gets its own
+  worktree automatically."* — onder `.claude/worktrees/<naam>/` op een branch `worktree-<naam>`. Een
+  worktree is een VERSE checkout, dus GITIGNOREDE bestanden zijn er per constructie niet, en de twee
+  weggooi-regels reisden dus niet mee. **DIT STOND NERGENS VASTGELEGD**, in geen enkel document.
+  GEREPAREERD: `.worktreeinclude` in de projectroot neemt `.claude/rules/` mee. Diezelfde pagina
+  geeft de syntaxis, verbatim: *"The file uses `.gitignore` syntax. Only files that match a pattern
+  and are also gitignored are copied, so tracked files are never duplicated."*
+- **TWEE OORZAKEN, NIET ÉÉN — en dat verschil telt.** De worktree verklaart de desktop-kant. Van
+  één gestrande aflezing is een ANDERE oorzaak GEMETEN: die sessie was zelf ouder dan de bestanden
+  die zij moest lezen (transcript aangemaakt 2026-07-14, commit `e7c3e910` van 2026-08-23). Schrijf
+  de worktree dus niet als enige oorzaak op; er zijn er twee en ze vragen elk hun eigen controle.
+- **`cd C:\Users\daan\Projects\cadans` ALS VASTE EERSTE PROMPTREGEL IS VERDACHT — HERKOMST CHAT,
+  NIET GEMETEN.** Draait een sessie in haar eigen worktree, dan kan die regel CC uit zijn werkmap
+  naar de HOOFDCHECKOUT tillen, en dan meet en commit hij op een andere branch dan waar de sessie
+  hoort. Lees dit NIET als vastgesteld. De meting is goedkoop en hoort bij de eerstvolgende ronde:
+  laat de sessie haar eigen pad rapporteren vóór en ná die regel.
+- **NIEUWE CANON-REGEL: ELK RAPPORT DRAAGT ZIJN OMGEVING** — pad, worktree ja of nee, branch,
+  versie. Staat bij de rapportvorm in `docs/WERKWIJZE.md`. De toets is
+  `git rev-parse --git-dir` tegen `--git-common-dir`: gelijk is hoofdcheckout, ongelijk is worktree.
+- **`--print` BESTAAT NIET IN DE DESKTOP-APP**, dus `claude -p` is daar geen instrument. Samen met
+  de authenticatiefout van de vorige ronde is die route definitief dicht: een geneste sessie leest
+  niets af, en de aflezing hoort bij de OPENING van een echte sessie.
+- **DE RULES-AFLEZING KRIJGT GEEN EIGEN RONDE MEER — zij rijdt mee.** De twee probes staan klaar en
+  reizen nu mee dankzij `.worktreeinclude`, dus een verse sessie beantwoordt de vraag in haar
+  openingszin. Ruim ze daarna op.
 - **VLOEREN NU: vitest-totaal 1010 over 78 bestanden · engine-selftest-assert-count 1772 ·
   lint-waarschuwingen 20.** Onbewogen: docs-en-config. Lees ze zelf uit de suite; neem ze niet over
   uit dit blok.
@@ -71,18 +98,32 @@ GEEN VANGNET: TWEE AFLEZINGEN STAAN OPEN EN DIE ZIJN JOUW EERSTE DAAD. Code-en-c
   · 48 · 49 · 51 (alleen (3)) · 52.
 
 FOCUS VOLGENDE CHAT: **ROADMAP punt 47 — de blok-check valt in twee, ijking tegenover doelcheck.**
-BEGIN MET DE DRIELEDIGE AFLEZING ALS EERSTE DAAD, want die kost één bericht en geen ronde.
-**(a)** Wordt `.claude/agents/recon.md` nu wél ontdekt — staat `recon` in je lijst van agent-types?
-**(b)** BINDEN zijn tools: roep hem aan en laat hem rapporteren welke tools hij werkelijk heeft, of
-een `Write` ontbreekt dan wel faalt, en of `Bash` een schrijfpad blijft. **(c)** De rules-semantiek:
-verschijnt `RULESALTIJD-MERKSTRING-R5N9YB` aan het begin van je eerste antwoord (regel zonder
-`paths` laadt altijd), en verschijnt `RULESPATHS-MERKSTRING-K8T3WQ` zodra je
-`packages/engine/src/zones.ts` leest (path-scoped laadt op file-read)? Ruim beide regels daarna op.
-SLAAGT DIE AFLEZING, dan draait 47 als de EENMALIGE PROEF uit punt 52 — recon en bouw in één ronde,
-met een STRENGE stop-conditie. SLAAGT ZIJ NIET, dan draait 47 gesplitst en verschuift de proef.
-DE OPENSTAANDE MEETVRAAG VAN 47 staat bij het punt: `blokStartBijDoel` herschrijft `doelStart` bij
-een doelwissel terwijl poort (1) van `buildTestVoorstel` blokweek gelijk aan `BLOK_WEKEN` eist —
-VERMOEDEN, HERKOMST CHAT en NIET GEMETEN, dat een wissel het ijkaanbod drie weken onderdrukt.
+
+**DE RONDE OPENT MET DE OMGEVINGSVERKLARING, EN DIE IS EEN STOP-CONDITIE.** Rapporteer vóór alles:
+je werkpad, of dat pad een worktree is (`git rev-parse --git-dir` tegen `--git-common-dir` — gelijk
+is hoofdcheckout, ongelijk is worktree), je branch, of die achterloopt op `origin/main`, en
+`claude --version`. **Draait de sessie niet waar we denken, dan stopt zij daar** en meldt dat. Doe
+dit vóór de `cd`-regel effect heeft, of meld beide paden: die regel is VERDACHT (zie het blok
+hierboven) en kan een worktree-sessie naar de hoofdcheckout tillen.
+
+**DE RULES-AFLEZING KRIJGT GEEN EIGEN RONDE MEER — zij rijdt mee in de openingszin.** Dankzij
+`.worktreeinclude` reizen de twee probes nu mee naar een verse worktree. Verschijnt
+`RULESALTIJD-MERKSTRING-R5N9YB` aan het begin van je eerste antwoord, dan laadt een regel ZONDER
+`paths` altijd. Verschijnt `RULESPATHS-MERKSTRING-K8T3WQ` zodra je `packages/engine/src/zones.ts`
+leest, dan vuurt een PATH-SCOPED regel op file-read. Verschijnt er niets, dan is dat GEEN bewijs van
+het tegendeel — niet-geladen en geladen-maar-genegeerd zijn niet te scheiden. Meld het als vondst,
+ruim beide regels op, en ga door. Meet in dezelfde beweging of `recon` nu in je agent-types staat en
+of zijn tools BINDEN; lukt dat niet, dan blijft dat NIET GEMETEN en niet gemeten-als-afwezig.
+
+**PUNT 47 DRAAIT ALS DE EENMALIGE PROEF VAN PUNT 52** — recon en bouw in ÉÉN ronde, met de WAT-ALS
+als VOOR-AUTORISATIE in plaats van een voorspelling: je meet, leest je eigen bevindingen, en bouwt
+door zolang de verwachting HOUDT; valt zij om, dan stop je en rapporteer je. Het
+beoordelingscriterium staat bij punt 52 en is nadrukkelijk NIET "werkte het", maar of het ene
+rapport nog dezelfde bewijskracht draagt nu het twee rondes werk draagt. DE OPENSTAANDE MEETVRAAG
+VAN 47 staat bij het punt: `blokStartBijDoel` herschrijft `doelStart` bij een doelwissel terwijl
+poort (1) van `buildTestVoorstel` blokweek gelijk aan `BLOK_WEKEN` eist — VERMOEDEN, HERKOMST CHAT
+en NIET GEMETEN, dat een wissel het ijkaanbod drie weken onderdrukt.
+
 CONTEXT: Daan fietst voorlopig niet, beschikbaarheid 0, planner leeg vanaf 2026-08-09 — **dat is
 geen defect.** Verse chat.
 
