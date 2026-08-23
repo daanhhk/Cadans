@@ -42,9 +42,17 @@ Drie bestanden, geen enkele map.
 ```
 
 `git ls-files .claude` geeft twee bestanden: `.claude/launch.json` en `.claude/settings.json`.
-`settings.local.json` is dus NIET getrackt — en `.gitignore` noemt `claude` nergens, dus hij is
-untracked in plaats van genegeerd. Dat is een verschil dat telt: een `git add -A` zou hem
-meenemen.
+`settings.local.json` is dus NIET getrackt, en hij is ook echt GENEGEERD — maar niet door de
+`.gitignore` van deze repo. `git check-ignore -v` wijst de regel aan:
+
+```
+"C:\\Users\\daan/.config/git/ignore":3:**/.claude/settings.local.json	.claude/settings.local.json
+```
+
+De uitsluiting staat dus in de GLOBALE git-ignore van deze machine, niet in de repo. Dat telt voor
+punt 51: op een andere machine, of bij een verse kloon zonder die globale configuratie, zou
+`git add -A` dit bestand van 47878 bytes gewoon meenemen. Een regel in de repo-eigen `.gitignore`
+zou dat per constructie afvangen; vandaag hangt het aan een machine-instelling.
 
 **`settings.json` (2006 bytes, getrackt).** Draagt uitsluitend `permissions`, met
 `defaultMode: "acceptEdits"`, 51 `allow`-regels en 6 `deny`-regels. De deny-lijst is de enige
