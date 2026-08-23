@@ -40,9 +40,12 @@ const put = (path: string, body: unknown) =>
     body: JSON.stringify(body),
   });
 
-const LEEG = { blok: null, antwoord: null };
-const BEVESTIGD = { blok: "2026-09-21", antwoord: "bevestigd" };
-const NIET_NU = { blok: "2026-09-21", antwoord: "niet_nu" };
+// DRIE VELDEN SINDS 24-08-2026 (ROADMAP punt 64). Deze drie constanten pinden tot die dag een
+// tweeledige sleutel; het DOEL is de derde helft geworden omdat een bevestiging geldt voor het doel
+// waarvoor zij gegeven is. Elke test hieronder ging daarin mee.
+const LEEG = { blok: null, doel: null, antwoord: null };
+const BEVESTIGD = { blok: "2026-09-21", doel: "FTP", antwoord: "bevestigd" };
+const NIET_NU = { blok: "2026-09-21", doel: "FTP", antwoord: "niet_nu" };
 
 beforeEach(async () => {
   await db.delete(syncState).where(eq(syncState.userId, U));
@@ -53,7 +56,7 @@ beforeEach(async () => {
 });
 
 describe("GET/PUT /api/ijking", () => {
-  it("GET op een lege rij geeft twee nullen", async () => {
+  it("GET op een lege rij geeft drie nullen", async () => {
     const r = await call("/api/ijking");
     expect(r.status).toBe(200);
     expect(r.body).toEqual(LEEG);
@@ -80,7 +83,20 @@ describe("GET/PUT /api/ijking", () => {
     expect((await call("/api/ijking")).body).toEqual(BEVESTIGD);
   });
 
-  it("PUT met beide null WIST", async () => {
+  it("een ANDER DOEL op dezelfde opening is een ANDER antwoord (punt 64)", async () => {
+    // De ronde-trip die het gat van punt 64 dicht: dezelfde openingsmaandag, ander doel, en de
+    // opgeslagen rij draagt dat doel mee. Zonder deze kolom was dit dezelfde rij.
+    await put("/api/ijking", BEVESTIGD);
+    const ander = {
+      blok: "2026-09-21",
+      doel: "Korte beklimmingen",
+      antwoord: "niet_nu",
+    };
+    expect((await put("/api/ijking", ander)).status).toBe(200);
+    expect((await call("/api/ijking")).body).toEqual(ander);
+  });
+
+  it("PUT met alle drie null WIST", async () => {
     await put("/api/ijking", BEVESTIGD);
     const w = await put("/api/ijking", LEEG);
     expect(w.status).toBe(200);
@@ -90,22 +106,70 @@ describe("GET/PUT /api/ijking", () => {
   it("400 op een blok dat geen yyyy-MM-dd is, en er is NIETS weggeschreven", async () => {
     const w = await put("/api/ijking", {
       blok: "21-09-2026",
+      doel: "FTP",
       antwoord: "bevestigd",
     });
     expect(w.status).toBe(400);
     expect(await repo.readIjking(db, U)).toEqual(LEEG);
   });
 
-  it("400 op een antwoord buiten de twee waarden, en er is NIETS weggeschreven", async () => {
-    for (const antwoord of ["ja", "afgewezen", "", "BEVESTIGD"]) {
-      const w = await put("/api/ijking", { blok: "2026-09-21", antwoord });
+  it("400 op een doel buiten DOEL_OPTIONS, en er is NIETS weggeschreven", async () => {
+    // STRIKT, net als PUT /api/doel-passend: hier hoort het GENORMALISEERDE doel te landen, want
+    // poort (2b) vergelijkt genormaliseerd met genormaliseerd. Een legacy-string hoort al door
+    // `normalizeDoel_` te zijn gegaan vóór hij hier aankomt — "VO2max" is dus terecht een 400.
+    for (const doel of ["VO2max", "ftp", "", "Beklimmingen", 3, undefined]) {
+      const w = await put("/api/ijking", {
+        blok: "2026-09-21",
+        doel,
+        antwoord: "bevestigd",
+      });
       expect(w.status).toBe(400);
       expect(await repo.readIjking(db, U)).toEqual(LEEG);
     }
   });
 
+  it("400 op een antwoord buiten de twee waarden, en er is NIETS weggeschreven", async () => {
+    for (const antwoord of ["ja", "afgewezen", "", "BEVESTIGD"]) {
+      const w = await put("/api/ijking", {
+        blok: "2026-09-21",
+        doel: "FTP",
+        antwoord,
+      });
+      expect(w.status).toBe(400);
+      expect(await repo.readIjking(db, U)).toEqual(LEEG);
+    }
+  });
+
+  it("400 op een HALVE rij, en er is NIETS weggeschreven", async () => {
+    // ALLE DRIE OF GEEN. De gevaarlijkste vorm is {blok, doel, antwoord: null}: poort (2b) leest
+    // `ijkingAntwoord` niet, dus die rij onderdrukt het aanbod twaalf weken terwijl `ijkStatus`
+    // zowel `bevestigd` als `ongeijkt` op false zet en de staat-regel niets zegt — onderdrukking
+    // zonder uitleg, wat M91 verbiedt. Gevonden in de weerleggingspas van 24-08-2026; tot die dag
+    // gaf de route hier 200.
+    const halve = [
+      { blok: "2026-09-21", doel: "FTP", antwoord: null },
+      { blok: "2026-09-21", doel: null, antwoord: "bevestigd" },
+      { blok: null, doel: "FTP", antwoord: "bevestigd" },
+      { blok: "2026-09-21", doel: null, antwoord: null },
+      { blok: null, doel: null, antwoord: "bevestigd" },
+      { blok: null, doel: "FTP", antwoord: null },
+    ];
+    for (const body of halve) {
+      const w = await put("/api/ijking", body);
+      expect(w.status).toBe(400);
+      expect(await repo.readIjking(db, U)).toEqual(LEEG);
+    }
+    // En de twee VOLLEDIGE vormen blijven gewoon door.
+    expect((await put("/api/ijking", BEVESTIGD)).status).toBe(200);
+    expect((await put("/api/ijking", LEEG)).status).toBe(200);
+  });
+
   it("400 op een antwoord dat geen string is, en er is NIETS weggeschreven", async () => {
-    const w = await put("/api/ijking", { blok: "2026-09-21", antwoord: 3 });
+    const w = await put("/api/ijking", {
+      blok: "2026-09-21",
+      doel: "FTP",
+      antwoord: 3,
+    });
     expect(w.status).toBe(400);
     expect(await repo.readIjking(db, U)).toEqual(LEEG);
   });

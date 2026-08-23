@@ -71,7 +71,7 @@ export function TestVoorstelCard({
     if (saving) return;
     setSaving(true);
     try {
-      await putIjking(voorstel.blokStart, a);
+      await putIjking(voorstel.blokStart, voorstel.doel, a);
       bumpPlannerVersion();
     } catch {
       setSaving(false);

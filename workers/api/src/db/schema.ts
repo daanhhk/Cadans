@@ -299,11 +299,38 @@ export const syncState = sqliteTable("sync_state", {
    * voor het NIEUWE doel, en er is per besluit van 23-08-2026 geen retry: twaalf weken zonder
    * ijkaanbod. `dosisTredeDoel` en `doelPassendDoel` dragen precies daarvoor een tweede kolom.
    *
-   * NIET GEREPAREERD IN DEZE RONDE, met opzet gemeld in plaats van gebouwd. De prompt van ronde 5
-   * staat één migratie met één kolommenpaar toe en zegt: blijkt er meer nodig, stop en rapporteer.
-   * De reparatie is een derde kolom `ijking_doel` in het bestaande idiom, plus dezelfde
-   * doel-vergelijking in poort (2b) die `doelPassend` al doet. Dat is een tweede migratie. */
+   * GEREPAREERD OP 24-08-2026 (ROADMAP punt 64) met de kolom hieronder. Het antwoord telt sindsdien
+   * alleen als blok ÉN doel matchen; deze kolom alleen is dus niet meer de identiteit. */
   ijkingBlok: text("ijking_blok"),
+  /** ROADMAP punt 64 — het GENORMALISEERDE doel waarvoor het ijkantwoord gegeven is. Spiegelt
+   * `doelPassendDoel` en `dosisTredeDoel`, en om precies dezelfde reden.
+   *
+   * BESLUIT VAN 24-08-2026: een bevestiging geldt voor het DOEL waarvoor zij gegeven is. Wisselt het
+   * doel binnen de beantwoorde week, dan vervalt het antwoord en komt de vraag opnieuw. Het is dan
+   * een nieuw blok met een nieuwe doelstelling, en één extra tik is goedkoper dan twaalf weken
+   * doseren op een waarde die voor dát doel niemand heeft bevestigd.
+   *
+   * ALLEEN EFFECT-DOELEN LANDEN HIER. De enige schrijver is `TestVoorstelCard`, en die stuurt
+   * `voorstel.doel` — dus een waarde die `buildTestVoorstel` heeft teruggegeven. Poort (2) laat
+   * `Onderhoud` niet door (`blokCheckEnabled` is false, DOELEN-SPEC §3.2), dus `"Onderhoud"` kan
+   * hier per constructie NOOIT in staan. Gemeten in de weerleggingspas van 24-08-2026; het maakt
+   * de vier effect-doelen de enige bereikbare waarden.
+   *
+   * ÉÉN PAAR EN GEEN VERZAMELING, en dat heeft een prijs. Een beantwoord aanbod voor een nieuw doel
+   * overschrijft het antwoord van het vorige, dus heen-en-weer wisselen binnen dezelfde
+   * openingsweek laat de vraag opnieuw komen op dezelfde openingsmaandag. Zie poort (2b) in
+   * `apps/web/src/lib/testvoorstel.ts` voor de meting en ROADMAP punt 64 voor het nakijkpunt.
+   *
+   * GENORMALISEERD, want de poort vergelijkt genormaliseerd met genormaliseerd. `settings.doel` is
+   * vrije tekst in D1 en kan een legacy-waarde dragen ("Beklimmingen", "VO2max"); `normalizeDoel_`
+   * vouwt die op een `DOEL_OPTIONS`-waarde. De route valideert daarom STRIKT op `DOEL_OPTIONS` —
+   * een legacy-string hoort al genormaliseerd te zijn vóór hij hier aankomt. Zelfde regel als
+   * `PUT /api/doel-passend`.
+   *
+   * NULL IS EEN GELDIGE WAARDE en betekent "er is niets beantwoord" (samen met een lege
+   * `ijking_blok`). Een null-doel matcht nooit een gezet doel, dus een oude rij uit de tijd vóór
+   * deze kolom onderdrukt niets — dat is de gewenste kant om op te falen. */
+  ijkingDoel: text("ijking_doel"),
   /** 'bevestigd' | 'niet_nu' | null. Exact die twee waarden; de route valideert strikt en
    * normaliseert niet. Spiegelt `eventOvernameAntwoord`.
    *

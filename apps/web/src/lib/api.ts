@@ -307,29 +307,39 @@ export type IjkAntwoord = "bevestigd" | "niet_nu";
 
 export async function getIjking(): Promise<{
   blok: string | null;
+  doel: string | null;
   antwoord: IjkAntwoord | null;
 }> {
-  const r = await apiGet<{ blok: string | null; antwoord: string | null }>(
-    "/api/ijking",
-  );
+  const r = await apiGet<{
+    blok: string | null;
+    doel: string | null;
+    antwoord: string | null;
+  }>("/api/ijking");
   const a = r?.antwoord;
   return {
     blok: r?.blok ?? null,
+    doel: r?.doel ?? null,
     antwoord: a === "bevestigd" || a === "niet_nu" ? a : null,
   };
 }
 
-/** PUT /api/ijking: zet de openingsmaandag en het antwoord samen. Twee van de drie uitgangen
- * schrijven hier — BEVESTIGEN en NIET-NU. Inplannen niet: dat loopt via `putOverride`, en een
- * geplande test ziet poort (3) al. De route valideert strikt op de twee waarden. */
+/** PUT /api/ijking: zet de openingsmaandag, het GENORMALISEERDE doel en het antwoord samen. Twee
+ * van de drie uitgangen schrijven hier — BEVESTIGEN en NIET-NU. Inplannen niet: dat loopt via
+ * `putOverride`, en een geplande test ziet poort (3) al. De route valideert strikt: `blok` op
+ * yyyy-MM-dd, `doel` op `DOEL_OPTIONS`, `antwoord` op de twee waarden.
+ *
+ * HET DOEL HOORT ERBIJ (ROADMAP punt 64). Een bevestiging geldt voor het doel waarvoor zij gegeven
+ * is; zonder deze parameter zette het antwoord van een oud doel het aanbod voor een nieuw doel
+ * dicht zodra de wissel op maandag, dinsdag of woensdag van de beantwoorde week viel. */
 export async function putIjking(
   blok: string | null,
+  doel: string | null,
   antwoord: IjkAntwoord | null,
 ): Promise<void> {
   const resp = await fetch("/api/ijking", {
     method: "PUT",
     headers: { "content-type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({ blok, antwoord }),
+    body: JSON.stringify({ blok, doel, antwoord }),
   });
   if (!resp.ok) {
     const parsed = await parseBody(resp);

@@ -757,21 +757,33 @@ export async function writeDoelPassend(
     });
 }
 
-// ── ijking (sync_state.ijking_*) — ROADMAP punt 59 ────────────────────────
-// Het antwoord op het IJKAANBOD bij een doelblok-OPENING (M92). De OPENINGSMAANDAG is de
-// identiteit; een doelwissel schrijft een verse `doelStart` en dus een andere opening, waarmee de
-// vraag vanzelf terugkomt. Twee waarden: 'bevestigd' dekt het blok, 'niet_nu' laat de drempel
-// ONGEIJKT (M91). Inplannen schrijft hier NIETS — dat loopt via de override-keten.
+// ── ijking (sync_state.ijking_*) — ROADMAP punt 59 en 64 ──────────────────
+// Het antwoord op het IJKAANBOD bij een doelblok-OPENING (M92). Twee waarden: 'bevestigd' dekt het
+// blok, 'niet_nu' laat de drempel ONGEIJKT (M91). Inplannen schrijft hier NIETS — dat loopt via de
+// override-keten.
+//
+// DE IDENTITEIT IS BLOK PLUS DOEL, en dat is sinds 24-08-2026 zo. De eerste versie hield de
+// OPENINGSMAANDAG voor voldoende, met als grond dat een doelwissel per constructie een verse
+// `doelStart` schrijft. GEMETEN dat die grond onwaar is: `blokStartBijDoel` klemt op maandag,
+// dinsdag en woensdag naar de maandag van DEZE week, dus een wissel binnen de beantwoorde
+// openingsweek levert dezelfde maandag op en het antwoord van het OUDE doel zette het aanbod voor
+// het NIEUWE dicht — 3 van de 7 wisseldagen, twaalf weken lang, zonder retry. Nu telt het antwoord
+// alleen als blok ÉN doel matchen. Zelfde vorm als `readDoelPassend` / `writeDoelPassend`.
 //
 // DIT VERVANGT EEN VLUCHTIGE MODULE-SET in TestVoorstelCard.tsx die geen app-herstart overleefde.
 
 export async function readIjking(
   db: Db,
   userId: number,
-): Promise<{ blok: string | null; antwoord: string | null }> {
+): Promise<{
+  blok: string | null;
+  doel: string | null;
+  antwoord: string | null;
+}> {
   const rows = await db
     .select({
       blok: syncState.ijkingBlok,
+      doel: syncState.ijkingDoel,
       antwoord: syncState.ijkingAntwoord,
     })
     .from(syncState)
@@ -779,17 +791,23 @@ export async function readIjking(
     .limit(1);
   return {
     blok: rows[0]?.blok ?? null,
+    doel: rows[0]?.doel ?? null,
     antwoord: rows[0]?.antwoord ?? null,
   };
 }
 
-/** Zet de twee ijking-waarden samen. Upsert: raakt ALLEEN deze twee kolommen → de sync-velden,
+/** Zet de DRIE ijking-waarden samen. Upsert: raakt ALLEEN deze drie kolommen → de sync-velden,
  * debt-opt-in, fatigue-shift, dosis-trede, event-overname, doel-passendheid en power-zones blijven
- * intact. Zelfde vorm als `writeDoelPassend`. */
+ * intact. Zelfde vorm als `writeDoelPassend`.
+ *
+ * ALLE DRIE OF GEEN, en dat is opzet: blok, doel en antwoord vormen samen één besluit. Een schrijver
+ * die er twee zet en de derde laat staan, laat een halve rij achter waarin het doel bij het
+ * verkeerde blok hoort. Daarom staan ze alle drie in `values` én in `set`. */
 export async function writeIjking(
   db: Db,
   userId: number,
   blok: string | null,
+  doel: string | null,
   antwoord: string | null,
 ): Promise<void> {
   await db
@@ -797,12 +815,14 @@ export async function writeIjking(
     .values({
       userId,
       ijkingBlok: blok,
+      ijkingDoel: doel,
       ijkingAntwoord: antwoord,
     })
     .onConflictDoUpdate({
       target: syncState.userId,
       set: {
         ijkingBlok: blok,
+        ijkingDoel: doel,
         ijkingAntwoord: antwoord,
       },
     });

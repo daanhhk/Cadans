@@ -6,6 +6,7 @@
 // op warm (en warm valt terug op de droge reden-string). De settings-kiezer komt in een aparte brok →
 // render geeft nu persona "warm" hardcoded.
 
+import { DOEL_BLOK_WEKEN } from "@cadans/engine";
 import type { BlokReview } from "./blok";
 import type { MetingBron } from "./effect";
 import { nlUpTo1 } from "./format";
@@ -790,16 +791,27 @@ export function ijkStaatRegel(o: {
   bevestigd: boolean;
   ongeijkt: boolean;
   laatsteMeting: { bron: MetingBron; datum: string } | null;
-  blokkenOud: number | null;
+  wekenOud: number | null;
 }): string | null {
+  // WEKEN EN GEEN BLOKKEN sinds 24-08-2026 (Daan-besluit, ROADMAP punt 64). Tot die dag stond hier
+  // `blokkenOud`, met "Je drempel is een blok oud." en "Je drempel is N blokken oud.". Een blok is
+  // een teleenheid van de app; weken zijn wat de renner nodig heeft om te oordelen.
+  //
+  // DE ZICHTBAARHEIDSGRENS IS NIET VERSCHOVEN, en dat is opzet: `blokkenOud <= 0` zweeg onder 84
+  // dagen, en `wekenOud < DOEL_BLOK_WEKEN` zwijgt onder 12 weken — dezelfde grens, in de nieuwe
+  // eenheid uitgedrukt. Alleen wat de gebruiker LEEST is veranderd, niet WANNEER hij het leest.
+  // Wie die grens ooit wil verlagen doet dat als eigen besluit, niet als bijvangst.
+  //
+  // GEEN ENKELVOUDSTAK. Onder de grens van twaalf zwijgt deze regel, dus "1 week" kan hier per
+  // constructie niet uit komen. Een enkelvoudsvorm zou dode machinerie zijn die als levende
+  // mogelijkheid leest (CC-CHECKS CHECK 27); verlaagt iemand de grens, dan hoort hij hem erbij te
+  // schrijven en te toetsen.
   const leeftijd =
-    o.blokkenOud == null
+    o.wekenOud == null
       ? "Ik heb je drempel nog nooit gemeten."
-      : o.blokkenOud <= 0
+      : o.wekenOud < DOEL_BLOK_WEKEN
         ? null
-        : o.blokkenOud === 1
-          ? "Je drempel is een blok oud."
-          : `Je drempel is ${o.blokkenOud} blokken oud.`;
+        : `Je drempel is ${o.wekenOud} weken oud.`;
   const gemeten = o.laatsteMeting
     ? ` Voor het laatst gemeten op ${datumKort_(o.laatsteMeting.datum)}.`
     : "";

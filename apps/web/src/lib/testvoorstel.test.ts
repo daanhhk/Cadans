@@ -1,8 +1,13 @@
-import { DOEL_BLOK_WEKEN } from "@cadans/engine";
+import { DOEL_BLOK_WEKEN, DOEL_OPTIONS, normalizeDoel_ } from "@cadans/engine";
 import type { EventItem, OverrideEntry, PlannerDay } from "@cadans/shared";
 import { describe, expect, it } from "vitest";
 import type { ActValuesRow } from "./activities";
-import { BLOK_WEKEN, blokStartVoorWeek, blokWeekVanWeek } from "./blok";
+import {
+  BLOK_WEKEN,
+  blokCheckEnabled,
+  blokStartVoorWeek,
+  blokWeekVanWeek,
+} from "./blok";
 import { laatsteGelegenheid } from "./effect";
 import { blokStartBijDoel } from "./settings";
 import {
@@ -148,6 +153,7 @@ function bouw(
     events?: EventItem[];
     activities?: ActValuesRow[];
     ijkingBeantwoordBlok?: string | null;
+    ijkingBeantwoordDoel?: string | null;
   } = {},
 ) {
   return buildTestVoorstel({
@@ -160,6 +166,7 @@ function bouw(
     weekMondayISO: o.weekMondayISO ?? OPENING,
     todayISO: o.todayISO ?? OPENING,
     ijkingBeantwoordBlok: o.ijkingBeantwoordBlok ?? null,
+    ijkingBeantwoordDoel: o.ijkingBeantwoordDoel ?? null,
   });
 }
 
@@ -640,15 +647,91 @@ describe("de DRIE UITGANGEN en de bewaarde keuze (punt 59)", () => {
   it("een beantwoorde opening geeft GEEN tweede aanbod", () => {
     // POORT (2b). Bevestigen en niet-nu onderdrukken allebei; het verschil zit in wat de app erover
     // vertelt, niet in of de vraag terugkomt (M92: hoogstens één aanbod per opening).
-    expect(bouw({ ijkingBeantwoordBlok: OPENING })).toBeNull();
+    // MEEGEGAAN 24-08-2026 (punt 64): de sleutel is blok PLUS doel, dus het doel hoort erbij.
+    expect(
+      bouw({ ijkingBeantwoordBlok: OPENING, ijkingBeantwoordDoel: "FTP" }),
+    ).toBeNull();
   });
 
   it("een antwoord op een ANDERE opening onderdrukt niet", () => {
-    // De openingsmaandag IS de identiteit. Het antwoord van het vorige doelblok mag dit blok niet
-    // dichtzetten — anders zou één bevestiging voorgoed gelden.
-    expect(bouw({ ijkingBeantwoordBlok: "2026-06-29" })).not.toBeNull();
-    expect(bouw({ ijkingBeantwoordBlok: null })).not.toBeNull();
-    expect(bouw({ ijkingBeantwoordBlok: undefined })).not.toBeNull();
+    // Het antwoord van het vorige doelblok mag dit blok niet dichtzetten — anders zou één
+    // bevestiging voorgoed gelden. MEEGEGAAN 24-08-2026: het doel matcht hier telkens, zodat deze
+    // test uitsluitend de BLOK-helft van de sleutel toetst.
+    expect(
+      bouw({ ijkingBeantwoordBlok: "2026-06-29", ijkingBeantwoordDoel: "FTP" }),
+    ).not.toBeNull();
+    expect(
+      bouw({ ijkingBeantwoordBlok: null, ijkingBeantwoordDoel: "FTP" }),
+    ).not.toBeNull();
+    expect(
+      bouw({ ijkingBeantwoordBlok: undefined, ijkingBeantwoordDoel: "FTP" }),
+    ).not.toBeNull();
+  });
+
+  it("een antwoord voor een ANDER DOEL onderdrukt niet (punt 64)", () => {
+    // DE TWEEDE HELFT VAN DE SLEUTEL, en dit is het gat dat punt 64 dicht. Zelfde opening, ander
+    // doel: de vraag hoort terug te komen, want het is een nieuw blok met een nieuwe doelstelling.
+    expect(
+      bouw({
+        ijkingBeantwoordBlok: OPENING,
+        ijkingBeantwoordDoel: "Onderhoud",
+      }),
+    ).not.toBeNull();
+    // En een rij van vóór de doel-kolom (doel leeg) onderdrukt niets — de veilige kant om op te
+    // falen: liever één vraag te veel dan twaalf weken op een onbevestigde waarde.
+    expect(
+      bouw({ ijkingBeantwoordBlok: OPENING, ijkingBeantwoordDoel: null }),
+    ).not.toBeNull();
+    expect(
+      bouw({ ijkingBeantwoordBlok: OPENING, ijkingBeantwoordDoel: undefined }),
+    ).not.toBeNull();
+  });
+
+  it("het gedragen doel is ALTIJD een DOEL_OPTIONS-waarde — anders faalt de tik stil", () => {
+    // CHECK 19, beide uiteinden van het SCHRIJFPAD. `TestVoorstelCard` stuurt `voorstel.doel` naar
+    // `PUT /api/ijking`, en die route valideert STRIKT op `DOEL_OPTIONS` en antwoordt anders 400.
+    // Zou `normalizeDoel_` ooit iets buiten die lijst kunnen opleveren, dan weigert de route een
+    // waarde die de app zelf heeft gemaakt en verdwijnt de tik van de gebruiker zonder melding.
+    // `normalizeDoel_` is vandaag TOTAAL op `DOEL_OPTIONS` — elke tak geeft een lid terug — en deze
+    // test pint dat vast, zodat een wijziging daar hier rood wordt en niet pas in productie.
+    const ruw = [
+      "FTP",
+      "Conditie",
+      "Korte beklimmingen",
+      "Lange beklimmingen",
+      "Onderhoud",
+      "Beklimmingen",
+      "VO2max",
+      "",
+      "onzin",
+      null,
+      undefined,
+    ];
+    for (const d of ruw) {
+      expect(DOEL_OPTIONS).toContain(normalizeDoel_(d));
+    }
+    // En het voorstel draagt precies die waarde, voor elk doel dat een aanbod oplevert.
+    for (const d of ["FTP", "Conditie", "Korte beklimmingen", "VO2max"]) {
+      const v = bouw({ doel: d });
+      if (v) expect(DOEL_OPTIONS).toContain(v.doel);
+    }
+  });
+
+  it("het voorstel DRAAGT het genormaliseerde doel dat de kaart terugschrijft", () => {
+    // Dragend: wat de kaart via `putIjking` opslaat moet per constructie hetzelfde zijn als waarop
+    // poort (2b) straks vergelijkt. Een legacy-string uit D1 valt op dezelfde DOEL_OPTIONS-waarde.
+    expect(bouw()?.doel).toBe("FTP");
+    expect(bouw({ doel: "VO2max" })?.doel).toBe(normalizeDoel_("VO2max"));
+    // En dat teruggeschreven doel onderdrukt de VOLGENDE aanroep — de lus is rond.
+    const v = bouw({ doel: "Conditie" });
+    expect(v).not.toBeNull();
+    expect(
+      bouw({
+        doel: "Conditie",
+        ijkingBeantwoordBlok: v?.blokStart,
+        ijkingBeantwoordDoel: v?.doel,
+      }),
+    ).toBeNull();
   });
 
   it("BEVESTIGD levert de staat bevestigd-niet-gemeten", () => {
@@ -659,13 +742,16 @@ describe("de DRIE UITGANGEN en de bewaarde keuze (punt 59)", () => {
       todayISO: OPENING,
       ijkingAntwoord: "bevestigd",
       ijkingBeantwoordBlok: OPENING,
+      ijkingBeantwoordDoel: "FTP",
       huidigeOpening: OPENING,
+      doel: "FTP",
     });
     expect(s.bevestigd).toBe(true);
     expect(s.ongeijkt).toBe(false);
     expect(s.laatsteMeting).toEqual({ bron: "race", datum: "2026-05-21" });
-    // 2026-05-21 → 2026-09-21 is 123 dagen; 123 / 84 = 1 vol doelblok.
-    expect(s.blokkenOud).toBe(1);
+    // MEEGEGAAN 24-08-2026 (besluit twee, punt 64): de eenheid is WEKEN, niet blokken.
+    // 2026-05-21 → 2026-09-21 is 123 dagen; 123 / 7 = 17 volle weken (was: 123 / 84 = 1 blok).
+    expect(s.wekenOud).toBe(17);
   });
 
   it("NIET-NU levert de ONGEIJKT-staat (M91)", () => {
@@ -676,7 +762,9 @@ describe("de DRIE UITGANGEN en de bewaarde keuze (punt 59)", () => {
       todayISO: OPENING,
       ijkingAntwoord: "niet_nu",
       ijkingBeantwoordBlok: OPENING,
+      ijkingBeantwoordDoel: "FTP",
       huidigeOpening: OPENING,
+      doel: "FTP",
     });
     expect(s.ongeijkt).toBe(true);
     expect(s.bevestigd).toBe(false);
@@ -690,12 +778,52 @@ describe("de DRIE UITGANGEN en de bewaarde keuze (punt 59)", () => {
       todayISO: OPENING,
       ijkingAntwoord: "bevestigd",
       ijkingBeantwoordBlok: "2026-06-29",
+      ijkingBeantwoordDoel: "FTP",
       huidigeOpening: OPENING,
+      doel: "FTP",
     });
     expect(s.bevestigd).toBe(false);
     expect(s.ongeijkt).toBe(false);
     // De LEEFTIJD staat er nog wel: die hangt aan de meting en niet aan het antwoord.
-    expect(s.blokkenOud).toBe(1);
+    expect(s.wekenOud).toBe(17);
+  });
+
+  it("een antwoord voor een ANDER DOEL telt niet meer voor de staat (punt 64)", () => {
+    // De spiegel van poort (2b): dezelfde tweeledige sleutel, dus dezelfde uitkomst. Zonder dit
+    // zou de app na een doelwissel melden dat de drempel "bevestigd" is voor een doel waarvoor
+    // niemand iets bevestigd heeft.
+    const s = ijkStatus({
+      activities: OUDE_METING.acts,
+      events: OUDE_METING.events,
+      overrides: [],
+      todayISO: OPENING,
+      ijkingAntwoord: "bevestigd",
+      ijkingBeantwoordBlok: OPENING,
+      ijkingBeantwoordDoel: "Onderhoud",
+      huidigeOpening: OPENING,
+      doel: "Korte beklimmingen",
+    });
+    expect(s.bevestigd).toBe(false);
+    expect(s.ongeijkt).toBe(false);
+    expect(s.wekenOud).toBe(17);
+  });
+
+  it("de staat vergelijkt GENORMALISEERD, aan beide kanten (punt 64)", () => {
+    // `settings.doel` is vrije tekst in D1; de kolom draagt alleen DOEL_OPTIONS-waarden. Een
+    // legacy-string hoort dus te matchen met de genormaliseerde vorm ervan.
+    const legacy = "VO2max";
+    const s = ijkStatus({
+      activities: OUDE_METING.acts,
+      events: OUDE_METING.events,
+      overrides: [],
+      todayISO: OPENING,
+      ijkingAntwoord: "bevestigd",
+      ijkingBeantwoordBlok: OPENING,
+      ijkingBeantwoordDoel: normalizeDoel_(legacy),
+      huidigeOpening: OPENING,
+      doel: legacy,
+    });
+    expect(s.bevestigd).toBe(true);
   });
 
   it("de leeftijd telt SPRONGEN niet mee — een proxy is geen meting (M91)", () => {
@@ -710,12 +838,13 @@ describe("de DRIE UITGANGEN en de bewaarde keuze (punt 59)", () => {
       todayISO: OPENING,
     });
     expect(s.laatsteMeting).toBeNull();
-    expect(s.blokkenOud).toBeNull();
+    expect(s.wekenOud).toBeNull();
   });
 
   it("de teller vraagt geen eigen opslag: hij volgt uit de laatste ECHTE meting", () => {
-    // BESLUIT VIER, en dit is de vorm waarin hij gebouwd is. Twee doelblokken verder zonder meting
-    // is 2, drie is 3 — zonder dat er ergens een teller staat.
+    // BESLUIT VIER, en dit is de vorm waarin hij gebouwd is — zonder dat er ergens een teller staat.
+    // MEEGEGAAN 24-08-2026 (besluit twee): de eenheid is WEKEN. Waar dit eerder 0/1/2/3 blokken las
+    // op 83/84/168/252 dagen, leest het nu 11/12/24/36 weken op dezelfde dagen.
     const mk = (dagenGeleden: number) => {
       const d = isoMin(OPENING, dagenGeleden);
       return ijkStatus({
@@ -723,12 +852,38 @@ describe("de DRIE UITGANGEN en de bewaarde keuze (punt 59)", () => {
         events: [race(d)],
         overrides: [],
         todayISO: OPENING,
-      }).blokkenOud;
+      }).wekenOud;
     };
-    expect(mk(83)).toBe(0);
-    expect(mk(84)).toBe(1);
-    expect(mk(168)).toBe(2);
-    expect(mk(252)).toBe(3);
+    expect(mk(83)).toBe(11);
+    expect(mk(84)).toBe(12);
+    expect(mk(168)).toBe(24);
+    expect(mk(252)).toBe(36);
+  });
+
+  it("BEVESTIGEN maakt de drempel niet JONGER — besluit twee, gemeten", () => {
+    // DE LEESVRAAG UIT SECTIE 2, als test. `wekenOud` hangt aan `laatsteGelegenheid`, die alleen
+    // GEREDEN maximale inspanningen kent; een bevestiging schrijft enkel `sync_state.ijking_*` en
+    // kan de teller dus per constructie niet verzetten. Dezelfde historie, drie antwoorden, één
+    // leeftijd.
+    const basis = {
+      activities: OUDE_METING.acts,
+      events: OUDE_METING.events,
+      overrides: [] as OverrideEntry[],
+      todayISO: OPENING,
+      ijkingBeantwoordBlok: OPENING,
+      ijkingBeantwoordDoel: "FTP",
+      huidigeOpening: OPENING,
+      doel: "FTP",
+    };
+    const zonder = ijkStatus(basis);
+    const bevestigd = ijkStatus({ ...basis, ijkingAntwoord: "bevestigd" });
+    const nietNu = ijkStatus({ ...basis, ijkingAntwoord: "niet_nu" });
+    expect(bevestigd.bevestigd).toBe(true);
+    expect(nietNu.ongeijkt).toBe(true);
+    expect(zonder.wekenOud).toBe(17);
+    expect(bevestigd.wekenOud).toBe(17);
+    expect(nietNu.wekenOud).toBe(17);
+    expect(bevestigd.laatsteMeting).toEqual(zonder.laatsteMeting);
   });
 });
 
@@ -854,7 +1009,9 @@ describe("de opening waarop het antwoord GELDT is de TWAALFWEEKSE (weerleggingsp
         todayISO: ma,
         ijkingAntwoord: "bevestigd",
         ijkingBeantwoordBlok: OPENING,
+        ijkingBeantwoordDoel: "FTP",
         huidigeOpening: doelblokOpeningVoorWeek(DOELSTART, ma),
+        doel: "FTP",
       });
       expect(s.bevestigd).toBe(true);
       expect(s.ongeijkt).toBe(false);
@@ -870,7 +1027,9 @@ describe("de opening waarop het antwoord GELDT is de TWAALFWEEKSE (weerleggingsp
       todayISO: ma,
       ijkingAntwoord: "bevestigd",
       ijkingBeantwoordBlok: OPENING,
+      ijkingBeantwoordDoel: "FTP",
       huidigeOpening: doelblokOpeningVoorWeek(DOELSTART, ma),
+      doel: "FTP",
     });
     expect(s.bevestigd).toBe(false);
   });
@@ -926,5 +1085,203 @@ describe("het venster van poort (3) is VERBREED, niet gedraaid (weerleggingspas 
     expect(
       bouw({ overrides: [testOverride(isoMin(OPENING, -28))] }),
     ).not.toBeNull();
+  });
+});
+
+describe("een DOELWISSEL in de beantwoorde openingsweek geeft een nieuw aanbod (punt 64)", () => {
+  // Vóór 24-08-2026 was de opgeslagen sleutel alleen de openingsmaandag, met als grond dat
+  // `blokStartBijDoel` bij een wissel per constructie een verse `doelStart` schrijft. GEMETEN dat
+  // die grond onwaar is: `WISSEL_LAATSTE_DAG = 3` klemt op maandag, dinsdag en woensdag naar de
+  // maandag van DEZE week, dus 3 van de 7 wisseldagen leverden dezelfde maandag en daarmee GEEN
+  // nieuw aanbod.
+  //
+  // TWEE EFFECT-DOELEN, EN DAT IS EEN CORRECTIE OP DE EERSTE VERSIE VAN DEZE TEST. Die gebruikte
+  // `"Onderhoud"` als OUD_DOEL, met "Daans februari-scenario" als verantwoording. Dat scenario
+  // geeft juist DELTA NUL: `blokCheckEnabled("Onderhoud")` is false, dus daar komt nooit een aanbod
+  // en kan `TestVoorstelCard` — de enige schrijver van `ijking_*` — voor die opening ook nooit een
+  // rij wegschrijven. De fixture toetste dus een D1-stand die de app niet kan produceren. Het
+  // gemeten geval is een wissel tussen twee EFFECT-doelen; zie `docs/PUNT47-BOUW.md` §32k.
+  //
+  // DE ZEVEN DAGEN KOMEN UIT DE ECHTE BRON, niet uit een nagebouwd raster (CC-CHECKS CHECK 12):
+  // `blokStartBijDoel` bepaalt de nieuwe `doelStart` en `buildTestVoorstel` bepaalt het aanbod.
+  const OUD_DOEL = "FTP";
+  const NIEUW_DOEL = "Korte beklimmingen";
+
+  /** De zeven dagen van de beantwoorde openingsweek, maandag t/m zondag. */
+  const wisseldagen = () =>
+    [0, 1, 2, 3, 4, 5, 6].map((i) => isoMin(OPENING, -i));
+
+  it("het onbereikbare doel: Onderhoud kan NOOIT als opgeslagen doel landen", () => {
+    // De grond onder de fixture-correctie hierboven, als test. Poort (2) laat Onderhoud niet door,
+    // dus er is geen voorstel en dus ook geen `voorstel.doel` om weg te schrijven. De vier
+    // effect-doelen zijn de enige waarden die `ijking_doel` ooit kan dragen.
+    expect(blokCheckEnabled("Onderhoud")).toBe(false);
+    expect(bouw({ doel: "Onderhoud" })).toBeNull();
+    for (const d of [
+      "FTP",
+      "Conditie",
+      "Korte beklimmingen",
+      "Lange beklimmingen",
+    ]) {
+      expect(bouw({ doel: d })?.doel).toBe(d);
+    }
+  });
+
+  it("levert op ALLE ZEVEN wisseldagen een aanbod — was 4 van 7", () => {
+    let metAanbod = 0;
+    let zelfdeMaandag = 0;
+    for (const wisselDag of wisseldagen()) {
+      // De app rekent de nieuwe doelStart uit met de ECHTE functie uit settings.ts.
+      const nieuweDoelStart = blokStartBijDoel(
+        OUD_DOEL,
+        OPENING,
+        NIEUW_DOEL,
+        wisselDag,
+      );
+      if (nieuweDoelStart === OPENING) zelfdeMaandag++;
+      const v = bouw({
+        doel: NIEUW_DOEL,
+        doelStart: nieuweDoelStart,
+        weekMondayISO: nieuweDoelStart,
+        todayISO: nieuweDoelStart,
+        plannerDays: weekVanaf(nieuweDoelStart),
+        // Het bewaarde antwoord van het OUDE doel op de OUDE opening.
+        ijkingBeantwoordBlok: OPENING,
+        ijkingBeantwoordDoel: OUD_DOEL,
+      });
+      if (v) metAanbod++;
+    }
+    // De 3 van 7 uit de recon staat er nog steeds — de KLEM is niet veranderd, de SLEUTEL wel.
+    expect(zelfdeMaandag).toBe(3);
+    expect(metAanbod).toBe(7);
+  });
+
+  it("en de vier andere dagen kregen hun aanbod al vóór punt 64 — de sleutel is de winst", () => {
+    // De tegenproef die aanwijst WAT er veranderd is: met alleen de blok-helft van de sleutel
+    // vuurden er vier. Hier nagespeeld door het opgeslagen doel gelijk te zetten aan het nieuwe,
+    // want dan gedraagt de tweeledige sleutel zich precies als de oude eenledige.
+    let metAanbod = 0;
+    for (const wisselDag of wisseldagen()) {
+      const nieuweDoelStart = blokStartBijDoel(
+        OUD_DOEL,
+        OPENING,
+        NIEUW_DOEL,
+        wisselDag,
+      );
+      const v = bouw({
+        doel: NIEUW_DOEL,
+        doelStart: nieuweDoelStart,
+        weekMondayISO: nieuweDoelStart,
+        todayISO: nieuweDoelStart,
+        plannerDays: weekVanaf(nieuweDoelStart),
+        ijkingBeantwoordBlok: OPENING,
+        ijkingBeantwoordDoel: NIEUW_DOEL,
+      });
+      if (v) metAanbod++;
+    }
+    expect(metAanbod).toBe(4);
+  });
+
+  it("een DOORROLLEND blok ZONDER wissel krijgt géén tweede aanbod", () => {
+    // DE ANDERE KANT, en dit is de ingreep die makkelijk doorschiet. Zonder doelwissel blijft
+    // `blokStartBijDoel` de geladen blokstart teruggeven, matcht de volledige sleutel, en hoort
+    // poort (2b) dicht te staan — op elk van de zeven dagen van de openingsweek.
+    let metAanbod = 0;
+    for (const dag of wisseldagen()) {
+      const zelfdeDoelStart = blokStartBijDoel(
+        OUD_DOEL,
+        OPENING,
+        OUD_DOEL,
+        dag,
+      );
+      expect(zelfdeDoelStart).toBe(OPENING);
+      const v = bouw({
+        doel: "FTP",
+        doelStart: DOELSTART,
+        weekMondayISO: OPENING,
+        todayISO: dag,
+        ijkingBeantwoordBlok: OPENING,
+        ijkingBeantwoordDoel: "FTP",
+      });
+      if (v) metAanbod++;
+    }
+    expect(metAanbod).toBe(0);
+  });
+
+  it("HEEN EN TERUG binnen dezelfde week herstelt de onderdrukking", () => {
+    // DE ROTATIE-VRAAG, zelf nagemeten: vangt de nieuwe sleutel iets NIEUWS af terwijl er iets
+    // OUDS ontsnapt? Nee. Wisselt de gebruiker weg en weer terug, dan staat hij weer precies waar
+    // hij stond en geldt zijn oorspronkelijke antwoord opnieuw — zolang de BLOK-helft nog matcht.
+    //
+    // TWEE DOELEN DIE BEIDE POORT (2) PASSEREN, en dat is dragend. Een eerdere versie van deze
+    // probe wisselde terug naar "Onderhoud", en die valt al op `blokCheckEnabled` — de uitslag
+    // "geen aanbod" kwam daar dus van poort (2) en niet van poort (2b). Twee dingen tegelijk in
+    // één probe; hier verschilt alleen de sleutel.
+    const A = "FTP";
+    const B = "Korte beklimmingen";
+    expect(blokCheckEnabled(A)).toBe(true);
+    expect(blokCheckEnabled(B)).toBe(true);
+    let terugOnderdrukt = 0;
+    let terugAanbod = 0;
+    for (const dag of wisseldagen()) {
+      const heen = blokStartBijDoel(A, OPENING, B, dag);
+      const terug = blokStartBijDoel(B, heen, A, dag);
+      // HEEN: ander doel, dus altijd een aanbod.
+      expect(
+        bouw({
+          doel: B,
+          doelStart: heen,
+          weekMondayISO: heen,
+          todayISO: heen,
+          plannerDays: weekVanaf(heen),
+          ijkingBeantwoordBlok: OPENING,
+          ijkingBeantwoordDoel: A,
+        }),
+      ).not.toBeNull();
+      // TERUG: het oorspronkelijke doel weer. Onderdrukt zolang de blok-helft nog matcht.
+      const v = bouw({
+        doel: A,
+        doelStart: terug,
+        weekMondayISO: terug,
+        todayISO: terug,
+        plannerDays: weekVanaf(terug),
+        ijkingBeantwoordBlok: OPENING,
+        ijkingBeantwoordDoel: A,
+      });
+      if (blokStartVoorWeek(terug, terug) === OPENING) {
+        expect(v).toBeNull();
+        terugOnderdrukt++;
+      } else {
+        expect(v).not.toBeNull();
+        terugAanbod++;
+      }
+    }
+    // Ma/di/wo klemmen naar dezelfde maandag; do t/m zo krijgen een verse doelStart en dus een
+    // ander blok, waar terecht wél een aanbod hoort.
+    expect(terugOnderdrukt).toBe(3);
+    expect(terugAanbod).toBe(4);
+  });
+
+  it("een LEGACY-rij zonder doel onderdrukt niets — de veilige kant", () => {
+    // Een rij die vóór migratie 0012 is weggeschreven draagt `ijking_blok` maar geen `ijking_doel`.
+    // De vraag komt dan EENMALIG terug. Dat is de goede kant om op te falen: één vraag te veel is
+    // goedkoper dan twaalf weken doseren op een waarde die niemand voor dit doel bevestigd heeft.
+    expect(
+      bouw({ ijkingBeantwoordBlok: OPENING, ijkingBeantwoordDoel: null }),
+    ).not.toBeNull();
+    expect(
+      bouw({ ijkingBeantwoordBlok: OPENING, ijkingBeantwoordDoel: "FTP" }),
+    ).toBeNull();
+  });
+
+  it("en zonder bewaard antwoord staat er op die zeven dagen ÉÉN aanbod, niet zeven", () => {
+    // De tegenhanger van de vorige test: de kaart staat de hele week, maar hij biedt telkens
+    // DEZELFDE dag aan. Zeven renders van één aanbod is geen zeven aanbiedingen.
+    const datums = new Set<string>();
+    for (const dag of wisseldagen()) {
+      const v = bouw({ todayISO: dag });
+      if (v) datums.add(v.datum);
+    }
+    expect(datums.size).toBe(1);
   });
 });

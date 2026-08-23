@@ -1657,8 +1657,10 @@ export async function loadSchemaWeek(): Promise<{
     weekMondayISO: monday,
     todayISO,
     // ROADMAP punt 59 — het bewaarde antwoord op DEZE opening. Vervangt de vluchtige module-Set in
-    // TestVoorstelCard die geen app-herstart overleefde.
+    // TestVoorstelCard die geen app-herstart overleefde. ROADMAP punt 64 — het DOEL hoort in de
+    // sleutel: een bevestiging geldt voor het doel waarvoor zij gegeven is.
     ijkingBeantwoordBlok: ijkingRow.blok,
+    ijkingBeantwoordDoel: ijkingRow.doel,
   });
 
   // ROADMAP punt 59 — de STAAT van de drempelwaarde, los van of er een aanbod staat. Blijft
@@ -1678,6 +1680,8 @@ export async function loadSchemaWeek(): Promise<{
           todayISO,
           ijkingAntwoord: ijkingRow.antwoord,
           ijkingBeantwoordBlok: ijkingRow.blok,
+          ijkingBeantwoordDoel: ijkingRow.doel,
+          doel: settings?.doel ?? null,
           // De opening van het LOPENDE doelblok — de TWAALFWEEKSE teller, niet de vierweekse.
           // `blokStartVoorWeek` stond hier eerst en dat was fout: die rijdt `blokWeekVanWeek`
           // modulo BLOK_WEKEN (4). In de openingsweek vallen beide samen, dus geen test zag het;

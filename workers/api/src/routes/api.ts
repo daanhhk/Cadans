@@ -709,20 +709,23 @@ api.put("/doel-passend", async (c) => {
   return c.json({ ok: true });
 });
 
-// ROADMAP punt 59 — DE IJKING (spiegelt /doel-passend). GET geeft de openingsmaandag en het
-// antwoord waarvoor geantwoord is (of twee nullen); PUT zet de twee samen. Twee waarden:
-// 'bevestigd' dekt het blok, 'niet_nu' laat de drempel ONGEIJKT (M91). INPLANNEN schrijft hier
-// niets — dat loopt via PUT /api/override/:date, en een geplande test ziet poort (3).
+// ROADMAP punt 59 en 64 — DE IJKING (spiegelt /doel-passend). GET geeft de openingsmaandag, het
+// GENORMALISEERDE doel en het antwoord waarvoor geantwoord is (of drie nullen); PUT zet de drie
+// samen. Twee antwoordwaarden: 'bevestigd' dekt het blok, 'niet_nu' laat de drempel ONGEIJKT (M91).
+// INPLANNEN schrijft hier niets — dat loopt via PUT /api/override/:date, en een geplande test ziet
+// poort (3). Het DOEL hoort erbij sinds 24-08-2026: een bevestiging geldt voor het doel waarvoor
+// zij gegeven is, en een wissel binnen de beantwoorde week laat de vraag terugkomen.
 api.get("/ijking", async (c) => {
   const db = makeDb(c.env.DB);
-  const { blok, antwoord } = await readIjking(db, CURRENT_USER_ID);
-  return c.json({ blok, antwoord });
+  const { blok, doel, antwoord } = await readIjking(db, CURRENT_USER_ID);
+  return c.json({ blok, doel, antwoord });
 });
 
 api.put("/ijking", async (c) => {
   const db = makeDb(c.env.DB);
   const body = await readJsonObject(c);
   const blok = body.blok;
+  const doel = body.doel;
   const antwoord = body.antwoord;
   // NIET normaliseren, NIET clampen, GEEN lege string accepteren. Elke afwijzing gebeurt VÓÓR de
   // schrijfactie, zodat een 400 ook echt betekent dat er niets is weggeschreven.
@@ -731,15 +734,45 @@ api.put("/ijking", async (c) => {
       message: "invalid blok, expected yyyy-MM-dd or null",
     });
   }
+  // STRIKT OP DOEL_OPTIONS terwijl `settings.doel` vrije tekst is, en dat is opzet: hier wordt het
+  // GENORMALISEERDE doel bewaard, want poort (2b) vergelijkt straks genormaliseerd met
+  // genormaliseerd. Een legacy-string hoort dus al door `normalizeDoel_` te zijn gegaan vóór hij
+  // hier aankomt. Letterlijk dezelfde regel als `PUT /api/doel-passend` hierboven.
+  if (
+    doel !== null &&
+    (typeof doel !== "string" ||
+      !(DOEL_OPTIONS as readonly string[]).includes(doel))
+  ) {
+    throw new HTTPException(400, {
+      message: "invalid doel, expected a DOEL_OPTIONS value or null",
+    });
+  }
   if (antwoord !== null && antwoord !== "bevestigd" && antwoord !== "niet_nu") {
     throw new HTTPException(400, {
       message: "invalid antwoord, expected 'bevestigd', 'niet_nu' or null",
+    });
+  }
+  // ALLE DRIE OF GEEN, en deze route DWINGT dat af — de repo-laag kon dat niet.
+  //
+  // WAAROM DIT ER STAAT. `writeIjking` zet de drie kolommen altijd samen, maar tot 24-08-2026
+  // accepteerde deze route met 200 ook een HALVE rij. De gevaarlijkste vorm is
+  // `{blok, doel, antwoord: null}`: poort (2b) leest `ijkingAntwoord` NIET — hij sleutelt alleen op
+  // blok en doel — dus die rij onderdrukt het aanbod twaalf weken lang, terwijl `ijkStatus` zowel
+  // `bevestigd` als `ongeijkt` op false zet en de staat-regel dus NIETS zegt. Onderdrukking zonder
+  // uitleg is precies wat M91 verbiedt. Vandaag is die vorm niet bereikbaar vanuit
+  // `TestVoorstelCard`, maar een tweede schrijver zou hem zo maken; gevonden in de weerleggingspas
+  // van 24-08-2026.
+  const gezet = [blok, doel, antwoord].filter((v) => v !== null).length;
+  if (gezet !== 0 && gezet !== 3) {
+    throw new HTTPException(400, {
+      message: "blok, doel and antwoord must be all set or all null",
     });
   }
   await writeIjking(
     db,
     CURRENT_USER_ID,
     blok as string | null,
+    doel as string | null,
     antwoord as string | null,
   );
   return c.json({ ok: true });

@@ -15,7 +15,11 @@
 // Hij is AFGELEID uit de meetkunde van poort (1) en bewaakt sindsdien niet de frequentie — dat doet
 // poort (1) — maar alleen de nabijheid van een reeds gedane maximale inspanning. Wie hem wil
 // herzien leest eerst zijn eigen docstring: één dag hoger onderdrukt al natuurlijke openingen.
-import { computeMacroPhase, DOEL_BLOK_WEKEN } from "@cadans/engine";
+import {
+  computeMacroPhase,
+  DOEL_BLOK_WEKEN,
+  normalizeDoel_,
+} from "@cadans/engine";
 import type { EventItem, OverrideEntry, PlannerDay } from "@cadans/shared";
 import type { ActValuesRow } from "./activities";
 import {
@@ -94,8 +98,12 @@ function dagenTussen_(vanISO: string, totISO: string): number {
 }
 
 export interface TestVoorstel {
-  /** Maandag van blokweek 1 — de sleutel waarop een afwijzing hangt. */
+  /** Maandag van blokweek 1 — de EERSTE helft van de sleutel waarop een antwoord hangt. */
   blokStart: string;
+  /** ROADMAP punt 64 — het GENORMALISEERDE doel: de TWEEDE helft van die sleutel. De kaart schrijft
+   * hem samen met `blokStart` terug via `putIjking`, zodat wat er opgeslagen wordt per constructie
+   * hetzelfde is als waarop poort (2b) straks vergelijkt. */
+  doel: string;
   /** De voorgestelde testdag. */
   datum: string;
   durMin: number;
@@ -146,8 +154,24 @@ export interface IjkStatus {
   ongeijkt: boolean;
   /** De laatste ECHTE maximale inspanning (test of gereden A/B-wedstrijd), of null. */
   laatsteMeting: { bron: MetingBron; datum: string } | null;
-  /** Hoeveel VOLLE doelblokken de drempelwaarde oud is, of null als er nooit gemeten is. */
-  blokkenOud: number | null;
+  /**
+   * Hoeveel VOLLE WEKEN de drempelwaarde oud is, of null als er nooit gemeten is.
+   *
+   * WEKEN EN GEEN BLOKKEN, per Daan-besluit van 24-08-2026 (ROADMAP punt 64). Dit veld heette tot
+   * die dag `blokkenOud` en droeg `Math.floor(dagen / (DOEL_BLOK_WEKEN * 7))`. De grond voor de
+   * wissel: weken zijn wat de renner nodig heeft om te oordelen, "drie blokken" is een teleenheid
+   * van de app. De ZICHTBAARHEIDSGRENS is onveranderd — `ijkStaatRegel` zwijgt onder
+   * `DOEL_BLOK_WEKEN` weken, precies waar `blokkenOud <= 0` voorheen zweeg — dus alleen de EENHEID
+   * die de gebruiker leest is veranderd, niet WANNEER hij iets leest.
+   *
+   * DIT IS DE LEEFTIJD VAN DE LAATSTE METING, niet van de laatste BEVESTIGING, en dat onderscheid
+   * is dragend. De bron is `laatsteGelegenheid`, die uitsluitend GEREDEN maximale inspanningen kent
+   * (een test-override mét rit, een gereden A/B-wedstrijd). Een bevestiging schrijft alleen
+   * `sync_state.ijking_*` — geen override en geen activiteit — en kan deze teller dus per
+   * constructie niet verzetten. Dat is precies wat besluit twee vraagt: bevestigen maakt de drempel
+   * niet jonger.
+   */
+  wekenOud: number | null;
 }
 
 /**
@@ -172,8 +196,13 @@ export function ijkStatus(input: {
   ijkingAntwoord?: "bevestigd" | "niet_nu" | null;
   /** De openingsmaandag waarvoor dat antwoord geldt, of null. */
   ijkingBeantwoordBlok?: string | null;
+  /** ROADMAP punt 64 — het GENORMALISEERDE doel waarvoor dat antwoord geldt, uit
+   * `sync_state.ijking_doel`, of null. */
+  ijkingBeantwoordDoel?: string | null;
   /** De openingsmaandag van het LOPENDE doelblok, of null als die niet te bepalen is. */
   huidigeOpening?: string | null;
+  /** ROADMAP punt 64 — het doel dat NU staat (`settings.doel`, rauw); wordt hier genormaliseerd. */
+  doel?: string | null;
 }): IjkStatus {
   const laatste = laatsteGelegenheid({
     activities: input.activities,
@@ -183,19 +212,21 @@ export function ijkStatus(input: {
     negeerSprong: true,
   });
   const dagen = laatste ? dagenTussen_(laatste.datum, input.todayISO) : null;
-  const blokkenOud =
-    dagen == null ? null : Math.floor(dagen / (DOEL_BLOK_WEKEN * 7));
-  // Het antwoord telt alleen voor het blok waarvoor het gegeven is. Staat het op een OUDERE
-  // opening, dan zegt het niets over de staande waarde van vandaag.
+  const wekenOud = dagen == null ? null : Math.floor(dagen / 7);
+  // Het antwoord telt alleen voor het blok ÉN het doel waarvoor het gegeven is. Staat het op een
+  // OUDERE opening, of op een ANDER doel, dan zegt het niets over de staande waarde van vandaag.
+  // Dezelfde tweeledige sleutel als poort (2b) hieronder — die twee horen niet uiteen te lopen.
   const geldt =
     input.ijkingBeantwoordBlok != null &&
     input.huidigeOpening != null &&
-    input.ijkingBeantwoordBlok === input.huidigeOpening;
+    input.ijkingBeantwoordBlok === input.huidigeOpening &&
+    input.ijkingBeantwoordDoel != null &&
+    input.ijkingBeantwoordDoel === normalizeDoel_(input.doel ?? "");
   return {
     bevestigd: geldt && input.ijkingAntwoord === "bevestigd",
     ongeijkt: geldt && input.ijkingAntwoord === "niet_nu",
     laatsteMeting: laatste,
-    blokkenOud,
+    wekenOud,
   };
 }
 
@@ -222,6 +253,34 @@ export function buildTestVoorstel(input: {
    * staat nu in deze PURE laag en is daarmee toetsbaar zonder DOM.
    */
   ijkingBeantwoordBlok?: string | null;
+  /**
+   * ROADMAP punt 64 — het GENORMALISEERDE doel waarvoor dat antwoord gegeven is, uit
+   * `sync_state.ijking_doel`. Weggelaten of null → het antwoord onderdrukt niets.
+   *
+   * WAAROM DE OPENINGSMAANDAG ALLEEN NIET VOLSTAAT, en dit is gemeten en geen voorzorg. De eerste
+   * versie liet deze sleutel weg met als grond dat een doelwissel per constructie een verse
+   * `doelStart` schrijft, dus een andere opening. GEMETEN op de echte `blokStartBijDoel`:
+   * `WISSEL_LAATSTE_DAG = 3` klemt op maandag, dinsdag en woensdag naar de maandag van DEZE week,
+   * dus een wissel in de beantwoorde openingsweek geeft DEZELFDE maandag terug — 3 van de 7
+   * wisseldagen. Het antwoord van het OUDE doel zette dan het aanbod voor het NIEUWE dicht, twaalf
+   * weken lang en zonder retry.
+   *
+   * HET GELDT VOOR EEN WISSEL TUSSEN TWEE EFFECT-DOELEN, en die precisering is een correctie op
+   * mijn eigen eerste versie. Die noemde hier "Daans februari-scenario (onderhoud naar korte
+   * beklimmingen)" als het geval. GEMETEN in de weerleggingspas van 24-08-2026 dat dat scenario
+   * juist DELTA NUL geeft: op Onderhoud staat poort (2) dicht (`blokCheckEnabled` is false), dus
+   * daar komt nooit een aanbod en kan `TestVoorstelCard` — de enige schrijver van `ijking_*` —
+   * voor die opening ook nooit een rij wegschrijven. Zonder rij onderdrukte de OUDE poort al
+   * niets: 7 van 7 wisseldagen, vóór én na. De drie dagen winst horen bij een wissel van een
+   * EFFECT-doel naar een ander effect-doel, bijvoorbeeld FTP naar Korte beklimmingen. Dat is een
+   * echt geval, maar een ANDER geval dan het eerst genoemde. Gemeten per databasestand: geen rij
+   * 7/7 → 7/7 (delta 0); rij van een oudere opening 7/7 → 7/7 (delta 0); rij van DEZE opening met
+   * een effect-doel 4/7 → 7/7 (delta 3).
+   *
+   * `doelPassendVoorstel` draagt deze sleutel al, met exact dezelfde vergelijking en dezelfde
+   * grond; zie `apps/web/src/lib/doelpassend.ts` stap 5.
+   */
+  ijkingBeantwoordDoel?: string | null;
 }): TestVoorstel | null {
   // (1) Alleen in de DOELBLOK-OPENING — week 1 van het twaalfweekse doelblok. De engine levert die
   //     grootheid al: `computeMacroPhase(...).week`. Geen eigen raster nabouwen, en geen wijziging
@@ -310,6 +369,9 @@ export function buildTestVoorstel(input: {
   if (macro?.week !== DOELBLOK_OPENINGSWEEK) return null;
   // (2) Onderhoud heeft geen effect-meter (DOELEN-SPEC §3.2) → daar valt niets te testen.
   if (!blokCheckEnabled(input.doel)) return null;
+  // Het GENORMALISEERDE doel: de sleutelhelft van poort (2b) en het veld dat de kaart terugschrijft.
+  // Eén keer berekend, want beide moeten per se dezelfde waarde gebruiken.
+  const huidigDoel = normalizeDoel_(input.doel ?? "");
 
   // DE VIERWEEKSE KLOK BLIJFT STAAN, EN DIT IS WAARVOOR — het stond nergens opgeschreven en twee
   // bouwrondes zijn er bijna op stukgelopen (docs/PUNT47-BOUW.md §9 V1).
@@ -373,12 +435,36 @@ export function buildTestVoorstel(input: {
   const vensterStart = shiftIso_(blokStart, -(BLOK_WEKEN - 1) * 7);
   const vensterEind = shiftIso_(blokStart, BLOK_WEKEN * 7);
 
-  // (2b) IS DEZE OPENING AL BEANTWOORD? Bevestigen en niet-nu onderdrukken allebei het aanbod voor
-  //      dit doelblok; het verschil zit in wat de app erover VERTELT (`ijkStatus` hieronder), niet
-  //      in of de vraag terugkomt. Per M92 bestaat er hoogstens één aanbod per opening.
+  // (2b) IS DEZE OPENING AL BEANTWOORD, VOOR DIT DOEL? Bevestigen en niet-nu onderdrukken allebei
+  //      het aanbod voor dit doelblok; het verschil zit in wat de app erover VERTELT (`ijkStatus`
+  //      hierboven), niet in of de vraag terugkomt.
+  //
+  //      "HOOGSTENS ÉÉN AANBOD PER OPENING" (M92) GELDT NU PER (OPENING, DOEL) EN NIET MEER PER
+  //      OPENING, en dat is een GEMETEN gevolg van het besluit van 24-08-2026 en geen slordigheid.
+  //      `sync_state` draagt ÉÉN paar en geen verzameling, dus een beantwoord aanbod voor een NIEUW
+  //      doel OVERSCHRIJFT het antwoord van het vorige. Wisselt de gebruiker binnen dezelfde
+  //      openingsweek heen en weer tussen twee effect-doelen en beantwoordt hij telkens, dan komt
+  //      de vraag opnieuw op DEZELFDE openingsmaandag. GEMETEN: FTP beantwoord met niet_nu op
+  //      maandag, dinsdag naar Korte beklimmingen en woensdag terug naar FTP geeft TWEE aanbiedingen
+  //      op `2026-09-21`; vóór de ingreep waren dat er nul. Dat is besluit één twee keer toegepast —
+  //      elke wissel is een nieuw blok met een nieuwe doelstelling — en de prijs ervan. Wil je het
+  //      dichtzetten, dan moet de drager een VERZAMELING beantwoorde doelen per opening worden, en
+  //      dat is een andere kolomvorm dan `doel_passend` en `dosis_trede` gebruiken. Staat als
+  //      nakijkpunt bij ROADMAP punt 64.
+  //
+  //      HET DOEL HOORT IN DE SLEUTEL (ROADMAP punt 64, 24-08-2026). Een bevestiging geldt voor het
+  //      doel waarvoor zij gegeven is: wisselt het doel binnen de beantwoorde week, dan is het een
+  //      nieuw blok met een nieuwe doelstelling en hoort de vraag terug te komen. Zonder deze
+  //      tweede helft van de sleutel zette het antwoord van het OUDE doel het aanbod voor het
+  //      NIEUWE dicht op 3 van de 7 wisseldagen — zie de docstring van `ijkingBeantwoordDoel`.
+  //      GENORMALISEERD aan beide kanten: `settings.doel` is vrije tekst in D1, de route bewaart
+  //      alleen `DOEL_OPTIONS`-waarden, en `normalizeDoel_` vouwt een legacy-string op dezelfde
+  //      waarde. Letterlijk het patroon van `doelPassendVoorstel` stap 5.
   if (
     input.ijkingBeantwoordBlok != null &&
-    input.ijkingBeantwoordBlok === blokStart
+    input.ijkingBeantwoordBlok === blokStart &&
+    input.ijkingBeantwoordDoel != null &&
+    input.ijkingBeantwoordDoel === huidigDoel
   ) {
     return null;
   }
@@ -456,6 +542,7 @@ export function buildTestVoorstel(input: {
 
   return {
     blokStart,
+    doel: huidigDoel,
     datum: keuze.datum,
     durMin: TEST_DUUR_MIN,
     beschikbaarMin: keuze.minuten ?? 0,
