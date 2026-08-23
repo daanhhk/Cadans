@@ -1982,6 +1982,25 @@ punten staat onder *Gesloten — vindplaats*.
     WAT VAN 47 OPEN BLIJFT: de MAAT uit `DOELEN-SPEC` §3.2 (punt 54), de duurzame ONGEIJKT-staat
     van M91 (punt 53), het verdwenen retry-venster (punt 55) en de dagkeuze van poort (6) die de
     vloer niet kent (punt 58).
+    **RONDE 4, 23-08-2026 — DE PLAATSING IS OMGEKEERD EN DAARMEE IS DE BOUW VAN 47 AF.** Norm:
+    **M92** in `docs/TRAININGSMODEL.md` §13, die M90a op het punt van de PLAATSING vervangt (M3:
+    niets hernummerd, M90 blijft staan met een notitie erbij; M90b, M90c en M91 gelden ongewijzigd).
+    De ijking valt niet meer op het EINDE van een doelblok maar op zijn OPENING, want de
+    drempelwaarde doet zijn werk VOORUIT — en bij een doelwissel meet de eind-plaatsing het
+    aflopende doel af terwijl het nieuwe blok twaalf weken op een onbevestigde waarde doseert.
+    GEBOUWD: poort (1) toetst `computeMacroPhase(...).week === DOELBLOK_OPENINGSWEEK` (1), en
+    `TEST_INTERVAL_DAGEN` is AFGELEID als `DOEL_BLOK_WEKEN * 7 - AANBODVENSTER_DAGEN` = **77**. Geen
+    engine geraakt. GEMETEN op de gebouwde bron: **440 van de 440** openingen gedekt tegen 277 van
+    de 420 daarvoor, 462 aanbiedingen waarvan **0** buiten een opening, en de wachttijd tussen twee
+    ijkingen van gemiddeld **129,1 naar 84,0 dagen** — onder de 111,5 van vóór de hele ingreep, bij
+    BEIDE weekvormen. Een doelwissel levert nu een aanbod in de wisselweek zelf; onder de oude poort
+    leverde hij er per constructie nooit een.
+    TWEE COPY-STRINGS MOESTEN MEE, want zij waren door de verhuizing onwaar: `Dit blok loopt af. `
+    werd `Er begint een nieuw blok. `, en `die waarde ijkt je volgende blok.` werd `die waarde ijkt
+    dit blok.`
+    GEVOLG VOOR M89, en dat is de kern van dit punt: de twee vragen scheiden nu ook in de TIJD. De
+    IJKING staat vooraan en kijkt vooruit, de DOELCHECK staat achteraan en kijkt terug. Die tweede
+    helft is nog niet gebouwd — punt 61.
 48. **Geen testaanbod rond een A- of B-event** — open · CLIENT. Daan-besluit 21-08-2026. Een
     event is een event: daar geef je alles, en het event is zelf de betere meting. Een
     20-minuten-all-out kost twee tot drie dagen herstel, en in een taper vernietigt hij precies
@@ -2357,13 +2376,21 @@ punten staat onder *Gesloten — vindplaats*.
     hangt aan de norm en niet aan de code — een ijking buiten de blokgrens meet de zones voor het
     volgende blok pas als dat blok al loopt. Herkomst: OPEN, expliciet niet beslist tot de oorzaak
     gemeten was; die is er nu (punt 58), dus deze vraag kan beslist worden.
-    **TWEEDE KOSTENPOST, gevonden in de weerleggingspas van 23-08-2026 en hier nieuw:** het EERSTE
-    aanbod na een verse `doelStart` schuift van **27 naar 83 dagen**. GEMETEN over vier
-    `doelStart`-waarden (`2026-01-05`, `2026-06-29`, `2026-09-07`, `2027-02-01`), met een ruime week
-    en zonder meethistorie: oud telkens 27 dagen, nieuw telkens 83. Wie vandaag een doel kiest heeft
-    dus acht weken langer geen enkel ijkpunt, terwijl dat juist het moment is waarop het volgende
-    blok een dosis-anker nodig heeft. Dit valt BUITEN de dekkingsmaat van punt 47 — die telt alleen
-    grenzen — en hoort bij de beslissing over het venster.
+    **TWEEDE KOSTENPOST, gevonden in de weerleggingspas van 23-08-2026:** het EERSTE aanbod na een
+    verse `doelStart` schoof van 27 naar 83 dagen. GEMETEN over vier `doelStart`-waarden met een
+    ruime week en zonder meethistorie: oud telkens 27 dagen, na ronde 3 telkens 83.
+    **DIE KOSTENPOST IS DOOR RONDE 4 VERVALLEN.** Met poort (1) op de OPENING is een verse
+    `doelStart` per constructie zelf een opening, dus het aanbod komt in die week: gemeten geeft een
+    wissel op `2026-08-05` een nieuwe `doelStart` van `2026-08-03` en een aanbod op `2026-08-08` —
+    vijf dagen in plaats van drieëntachtig.
+    **DE HERKANSINGS-VRAAG IS BEANTWOORD MET NEE (Daan-besluit 23-08-2026) en dit deel is GESLOTEN.**
+    Er komt geen herkansings- of inhaalmechanisme voor een gemist aanbod. GROND: de gebruiker kan
+    een testinspanning altijd zelf inplannen, en een aanbod dat weken te laat komt ijkt een blok dat
+    al loopt — dat is een andere handeling dan waar M92 om vraagt. Vastgelegd in M92.
+    **WAT VAN 55 OPENBLIJFT** is uitsluitend de tegenhanger: is er niet geijkt, dan hoort de app dat
+    te ZEGGEN (M91). Dat is punt 59 en niet dit punt. Als kostenpost is 55 daarmee klein geworden:
+    de dekking staat op 440 van de 440 en het venster mist alleen nog als de hele week geen dag van
+    `TEST_MIN_BESCHIKBAAR_MIN` draagt.
 56. **`TEST_MIN_BESCHIKBAAR_MIN` en `TEST_DUUR_MIN` dragen geen herkomst-etiket** — open · norm.
     Beide staan in `apps/web/src/lib/testvoorstel.ts` en beide staan op 60. Anders dan
     `TEST_INTERVAL_DAGEN` en `WEDSTRIJD_HORIZON_DAGEN` is nergens vastgelegd of ze uit de
@@ -2435,6 +2462,72 @@ punten staat onder *Gesloten — vindplaats*.
     176** gemiste grenzen precies ÉÉN kandidaat — poort (6) heeft daar niets te kiezen — en **176
     van de 176** vuren alsnog zodra de vloer op 0 staat. De null valt op poort (7). Toets poorten
     ONAFHANKELIJK en verander per probe precies één ding.
+    **AF PER 23-08-2026, ronde 4 van punt 47.** De vloer is HERAFGELEID voor de nieuwe meetkunde:
+    `DOEL_BLOK_WEKEN * 7 - AANBODVENSTER_DAGEN` = 77. Openingsmaandagen liggen 84 dagen uit elkaar,
+    de gekozen testdag wobbelt binnen de week, dus de kortste afstand is 78 en alles t/m 78 bedient
+    440 van de 440. 77 ligt daar met één structurele dag onder, ontleend aan de vensterbreedte in
+    plaats van aan het extremum van de verschuiving. Het residu is daarmee weg: dekking 100,0
+    procent bij beide weekvormen.
+59. **De BEVESTIG-uitgang, de duurzame ONGEIJKT-staat en de bevestigings-teller** — open · CLIENT
+    plus DATA plus norm. ÉÉN punt en één ronde, want alle drie delen dezelfde drager. Norm ligt er
+    al: M92 (drie uitgangen bij een opening) en M91 (een afwijzing is geen meting; de app draagt de
+    ONGEIJKT-staat en zegt haar).
+    WAT ER MOET KOMEN. (a) Een derde uitgang naast inplannen en afwijzen: BEVESTIGEN dat de staande
+    drempelwaarde nog representatief is. Een bevestiging DEKT het blok maar is GEEN meting. (b) Een
+    staat die een doelblok overleeft, want de huidige afwijzing is een module-lokale `Set` in
+    `TestVoorstelCard.tsx` en overleeft geen herstart. (c) Een TELLER van opeenvolgende
+    bevestigingen en afwijzingen, zichtbaar gemaakt: drie op rij is een drempel die drie blokken oud
+    is. Neem de optie-inventaris uit `docs/PUNT47-RECON.md` vraag 4 erin op.
+    **DIT IS DE EERSTE RONDE VAN DEZE REEKS DIE DE WORKER EN EEN MIGRATIE RAAKT** — `sync_state` of
+    `day_state` plus een route — en dat is een andere autorisatieklasse dan alles wat 47 tot nu toe
+    kostte. Reken op een aparte autorisatie voor de migratie.
+60. **M91 tegenover `sprongDagen`: onderdrukt een proxy het ijkaanbod?** — open · norm plus CLIENT.
+    VASTGESTELD 23-08-2026, NIET opgelost; volledige verantwoording in `docs/PUNT47-BOUW.md` §24 met
+    beide teksten verbatim.
+    DE TEGENSPRAAK. M91 zegt: *"Een proxy vervangt de ijking niet ... Zij is informant (M17, M30) en
+    mag het aanbod niet onderdrukken."* Hij noemt de hartslag-vermogenkoppeling als VOORBEELD, niet
+    als enige geval. `sprongDagen` in `apps/web/src/lib/effect.ts` leest `rolling_ftp` — intervals'
+    eigen SCHATTING van de drempel — en voedt `laatsteGelegenheid`, die poort (7) voedt, die het
+    aanbod onderdrukt. De docstring noemt dat expliciet consistent en trekt de grens elders, maar
+    die docstring is OUDER dan M91.
+    HET TEGENARGUMENT, en het weegt: een sprong kan alleen ontstaan als er werkelijk een betere
+    inspanning in het venster kwam, dus het signaal DETECTEERT een inspanning en is geen schatting
+    die als drempel wordt gebruikt.
+    **HET SCHEIDENDE GETAL, gemeten:** doelblok-openingen die worden onderdrukt door een
+    `laatsteGelegenheid` met bron `inspanning` zonder gereden race of test in dezelfde periode —
+    bij Daans gemeten sprongtempo (één per ~182 dagen) **162 van de 440 = 36,8 procent**; bij één
+    per 91 dagen 320 van de 440; bij één per 56 dagen 420 van de 440.
+    DE LEZING DIE ERBIJ HOORT: het detector-argument redt de helft van de zaak. Wat een sprong
+    aantoont is dat er hard gereden is; wat hij niet aantoont is dat die rit een 20-minuten-maximum
+    was, noch wélke waarde het blok moet doseren. Door het aanbod te onderdrukken laat de app het
+    blok doseren op `rolling_ftp` zelf — de proxy-stap die M91 verbiedt. En het maakt de app STIL:
+    geen aanbod, geen afwijzing, geen teller, precies de toestand die M91 wil uitsluiten.
+    DE INGREEP DIE HIERUIT VOLGT en die NIET gebouwd is: een sprong mag het aanbod niet onderdrukken
+    maar wel de TEKST informeren ("intervals ziet een sprong op X — klopt dat?"). Dat maakt de
+    bevestig-uitgang van punt 59 tot drager, dus 59 en 60 horen in dezelfde ronde.
+62. **Het venster van poort (3) kijkt sinds M92 VOORUIT en laat een pre-opening test door** — open ·
+    CLIENT. GEMETEN 23-08-2026 in de weerleggingspas van ronde 4; NIET gerepareerd omdat die prompt
+    poort (3) uitdrukkelijk onaangeroerd liet.
+    HET MECHANISME. Poort (3) onderdrukt het aanbod als er in het venster `[blokStart, blokStart +
+    BLOK_WEKEN * 7)` al een test-override staat. `blokStart` is `blokStartVoorWeek` van de
+    aanbodweek, en sinds de verhuizing IS de aanbodweek vierweekse blokweek 1 — dus `blokStart` is
+    de openingsmaandag zelf en het venster dekt de vier weken NA de opening. Tot M92 lag het aanbod
+    in blokweek 4 en dekte het venster de drie weken ERVOOR.
+    HET GEVOLG, gemeten op de gebouwde bron: een test die 5 of 10 dagen VÓÓR de opening is ingepland
+    en nog NIET gereden is, wordt door geen enkele poort gezien — poort (3) niet want hij ligt vóór
+    het venster, en poort (7) niet want `laatsteGelegenheid` telt alleen wat GEREDEN is. De app
+    biedt dan een TWEEDE test aan. Dezelfde test wél gereden wordt correct onderdrukt, en een test
+    ná de opening ook.
+    DE INGREEP IS KLEIN: anker het venster op het EIND van de aanbodweek in plaats van op het begin,
+    dus `[blokStart − 21, blokStart + 7)`. Dat herstelt exact de oude meetkunde (vier weken eindigend
+    met de aanbodweek) zonder de vierweekse klok te verlaten. Vraagt autorisatie omdat het poort (3)
+    raakt.
+61. **De DOELCHECK aan het eind van het blok — de tweede helft van M89** — open · norm plus CLIENT.
+    M92 heeft de twee vragen van M89 ook in de TIJD gescheiden: de IJKING staat nu vooraan en kijkt
+    vooruit, de DOELCHECK hoort achteraan en kijkt terug. Die tweede helft bestaat nog niet als
+    eigen moment; vandaag draagt de blok-terugblik hem impliciet.
+    HANGT AAN PUNT 54 (welke maat per doel) en aan punt 49 (de grondstof voor Conditie en de
+    klimdoelen). Bouw hem niet vóór 54 beslist is, anders kiest de bouw stilzwijgend een maat.
 
 ## De tijdslijn
 
@@ -2723,14 +2816,21 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
 11b. **57** — AF (23-08-2026) — de roostercondititie plus de afgeleide vloer, als één wijziging.
     Gebouwd in ronde 3 van punt 47; dekking van 24,1% naar 100,0% (vaste weekvorm) en 66,7%
     (wisselende), nagemeten op de gebouwde bron. **DE VOLGENDE IS 11c.**
-11c. **58 + 55** — het residu en het verdwenen retry-venster, in ÉÉN ronde. 58 is de gemeten
-    oorzaak van al het residu (176 van de 176: poort (6) kiest de ruimste dag, niet een dag die de
-    vloer haalt) en de ingreep is klein — een voorkeursregel in poort (6). 55 is de kostenpost die
-    door de bouw van 57 LIVE is geworden: een gemiste doelblokgrens wacht nu twaalf weken in plaats
-    van vier, en de canon-vraag of een gemiste grens hoort te HERKANSEN kan nu beslist worden omdat
-    de oorzaak gemeten is. Ze horen samen omdat 58 het residu grotendeels wegneemt en 55 pas daarna
-    op zijn echte omvang te beoordelen is. **53 komt eraan vast** zodra er voor een openblijvend
-    venster staat onthouden moet worden, en vraagt dan een eigen autorisatie voor persistente staat.
+11c. **58 + 55** — AF (23-08-2026, ronde 4 van punt 47). 58 is opgelost door de vloer te
+    HERAFLEIDEN voor de nieuwe meetkunde (77 in plaats van 84); het residu is weg, dekking 100,0
+    procent bij beide weekvormen. Van 55 is de herkansings-vraag met NEE beantwoord en gesloten, en
+    de kostenpost van het eerste aanbod na een verse `doelStart` is vervallen — die week IS nu zelf
+    een opening. Wat van 55 openblijft is de tegenhanger (M91: zeg het als er niet geijkt is) en dat
+    is punt 59. **DE VOLGENDE IS 11d.**
+11d. **62** — het venster van poort (3) kijkt vooruit en laat een pre-opening test door. KLEIN en
+    eerst, want het is een gemeten REGRESSIE die ronde 4 zelf heeft veroorzaakt en die daar niet
+    gerepareerd mocht worden. Eén regel, één autorisatie. **DE VOLGENDE IS 11e.**
+11e. **59 + 60** — de bevestig-uitgang met de ONGEIJKT-staat, plus het M91-verdict. Samen in ÉÉN
+    ronde, want de ingreep die 60 vraagt — een sprong mag het aanbod niet onderdrukken maar wel de
+    tekst informeren — maakt de bevestig-uitgang van 59 tot drager. **DIT IS DE EERSTE RONDE VAN
+    DEZE REEKS DIE DE WORKER EN EEN MIGRATIE RAAKT**, dus een andere autorisatieklasse: reken op een
+    aparte autorisatie voor de migratie. Het scheidende getal van 60 ligt er al: 162 van de 440
+    openingen (36,8 procent) wordt onderdrukt door een sprong alleen.
 12. **48** — geen testaanbod rond een A- of B-event. Klein, één conditie in `buildTestVoorstel`,
     en het staat hier zo vroeg omdat het goedkoop is en een echte schade voorkomt.
 13. **49** — de doelcheck aflezen uit een sleutelsessie. Vraagt opslag en aggregatie van de
@@ -2741,9 +2841,12 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
 16b. **56** — de twee constanten zonder herkomst-etiket. Klein, en het is een OPZOEKRONDE en geen
     bouw: de GAS-bron op schijf plus de commit-historie van `apps/web/src/lib/testvoorstel.ts`.
     Raden is hier expliciet verboden.
-17. **54** — de doelcheck-maat per doel. Achteraan met dezelfde reden als 11: bij Conditie en
-    beide klimdoelen is de maat pas te kiezen als punt 49 en punt 11 hun gereedschap geleverd
-    hebben. Bij FTP en Onderhoud kan het eerder, maar dan kiest men de helft van een norm.
+17. **54 + 61** — de doelcheck-maat per doel, en dan de doelcheck als eigen moment. Achteraan met
+    dezelfde reden als 11: bij Conditie en beide klimdoelen is de maat pas te kiezen als punt 49 en
+    punt 11 hun gereedschap geleverd hebben. Bij FTP en Onderhoud kan het eerder, maar dan kiest men
+    de helft van een norm. 61 komt er direct achteraan en niet ervoor: M92 heeft de twee vragen van
+    M89 ook in de TIJD gescheiden — de ijking vooraan en vooruit, de doelcheck achteraan en terug —
+    maar wie 61 bouwt vóór 54 beslist is, kiest stilzwijgend een maat.
 18. **11** — de duurvermogen-maat OPNIEUW ontwerpen. Achteraan met de juiste reden: de
     gemeten maat mat de RITKEUZE en niet het duurvermogen, dus dit is een afgekeurd ontwerp
     en geen wachtende bouw. Tot dan blijft Conditie ongedekt (M33, M39). Punt 49 levert
