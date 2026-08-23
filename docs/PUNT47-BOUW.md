@@ -1914,11 +1914,29 @@ Werkpad `/c/Users/daan/Projects/cadans`; `git rev-parse --git-dir` en `--git-com
 allebei `.git`, dus HOOFDCHECKOUT en geen worktree; branch `main`; 0 achter en 0 vooruit op
 `origin/main`; `claude --version` is `2.1.208 (Claude Code)`; boom schoon bij aanvang.
 
-De AGENT- en RULES-PROBES blijven **NIET GEMETEN**, en er is niet naar gezocht. De sessie is ouder
-dan alle drie de bestanden: het eerste bericht draagt `2026-07-14T07:20:14.850Z`,
+De AGENT- en RULES-PROBES zijn voor de HOOFDSESSIE **NIET GEMETEN**, en er is niet naar gezocht. De
+sessie is ouder dan alle drie de bestanden: het eerste bericht draagt `2026-07-14T07:20:14.850Z`,
 `.claude/agents/recon.md` dateert van 23-08-2026 07:48 en de twee weggooi-regels van 23-08-2026
 13:20. Een sessie kan de laadmachinerie van haar eigen start niet achteraf waarnemen; "niet gemeten"
-is hier dus de enige eerlijke uitslag en niet "gemeten als afwezig".
+is daar dus de enige eerlijke uitslag en niet "gemeten als afwezig".
+
+**MAAR DE ALTIJD-REGEL IS ALSNOG BEANTWOORD, langs een weg waar niemand om gevraagd had.** De vijf
+lenzen van de weerleggingspas draaien elk in een VERSE agent-sessie, en die zijn jonger dan de
+regelbestanden. **5 van de 6 agents gaven `RULESALTIJD-MERKSTRING-Q4XM7D` verbatim terug** — twee
+ervan expliciet met de opmerking dat de regel in hun context stond. De merkstring stond NIET in de
+prompt die ik ze meegaf: geteld, 0 treffers op `RULESALTIJD` in
+`workflows/scripts/punt64-weerleggen-wf_e526f15e-40f.js`. De enige weg waarlangs zij hem kunnen
+kennen is het regelbestand zelf.
+
+**CONCLUSIE: een regel in `.claude/rules/` ZONDER `paths`-frontmatter laadt bij het starten van een
+verse agent-sessie op Claude Code `2.1.208`.** Dat bevestigt wat de documentatie beweert, nu als
+meting. Het zegt NIETS over de hoofdsessie — die vraag blijft open en een verse chat beantwoordt
+hem gratis.
+
+**DE PATHS-REGEL BLIJFT NIET GEMETEN.** Geen van de zes agents heeft `packages/engine/src/zones.ts`
+gelezen (geteld: 0 treffers per agent-transcript), dus de aanleiding om te vuren heeft zich nooit
+voorgedaan. `RULESPATHS-MERKSTRING-V9HB2K` kwam 0 keer terug, en dat is "niet gemeten" en nooit
+"gemeten als afwezig".
 
 ### 32b. Het idiom, HERTOETST tegen HEAD vóór het gekopieerd werd
 

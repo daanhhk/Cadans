@@ -94,11 +94,20 @@ remote-D1-mutatie — alles lokaal tegen miniflare.
   heeft als `ijking_*` had, is **NIET gemeten** en staat als nakijkpunt bij ROADMAP punt 64.
 - **DE BEVESTIGINGS-TELLER IS VERVALLEN, niet uitgesteld.** Daan-besluit: de leeftijd in weken
   vervangt hem. Punt 59 is daarmee helemaal AF en er komt geen kolom voor.
-- **DE AGENT EN DE RULES-PROBES BLIJVEN NIET GEMETEN**, en er is niet naar gezocht: het eerste
-  bericht van deze sessie draagt `2026-07-14T07:20:14.850Z`, `.claude/agents/recon.md` dateert van
-  `2026-08-23 07:48` en de twee weggooi-regels van `2026-08-23 13:20`. De sessie is dus ouder dan
-  alle drie. Agent-discovery lukte wél in een remote container op `2.1.241` en op deze machine op
-  `2.1.208` nog NOOIT; dat verschil is onverklaard. De twee regels liggen klaar:
+- **DE ALTIJD-REGEL IS ALSNOG GEMETEN, en het antwoord is JA — maar voor SUBAGENTS, niet voor de
+  hoofdsessie.** Er is niet naar gezocht: de vijf lenzen van de weerleggingspas begonnen er
+  spontaan mee. **5 van de 6 agents gaven `RULESALTIJD-MERKSTRING-Q4XM7D` verbatim terug**, en de
+  merkstring stond NIET in de prompt die ik ze gaf (geteld: 0 treffers in het workflow-script). De
+  enige weg waarlangs zij hem kunnen kennen is de regel zelf. **CONCLUSIE: een regel in
+  `.claude/rules/` ZONDER `paths`-frontmatter laadt bij het starten van een verse agent-sessie op
+  `2.1.208`.** Wat NIET gemeten is: of hij ook in de HOOFDsessie laadt — die is ouder dan het
+  bestand en kan haar eigen start niet achteraf waarnemen. Een verse chat beantwoordt dat gratis.
+- **DE PATHS-REGEL BLIJFT NIET GEMETEN, en dat is geen bewijs van het tegendeel.** Geen van de zes
+  agents heeft `packages/engine/src/zones.ts` gelezen (geteld: 0 treffers per agent), dus de
+  aanleiding om te vuren heeft zich nooit voorgedaan. `RULESPATHS-MERKSTRING-V9HB2K` kwam 0 keer
+  terug; dat is "niet gemeten", nooit "gemeten als afwezig".
+- **AGENT-DISCOVERY blijft onverklaard:** het lukte wél in een remote container op `2.1.241` en op
+  deze machine op `2.1.208` nog NOOIT. De twee regels liggen klaar:
   `.claude/rules/_wegwerp-altijd-probe.md` met merkstring `RULESALTIJD-MERKSTRING-Q4XM7D` (ZONDER
   `paths`) en `.claude/rules/_wegwerp-paths-probe.md` met merkstring `RULESPATHS-MERKSTRING-V9HB2K`
   (gescoopt op `packages/engine/src/zones.ts`). **Verschijnt de eerste aan het begin van je eerste
