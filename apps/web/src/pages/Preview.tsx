@@ -663,12 +663,17 @@ const blokReviewFixtures: { label: string; r: BlokReview | null }[] = [
 ];
 
 // 5b-ii — TestVoorstelCard-fixture. Net als de blok-fixtures BEREKEND door de echte
-// buildTestVoorstel, niet met de hand gezet. De rustweek van 17-08-2026 is de eerste waarin dit
-// live kan vuren; de laatste meting is de gereden A-wedstrijd van 21-05-2026 (93 dagen ervoor).
+// buildTestVoorstel, niet met de hand gezet.
+//
+// VERPLAATST 23-08-2026 van de vierweekse rustweek van 17-08 naar de DOELBLOK-TESTWEEK van
+// 14-09-2026. Poort (1) toetst sinds die datum `computeMacroPhase(...).isTestWeek` in plaats van de
+// vierweekse blokweek, en 17-08 is doelblokweek 8 — daar vuurt het aanbod niet meer. Bij
+// doelStart 29-06-2026 is 14-09-2026 de eerste doelblok-testweek (weekindex 11). De laatste meting
+// blijft de gereden A-wedstrijd van 21-05-2026; die ligt nu 121 dagen vóór de voorgestelde testdag.
 const previewTestVoorstel: TestVoorstel | null = buildTestVoorstel({
   plannerDays: [
     {
-      datum: "2026-08-17",
+      datum: "2026-09-14",
       train: false,
       dag: "ma",
       minuten: null,
@@ -678,7 +683,7 @@ const previewTestVoorstel: TestVoorstel | null = buildTestVoorstel({
       gedaan: false,
     },
     {
-      datum: "2026-08-18",
+      datum: "2026-09-15",
       train: true,
       dag: "di",
       minuten: 45,
@@ -688,7 +693,7 @@ const previewTestVoorstel: TestVoorstel | null = buildTestVoorstel({
       gedaan: false,
     },
     {
-      datum: "2026-08-19",
+      datum: "2026-09-16",
       train: false,
       dag: "wo",
       minuten: null,
@@ -698,7 +703,7 @@ const previewTestVoorstel: TestVoorstel | null = buildTestVoorstel({
       gedaan: false,
     },
     {
-      datum: "2026-08-20",
+      datum: "2026-09-17",
       train: true,
       dag: "do",
       minuten: 60,
@@ -708,7 +713,7 @@ const previewTestVoorstel: TestVoorstel | null = buildTestVoorstel({
       gedaan: false,
     },
     {
-      datum: "2026-08-21",
+      datum: "2026-09-18",
       train: false,
       dag: "vr",
       minuten: null,
@@ -718,7 +723,7 @@ const previewTestVoorstel: TestVoorstel | null = buildTestVoorstel({
       gedaan: false,
     },
     {
-      datum: "2026-08-22",
+      datum: "2026-09-19",
       train: true,
       dag: "za",
       minuten: 90,
@@ -728,7 +733,7 @@ const previewTestVoorstel: TestVoorstel | null = buildTestVoorstel({
       gedaan: false,
     },
     {
-      datum: "2026-08-23",
+      datum: "2026-09-20",
       train: false,
       dag: "zo",
       minuten: null,
@@ -743,8 +748,8 @@ const previewTestVoorstel: TestVoorstel | null = buildTestVoorstel({
   activities: [previewAct("2026-05-21", null, 30)],
   doel: "FTP",
   doelStart: "2026-06-29",
-  weekMondayISO: "2026-08-17",
-  todayISO: "2026-08-17",
+  weekMondayISO: "2026-09-14",
+  todayISO: "2026-09-14",
 });
 
 const fixtureLabel: React.CSSProperties = {
@@ -819,8 +824,8 @@ function VoorstelPreview() {
       {previewTestVoorstel && (
         <div>
           <div style={fixtureLabel}>
-            Test · VOORSTEL in de rustweek (laatste meting 21-05, 93 dagen
-            terug) — knoppen schrijven een ECHTE override, niet aantikken
+            Test · VOORSTEL in de doelblok-testweek (laatste meting 21-05, 121
+            dagen terug) — knoppen schrijven een ECHTE override, niet aantikken
           </div>
           <div style={{ pointerEvents: "none", opacity: 0.97 }}>
             <TestVoorstelCard

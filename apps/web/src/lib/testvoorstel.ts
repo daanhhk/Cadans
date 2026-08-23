@@ -10,21 +10,59 @@
 // geijkte signaal-drempels. Het plateau-criterium uit `docs/WERKWIJZE.md` (*Recon en bewijslast*)
 // is hier NIET van toepassing: er valt niets te ijken aan "hoe vaak wil ik testen". Een volgende
 // chat hoeft ze dus niet op een reeks te toetsen — alleen met Daan te herzien.
+//
+// MET ÉÉN UITZONDERING SINDS 23-08-2026: `TEST_INTERVAL_DAGEN` is geen vrije beleidswaarde meer
+// maar de DAG-UITDRUKKING van M90b, en hij is bovendien een TRAPFUNCTIE van de vierweekse
+// openingsperiode. Wie hem wil herzien leest eerst zijn eigen docstring: verschuiven binnen de
+// trede 66-84 verandert niets, en één stap eroverheen slaat elke tweede doelblokgrens over.
+import { computeMacroPhase } from "@cadans/engine";
 import type { EventItem, OverrideEntry, PlannerDay } from "@cadans/shared";
 import type { ActValuesRow } from "./activities";
 import {
   BLOK_WEKEN,
   blokCheckEnabled,
   blokStartVoorWeek,
-  blokWeekVanWeek,
   shiftIso_,
 } from "./blok";
 import { parseLocalDate } from "./dates";
 import { laatsteGelegenheid, type MetingBron } from "./effect";
 
-/** Hoogstens ~vier metingen per jaar: pas na zoveel dagen sinds de laatste maximale inspanning
- * biedt de coach een test aan. BELEID, geen gemeten drempel. */
-export const TEST_INTERVAL_DAGEN = 90;
+/**
+ * De DAG-VLOER onder het ijkaanbod: pas na zoveel dagen sinds de laatste maximale inspanning biedt
+ * de coach een test aan. Gemeten tot de GEKOZEN TESTDATUM, niet tot de weekmaandag — zie poort (7).
+ *
+ * DE BEDOELING (GEPIND `docs/TRAININGSMODEL.md` §13, M90b): één ijkinspanning per DOELBLOK. Een
+ * doelblok is `DOEL_BLOK_WEKEN` van twaalf weken, dus 84 dagen, en dat is de waarde hier.
+ *
+ * WAT ER WERKELIJK BINDT, en dit is de plek waar twee bouwrondes zich op vergist hebben. Sinds
+ * poort (1) versmald is liggen de OPENINGEN 84 dagen uit elkaar — één per doelblok — en niet 28.
+ * De afstand tussen twee AANBIEDINGEN is daarom `84 + (k − j)` dagen, waarbij j en k de weekdag
+ * zijn van de vorige en de volgende gekozen testdag. Poort (6) kiest de ruimste dag van de week,
+ * dus die weekdag WOBBELT: `k − j` ligt tussen −6 en +6, en de kortste afstand is 78 dagen.
+ *
+ * DAARUIT VOLGT DAT 84 TE HOOG IS, en dat is GEMETEN op de gebouwde bron. Elke vloer van 60 t/m 79
+ * bedient 21 van de 21 doelblokgrenzen bij zowel een vaste als een wisselende weekvorm; 80 geeft
+ * 20 van de 21, 82 geeft 15, en 84 geeft 14 van de 21. De waarde die de bedoeling van M90b
+ * uitdrukt ZONDER de grens te blokkeren die zij moet toelaten is `DOEL_BLOK_WEKEN × 7 − 6` = 78:
+ * één doelblok minus de breedte van het aanbodvenster.
+ *
+ * WAAROM ER DAN TOCH 84 STAAT: de bouwronde van 23-08-2026 was op 84 geautoriseerd, en de
+ * meetfrequentie is een BELEIDSVRAAG die met Daan wordt herzien en niet door de uitvoerder.
+ * De waarde is dus bewust blijven staan, met deze meting ernaast. ROADMAP punt 58 draagt het
+ * voorstel om naar 78 te gaan; tot dat besluit kost 84 ongeveer een derde van de doelblokgrenzen
+ * bij een wisselende weekvorm.
+ *
+ * DE GELIJKHEID 84 = 12 × 7 IS EEN SAMENVAL EN GEEN MECHANISME. Schrijf hem niet als reden op — de
+ * bindende grootheid is de afstand tussen twee GEKOZEN testdagen, niet die tussen twee grenzen.
+ *
+ * WAAROM IN ELK GEVAL NIET 90, de vorige waarde: tussen twee doelblokgrenzen liggen 84 dagen, dus
+ * een vloer van 90 haalt de volgende grens per constructie NOOIT en slaat elke tweede over.
+ * GEMETEN op de gebouwde bron: vloer 90 bedient 11 van de 21 grenzen, vloer 84 bedient er 21 bij
+ * een vaste weekvorm en 14 bij een wisselende.
+ *
+ * BELEID, geen uit data geijkte signaal-drempel — zie de kop van dit bestand.
+ */
+export const TEST_INTERVAL_DAGEN = 84;
 /** Komt er binnen dit venster een A/B-wedstrijd aan, dan IS die de meting en biedt de coach geen
  * test aan. BELEID. */
 export const WEDSTRIJD_HORIZON_DAGEN = 28;
@@ -70,14 +108,82 @@ export function buildTestVoorstel(input: {
   weekMondayISO: string;
   todayISO: string;
 }): TestVoorstel | null {
-  // (1) Alleen in de RUSTWEEK — tevens de laatste week van het blok. Een test daarbuiten valt
-  //     buiten het venster dat de effect-referent meet, of kost een opbouwdag.
-  if (blokWeekVanWeek(input.doelStart, input.weekMondayISO) !== BLOK_WEKEN) {
-    return null;
-  }
+  // (1) Alleen in de DOELBLOK-TESTWEEK — week 12 van het twaalfweekse doelblok, de grens waaraan
+  //     M90a de ijking hangt (GEPIND `docs/TRAININGSMODEL.md` §13). De engine levert die grootheid
+  //     al: `computeMacroPhase(...).isTestWeek`. Geen eigen raster nabouwen, en geen wijziging in
+  //     `packages/engine` nodig.
+  //
+  //     TOT 23-08-2026 STOND HIER DE VIERWEEKSE BLOKWEEK, en die versmalling is de hele ingreep.
+  //     GEMETEN waarom (docs/PUNT47-BOUW.md §14 en §16): met de vierweekse poort kreeg 24,1 procent
+  //     van de doelblokgrenzen werkelijk een ijking; met deze poort plus de vloer op 84 is dat
+  //     100,0 procent bij een vaste weekvorm en 66,7 procent bij een wisselende, over 8421 grenzen
+  //     per variant. Over 120 zaden van de wisselende weekvorm: gemiddeld 66,9 procent, minimum
+  //     57,1 procent, maximum 76,2 procent.
+  //
+  //     DE TWEE HELFTEN WERKEN ALLEEN SAMEN, en de tegenproef gaat BEIDE kanten op. Deze poort
+  //     alleen, met de oude vloer van 90, haalt ongeveer de helft van de grenzen. En de VLOER
+  //     alleen, met de oude vierweekse poort, is niet onschadelijk maar SCHADELIJK: gemeten zakt de
+  //     dekking dan van 23,8 procent naar **0 van de 21 grenzen** bij een vaste weekvorm. Wie ooit
+  //     deze poort terugdraait en de vloer laat staan, laat de app dus slechter achter dan hij hem
+  //     vond.
+  //
+  //     DE DOELBLOK-TESTWEEK IS PER CONSTRUCTIE OOK EEN VIERWEEKSE OPENING, en dat is bewezen en
+  //     niet aangenomen: beide klokken beelden dezelfde absolute weekindex sinds `doelStart` af, de
+  //     een modulo 12 en de ander modulo 4, en 11 mod 4 is 3 — blokweek 4. Omdat 4 een deler is van
+  //     12 kan dat niet toevallig misgaan. GEMETEN: 86 van de 86 over 1040 weekmaandagen, en 600
+  //     van de 600 over zestig verschillende `doelStart`-waarden. Daarom mogen poort (3) en de
+  //     afwijs-sleutel hieronder op de VIERWEEKSE klok blijven staan.
+  //
+  //     ZONDER GELDIGE `doelStart` GEEN AANBOD, en die vroege uitgang is DRAGEND — hij dekt TWEE
+  //     gaten die `computeMacroPhase` open laat.
+  //     (i) Een ONTBREKENDE startdatum: daar valt die functie terug op `new Date()` — de AMBIENT
+  //         KLOK — terwijl dit bestand belooft er geen te hebben (zie de kop).
+  //     (ii) Een ONGELDIGE startdatum, en dat is de gevaarlijke. `settings.doel` en `doelStart`
+  //         zijn VRIJE TEKST in D1 (zie `normalizeDoel_` in `packages/engine/src/phase.ts`), dus
+  //         een bedorven rij komt hier gewoon binnen. `parseLocalDate` geeft dan een `Invalid
+  //         Date`, en die is TRUTHY — de vangregel `if (!startDate)` in `computeMacroPhase` vuurt
+  //         dus niet. Het dagverschil wordt `NaN`, de blokweek wordt `NaN`, en `NaN <= 4`,
+  //         `NaN <= 8` en `NaN <= 11` zijn alle drie onwaar, dus de keten valt door naar de
+  //         `else`-tak en levert **`fase: "Test"`, `isTestWeek: true`** — élke week opnieuw.
+  //         GEMETEN op `"kapot"`, `""`, `"29-06-2026"` en `"2026/06/29"`: alle vier `isTestWeek`
+  //         true. De OUDE poort had dit gat niet: `blokWeekVanWeek` draagt zijn eigen
+  //         `Number.isNaN(...)`-vang en geeft dan 1, wat nooit gelijk is aan `BLOK_WEKEN`.
+  //         Zonder deze regel zou de app bij één bedorven rij ELKE week de ijkkaart tonen met de
+  //         copy "Dit blok loopt af." terwijl er geen blok afloopt — een M55-schending die de
+  //         oude poort per constructie niet kon produceren.
+  if (!input.doelStart) return null;
+  const doelStartDatum = parseLocalDate(input.doelStart);
+  if (Number.isNaN(doelStartDatum.getTime())) return null;
+  const weekMaandag = parseLocalDate(input.weekMondayISO);
+  if (Number.isNaN(weekMaandag.getTime())) return null;
+  const macro = computeMacroPhase(doelStartDatum, weekMaandag) as {
+    isTestWeek?: boolean;
+    week?: number;
+  };
+  if (macro?.isTestWeek !== true) return null;
   // (2) Onderhoud heeft geen effect-meter (DOELEN-SPEC §3.2) → daar valt niets te testen.
   if (!blokCheckEnabled(input.doel)) return null;
 
+  // DE VIERWEEKSE KLOK BLIJFT STAAN, EN DIT IS WAARVOOR — het stond nergens opgeschreven en twee
+  // bouwrondes zijn er bijna op stukgelopen (docs/PUNT47-BOUW.md §9 V1).
+  //
+  // Hij draagt na de versmalling van poort (1) nog TWEE dingen, allebei over IDENTITEIT en niet
+  // over timing. (i) Het onderdrukkings-venster van poort (3) hieronder: staat er in dit vierweekse
+  // blok al een test ingepland, dan biedt de app er geen tweede aan. (ii) `blokStart` reist als
+  // AFWIJS-SLEUTEL het bestand uit — hij staat in de teruggegeven `TestVoorstel` en wordt gelezen
+  // door `SchemaView.tsx` (`isTestVoorstelAfgewezen`) en `TestVoorstelCard.tsx` (`afgewezen.add`).
+  // "Niet dit blok" betekent daarmee "niet dit VIERWEEKSE blok".
+  //
+  // DAT BLIJFT KLOPPEN OMDAT DE SLEUTEL UNIEK IS PER AANBOD. Elke doelblok-testweek valt in zijn
+  // eigen vierweekse blok, want twaalf weken zijn precies drie van die blokken. GEMETEN over 260
+  // weekmaandagen: 21 doelblok-testweken, 21 UNIEKE afwijs-sleutels, 0 van de 20 opeenvolgende
+  // paren deelt er een. Eén afwijzing kan dus nooit twee aanbiedingen onderdrukken.
+  //
+  // WAT HIJ NIET MEER DRAAGT — en dat is de eerlijke helft. Vóór 23-08-2026 was hij ook de
+  // RETRY-klok: miste een aanbod zijn week, dan kwam de volgende opening vier weken later. Na de
+  // versmalling is er geen retry meer; een gemiste doelblokgrens wacht twaalf weken. Dat is een
+  // BEWUSTE kostenpost en hij staat als ROADMAP punt 55 open, met de gemeten oorzaak van het
+  // missen bij punt 58.
   const blokStart = blokStartVoorWeek(input.doelStart, input.weekMondayISO);
   const blokEind = shiftIso_(blokStart, BLOK_WEKEN * 7);
 

@@ -12,7 +12,7 @@ import { bumpPlannerVersion } from "../../lib/plannerSignal";
 import type { TestVoorstel } from "../../lib/testvoorstel";
 import { CoachCallout } from "./CoachCallout";
 
-// 5b-ii — het TESTVOORSTEL in de rustweek. Spiegelt VerlengCard: CoachCallout met de aanbod-copy,
+// 5b-ii — het TESTVOORSTEL in de doelblok-testweek. Spiegelt VerlengCard: CoachCallout met de aanbod-copy,
 // een accept-knop die via de BESTAANDE override-keten schrijft (putOverride → PUT
 // /api/override/:date → ProposalDay.override → OverriddenDetail + "Terug naar voorstel"), dus
 // omkeerbaar en zonder parallelle weergave-weg. Afwijzen is sessie-scoped, géén D1.

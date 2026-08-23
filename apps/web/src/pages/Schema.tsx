@@ -34,7 +34,7 @@ interface SchemaData {
   fatigue: FatigueVoorstel | null;
   /** 5a-ii — blok-terugblik (alleen in blokweek 4 en 1), of null. */
   blokReview: BlokReview | null;
-  /** 5b-ii — testvoorstel voor de rustweek, of null. */
+  /** 5b-ii — testvoorstel voor de doelblok-testweek, of null. */
   testVoorstel: TestVoorstel | null;
   /** ROADMAP stap 2 — dosis-trede-voorstel, of null. */
   dosisTredeVoorstel: DosisTredeVoorstel | null;

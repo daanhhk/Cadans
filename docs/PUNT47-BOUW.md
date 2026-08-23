@@ -1,4 +1,4 @@
-# Punt 47 — twee bouwrondes die geen van beide gebouwd hebben
+# Punt 47 — twee rondes die niet bouwden, en een derde die het wel deed
 
 Het bouwspoor van ROADMAP punt 47: de ijking aan het eind van een blok. Twee rondes, allebei
 opgezet als de proef van ROADMAP punt 52 — recon en bouw in één ronde, met de verwachtingen als
@@ -18,19 +18,23 @@ Eén document, twee rondes, doorlopende nummering.
   in voor een LOTERIJ die door een historisch toeval wordt beslist. §12 draagt het punt-52-oordeel
   dat telt.
 
+- **§13 t/m §18 — RONDE 3 (23-08-2026, avond): de VERSMALLING en de VLOER, samen.** Beide helften
+  in één geautoriseerde wijziging. X1 en X2 hielden, X3 viel — en zijn val was de scherpste vondst
+  van de ronde. **Er is gebouwd.** §18 sluit punt 52.
+
 **LEES §9 W2 IN ZIJN GEHEEL, want daar staat een CORRECTIE op mijn eigen eerste uitslag.** Die
 uitslag luidde dat vloer 84 de doelblokgrens NOOIT raakt. Dat was te absoluut en is adversarieel
 weerlegd vóór er iets gecommit was; de fout, hoe hij is gevonden en de herstelmeting staan er alle
 drie bij. Neem het cijfer 0-van-154 uit dit document nergens over.
 
-**DE STAND VAN PUNT 47 NA BEIDE RONDES — en die is NIET dat beide routes op zijn.** Er zijn twee
-routes voorgesteld om de ijking op de doelblokgrens te laten landen: de klok omhangen (ronde 1) en
-de dag-vloer afleiden (ronde 2). Elk apart werkt niet — de vloer alleen laat de dekking op 25,0%
-staan waar zij al stond. **SAMEN werken ze wél, en dat is gemeten** (§9 W2-d): poort (1) op de
-doelblok-testweek plus de vloer op 84 tilt het aandeel doelblokgrenzen dat werkelijk een ijking
-krijgt van **25,0% naar 66,9%** bij een realistische planner, en van 25,0% naar 99,9% bij een vaste
-weekvorm. De grond waarop ronde 1 de omhanging liet vervallen — een versmalling van dertien
-openingen naar vier — telde OPENINGEN waar het om GELEVERDE IJKINGEN gaat, en is daarmee weerlegd.
+**DE STAND VAN PUNT 47 NA DRIE RONDES.** Er zijn twee routes voorgesteld om de ijking op de
+doelblokgrens te laten landen: de klok versmallen (ronde 1) en de dag-vloer afleiden (ronde 2). Elk
+apart werkt niet — de vloer alleen laat de dekking staan waar zij al stond. **SAMEN werken ze wél,
+en dat is in ronde 2 gemeten en in ronde 3 gebouwd en nagemeten:** het aandeel doelblokgrenzen dat
+werkelijk een ijking krijgt gaat van **24,1% naar 100,0%** bij een vaste weekvorm en **66,7%** bij
+een wisselende, over 8421 grenzen per variant. De grond waarop ronde 1 de versmalling liet
+vervallen — dertien openingen per jaar worden er vier — telde OPENINGEN waar het om GELEVERDE
+IJKINGEN gaat, en is weerlegd.
 
 ## 0. Omgevingsverklaring
 
@@ -670,5 +674,437 @@ BOUW-helft even goed draagt als een eigen rapport — de oorspronkelijke vraag v
 twee rondes nog altijd onbeantwoord, om de eenvoudige reden dat er twee keer geen bouw was. Punt 52
 kan dus niet worden afgevinkt. Wat het wél verdient is de nieuwe regel hierboven, en een derde
 poging op de eerstvolgende ronde waarin de verwachtingen houden.
+
+---
+
+# RONDE 3 — 23-08-2026, avond: de versmalling en de vloer, samen
+
+## 13. Omgevingsverklaring
+
+Gerapporteerd vóór alles; er stond met opzet geen vaste `cd`-regel in de prompt en er is niet
+ge-`cd`'d, dus er is één pad.
+
+- **Werkpad:** `/c/Users/daan/Projects/cadans`.
+- **Worktree:** NEE. `git rev-parse --git-dir` en `--git-common-dir` geven allebei `.git`.
+- **Branch:** `main`, remote `https://github.com/daanhhk/Cadans.git` — een checkout van
+  `daanhhk/Cadans`, dus de STOP-conditie is niet geraakt.
+- **Achterstand:** geen. `git rev-list --left-right --count origin/main...HEAD` geeft `0` en `0`.
+- **Versie:** `2.1.208 (Claude Code)`. Boom schoon bij aanvang.
+
+**DE AGENT EN DE RULES-PROBES BLIJVEN NIET GEMETEN, en er is deze ronde niet naar gezocht.** Deze
+sessie is ouder dan `.claude/agents/recon.md` en ouder dan de probes, dus beide vragen zijn hier per
+constructie onbeantwoordbaar. De prompt schreef terecht voor ze niet te proberen. Ze rijden mee
+zodra er een verse sessie is.
+
+## 14. De drie verwachtingen X1 t/m X3
+
+Alle metingen draaien de ECHTE functies, met `TZ=Europe/Amsterdam` gepind, gebundeld naar een
+tijdelijk pad buiten de repo-tree. Geen poort en geen dagraster nagebouwd.
+
+### X2 eerst — HOUDT, en het is een SAMENVAL en geen kans
+
+X2 draagt de hele meetopstelling van X1, dus hij komt eerst. De versmalde poort is vóór de bouw
+gemeten door `buildTestVoorstel` alleen op doelblok-testweken aan te roepen; dat is alleen
+equivalent als elke doelblok-testweek óók een vierweekse opening is.
+
+**GEMETEN, niet als waarschijnlijkheid maar als samenval: 86 van de 86** doelblok-testweken over
+1040 weekmaandagen is ook blokweek 4, tegenvoorbeelden geen. Over zestig verschillende
+`doelStart`-waarden: **600 van de 600**. De grond staat in de code en niet in de reeks: beide
+klokken beelden dezelfde absolute weekindex sinds `doelStart` af, de een modulo 12 en de ander
+modulo 4. `isTestWeek` is index ≡ 11 (mod 12), en 11 mod 4 is 3 — blokweek 4. Omdat 4 een deler is
+van 12 kan dat niet toevallig misgaan.
+
+**DE TWEEDE HELFT VAN X2 — de afwijzing.** De sleutel is `blokStart`, en die komt uit
+`blokStartVoorWeek(input.doelStart, input.weekMondayISO)`; de vloer komt er niet in voor. Gemeten
+over 260 weekmaandagen: **21 doelblok-testweken, 21 UNIEKE afwijs-sleutels, 0 van de 20**
+opeenvolgende paren deelt er een. Eén afwijzing kan dus nooit twee aanbiedingen onderdrukken. Op
+hetzelfde geval geven vloer 90 en vloer 84 dezelfde sleutel (`2026-11-16`). **Poort (3) en de
+afwijs-sleutel konden daarom op de vierweekse klok blijven staan.**
+
+### X1 — HOUDT, en de winst overleeft de sweep overal
+
+De beginconditie — de tijd sinds de laatste maximale inspanning op t0 — is als DIMENSIE afgelopen
+over 0 t/m 400 dagen in stappen van 1, plus het geval "nog nooit gemeten". Per beginwaarde een
+volle keten van 260 weken met 21 doelblokgrenzen, dus 8421 grenzen per variant. Uitsluitingen: geen.
+
+```
+  VASTE weekvorm (grote dag altijd zaterdag)
+    BASELINE  vierweekse poort + vloer 90 : 2033 van de 8421 = 24,1%
+              spreiding: min 23,8% · p25 23,8% · mediaan 23,8% · p75 23,8% · max 28,6%
+              beginwaarden met NUL grenzen bedeeld: 0 van de 401 · met ALLE: 0 van de 401
+    GEBOUWD   doelblok-poort   + vloer 84 : 8419 van de 8421 = 100,0%
+              spreiding: min 95,2% · p25 100,0% · mediaan 100,0% · p75 100,0% · max 100,0%
+              beginwaarden met NUL grenzen bedeeld: 0 van de 401 · met ALLE: 399 van de 401
+
+  WISSELENDE weekvorm (per week een andere ruimste dag)
+    BASELINE  : 2038 van de 8421 = 24,2%   spreiding min 23,8% · mediaan 23,8% · max 28,6%
+    GEBOUWD   : 5613 van de 8421 = 66,7%   spreiding min 61,9% · mediaan 66,7% · max 66,7%
+```
+
+**DE WINST VERDWIJNT NERGENS EN SLAAT NERGENS OM.** Het MINIMUM van de gebouwde variant (95,2% vast,
+61,9% wisselend) ligt over het hele bereik boven het MAXIMUM van de baseline (28,6%). Er is geen
+beginwaarde waarbij de baseline wint, en geen beginwaarde waarbij de gebouwde variant nul grenzen
+bedient. Het geval "nog nooit een maximum gezien" gaat van 5 van de 21 naar 21 van de 21 (vast) en
+14 van de 21 (wisselend).
+
+### X3 — VALT
+
+> **WAARSCHUWING BIJ DEZE PARAGRAAF.** Wat hieronder staat is de diagnose zoals zij vóór de
+> weerleggingspas luidde, en zij is FOUT. Het residu komt niet uit de dagkeuze van poort (6) maar
+> uit de VLOER, poort (7). De paragraaf blijft staan omdat de weg ernaartoe de les draagt — twee
+> opeenvolgende misattributies met dezelfde oorzaak — maar de uitkomst is vervangen in **§16**.
+> Neem uit deze paragraaf geen enkele toeschrijving over.
+
+Mijn verwachting was dat het residu bij een wisselende weekvorm uit de BESCHIKBAARHEIDSPOORT komt.
+**Dat is onjuist, in 176 van de 176 gevallen** — maar de vervanging die ik ervoor in de plaats zette
+was óók onjuist.
+
+**EERST DE FOUT IN MIJN EIGEN EERSTE DIAGNOSE, want die kwam er bijna doorheen.** Ik toetste de
+poorten in een CASCADE: eerst een ruime week (elke dag 150 minuten), en vuurde het aanbod dan wel,
+dan heette dat de beschikbaarheidspoort. Die cascade is fout van opzet. Een ruimere week verandert
+niet alleen de beschikbaarheid maar ook de DAGKEUZE van poort (6) — die kiest de meeste minuten en
+bij gelijkspel de laatste datum, dus een ruime week duwt de keuze naar zondag, waardoor
+`dagenSinds` groeit en de VLOER alsnog gehaald wordt. De eerste diagnose boekte daarmee een
+intervalprobleem op de beschikbaarheid, en gaf 176 van de 176 op de verkeerde poort.
+GEMETEN op één keten: **6 van de 6** gemiste grenzen werden door die cascade verkeerd geboekt.
+
+**DE HERMETEN DIAGNOSE toetst de poorten ONAFHANKELIJK,** elk door interventie op de echte functie:
+vloer op 0 met dezelfde week (bestond er een kandidaat?), daarna pas een ruime week, en ten slotte
+per weekdag een week waarin ALLEEN die dag kandidaat is. Over 25 ketens × 21 grenzen = 525 grenzen,
+349 bedeeld, 176 gemist:
+
+```
+  poort (5), geen kandidaat                          :   0 van de 176 =   0,0%
+  poort (3) of (4)                                   :   0 van de 176 =   0,0%
+  de vloer, en GEEN ENKELE dag haalde het            :   0 van de 176 =   0,0%
+  de vloer, maar poort (6) koos de VERKEERDE DAG     : 176 van de 176 = 100,0%
+```
+
+Drie voorbeelden: bij grens `2026-12-07` koos poort (6) `2026-12-09` met `dagenSinds` 80, terwijl
+dag 6 van diezelfde week de vloer wél gehaald zou hebben; bij `2027-11-08` koos hij `2027-11-10`
+met 81; bij `2028-07-17` koos hij `2028-07-17` met 79.
+
+**WAT DIT BETEKENT.** Het residu is geen beschikbaarheidsprobleem — er is altijd trainingstijd — en
+geen intervalprobleem: een andere vloerwaarde repareert het niet, want de dag die het haalt bestaat
+al. Het is een KEUZEprobleem. Poort (6) optimaliseert op beschikbare minuten en weet niet dat de
+vloer bestaat:
+
+```
+  let keuze = kandidaten[0] as PlannerDay;
+  for (const d of kandidaten) {
+    const meer = (d.minuten ?? 0) > (keuze.minuten ?? 0);
+    const gelijkMaarLater =
+      (d.minuten ?? 0) === (keuze.minuten ?? 0) && d.datum > keuze.datum;
+    if (meer || gelijkMaarLater) keuze = d;
+  }
+```
+
+Valt de ruimste dag vroeg in de week, dan is `dagenSinds` 79 tot 81 en sterft het aanbod terwijl
+zaterdag in diezelfde week 84 of meer had gegeven.
+
+**EN DAAR ZIT DE FOUT, die pas in §16 boven water kwam: in de gemeten fixture IS zaterdag geen
+kandidaat.** De `alleenDag`-probe gaf de onderzochte dag 90 minuten, terwijl diezelfde dag in de
+echte week 45 minuten of geen training draagt — onder `TEST_MIN_BESCHIKBAAR_MIN`. De probe bouwde
+dus een week die niet bestond en boekte het verschil op de keuze. **Dat is exact dezelfde fout als
+de cascade die er twee alinea's hoger wordt rechtgezet: één interventie die meer dan één ding
+verandert.** Ik heb hem twee keer achter elkaar gemaakt, de tweede keer terwijl ik de eerste aan het
+uitleggen was.
+
+## 15. Wat er gebouwd is
+
+Eén samenhangende wijziging in `apps/web/src/lib/testvoorstel.ts`, plus de tests en de fixtures die
+eraan hangen. **Geen regel in `packages/engine`** — `git diff --stat packages/engine` is leeg.
+
+**(a) POORT (1) VERSMALD.** De oude regel was
+`if (blokWeekVanWeek(input.doelStart, input.weekMondayISO) !== BLOK_WEKEN) {`. De nieuwe:
+
+```
+  if (!input.doelStart) return null;
+  const macro = computeMacroPhase(
+    parseLocalDate(input.doelStart),
+    parseLocalDate(input.weekMondayISO),
+  ) as { isTestWeek?: boolean };
+  if (macro?.isTestWeek !== true) return null;
+```
+
+De grootheid komt uit de engine zoals die er al was; `computeMacroPhase` stond al in de exports en
+wordt in `apps/web/src/lib` al door vier andere bestanden gebruikt. **De vroege uitgang op een
+ontbrekende `doelStart` is DRAGEND en geen defensieve regel:** `computeMacroPhase` valt bij een
+lege startdatum terug op `new Date()`, en dit bestand belooft in zijn kop geen ambient klok te
+hebben. De oude poort kwam daar via `blokWeekVanWeek` niet aan toe, want die geeft dan een vaste 1.
+`blokWeekVanWeek` is daarmee uit de imports van dit bestand verdwenen; hij blijft in `blok.ts` staan
+en wordt daar door anderen gebruikt.
+
+**(b) `TEST_INTERVAL_DAGEN` VAN 90 NAAR 84**, met een docstring die twee dingen apart houdt: de
+BEDOELING (de dag-uitdrukking van M90b, GEPIND `docs/TRAININGSMODEL.md` §13) en wat er WERKELIJK
+bindt. Dat tweede is `ceil(TEST_INTERVAL_DAGEN / 28) × 28` — een trapfunctie op de vierweekse
+openingsperiode — waardoor elke waarde van 66 t/m 84 zich identiek gedraagt en 84 de BOVENKANT van
+zijn trede is. De docstring zegt met zoveel woorden dat `84 = 12 × 7` een samenval is en geen
+mechanisme, en dat het niet als reden opgeschreven moet worden.
+
+**(c) DE ROL VAN DE VIERWEEKSE KLOK IS VASTGELEGD — en zij is KLEINER dan de prompt aannam.** Hij
+draagt na de versmalling nog twee dingen, allebei over IDENTITEIT en niet over timing: het
+onderdrukkings-venster van poort (3), en `blokStart` als afwijs-sleutel die het bestand uitreist
+naar `SchemaView.tsx` en `TestVoorstelCard.tsx`. **Wat hij NIET meer draagt is de RETRY.** Vóór deze
+ronde kwam een gemist aanbod vier weken later terug; nu wacht een gemiste doelblokgrens twaalf
+weken. De docstring zegt dat expliciet en verwijst naar punt 55 en punt 58.
+
+**(d) ONAANGEROERD:** `WEDSTRIJD_HORIZON_DAGEN` (28), poort (3), de afwijs-sleutel,
+`TEST_MIN_BESCHIKBAAR_MIN` (60), `TEST_DUUR_MIN` (60), poort (6) en de engine.
+
+**(e) COPY — GEEN GEBRUIKERSTEKST GEWIJZIGD, en dat is gecontroleerd en niet aangenomen.** De twee
+strings die een moment kunnen claimen staan in `apps/web/src/lib/coachNarrative.ts`. `testAanbodRegel`
+opent met `Dit blok loopt af.` — dat blijft waar en wordt zelfs preciezer: het aanbod valt nu in
+week 12 van het doelblok, dus het blok dat afloopt is het doelblok. `testAfwijsLabel` geeft
+`"Niet dit blok"`, en de sleutel eronder blijft het vierweekse blok; die belofte wordt na de
+versmalling ruimer ingelost dan zij luidt (de volgende kans is twaalf weken later, niet vier), dus
+zij claimt geen moment dat de poort niet produceert. M55 is daarmee niet geraakt.
+
+**WEL GEWIJZIGD: één ontwikkelaarsgerichte string in `apps/web/src/pages/Preview.tsx`.** Verbatim
+vóór: `Test · VOORSTEL in de rustweek (laatste meting 21-05, 93 dagen` / `terug) — knoppen schrijven
+een ECHTE override, niet aantikken`. Verbatim na: `Test · VOORSTEL in de doelblok-testweek (laatste
+meting 21-05, 121` / `dagen terug) — knoppen schrijven een ECHTE override, niet aantikken`. Reden:
+de preview-fixture stond op de vierweekse rustweek van `2026-08-17` (doelblokweek 8) en zou na de
+versmalling niets meer renderen; hij is verplaatst naar de doelblok-testweek van `2026-09-14`,
+waardoor ook het dagenaantal verandert. Verder zijn vier COMMENTAAR-regels van "rustweek" naar
+"doelblok-testweek" gezet in `SchemaView.tsx`, `Schema.tsx` en `TestVoorstelCard.tsx`.
+
+**(f) TESTS.** `apps/web/src/lib/testvoorstel.test.ts` gaat van 21 naar 27 tests; de hele suite van
+1010 naar 1016 over 78 bestanden. De fixture verhuisde van `2026-08-17` naar `2026-09-14`, want die
+eerste is geen doelblok-testweek meer.
+
+BESTAANDE TESTS DIE HET OUDE MOMENT VASTPINDEN en naar de nieuwe norm zijn gebracht, bij naam:
+`"alleen in de RUSTWEEK: blokweek 1, 2 en 3 geven null"` (nu
+`"alleen in de DOELBLOK-TESTWEEK: de elf weken ervoor geven null"`, en hij loopt nu elf weken af in
+plaats van drie); `"er staat al een test in dit blok → null"`; `"A- of B-wedstrijd binnen de horizon
+→ null (die wedstrijd IS de meting)"`; `"C-wedstrijd binnen de horizon → WEL een aanbod"`;
+`"A-wedstrijd BUITEN de horizon → wel een aanbod"`; `"interval nog niet vol → null"`; `"een NIET
+gereden wedstrijd telt niet als meting → interval blijft open"`; `"een dag in het VERLEDEN valt
+af"`; `"een dag met een override valt af"`; `"de MEESTE minuten wint"`; `"gelijkspel → de LAATSTE
+datum"`; `"wedstrijd 21-05 → aanbod op 2026-08-22, 93 dagen ertussen"` (nu `"... op 2026-09-19, 121
+dagen ertussen"`); `"een sprongdag binnen 90 dagen vóór de testdatum ONDERDRUKT het aanbod"` (nu
+`"... binnen TEST_INTERVAL_DAGEN vóór ..."`, want het getal hoorde niet in een testnaam); `"zonder
+die sprong blijft het aanbod staan"`; en `"een sprong LANG geleden laat het aanbod staan en wordt
+als bron gemeld"`.
+
+**ÉÉN TEST IS NIET BIJGESTELD MAAR VAN FIXTURE VERWISSELD, en dat verschil is dragend:**
+`"toetsen op de WEEKMAANDAG zou het aanbod ONDERDRUKKEN — 88 dagen"`, nu
+`"... — 81 tegen 86 dagen"`. Hij toont aan WAAROM poort (7) tot de gekozen testdag meet en niet tot
+de weekmaandag. Met de oude vloer van 90 droeg de wedstrijd van `2026-05-21` dat contrast (88 dagen
+tot de maandag, 93 tot de testdag). Onder de vloer van 84 liggen die twee ALLEBEI boven de vloer en
+toont de fixture niets meer — de assertie zou rood worden en haar verzwakken was een verstopte
+regressie geweest. Een meting op `2026-06-25` herstelt het contrast op de nieuwe vloer: 81 tot de
+maandag, 86 tot de testdag.
+
+NIEUWE DEKKING: `"een vierweekse OPENING die geen doelblok-testweek is geeft null"` (de versmalling
+zelf, op `2026-07-20`, `2026-08-17` en `2026-10-12`, elk met een assertie dat het wél blokweek 4
+is); `"de doelblok-testweek IS per constructie ook een vierweekse opening"`; `"zonder doelStart geen
+aanbod, en GEEN ambient klok"`; `"de dagkeuze kijkt NIET naar de vloer — en dat is een gemeten
+kostenpost"` (punt 58); en een eigen blok `"de INTERVALGRENS als dimensie, niet als vaste waarde"`
+met `"de omslag ligt EXACT op TEST_INTERVAL_DAGEN vóór de gekozen testdag"` en `"de dimensie
+afgelopen: monotoon, precies één omslagpunt, en dat is de vloer"` — die laatste loopt 61
+beginwaarden af en asserteert dat er precies één omslag is en dat die op `TEST_INTERVAL_DAGEN - 1`
+ligt. Dat laatste blok is er omdat de twee vorige rondes allebei op een gestipuleerde beginconditie
+strandden.
+
+**DE ROOD-METING, PER PLEK** (`docs/CC-CHECKS.md` CHECK 17). De vloer terug op 90 laat drie
+benoemde tests vallen: `"de omslag ligt EXACT op TEST_INTERVAL_DAGEN vóór de gekozen testdag"`,
+`"de dagkeuze kijkt NIET naar de vloer — en dat is een gemeten kostenpost"` en `"toetsen op de
+WEEKMAANDAG zou het aanbod ONDERDRUKKEN — 81 tegen 86 dagen"`. Poort (1) geneutraliseerd laat er
+drie ANDERE vallen: `"alleen in de DOELBLOK-TESTWEEK: de elf weken ervoor geven null"`, `"een
+vierweekse OPENING die geen doelblok-testweek is geeft null"` en `"zonder doelStart geen aanbod, en
+GEEN ambient klok"`. Beide plekken zijn dus dragend, en geen van beide is stil een no-op.
+
+**DE NA-METING OP DE GEBOUWDE BRON, zonder enige substitutie.** De poort vuurt in 21 van de 21
+gevallen in een doelblok-testweek en **0 keer** daarbuiten. De dekking reproduceert de VOOR-meting
+teken voor teken: **8419 van de 8421 (100,0%)** vast en **5613 van de 8421 (66,7%)** wisselend —
+exact dezelfde getallen als de simulatie. 21 aanbiedingen gaven 21 unieke afwijs-sleutels. Met
+`doelStart` null geeft de functie `null` en raakt de ambient klok niet.
+
+## 16. De weerleggingspas — wat er kantelde
+
+Verplicht per sectie 5 van de prompt, en het is de tweede regel uit het punt-52-verdict van ronde 2.
+Vier onafhankelijke lenzen — noemer, dode takken, grens, regressie — kregen de opdracht de
+hoofdclaim van deze ronde ONDERUIT te halen, met eigen meetscripts buiten de repo. **Alle vier
+weerlegden hem, met hoge zekerheid.** Hun bevindingen zijn NIET overgenomen maar zelf nagemeten; wat
+hieronder staat rust op mijn eigen harnas.
+
+**WAT OVEREIND BLEEF.** De getallen van de dekking reproduceren: baseline 2033 van de 8421 (24,1%)
+met maximum 28,6%, gebouwd 8419 van de 8421 (100,0%) vast en 5613 van de 8421 (66,7%) wisselend. De
+samenval uit X2 is niet te weerleggen — 86 van de 86 en 600 van de 600, en de rekenkundige grond
+eronder klopt. De afwijs-sleutels blijven uniek. X1 houdt: de winst verdwijnt nergens.
+
+### 16a. HET MECHANISME IN MIJN DOCSTRING BESCHREEF DE OUDE POORT
+
+Ik schreef dat de afstand tussen twee aanbiedingen `ceil(vloer / 28) × 28` is, en dat elke waarde
+van 66 t/m 84 daarom identiek is. **Dat gold vóór de versmalling.** Na de versmalling liggen de
+openingen 84 dagen uit elkaar, niet 28. GEMETEN op de gebouwde bron, afstanden tussen opeenvolgende
+aanbiedingen: bij een vaste weekvorm `{84}`, bij een wisselende `{84, 85, 87, 89, 163, 164, 166,
+168}`. De echte formule is `84 + (k − j)` met j en k de weekdag van de vorige en volgende gekozen
+testdag; die wobbelt tussen −6 en +6, dus de kortste afstand is **78**.
+
+### 16b. DAARDOOR IS 84 EEN SLECHTE WAARDE, EN DAT IS DE VONDST VAN DE PAS
+
+De trede 66 t/m 84 bestaat niet op de gebouwde bron. GEMETEN, vloer-sweep over één keten:
+
+```
+  vloer  60 : vast 21/21 · wisselend 21/21      vloer  80 : vast 21/21 · wisselend 20/21
+  vloer  66 : vast 21/21 · wisselend 21/21      vloer  82 : vast 21/21 · wisselend 15/21
+  vloer  70 : vast 21/21 · wisselend 21/21      vloer  84 : vast 21/21 · wisselend 14/21
+  vloer  74 : vast 21/21 · wisselend 21/21      vloer  85 : vast 11/21 · wisselend 12/21
+  vloer  77 : vast 21/21 · wisselend 21/21      vloer  90 : vast 11/21 · wisselend 11/21
+  vloer  78 : vast 21/21 · wisselend 21/21
+  vloer  79 : vast 21/21 · wisselend 21/21
+```
+
+**84 is niet de bovenkant van een vlakke trede maar de slechtste waarde binnen de trede die ik
+beweerde.** Het vlakke bereik is 60 t/m 79. De waarde die M90b uitdrukt zonder de grens te
+blokkeren die zij moet toelaten is `DOEL_BLOK_WEKEN × 7 − 6` = **78**.
+
+**DE WACHTTIJD MAAKT HET SCHERPER, en daar is 84 zelfs een REGRESSIE.** Gemiddelde afstand tussen
+twee aanbiedingen over 30 zaden: oud (vierweeks, vloer 90) **111,5 dagen**, grootste gat 118; nieuw
+met vloer 84 **126,3 dagen**, grootste gat **173**; met vloer 78 **84,0 dagen**, grootste gat 90.
+Bij een wisselende weekvorm wacht de renner met de gebouwde waarde dus LANGER dan vóór de ingreep.
+En 78 verruimt de norm niet: poort (1) laat per constructie hoogstens één aanbod per doelblok door.
+
+**DE WAARDE STAAT TOCH OP 84, en dat is een bewuste keuze.** Sectie 2 van de prompt autoriseert
+`TEST_INTERVAL_DAGEN` op 84, en de meetfrequentie is volgens de kop van het bestand zelf een
+beleidsvraag die met Daan wordt herzien. Een uitvoerder die een geautoriseerd getal onderweg
+vervangt omdat zijn eigen meting hem gelijk geeft, ondermijnt precies de poort die dit project
+overeind houdt. De meting staat in de docstring en het besluit staat als **ROADMAP punt 58** klaar
+als één getal.
+
+### 16c. HET RESIDU IS TWEE KEER VERKEERD TOEGESCHREVEN, DOOR MIJ
+
+Eerst aan de beschikbaarheidspoort (cascade-fout), daarna aan de dagkeuze van poort (6)
+(`alleenDag`-probe die de week verruimde). **Beide keren veranderde mijn probe meer dan één ding.**
+GEMETEN met onafhankelijke probes, over 25 ketens × 21 grenzen:
+
+```
+  gemiste grenzen                                                : 176
+  daarvan die alsnog vuren met de vloer op 0, ZELFDE week        : 176 van de 176  -> poort (7)
+  gemiste grenzen waarvan de ECHTE week MEER dan één kandidaat draagt : 0 van de 176
+  verdeling van het aantal kandidaten in de echte week           : {"1": 176}
+```
+
+Poort (6) heeft daar niets te kiezen. **De null valt op poort (7), de vloer.** Dat is dezelfde
+conclusie als 16b langs een andere weg, en het is de reden dat punt 58 nu over de VLOER gaat en
+niet over de dagkeuze. De test die de floor-blindheid van poort (6) vastpint blijft staan — dat
+gedrag bestaat — maar zijn commentaar zegt nu expliciet dat hij NIET de oorzaak van het residu is.
+
+### 16d. EEN REGRESSIE DIE IK ZELF HAD GEÏNTRODUCEERD — en die is gerepareerd
+
+Dit is de zwaarste vondst van de pas. Mijn eerste versie van poort (1) droeg alleen
+`if (!input.doelStart) return null;`. Dat dekt `null` en `""` en verder niets. `doelStart` is VRIJE
+TEKST in D1, en bij een bedorven waarde geeft `parseLocalDate` een `Invalid Date` — **die is
+TRUTHY**, dus de vangregel `if (!startDate)` in `computeMacroPhase` vuurt niet. Het dagverschil
+wordt `NaN`, de blokweek wordt `NaN`, en `NaN <= 4`, `NaN <= 8` en `NaN <= 11` zijn alle drie
+onwaar, waardoor de keten doorvalt naar de `else`-tak:
+
+```
+  else {
+    fase = "Test";
+    isTestWeek = true;
+  }
+```
+
+GEMETEN op `"kapot"`, `""`, `"29-06-2026"` en `"niet-een-datum"`: alle vier `isTestWeek: true`, met
+`week: NaN`. **Bij één bedorven rij zou de app ELKE week de ijkkaart tonen, met de copy `Dit blok
+loopt af.` terwijl er geen blok afloopt — een M55-schending die de OUDE poort per constructie niet
+kon produceren**, want `blokWeekVanWeek` draagt zijn eigen `Number.isNaN`-vang en geeft dan 1.
+
+GEREPAREERD met een expliciete geldigheidstoets op beide datums, en er staan twee tests op:
+`"een ONGELDIGE doelStart geeft null — anders vuurt het aanbod ELKE week"` en de tegenproef
+`"een GELDIGE maar afwijkend geschreven doelStart gedraagt zich als voorheen"`, want de vang mag
+niet te breed zijn — `"2026/06/29"` parseert wél en hoort gewoon te vuren, precies zoals bij de
+oude poort.
+
+### 16e. WAT DE PAS VERDER BLOOTLEGDE, en het staat er zonder verzachting
+
+- **DE NOEMER 8421 IS OP DE BESLISSENDE DIMENSIE OPNIEUW SMAL.** Hij is 401 beginwaarden × 21
+  grenzen, maar het LCG-zaad van de wisselende weekvorm stond in beide scripts vast op 7. Het
+  gerapporteerde minimum van 61,9% is dus het minimum BIJ ZAAD 7. GEMETEN over 120 zaden:
+  gemiddeld **66,9%**, minimum **57,1%** (zaad 50), maximum **76,2%**. Het echte minimum is 57,1%,
+  niet 61,9%.
+- **DE `sprongDagen`-TAK STOND WÉÉR DOOD.** Geen enkele fixture-rij zette `rolling_ftp`, dus de
+  derde bron van `laatsteGelegenheid` kon per constructie niet vuren — dezelfde CHECK 23-schending
+  als in ronde 2, in een ronde die die schending in haar eigen §12 als les opschreef. GEMETEN met
+  de tak levend: bij een sprong elke 20 weken zakt de dekking naar 9 van de 21, bij een sprong elke
+  8 weken naar 0 van de 21.
+- **A- EN B-WEDSTRIJDEN ONTBRAKEN OOK.** Met een A-race elke 365 dagen: 16 van de 21; elke 180
+  dagen: 9 van de 21; elke 120 dagen: 3 van de 21. Een wedstrijd IS een meting, dus een uitblijvend
+  aanbod is daar geen misser — maar **het getal 100,0% geldt alleen in een wereld zonder
+  wedstrijden en zonder een enkele rolling_ftp-sprong**, en dat hoort erbij te staan.
+- **HET EERSTE AANBOD NA EEN VERSE `doelStart` SCHUIFT VAN 27 NAAR 83 DAGEN.** GEMETEN over vier
+  `doelStart`-waarden, met een ruime week en zonder meethistorie: oud telkens 27 dagen, nieuw
+  telkens 83. Wie vandaag een doel kiest heeft acht weken langer geen ijkpunt, en dat is precies het
+  moment waarop het volgende blok een dosis-anker nodig heeft. Dit telt niet mee in de
+  dekkingsmaat, want het gaat over de weken vóór de eerste grens. **Nieuw genoteerd bij punt 55.**
+- **MIJN ZIN "de vloer alleen liet 24,1 procent op 24,1 staan" REPRODUCEERT NIET.** GEMETEN: de
+  oude vierweekse poort met vloer 84 geeft **0 van de 21** grenzen bij een vaste weekvorm, tegen 5
+  van de 21 met vloer 90. De vloer alleen is niet onschadelijk maar schadelijk. De conclusie "de
+  twee helften werken alleen samen" blijft staan; het getal eronder is vervangen.
+- **TWEE VAN MIJN DRIE MEETSCRIPTS DRAAIEN NIET MEER**, want zij ankeren op de literal
+  `export const TEST_INTERVAL_DAGEN = 90;` die na de bouw niet meer bestaat, en stoppen met
+  exitcode 2. Dat is gedrag zoals ontworpen — de assertie op de substitutie deed wat zij moet doen —
+  maar het betekent dat de baseline-getallen niet met díe scripts na te rekenen zijn. Ze zijn met
+  een eigen harnas gereproduceerd dat de poort terugdraait naar de oude vorm, met een assertie op
+  beide substituties.
+
+## 17. Wat benoemd is en niet gebouwd
+
+Als ROADMAP-punt vastgelegd: **punt 58** — `TEST_INTERVAL_DAGEN` staat zes dagen te hoog voor het
+venster dat hij moet toelaten, met de volle sweep en de wachttijd-meting erbij; het is een besluit
+van één getal. **Punt 55** is door deze bouw LIVE geworden: de retry is weg, en er is een nieuwe
+kostenpost bij (het eerste aanbod na een verse `doelStart` schuift van 27 naar 83 dagen). Verder
+ongewijzigd open: **53** (M91's ONGEIJKT-staat), **54** (de doelcheck-maat per doel), **56** (het
+ontbrekende herkomst-etiket op `TEST_MIN_BESCHIKBAAR_MIN` en `TEST_DUUR_MIN`), en de vaststelling
+dat agent-discovery wél lukte in de container op `2.1.241` en hier op `2.1.208` nog nooit.
+
+Niet gebouwd en niet aangeraakt: de duurzame ONGEIJKT-staat van M91, de doelcheck-maat, poort (6),
+`WEDSTRIJD_HORIZON_DAGEN`, en elke engine-wijziging, migratie of deploy.
+
+## 18. Punt 52 — het verdict, en het is een JA met één toevoeging
+
+De vraag van punt 52 was of één samengevoegde ronde dezelfde bewijskracht draagt als twee losse. Na
+ronde 2 luidde het antwoord: de vorm verdunt op twee plekken, en met twee regels erbij is hij
+bruikbaar. Ronde 3 heeft die twee regels gedraaid. **Dit is het eerste oordeel dat op een echte
+bouw-helft rust.**
+
+**REGEL (i) — geen gestipuleerde beginconditie — HEEFT GEWERKT, en meetbaar.** X1 liep de tijd sinds
+de laatste maximale inspanning af over 401 waarden in plaats van er één te kiezen. Dat leverde niet
+alleen een robuuster getal maar een ANDER soort uitspraak: niet "de winst is 100%" maar "het
+minimum van de gebouwde variant ligt over het hele bereik boven het maximum van de baseline". In
+ronde 2 had precies deze regel de val van W2 direct zichtbaar gemaakt in plaats van pas in een niet
+voorgeschreven vrijloop-keten.
+
+**REGEL (ii) — de adversariële weerleggingspas — HEEFT DE RONDE GERED, en dat is geen overdrijving.**
+Zij ving vier dingen die alle vier al in de bron of in de documenten stonden: een docstring die het
+mechanisme van de OUDE poort beschreef, een geautoriseerde constante die meetbaar de slechtste
+waarde in haar eigen beweerde klasse is, een residu dat ik twee keer achter elkaar aan de verkeerde
+poort toeschreef, en **een echte regressie in code die ik zelf had geschreven** — een bedorven
+`doelStart` die de ijkkaart elke week zou tonen. Zonder die pas was dat alle vier gecommit, met
+getallen erbij, en had het er overtuigend uitgezien.
+
+**DE TOEVOEGING DIE RONDE 3 AFDWINGT, en zij komt uit mijn eigen falen.** Twee van de vier vondsten
+gaan terug op DEZELFDE meetfout: een probe die meer dan één ding tegelijk verandert. De cascade
+verruimde de week én verschoof de dagkeuze; de `alleenDag`-probe verving de beschikbaarheid van de
+onderzochte dag. Ik maakte de tweede terwijl ik de eerste aan het uitleggen was. Daarom hoort er een
+DERDE regel bij, en zij is concreter dan "wees zorgvuldig": **een diagnose door interventie
+verandert per probe precies één ding, en de probe die een poort onderzoekt mag de invoer van geen
+enkele andere poort raken.** Dat is niet een regel over de samengevoegde vorm maar over meten in
+het algemeen; hij hoort bij de bewijslast-lessen.
+
+**HET VERDICT.** De samengevoegde vorm is BRUIKBAAR voor rondes die een mechanisme raken, MITS regel
+(i) en regel (ii) allebei draaien. Zonder (ii) is hij aantoonbaar slechter dan de splitsing: deze
+ronde zou dan vier fouten hebben opgeleverd waarvan één een regressie in productie. Met (ii) is hij
+beter dan de splitsing, want de pas toetst iets wat een tweede prompt niet toetst — niet de
+volgende STAP, maar de conclusie die er al ligt. De prijs is gemeten en reëel: vier extra lenzen en
+een tweede meetronde bovenop de eerste.
+
+**WAT NIET IS AANGETOOND, en dat mag niet als geregeld lezen.** Of de pas ook werkt wanneer de
+uitvoerder hem zelf opstelt ZONDER dat een prompt hem voorschrijft, is niet getoetst — in deze
+ronde stond hij als voorschrift. En de pas is één keer gedraaid, op één claim; dat vier van de vier
+lenzen raak schoten kan aan de claim liggen en niet aan de methode.
 
 <!-- EINDE docs/PUNT47-BOUW.md -->
