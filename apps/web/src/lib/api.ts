@@ -302,6 +302,41 @@ export async function putDoelPassend(
   }
 }
 
+/** ROADMAP punt 59 — HET IJKANTWOORD. Zelfde vorm als de doel-passendheid hierboven. */
+export type IjkAntwoord = "bevestigd" | "niet_nu";
+
+export async function getIjking(): Promise<{
+  blok: string | null;
+  antwoord: IjkAntwoord | null;
+}> {
+  const r = await apiGet<{ blok: string | null; antwoord: string | null }>(
+    "/api/ijking",
+  );
+  const a = r?.antwoord;
+  return {
+    blok: r?.blok ?? null,
+    antwoord: a === "bevestigd" || a === "niet_nu" ? a : null,
+  };
+}
+
+/** PUT /api/ijking: zet de openingsmaandag en het antwoord samen. Twee van de drie uitgangen
+ * schrijven hier — BEVESTIGEN en NIET-NU. Inplannen niet: dat loopt via `putOverride`, en een
+ * geplande test ziet poort (3) al. De route valideert strikt op de twee waarden. */
+export async function putIjking(
+  blok: string | null,
+  antwoord: IjkAntwoord | null,
+): Promise<void> {
+  const resp = await fetch("/api/ijking", {
+    method: "PUT",
+    headers: { "content-type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ blok, antwoord }),
+  });
+  if (!resp.ok) {
+    const parsed = await parseBody(resp);
+    throw new Error(errMessage(parsed, resp.status));
+  }
+}
+
 /** Eén te-pushen dag: datum + type + de ACTIEVE sessies (SchemaSession-shape; los getypeerd
  * om een schema↔api-importcyclus te vermijden). */
 export interface PushDayInput {

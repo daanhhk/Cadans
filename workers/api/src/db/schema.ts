@@ -279,6 +279,42 @@ export const syncState = sqliteTable("sync_state", {
    * de vraag terugkomt — anders zou één "nee" het hele blok dichtzetten. Spiegelt
    * `dosisTredeDoel`. */
   doelPassendDoel: text("doel_passend_doel"),
+  /** ROADMAP punt 59 — het ANTWOORD op het IJKAANBOD, per doelblok-OPENING. De openingsmaandag
+   * (yyyy-MM-dd) waarvoor geantwoord is. Spiegelt `dosisTredeBlok` en `doelPassendBlok`.
+   *
+   * WAAROM DIT PERSISTENT MOET, en dat is gemeten: tot 23-08-2026 leefde de afwijzing in een
+   * module-lokale `Set` in `apps/web/src/components/schema/TestVoorstelCard.tsx`. Die overleeft een
+   * remount na sync, maar geen app-herstart — dus na een herstart stond dezelfde vraag er weer,
+   * terwijl M92 zegt dat er per opening HOOGSTENS ÉÉN aanbod is.
+   *
+   * ER ONTBREEKT EEN DOEL-KOLOM, EN DAT IS EEN GEMETEN GAT — geen ontwerpkeuze. De eerste versie
+   * van deze docstring stond hier op 23-08-2026 en luidde verbatim: "DE OPENINGSMAANDAG IS DE
+   * IDENTITEIT en niet het doel: bij een doelwissel schrijft `blokStartBijDoel` een verse
+   * `doelStart`, dus de VOLGENDE opening is per constructie een andere maandag en de vraag komt
+   * vanzelf terug. Een doel-kolom zou daar niets toevoegen." De weerleggingspas van diezelfde dag
+   * haalde dat onderuit en de hermeting op de echte `blokStartBijDoel` bevestigt het: met een
+   * beantwoorde opening op ma 2026-09-21 geeft een doelwissel op ma 21-09, di 22-09 óf wo 23-09
+   * opnieuw `doelStart` 2026-09-21 — DRIE van de zeven wisseldagen, want `WISSEL_LAATSTE_DAG = 3`
+   * klemt naar de maandag van DEZE week. Het antwoord van het OUDE doel zet dan poort (2b) dicht
+   * voor het NIEUWE doel, en er is per besluit van 23-08-2026 geen retry: twaalf weken zonder
+   * ijkaanbod. `dosisTredeDoel` en `doelPassendDoel` dragen precies daarvoor een tweede kolom.
+   *
+   * NIET GEREPAREERD IN DEZE RONDE, met opzet gemeld in plaats van gebouwd. De prompt van ronde 5
+   * staat één migratie met één kolommenpaar toe en zegt: blijkt er meer nodig, stop en rapporteer.
+   * De reparatie is een derde kolom `ijking_doel` in het bestaande idiom, plus dezelfde
+   * doel-vergelijking in poort (2b) die `doelPassend` al doet. Dat is een tweede migratie. */
+  ijkingBlok: text("ijking_blok"),
+  /** 'bevestigd' | 'niet_nu' | null. Exact die twee waarden; de route valideert strikt en
+   * normaliseert niet. Spiegelt `eventOvernameAntwoord`.
+   *
+   * DRIE UITGANGEN, TWEE WAARDEN. Inplannen schrijft hier NIETS: dat pad loopt via de bestaande
+   * override-keten (`PUT /api/override/:date`), en een geplande test is zichtbaar voor poort (3).
+   * Alleen de twee antwoorden die GEEN override opleveren hebben een eigen geheugen nodig.
+   *
+   * BEVESTIGEN dekt het blok: de app zwijgt de rest van dat doelblok en behandelt de staande
+   * drempelwaarde als representatief. NIET-NU laat hem ONGEIJKT (M91) en de app zegt dat. Beide
+   * onderdrukken het aanbod voor DIT blok; het verschil zit in wat de app erover vertelt. */
+  ijkingAntwoord: text("ijking_antwoord"),
   /** ROADMAP punt 6 fase 2 — de RAUWE `icu_power_zones`-array als JSON-string, afgeleid uit de
    * NIEUWSTE fiets-rit die de activiteiten-sync ophaalt (de bovengrenzen in %FTP, bijvoorbeeld
    * `[55,75,90,105,120,150,999]`). Null = nog nooit een bruikbare rit gezien; de client valt dan

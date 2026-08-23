@@ -831,7 +831,6 @@ function VoorstelPreview() {
             <TestVoorstelCard
               voorstel={previewTestVoorstel}
               coachNaam="Coach"
-              onDismiss={() => undefined}
             />
           </div>
         </div>

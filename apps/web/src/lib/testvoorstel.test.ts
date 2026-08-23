@@ -2,10 +2,13 @@ import { DOEL_BLOK_WEKEN } from "@cadans/engine";
 import type { EventItem, OverrideEntry, PlannerDay } from "@cadans/shared";
 import { describe, expect, it } from "vitest";
 import type { ActValuesRow } from "./activities";
-import { BLOK_WEKEN, blokWeekVanWeek } from "./blok";
+import { BLOK_WEKEN, blokStartVoorWeek, blokWeekVanWeek } from "./blok";
+import { laatsteGelegenheid } from "./effect";
 import { blokStartBijDoel } from "./settings";
 import {
   buildTestVoorstel,
+  doelblokOpeningVoorWeek,
+  ijkStatus,
   TEST_DUUR_MIN,
   TEST_INTERVAL_DAGEN,
   WEDSTRIJD_HORIZON_DAGEN,
@@ -126,6 +129,14 @@ function testOverride(datum: string): OverrideEntry {
 /** Laatste meting ver genoeg terug: een gereden A-wedstrijd op 2026-05-21. */
 const OUDE_METING = { events: [race("2026-05-21")], acts: [act("2026-05-21")] };
 
+/** `n` dagen vóór een yyyy-MM-dd. Lokaal gerekend, net als de bron. */
+function isoMin(datumISO: string, n: number): string {
+  const [y, m, d] = datumISO.split("-").map(Number);
+  const dt = new Date(y ?? 2026, (m ?? 1) - 1, (d ?? 1) - n);
+  const p = (x: number) => String(x).padStart(2, "0");
+  return `${dt.getFullYear()}-${p(dt.getMonth() + 1)}-${p(dt.getDate())}`;
+}
+
 function bouw(
   o: {
     weekMondayISO?: string;
@@ -136,6 +147,7 @@ function bouw(
     overrides?: OverrideEntry[];
     events?: EventItem[];
     activities?: ActValuesRow[];
+    ijkingBeantwoordBlok?: string | null;
   } = {},
 ) {
   return buildTestVoorstel({
@@ -147,6 +159,7 @@ function bouw(
     doelStart: o.doelStart === undefined ? DOELSTART : o.doelStart,
     weekMondayISO: o.weekMondayISO ?? OPENING,
     todayISO: o.todayISO ?? OPENING,
+    ijkingBeantwoordBlok: o.ijkingBeantwoordBlok ?? null,
   });
 }
 
@@ -367,10 +380,34 @@ describe("buildTestVoorstel — de poorten", () => {
     expect(bouw({ doel: "Onderhoud" })).toBeNull();
   });
 
-  it("er staat al een test in dit blok → null", () => {
-    // Het vierweekse blok van de testweek 2026-09-14 begint op 2026-08-24 en eindigt vóór
-    // 2026-09-21. 2026-10-01 valt daarbinnen, maar in een andere week.
-    expect(bouw({ overrides: [testOverride("2026-10-01")] })).toBeNull();
+  it("er staat al een test rond deze opening → null", () => {
+    // HET VENSTER IS 23-08-2026 OMGEDRAAID (punt 62). Het loopt nu `[opening − 21, opening + 7)` =
+    // [2026-08-31, 2026-09-28) en eindigt dus MET de aanbodweek in plaats van eraan te beginnen.
+    // 2026-09-08 ligt daarbinnen, in een andere week dan de opening.
+    expect(bouw({ overrides: [testOverride("2026-09-08")] })).toBeNull();
+    // En in de openingsweek zelf ook.
+    expect(bouw({ overrides: [testOverride("2026-09-22")] })).toBeNull();
+  });
+
+  it("een NIET GEREDEN test kort VÓÓR de opening onderdrukt het aanbod", () => {
+    // DE REGRESSIE DIE RONDE 4 MAAKTE EN RONDE 5 REPAREERT. Zolang het venster vooruit keek,
+    // ontsnapte deze test aan poort (3) — hij lag ervóór — én aan poort (7), want
+    // `laatsteGelegenheid` telt alleen wat GEREDEN is. De app bood dan een TWEEDE test aan.
+    // GEMETEN op de gebouwde bron vóór de reparatie: aanbod op 2026-09-26.
+    for (const dagenVoor of [5, 10]) {
+      const datum = isoMin(OPENING, dagenVoor);
+      // NIET gereden: geen activities-rij op die dag.
+      expect(bouw({ overrides: [testOverride(datum)] })).toBeNull();
+    }
+  });
+
+  it("een test die ver vóór de opening ligt onderdrukt NIET", () => {
+    // TEGENKANT: het venster is vier weken, niet het hele doelblok. Een geaccepteerde test van de
+    // VORIGE opening ligt 84 dagen terug en mag deze opening niet dichtzetten — poort (7) beslist
+    // daar, niet poort (3).
+    expect(
+      bouw({ overrides: [testOverride(isoMin(OPENING, 30))] }),
+    ).not.toBeNull();
   });
 
   it("A- of B-wedstrijd binnen de horizon → null (die wedstrijd IS de meting)", () => {
@@ -599,10 +636,112 @@ describe("IJK-CASUS op echte getallen", () => {
   });
 });
 
-describe("de SPRONG als derde meetmoment", () => {
-  it("een sprongdag binnen TEST_INTERVAL_DAGEN vóór de testdatum ONDERDRUKT het aanbod", () => {
-    // Geen test en geen wedstrijd, maar de rolling FTP sprong op 2026-09-05 (261 → 272):
-    // 21 dagen vóór de testdatum 2026-09-26, dus ruim binnen het interval.
+describe("de DRIE UITGANGEN en de bewaarde keuze (punt 59)", () => {
+  it("een beantwoorde opening geeft GEEN tweede aanbod", () => {
+    // POORT (2b). Bevestigen en niet-nu onderdrukken allebei; het verschil zit in wat de app erover
+    // vertelt, niet in of de vraag terugkomt (M92: hoogstens één aanbod per opening).
+    expect(bouw({ ijkingBeantwoordBlok: OPENING })).toBeNull();
+  });
+
+  it("een antwoord op een ANDERE opening onderdrukt niet", () => {
+    // De openingsmaandag IS de identiteit. Het antwoord van het vorige doelblok mag dit blok niet
+    // dichtzetten — anders zou één bevestiging voorgoed gelden.
+    expect(bouw({ ijkingBeantwoordBlok: "2026-06-29" })).not.toBeNull();
+    expect(bouw({ ijkingBeantwoordBlok: null })).not.toBeNull();
+    expect(bouw({ ijkingBeantwoordBlok: undefined })).not.toBeNull();
+  });
+
+  it("BEVESTIGD levert de staat bevestigd-niet-gemeten", () => {
+    const s = ijkStatus({
+      activities: OUDE_METING.acts,
+      events: OUDE_METING.events,
+      overrides: [],
+      todayISO: OPENING,
+      ijkingAntwoord: "bevestigd",
+      ijkingBeantwoordBlok: OPENING,
+      huidigeOpening: OPENING,
+    });
+    expect(s.bevestigd).toBe(true);
+    expect(s.ongeijkt).toBe(false);
+    expect(s.laatsteMeting).toEqual({ bron: "race", datum: "2026-05-21" });
+    // 2026-05-21 → 2026-09-21 is 123 dagen; 123 / 84 = 1 vol doelblok.
+    expect(s.blokkenOud).toBe(1);
+  });
+
+  it("NIET-NU levert de ONGEIJKT-staat (M91)", () => {
+    const s = ijkStatus({
+      activities: OUDE_METING.acts,
+      events: OUDE_METING.events,
+      overrides: [],
+      todayISO: OPENING,
+      ijkingAntwoord: "niet_nu",
+      ijkingBeantwoordBlok: OPENING,
+      huidigeOpening: OPENING,
+    });
+    expect(s.ongeijkt).toBe(true);
+    expect(s.bevestigd).toBe(false);
+  });
+
+  it("een antwoord op een OUDERE opening telt niet meer voor de staat", () => {
+    const s = ijkStatus({
+      activities: OUDE_METING.acts,
+      events: OUDE_METING.events,
+      overrides: [],
+      todayISO: OPENING,
+      ijkingAntwoord: "bevestigd",
+      ijkingBeantwoordBlok: "2026-06-29",
+      huidigeOpening: OPENING,
+    });
+    expect(s.bevestigd).toBe(false);
+    expect(s.ongeijkt).toBe(false);
+    // De LEEFTIJD staat er nog wel: die hangt aan de meting en niet aan het antwoord.
+    expect(s.blokkenOud).toBe(1);
+  });
+
+  it("de leeftijd telt SPRONGEN niet mee — een proxy is geen meting (M91)", () => {
+    // Zonder gereden race of test, alleen een sprong: de drempel is NOOIT gemeten.
+    const s = ijkStatus({
+      activities: [
+        act("2026-05-14", 90, "Ride", 261),
+        act("2026-05-21", 90, "Ride", 272),
+      ],
+      events: [],
+      overrides: [],
+      todayISO: OPENING,
+    });
+    expect(s.laatsteMeting).toBeNull();
+    expect(s.blokkenOud).toBeNull();
+  });
+
+  it("de teller vraagt geen eigen opslag: hij volgt uit de laatste ECHTE meting", () => {
+    // BESLUIT VIER, en dit is de vorm waarin hij gebouwd is. Twee doelblokken verder zonder meting
+    // is 2, drie is 3 — zonder dat er ergens een teller staat.
+    const mk = (dagenGeleden: number) => {
+      const d = isoMin(OPENING, dagenGeleden);
+      return ijkStatus({
+        activities: [act(d)],
+        events: [race(d)],
+        overrides: [],
+        todayISO: OPENING,
+      }).blokkenOud;
+    };
+    expect(mk(83)).toBe(0);
+    expect(mk(84)).toBe(1);
+    expect(mk(168)).toBe(2);
+    expect(mk(252)).toBe(3);
+  });
+});
+
+describe("de SPRONG onderdrukt het ijkaanbod NIET meer (M91)", () => {
+  // OMGEDRAAID 23-08-2026. Tot die datum onderdrukte een sprong in `rolling_ftp` het aanbod, en
+  // deze drie tests pinden dat vast. M91 zegt dat een proxy de ijking niet vervangt en het aanbod
+  // niet mag onderdrukken; `rolling_ftp` is intervals' eigen SCHATTING van de drempel, dus precies
+  // zo'n proxy. Een sprong toont dát er hard gereden is, niet WELKE waarde het blok moet doseren.
+  // GEMETEN vóór de ingreep: 162 van de 440 openingen (36,8 procent) werd door een sprong alleen
+  // onderdrukt.
+
+  it("een sprongdag vlak vóór de testdatum onderdrukt het aanbod NIET", () => {
+    // Was: "een sprongdag binnen TEST_INTERVAL_DAGEN vóór de testdatum ONDERDRUKT het aanbod".
     const v = bouw({
       events: [],
       activities: [
@@ -610,11 +749,16 @@ describe("de SPRONG als derde meetmoment", () => {
         act("2026-09-05", 90, "Ride", 272),
       ],
     });
-    expect(v).toBeNull();
+    expect(v).not.toBeNull();
+    // En de sprong wordt ook niet als laatste meting gemeld: de poort kent hem niet.
+    expect(v?.laatsteMeting).toBeNull();
+    expect(v?.dagenSinds).toBeNull();
   });
 
   it("zonder die sprong blijft het aanbod staan", () => {
-    // Dezelfde twee dagen, maar zonder stijging → geen meetmoment → wél aanbieden.
+    // ONGEWIJZIGD, en dat is de tegenkant: zonder stijging was er ook vóór de ingreep geen
+    // meetmoment. Deze test moet groen blijven om te tonen dat de ingreep de sprong-DETECTIE
+    // wegneemt en niet het hele pad.
     const v = bouw({
       events: [],
       activities: [
@@ -626,18 +770,161 @@ describe("de SPRONG als derde meetmoment", () => {
     expect(v?.laatsteMeting).toBeNull();
   });
 
-  it("een sprong LANG geleden laat het aanbod staan en wordt als bron gemeld", () => {
-    const v = bouw({
-      events: [],
-      activities: [
-        act("2026-05-14", 90, "Ride", 261),
-        act("2026-05-21", 90, "Ride", 272),
-      ],
+  it("een GEREDEN wedstrijd onderdrukt nog WEL — alleen de proxy is eruit", () => {
+    // DRAGEND. Zonder deze assertie zou het uitzetten van poort (7) in zijn geheel ook slagen, en
+    // dat is een andere ingreep dan M91 vraagt.
+    const kort = isoMin(OPENING, 20);
+    expect(bouw({ events: [race(kort)], activities: [act(kort)] })).toBeNull();
+  });
+
+  it("de sprong blijft INFORMANT: laatsteGelegenheid ziet hem zonder de vlag", () => {
+    // De ijk-poort zet `negeerSprong: true`; de blok-terugblik in `blok.ts` doet dat NIET en noemt
+    // de sprong in zijn copy. M91 verbiedt onderdrukken, niet informeren (M17, M30).
+    const acts = [
+      act("2026-05-14", 90, "Ride", 261),
+      act("2026-05-21", 90, "Ride", 272),
+    ];
+    expect(
+      laatsteGelegenheid({
+        activities: acts,
+        events: [],
+        overrides: [],
+        totISO: OPENING,
+      }),
+    ).toEqual({ bron: "inspanning", datum: "2026-05-21" });
+    expect(
+      laatsteGelegenheid({
+        activities: acts,
+        events: [],
+        overrides: [],
+        totISO: OPENING,
+        negeerSprong: true,
+      }),
+    ).toBeNull();
+  });
+});
+
+describe("de opening waarop het antwoord GELDT is de TWAALFWEEKSE (weerleggingspas 23-08-2026)", () => {
+  // WAT HIER MIS GING EN GEEN TEST ZAG. `loadSchemaWeek` voedde `ijkStatus` met
+  // `blokStartVoorWeek(...)` — de VIERWEEKSE mesoteller — terwijl `huidigeOpening` de
+  // twaalfweekse openingsmaandag is. In de OPENINGSWEEK vallen die twee samen (de opening is per
+  // constructie ook mesoblok-week 1), en alle bestaande `ijkStatus`-tests gaven `huidigeOpening`
+  // met de hand mee. Gevolg, gemeten: `bevestigd` en `ongeijkt` golden alleen doelblokweek 1 t/m
+  // 4 en verdwenen daarna — acht van de twaalf weken zonder de zichtbaarheid die M91 vraagt.
+  //
+  // DEZE TESTS VALLEN OM ZODRA IEMAND DE VIERWEEKSE TELLER TERUGZET.
+
+  it("levert dezelfde opening voor ALLE twaalf weken van het doelblok", () => {
+    const opening = doelblokOpeningVoorWeek(DOELSTART, OPENING);
+    expect(opening).toBe(OPENING);
+    for (let w = 0; w < DOEL_BLOK_WEKEN; w++) {
+      expect(doelblokOpeningVoorWeek(DOELSTART, isoMin(OPENING, -w * 7))).toBe(
+        OPENING,
+      );
+    }
+    // En de week erná is een NIEUWE opening — niet dezelfde.
+    expect(
+      doelblokOpeningVoorWeek(DOELSTART, isoMin(OPENING, -DOEL_BLOK_WEKEN * 7)),
+    ).toBe(isoMin(OPENING, -DOEL_BLOK_WEKEN * 7));
+  });
+
+  it("wijkt af van de VIERWEEKSE mesoteller vanaf doelblokweek 5", () => {
+    // Het bewijs dat de twee grootheden verschillen, en precies waar. Vier weken samenloop,
+    // daarna acht weken uit elkaar — de reden dat de fout onzichtbaar bleef.
+    let gelijk = 0;
+    for (let w = 0; w < DOEL_BLOK_WEKEN; w++) {
+      const ma = isoMin(OPENING, -w * 7);
+      if (
+        doelblokOpeningVoorWeek(DOELSTART, ma) ===
+        blokStartVoorWeek(DOELSTART, ma)
+      )
+        gelijk++;
+    }
+    expect(gelijk).toBe(BLOK_WEKEN);
+  });
+
+  it("de bevestiging blijft het HELE doelblok staan", () => {
+    // De gedragstest die de bug zou hebben gevangen: dezelfde bewaarde rij, twaalf weken lang.
+    for (let w = 0; w < DOEL_BLOK_WEKEN; w++) {
+      const ma = isoMin(OPENING, -w * 7);
+      const s = ijkStatus({
+        activities: OUDE_METING.acts,
+        events: OUDE_METING.events,
+        overrides: [],
+        todayISO: ma,
+        ijkingAntwoord: "bevestigd",
+        ijkingBeantwoordBlok: OPENING,
+        huidigeOpening: doelblokOpeningVoorWeek(DOELSTART, ma),
+      });
+      expect(s.bevestigd).toBe(true);
+      expect(s.ongeijkt).toBe(false);
+    }
+  });
+
+  it("en vervalt op de VOLGENDE opening", () => {
+    const ma = isoMin(OPENING, -DOEL_BLOK_WEKEN * 7);
+    const s = ijkStatus({
+      activities: OUDE_METING.acts,
+      events: OUDE_METING.events,
+      overrides: [],
+      todayISO: ma,
+      ijkingAntwoord: "bevestigd",
+      ijkingBeantwoordBlok: OPENING,
+      huidigeOpening: doelblokOpeningVoorWeek(DOELSTART, ma),
     });
-    expect(v?.laatsteMeting).toEqual({
-      bron: "inspanning",
-      datum: "2026-05-21",
-    });
-    expect(v?.dagenSinds).toBe(128);
+    expect(s.bevestigd).toBe(false);
+  });
+
+  it("geen doelStart en een week vóór doelStart leveren null", () => {
+    expect(doelblokOpeningVoorWeek(null, OPENING)).toBeNull();
+    expect(doelblokOpeningVoorWeek("", OPENING)).toBeNull();
+    // ONPARSEERBAAR, en let op WELKE string dat is. `parseLocalDate` matcht eerst op
+    // `yyyy-MM-dd` en valt daarna terug op `new Date(iso)` — en die slikt "2026/06/29" gewoon,
+    // als 29 juni 2026. Deze test verwachtte dat eerst wél en viel om; de CODE had gelijk. De
+    // slash-vorm is een LEXICOGRAFISCH gevaar (poort (1b) van ronde 4 vergeleek strings, en "/"
+    // sorteert boven "-"), geen ongeldige datum.
+    expect(doelblokOpeningVoorWeek("geen-datum", OPENING)).toBeNull();
+    expect(doelblokOpeningVoorWeek("2026/06/29", OPENING)).toBe(OPENING);
+    expect(doelblokOpeningVoorWeek(DOELSTART, isoMin(DOELSTART, 7))).toBeNull();
+  });
+});
+
+describe("het venster van poort (3) is VERBREED, niet gedraaid (weerleggingspas 23-08-2026)", () => {
+  // MIJN EERSTE VERSIE ZETTE HET VENSTER OP [opening − 21, opening + 7) — "dezelfde span, alleen
+  // de richting klopt weer". Dat was geen correctie maar een ROTATIE: een niet-gereden test in
+  // week 2 t/m 4 van het doelblok werd door het OUDE venster onderdrukt en door het geroteerde
+  // niet meer. GEMETEN op de gebouwde bron, 20 ketens × 260 weken: 0 aanbiedingen op 440
+  // openingen met het oude venster, 440 op 440 met het geroteerde. Het venster is nu strikt
+  // ADDITIEF — de oude vier weken vanaf de opening, plus de aanloop van drie weken ervóór.
+  const testOverride = (datum: string): OverrideEntry => ({
+    datum,
+    override: { type: "library", workoutType: "test", durMin: 60 },
+  });
+
+  it("onderdrukt een geplande test in de AANLOOP — de reparatie van ronde 5", () => {
+    for (const d of [1, 5, 10, 14, 20]) {
+      expect(
+        bouw({ overrides: [testOverride(isoMin(OPENING, d))] }),
+      ).toBeNull();
+    }
+  });
+
+  it("onderdrukt een geplande test NA de opening — het gedrag van vóór 23-08-2026", () => {
+    for (const d of [2, 7, 14, 21, 27]) {
+      expect(
+        bouw({ overrides: [testOverride(isoMin(OPENING, -d))] }),
+      ).toBeNull();
+    }
+  });
+
+  it("laat een test BUITEN het venster staan", () => {
+    // De randen: 22 dagen ervóór en 28 dagen erná vallen er net buiten. Dat is de eerlijke helft —
+    // een venster dat alles slikt zou het aanbod nooit meer laten vuren.
+    expect(
+      bouw({ overrides: [testOverride(isoMin(OPENING, 22))] }),
+    ).not.toBeNull();
+    expect(
+      bouw({ overrides: [testOverride(isoMin(OPENING, -28))] }),
+    ).not.toBeNull();
   });
 });

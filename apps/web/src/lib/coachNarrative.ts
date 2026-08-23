@@ -541,7 +541,15 @@ export function weekTekortRegel(
 
 /** "Je ging voor het laatst vol …" per bron. Bij een SPRONG noemt de coach GEEN ritsoort — hij
  * weet niet wat voor rit het was, alleen dat de meter omhoogging. Geen wattwaarden hier: die zitten
- * niet in het meegegeven object en worden dus niet verzonnen. */
+ * niet in het meegegeven object en worden dus niet verzonnen.
+ *
+ * DE SPRONG-TAK IS SINDS 23-08-2026 ONBEREIKBAAR VIA DEZE FUNCTIE, en dat is gemeten. `metingZin_`
+ * heeft precies één aanroeper (`testAanbodRegel`) en die leest `TestVoorstel.laatsteMeting`; poort
+ * (7) haalt die op met `negeerSprong: true`, dus `bron` kan daar nooit meer `"inspanning"` zijn
+ * (M91: een proxy is geen ijking). De tak is BEWUST blijven staan: `laatsteGelegenheid` levert de
+ * sprong nog wél aan de blok-terugblik (`buildBlokReview` in `blok.ts`, zonder de vlag), en die
+ * heeft een eigen inline copy. Wie die twee ooit samenvoegt heeft deze zin nodig. Weghalen is een
+ * APARTE beslissing en niet die van deze ronde. */
 function metingZin_(
   m: { bron: MetingBron; datum: string },
   maanden: number,
@@ -741,6 +749,67 @@ export function testActieLabel(weekdag: string): string {
 /** Secundaire knop — afwijzen geldt voor dit hele blok, niet voor die ene dag. */
 export function testAfwijsLabel(): string {
   return "Niet dit blok";
+}
+
+// ── ROADMAP punt 59 — DE DERDE UITGANG EN DE ZICHTBAARHEID ───────────────────
+// M92 geeft het ijkaanbod drie uitgangen: inplannen, BEVESTIGEN dat de staande drempelwaarde nog
+// representatief is, of NIET-NU. Daans geval: hij doet op een willekeurig moment een diepe
+// inspanning, ziet zijn FTP omhoog gaan, zet die zelf in de instellingen, en vier weken later opent
+// een nieuw doelblok. Dan moet één tik volstaan (M12, M10).
+
+/** Derde knop — bevestigen dat de staande waarde nog klopt. */
+export function testBevestigLabel(): string {
+  return "Mijn waarde klopt nog";
+}
+
+/**
+ * De regel ONDER het aanbod die de derde uitgang uitlegt. VOORWAARDELIJK en zonder daad-claim
+ * (M55): hij zegt wat de tik doet, niet wat de app al gedaan heeft.
+ *
+ * DE EERSTE VERSIE BELOOFDE EEN BEREKENING DIE NIET BESTAAT, en dat is precies wat M55 verbiedt.
+ * Zij eindigde op "bevestig 'm en ik reken dit blok daarmee". De weerleggingspas van 23-08-2026
+ * legde ernaast wat er werkelijk gebeurt: bevestigen en "niet dit blok" schrijven allebei alleen
+ * `sync_state.ijking_blok` plus `ijking_antwoord` en zetten poort (2b) dicht. Het PLAN is na beide
+ * tikken bit-voor-bit hetzelfde; `IjkStatus.bevestigd` heeft precies één consument en dat is de
+ * staat-regel hieronder. De app rekent inderdaad met de staande drempelwaarde — maar dat deed zij
+ * al, ook zonder bevestiging, dus "daarmee rekenen" is geen gevolg van de tik.
+ */
+export function testBevestigUitleg(): string {
+  return "Heb je je drempel zelf al bijgesteld? Dan hoef je niet te testen — ik reken door met de waarde die er staat en vraag het dit blok niet nog eens.";
+}
+
+/**
+ * De STAAT-regel van de drempelwaarde, of null als er niets te melden is. Verschijnt NAAST het
+ * aanbod en blijft staan als het aanbod weg is; dat is de zichtbaarheid die M91 vraagt.
+ *
+ * SOBER, GEEN WAARSCHUWING EN GEEN HERHAALDE VRAAG. De app zegt wat er is: bevestigd is geen
+ * meting, en een drempel die blokken oud is hoort zichtbaar te zijn. Zij zegt NIET wat het
+ * betekent — dezelfde afwijking komt van hitte, slaap, ziekte en vermoeidheid (M53, M54).
+ */
+export function ijkStaatRegel(o: {
+  bevestigd: boolean;
+  ongeijkt: boolean;
+  laatsteMeting: { bron: MetingBron; datum: string } | null;
+  blokkenOud: number | null;
+}): string | null {
+  const leeftijd =
+    o.blokkenOud == null
+      ? "Ik heb je drempel nog nooit gemeten."
+      : o.blokkenOud <= 0
+        ? null
+        : o.blokkenOud === 1
+          ? "Je drempel is een blok oud."
+          : `Je drempel is ${o.blokkenOud} blokken oud.`;
+  const gemeten = o.laatsteMeting
+    ? ` Voor het laatst gemeten op ${datumKort_(o.laatsteMeting.datum)}.`
+    : "";
+  if (o.bevestigd) {
+    return `Je hebt je drempel bevestigd, niet gemeten.${leeftijd ? ` ${leeftijd}` : ""}${gemeten}`;
+  }
+  if (o.ongeijkt) {
+    return `Je drempel is dit blok niet geijkt.${leeftijd ? ` ${leeftijd}` : ""}${gemeten}`;
+  }
+  return leeftijd ? `${leeftijd}${gemeten}` : null;
 }
 
 /** CONSTANTE marker: gaat als `label` mee op de override én is waarop `testResultaat` matcht

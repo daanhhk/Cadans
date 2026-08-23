@@ -107,6 +107,99 @@ export interface TestVoorstel {
 }
 
 /**
+ * ROADMAP punt 59 — de OPENINGSMAANDAG van het doelblok waarin deze week valt, of null.
+ *
+ * WAAROM DIT EEN EIGEN FUNCTIE IS EN GEEN `blokStartVoorWeek`-AANROEP. Dat was mijn eerste versie
+ * en zij is in de weerleggingspas van 23-08-2026 onderuit gegaan: `blokStartVoorWeek` rijdt de
+ * VIERWEEKSE mesoteller (`blokWeekVanWeek`, modulo `BLOK_WEKEN`), niet het twaalfweekse doelblok.
+ * In de OPENINGSWEEK vallen die twee samen — de opening is per constructie ook blokweek 1 — en
+ * precies daardoor zag geen enkele test het verschil. GEMETEN: de bevestigde staat gold alleen in
+ * doelblokweek 1 t/m 4, viel in week 5 t/m 8 helemaal weg, en kwam daarna terug als een generieke
+ * leeftijdsregel zonder de bevestiging erin. Twee derde van het blok zonder de zichtbaarheid die
+ * M91 juist vraagt.
+ *
+ * De grootheid komt uit de engine: `computeMacroPhase(...).week` is 1..12, dus de opening ligt
+ * `(week - 1)` weken terug. Zelfde vroege uitgangen als poort (1) en (1b): geen `doelStart`, geen
+ * geldige datum, of een week vóór `doelStart` levert null — daar bestaat geen lopend doelblok.
+ */
+export function doelblokOpeningVoorWeek(
+  doelStartISO: string | null,
+  weekMondayISO: string,
+): string | null {
+  if (!doelStartISO) return null;
+  const start = parseLocalDate(doelStartISO);
+  const week = parseLocalDate(weekMondayISO);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(week.getTime()))
+    return null;
+  if (week.getTime() < start.getTime()) return null;
+  const macro = computeMacroPhase(start, week) as { week?: number };
+  const w = macro?.week;
+  if (typeof w !== "number" || !Number.isFinite(w)) return null;
+  return shiftIso_(weekMondayISO, -(w - 1) * 7);
+}
+
+/** ROADMAP punt 59 — de staat van de DREMPELWAARDE, los van of er een aanbod staat. */
+export interface IjkStatus {
+  /** Is de staande waarde BEVESTIGD in plaats van gemeten? Alleen waar na een bevestiging. */
+  bevestigd: boolean;
+  /** Is de waarde ONGEIJKT — geen meting én geen bevestiging voor het lopende doelblok (M91)? */
+  ongeijkt: boolean;
+  /** De laatste ECHTE maximale inspanning (test of gereden A/B-wedstrijd), of null. */
+  laatsteMeting: { bron: MetingBron; datum: string } | null;
+  /** Hoeveel VOLLE doelblokken de drempelwaarde oud is, of null als er nooit gemeten is. */
+  blokkenOud: number | null;
+}
+
+/**
+ * ROADMAP punt 59, besluit vier: een bevestiging is GEEN meting, en de app maakt zichtbaar wanneer
+ * de drempelwaarde meerdere blokken oud is.
+ *
+ * DE TELLER VRAAGT GEEN EIGEN OPSLAG, en dat is opzet. Het aantal opeenvolgende bevestigingen is
+ * niet de grootheid die iets zegt — de LEEFTIJD van de drempel is dat. Die volgt uit
+ * `laatsteGelegenheid` met de sprong uitgesloten: dagen sinds de laatste ECHTE maximale inspanning,
+ * gedeeld door de doelbloklengte. Dat telt bovendien óók de blokken waarin de gebruiker niets heeft
+ * geantwoord, en die zijn net zo goed ongemeten. Zie `docs/PUNT47-BOUW.md` §29.
+ *
+ * SPRONGEN TELLEN HIER NIET MEE, om dezelfde reden als in poort (7): `rolling_ftp` is een proxy en
+ * een proxy vervangt de ijking niet (M91).
+ */
+export function ijkStatus(input: {
+  activities: ActValuesRow[];
+  events: EventItem[];
+  overrides: OverrideEntry[];
+  todayISO: string;
+  /** Het antwoord uit `sync_state.ijking_antwoord`, of null. */
+  ijkingAntwoord?: "bevestigd" | "niet_nu" | null;
+  /** De openingsmaandag waarvoor dat antwoord geldt, of null. */
+  ijkingBeantwoordBlok?: string | null;
+  /** De openingsmaandag van het LOPENDE doelblok, of null als die niet te bepalen is. */
+  huidigeOpening?: string | null;
+}): IjkStatus {
+  const laatste = laatsteGelegenheid({
+    activities: input.activities,
+    events: input.events,
+    overrides: input.overrides,
+    totISO: input.todayISO,
+    negeerSprong: true,
+  });
+  const dagen = laatste ? dagenTussen_(laatste.datum, input.todayISO) : null;
+  const blokkenOud =
+    dagen == null ? null : Math.floor(dagen / (DOEL_BLOK_WEKEN * 7));
+  // Het antwoord telt alleen voor het blok waarvoor het gegeven is. Staat het op een OUDERE
+  // opening, dan zegt het niets over de staande waarde van vandaag.
+  const geldt =
+    input.ijkingBeantwoordBlok != null &&
+    input.huidigeOpening != null &&
+    input.ijkingBeantwoordBlok === input.huidigeOpening;
+  return {
+    bevestigd: geldt && input.ijkingAntwoord === "bevestigd",
+    ongeijkt: geldt && input.ijkingAntwoord === "niet_nu",
+    laatsteMeting: laatste,
+    blokkenOud,
+  };
+}
+
+/**
  * Het TESTVOORSTEL voor de getoonde week, of null. Elke poort levert null; de volgorde is
  * goedkoop-eerst en, belangrijker, van "mag het überhaupt" naar "past het".
  */
@@ -119,6 +212,16 @@ export function buildTestVoorstel(input: {
   doelStart: string | null;
   weekMondayISO: string;
   todayISO: string;
+  /**
+   * ROADMAP punt 59 — de OPENINGSMAANDAG waarvoor het ijkaanbod al beantwoord is (bevestigd of
+   * niet-nu), uit `sync_state.ijking_blok`. Weggelaten of null → nog niet beantwoord.
+   *
+   * DIT VERVING EEN VLUCHTIGE MODULE-SET. Tot 23-08-2026 leefde de afwijzing in een `Set` in
+   * `TestVoorstelCard.tsx` die een remount overleefde maar geen app-herstart; na een herstart stond
+   * dezelfde vraag er weer, terwijl M92 zegt dat er per opening HOOGSTENS ÉÉN aanbod is. De poort
+   * staat nu in deze PURE laag en is daarmee toetsbaar zonder DOM.
+   */
+  ijkingBeantwoordBlok?: string | null;
 }): TestVoorstel | null {
   // (1) Alleen in de DOELBLOK-OPENING — week 1 van het twaalfweekse doelblok. De engine levert die
   //     grootheid al: `computeMacroPhase(...).week`. Geen eigen raster nabouwen, en geen wijziging
@@ -234,10 +337,28 @@ export function buildTestVoorstel(input: {
   // test ingepland 5 of 10 dagen vóór de opening en niet gereden levert een TWEEDE aanbod; dezelfde
   // test wél gereden wordt correct onderdrukt, en een test 2 dagen ná de opening ook.
   //
-  // NIET GEREPAREERD IN RONDE 4, en dat is een grens en geen vergeetachtigheid: de prompt van die
-  // ronde schreef voor dat poort (3) ONAANGEROERD blijft. De reparatie is klein — het venster
-  // ankeren op het EIND van de aanbodweek in plaats van op het begin, `[opening − 21, opening + 7)`
-  // — maar zij hoort met autorisatie. Vastgelegd als ROADMAP punt 62.
+  // GEREPAREERD 23-08-2026 (ROADMAP punt 62, en het BESLUIT dat eronder ligt: per doelblok-opening
+  // bestaat HOOGSTENS ÉÉN aanbod). Het venster is VERBREED naar `[blokStart − 21, blokStart + 28)`.
+  // GEMETEN vóór de reparatie: een test die 5 of 10 dagen vóór de opening was ingepland en NIET
+  // gereden, ontsnapte aan poort (3) én aan poort (7), en de app bood een TWEEDE test aan.
+  //
+  // WAAROM VERBREDEN EN NIET VERSCHUIVEN, en dit is een CORRECTIE OP MIJN EIGEN EERSTE VERSIE.
+  // Die zette het venster op `[blokStart − 21, blokStart + 7)` — vier weken die eindigen met de
+  // aanbodweek, "dezelfde span, alleen de richting klopt weer". De weerleggingspas van 23-08-2026
+  // haalde dat onderuit en had gelijk: dat is geen correctie maar een ROTATIE. GEMETEN op de
+  // gebouwde bron, 20 ketens × 260 weken: een niet-gereden test 14 dagen ná elke opening werd door
+  // het oude venster onderdrukt (0 aanbiedingen op 440 openingen) en door het geroteerde venster
+  // NIET meer (440 op 440). Een blinde vlek ingeruild voor een andere. Het BESLUIT zegt dat een
+  // geplande-maar-niet-gereden test ROND DEZELFDE OPENING een nieuw aanbod onderdrukt, en weken 2
+  // t/m 4 van het doelblok liggen daar net zo goed in als de drie weken ervoor. Het venster is
+  // daarom strikt ADDITIEF: de oude `[blokStart, blokStart + 28)` plus de aanloop van 21 dagen.
+  // Niets dat vóór 23-08-2026 werd onderdrukt, wordt dat nu niet meer.
+  //
+  // WAAROM NIET HET HELE DOELBLOK ALS VENSTER, want dat lag voor de hand. Dan zou een GEACCEPTEERDE
+  // en gereden test van de vorige opening — die 84 dagen terug ligt — binnen het venster van de
+  // volgende vallen en die opening onderdrukken, terwijl poort (7) hem juist correct doorlaat.
+  // GEMETEN: met een venster van 84 dagen zakt de dekking terug. Vier weken eindigend met de
+  // aanbodweek is het smalste venster dat het gemeten gat dicht.
   //
   // WAT HIJ NIET MEER DRAAGT — en dat is de eerlijke helft. Vóór 23-08-2026 was hij ook de
   // RETRY-klok: miste een aanbod zijn week, dan kwam de volgende opening vier weken later. Sinds de
@@ -246,12 +367,26 @@ export function buildTestVoorstel(input: {
   // zelf inplannen. De tegenhanger van dat besluit staat wél open — is er niet geijkt, dan hoort de
   // app dat te ZEGGEN (M91), en dat is ROADMAP punt 59.
   const blokStart = blokStartVoorWeek(input.doelStart, input.weekMondayISO);
-  const blokEind = shiftIso_(blokStart, BLOK_WEKEN * 7);
+  // Het venster van poort (3): de aanloop van drie weken PLUS de vier weken vanaf de opening.
+  // `blokStart` blijft ongemoeid als afwijs-sleutel — die twee waren tot 23-08-2026 dezelfde
+  // grootheid en dat is precies waarom de aanloop stilzwijgend wegviel toen het aanbod verhuisde.
+  const vensterStart = shiftIso_(blokStart, -(BLOK_WEKEN - 1) * 7);
+  const vensterEind = shiftIso_(blokStart, BLOK_WEKEN * 7);
 
-  // (3) Staat er in dit blok al een test? Dan is er niets aan te bieden.
+  // (2b) IS DEZE OPENING AL BEANTWOORD? Bevestigen en niet-nu onderdrukken allebei het aanbod voor
+  //      dit doelblok; het verschil zit in wat de app erover VERTELT (`ijkStatus` hieronder), niet
+  //      in of de vraag terugkomt. Per M92 bestaat er hoogstens één aanbod per opening.
+  if (
+    input.ijkingBeantwoordBlok != null &&
+    input.ijkingBeantwoordBlok === blokStart
+  ) {
+    return null;
+  }
+
+  // (3) Staat er rond deze opening al een test? Dan is er niets aan te bieden.
   for (const ov of input.overrides || []) {
     if (!ov || typeof ov.datum !== "string") continue;
-    if (ov.datum < blokStart || ov.datum >= blokEind) continue;
+    if (ov.datum < vensterStart || ov.datum >= vensterEind) continue;
     const o = ov.override as { type?: unknown; workoutType?: unknown } | null;
     if (o?.type === "library" && String(o.workoutType ?? "") === "test") {
       return null;
@@ -301,11 +436,20 @@ export function buildTestVoorstel(input: {
   // (7) Het MEETINTERVAL. Bewust gemeten tot de GEKOZEN TESTDATUM en niet tot de weekmaandag: de
   //     vraag is hoe lang het geleden is op het moment dát je test. Nog nooit een maximum gezien
   //     (laatste === null) → wél aanbieden; dan is er juist niets om op terug te vallen.
+  //
+  //     `negeerSprong: true` SINDS 23-08-2026, en dat is M91 (GEPIND `docs/TRAININGSMODEL.md` §13):
+  //     een proxy mag het ijkaanbod niet onderdrukken. `rolling_ftp` is intervals' eigen schatting
+  //     van de drempel; een sprong daarin toont dát er hard gereden is en niet WELKE waarde dit
+  //     blok moet doseren — en juist die waarde is het onderwerp van de ijking. GEMETEN vóór de
+  //     ingreep: 162 van de 440 openingen (36,8 procent) werd onderdrukt door een sprong alleen.
+  //     De sprong blijft INFORMANT: `buildBlokReferent` in `blok.ts` leest dezelfde functie ZONDER
+  //     de vlag en noemt hem in de terugblik-copy.
   const laatste = laatsteGelegenheid({
     activities: input.activities,
     events: input.events,
     overrides: input.overrides,
     totISO: input.todayISO,
+    negeerSprong: true,
   });
   const dagenSinds = laatste ? dagenTussen_(laatste.datum, keuze.datum) : null;
   if (dagenSinds != null && dagenSinds < TEST_INTERVAL_DAGEN) return null;

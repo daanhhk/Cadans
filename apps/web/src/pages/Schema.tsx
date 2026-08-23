@@ -20,7 +20,7 @@ import {
   setLastSyncTs,
   setSyncInFlight,
 } from "../lib/syncStatus";
-import type { TestVoorstel } from "../lib/testvoorstel";
+import type { IjkStatus, TestVoorstel } from "../lib/testvoorstel";
 
 interface SchemaData {
   proposalWeek: ProposalWeek;
@@ -36,6 +36,8 @@ interface SchemaData {
   blokReview: BlokReview | null;
   /** 5b-ii — testvoorstel voor de doelblok-opening, of null. */
   testVoorstel: TestVoorstel | null;
+  /** ROADMAP punt 59 — de staat van de drempelwaarde, ook als er geen aanbod staat. */
+  ijkStaat: IjkStatus;
   /** ROADMAP stap 2 — dosis-trede-voorstel, of null. */
   dosisTredeVoorstel: DosisTredeVoorstel | null;
   eventOvernameVoorstel: EventOvernameVoorstel | null;
@@ -195,6 +197,7 @@ export function Schema() {
       doelPassendVoorstel={data.doelPassendVoorstel}
       grenzen={data.grenzen}
       testVoorstel={data.testVoorstel}
+      ijkStaat={data.ijkStaat}
       weekMonday={data.weekMonday}
     />
   );

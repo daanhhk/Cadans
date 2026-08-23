@@ -757,6 +757,57 @@ export async function writeDoelPassend(
     });
 }
 
+// ── ijking (sync_state.ijking_*) — ROADMAP punt 59 ────────────────────────
+// Het antwoord op het IJKAANBOD bij een doelblok-OPENING (M92). De OPENINGSMAANDAG is de
+// identiteit; een doelwissel schrijft een verse `doelStart` en dus een andere opening, waarmee de
+// vraag vanzelf terugkomt. Twee waarden: 'bevestigd' dekt het blok, 'niet_nu' laat de drempel
+// ONGEIJKT (M91). Inplannen schrijft hier NIETS — dat loopt via de override-keten.
+//
+// DIT VERVANGT EEN VLUCHTIGE MODULE-SET in TestVoorstelCard.tsx die geen app-herstart overleefde.
+
+export async function readIjking(
+  db: Db,
+  userId: number,
+): Promise<{ blok: string | null; antwoord: string | null }> {
+  const rows = await db
+    .select({
+      blok: syncState.ijkingBlok,
+      antwoord: syncState.ijkingAntwoord,
+    })
+    .from(syncState)
+    .where(eq(syncState.userId, userId))
+    .limit(1);
+  return {
+    blok: rows[0]?.blok ?? null,
+    antwoord: rows[0]?.antwoord ?? null,
+  };
+}
+
+/** Zet de twee ijking-waarden samen. Upsert: raakt ALLEEN deze twee kolommen → de sync-velden,
+ * debt-opt-in, fatigue-shift, dosis-trede, event-overname, doel-passendheid en power-zones blijven
+ * intact. Zelfde vorm als `writeDoelPassend`. */
+export async function writeIjking(
+  db: Db,
+  userId: number,
+  blok: string | null,
+  antwoord: string | null,
+): Promise<void> {
+  await db
+    .insert(syncState)
+    .values({
+      userId,
+      ijkingBlok: blok,
+      ijkingAntwoord: antwoord,
+    })
+    .onConflictDoUpdate({
+      target: syncState.userId,
+      set: {
+        ijkingBlok: blok,
+        ijkingAntwoord: antwoord,
+      },
+    });
+}
+
 // ── power-zones (sync_state.power_zones_json) — ROADMAP punt 6 fase 2 ──────
 // De RAUWE icu_power_zones-array, afgeleid uit de nieuwste fiets-rit door `syncActivities`.
 // Zie docs/ZONE-SYNC-BOUWDOC.md §3 t/m §5.

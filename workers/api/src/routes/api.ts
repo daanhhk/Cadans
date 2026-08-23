@@ -32,6 +32,7 @@ import {
   readEventOvername,
   readEvents,
   readFatigueShift,
+  readIjking,
   readOverrides,
   readPlannerDays,
   readPowerZones,
@@ -48,6 +49,7 @@ import {
   writeEventOvername,
   writeEvents,
   writeFatigueShift,
+  writeIjking,
   writeOverride,
   writePlannerDays,
   writeRpe,
@@ -703,6 +705,42 @@ api.put("/doel-passend", async (c) => {
     CURRENT_USER_ID,
     blok as string | null,
     doel as string | null,
+  );
+  return c.json({ ok: true });
+});
+
+// ROADMAP punt 59 — DE IJKING (spiegelt /doel-passend). GET geeft de openingsmaandag en het
+// antwoord waarvoor geantwoord is (of twee nullen); PUT zet de twee samen. Twee waarden:
+// 'bevestigd' dekt het blok, 'niet_nu' laat de drempel ONGEIJKT (M91). INPLANNEN schrijft hier
+// niets — dat loopt via PUT /api/override/:date, en een geplande test ziet poort (3).
+api.get("/ijking", async (c) => {
+  const db = makeDb(c.env.DB);
+  const { blok, antwoord } = await readIjking(db, CURRENT_USER_ID);
+  return c.json({ blok, antwoord });
+});
+
+api.put("/ijking", async (c) => {
+  const db = makeDb(c.env.DB);
+  const body = await readJsonObject(c);
+  const blok = body.blok;
+  const antwoord = body.antwoord;
+  // NIET normaliseren, NIET clampen, GEEN lege string accepteren. Elke afwijzing gebeurt VÓÓR de
+  // schrijfactie, zodat een 400 ook echt betekent dat er niets is weggeschreven.
+  if (blok !== null && (typeof blok !== "string" || !isIsoDate(blok))) {
+    throw new HTTPException(400, {
+      message: "invalid blok, expected yyyy-MM-dd or null",
+    });
+  }
+  if (antwoord !== null && antwoord !== "bevestigd" && antwoord !== "niet_nu") {
+    throw new HTTPException(400, {
+      message: "invalid antwoord, expected 'bevestigd', 'niet_nu' or null",
+    });
+  }
+  await writeIjking(
+    db,
+    CURRENT_USER_ID,
+    blok as string | null,
+    antwoord as string | null,
   );
   return c.json({ ok: true });
 });

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { BlokReview, DosisTredeVoorstel } from "../../lib/blok";
 import {
   coachNarrative,
+  ijkStaatRegel,
   normalizeCoachPersona,
 } from "../../lib/coachNarrative";
 import { weekdagNaam } from "../../lib/dates";
@@ -25,7 +26,7 @@ import {
   verlichtResultaat,
 } from "../../lib/schema";
 import { openSleutelDagen, sleutelPrikkelOpen } from "../../lib/sleutelinhaal";
-import type { TestVoorstel } from "../../lib/testvoorstel";
+import type { IjkStatus, TestVoorstel } from "../../lib/testvoorstel";
 import { bouwWeekTekort } from "../../lib/weektekort";
 import { Card, Overline } from "../ui";
 import { ActionButtons } from "./ActionButtons";
@@ -47,7 +48,7 @@ import { GemistCard } from "./GemistCard";
 import { OverriddenDetail } from "./OverriddenDetail";
 import { PeriodTimeline } from "./PeriodTimeline";
 import { SleutelInhaalBlok } from "./SleutelInhaalBlok";
-import { isTestVoorstelAfgewezen, TestVoorstelCard } from "./TestVoorstelCard";
+import { TestVoorstelCard } from "./TestVoorstelCard";
 import { isVerlengAfgewezen, VerlengCard } from "./VerlengCard";
 import { isVerlichtAfgewezen, VerlichtCard } from "./VerlichtCard";
 import { WeekLoad } from "./WeekLoad";
@@ -131,6 +132,7 @@ export function SchemaView({
   doelPassendVoorstel = null,
   grenzen,
   testVoorstel = null,
+  ijkStaat = null,
   weekMonday,
 }: {
   proposalWeek: ProposalWeek;
@@ -152,9 +154,22 @@ export function SchemaView({
   grenzen: readonly number[];
   /** 5b-ii — testvoorstel voor de doelblok-opening, of null. */
   testVoorstel?: TestVoorstel | null;
+  /** ROADMAP punt 59 — de staat van de drempelwaarde, ook zonder aanbod. */
+  ijkStaat?: IjkStatus | null;
   /** Maandag van de getoonde week (sleutel van de goedkeuring); default = view.weekMonday. */
   weekMonday?: string;
 }) {
+  // ROADMAP punt 59 — de staat-regel is puur en goedkoop; `null` betekent "niets te melden" en
+  // dan rendert er ook niets.
+  //
+  // NIET NAAST HET AANBOD. De aanbodkaart draagt de meting al: `testAanbodRegel` opent met "Je
+  // ging voor het laatst vol …" gevolgd door dezelfde datum die `ijkStaatRegel` als "Voor het
+  // laatst gemeten op …" zou herhalen — twee zinnen, één grootheid, direct onder elkaar. Gemeten
+  // in de weerleggingspas van 23-08-2026 op een aanbod met laatste meting 20-05: de kaart zei
+  // "van 20 mei, ongeveer 4 maanden terug" en de staat-regel eronder "Voor het laatst gemeten op
+  // 20 mei." De staat-regel is er voor de weken ZONDER aanbod; daar staat hij alleen.
+  const ijkStaatTekst =
+    ijkStaat && !testVoorstel ? ijkStaatRegel(ijkStaat) : null;
   const view = useMemo(
     () =>
       deriveSchemaView(
@@ -201,9 +216,10 @@ export function SchemaView({
   // 3d stap 4: idem voor het FATIGUE-aanbod ("Volg de deload" / "Hou de opbouw") — sessie-scoped
   // afwijzing leeft in FatigueCard; deze teller dwingt de her-evaluatie af.
   const [, setFatigueDismissed] = useState(0);
-  // 5b-ii: idem voor het TESTVOORSTEL ("Niet dit blok") — de afwijzing leeft sessie-scoped in
-  // TestVoorstelCard, op BLOKSTART; deze teller dwingt de her-evaluatie af.
-  const [, setTestDismissed] = useState(0);
+  // 5b-ii HAD hier ook een teller voor het TESTVOORSTEL. Weg op 23-08-2026: het antwoord staat nu
+  // in D1 en de kaart verdwijnt via de herlaadronde die poort (2b) opnieuw laat vuren. De teller
+  // liet de render-guard `!isTestVoorstelAfgewezen(...)` her-evalueren, en die guard bestaat niet
+  // meer.
   const day = view.days.find((d) => d.datum === selected) ?? view.days[0];
   // dag >= vandaag: het knoppen-blok toont alleen op vandaag/toekomst (verleden kun je niet meer plannen).
   const dayFuture = !!day && day.datum >= todayISO;
@@ -365,15 +381,28 @@ export function SchemaView({
           voorstel OPEN staat — twee vragende kaarten tegelijk is geen coach. Bij state "applied"
           is de vraag al beantwoord en mag hij wel. */}
       {testVoorstel &&
-        !isTestVoorstelAfgewezen(testVoorstel.blokStart) &&
         !eventOvernameVoorstel &&
         fatigueVoorstel?.state !== "offer" && (
           <TestVoorstelCard
             voorstel={testVoorstel}
             coachNaam={view.coachNaam}
-            onDismiss={() => setTestDismissed((n) => n + 1)}
           />
         )}
+
+      {/* ROADMAP punt 59 — DE STAAT VAN DE DREMPELWAARDE. Staat er ook als het aanbod weg is; dat
+          is de zichtbaarheid die M91 vraagt. Sober: geen waarschuwing, geen tweede vraag. */}
+      {ijkStaatTekst && (
+        <div
+          style={{
+            marginTop: "var(--s-3)",
+            fontFamily: "var(--font-sans)",
+            fontSize: "var(--fs-caption)",
+            color: "var(--text-muted)",
+          }}
+        >
+          {ijkStaatTekst}
+        </div>
+      )}
 
       {/* 5a-ii — BLOK-TERUGBLIK. Staat NA de fatigue-kaart en vóór het dag-detail:
           voorstellen die een actie vragen horen boven, een terugblik die context geeft eronder.

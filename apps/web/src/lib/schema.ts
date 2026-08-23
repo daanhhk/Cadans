@@ -29,6 +29,7 @@ import {
   getEventOvername,
   getEvents,
   getFatigueShift,
+  getIjking,
   getOverrides,
   getPlanner,
   getPowerZones,
@@ -40,6 +41,7 @@ import {
 } from "./api";
 import {
   type BlokReview,
+  blokCheckEnabled,
   blokReviewVenster,
   dosisTredeVoorstel as bouwDosisTredeVoorstel,
   buildBlokReview,
@@ -85,7 +87,13 @@ import {
 import { deriveReadiness, type ReadinessResult } from "./readiness";
 import { laadGelabeld, retryLoad } from "./schemaLoad";
 import { presetHoursLabel } from "./settings";
-import { buildTestVoorstel, type TestVoorstel } from "./testvoorstel";
+import {
+  buildTestVoorstel,
+  doelblokOpeningVoorWeek,
+  type IjkStatus,
+  ijkStatus,
+  type TestVoorstel,
+} from "./testvoorstel";
 import {
   buildWeekplanEntries,
   hasUnrecordedPastTrainingDay,
@@ -1311,6 +1319,12 @@ export async function loadSchemaWeek(): Promise<{
   blokReview: BlokReview | null;
   /** 5b-ii — testvoorstel voor de rustweek, of null. Laag-2 rendert de kaart. */
   testVoorstel: TestVoorstel | null;
+  /**
+   * ROADMAP punt 59 — de staat van de drempelwaarde, ook als er geen aanbod staat. Null bij een
+   * doel zonder effect-meter of zonder `doelStart`: daar kan per constructie nooit een ijkaanbod
+   * komen, dus een staat-melding zou onwegwerkbaar zijn.
+   */
+  ijkStaat: IjkStatus | null;
   /** ROADMAP stap 2 — dosis-trede-voorstel (null = geen kaart). Laag-2 rendert 'm. */
   dosisTredeVoorstel: DosisTredeVoorstel | null;
   /** ROADMAP punt 9 fase B — de overname-vraag, of null als er niets te vragen valt. */
@@ -1348,6 +1362,7 @@ export async function loadSchemaWeek(): Promise<{
     powerZonesRow,
     eventOvernameRow,
     doelPassendRow,
+    ijkingRow,
     plannerVorige1,
     plannerVorige2,
     plannerVorige3,
@@ -1379,6 +1394,7 @@ export async function loadSchemaWeek(): Promise<{
         { label: "power-zones", laad: () => getPowerZones() },
         { label: "event-overname", laad: () => getEventOvername() },
         { label: "doel-passendheid", laad: () => getDoelPassend() },
+        { label: "ijking", laad: () => getIjking() },
         // M87 — de referent-weken. Ze voeden UITSLUITEND `plannerHistorie`; de bestaande
         // "weekplanner"-rij hierboven blijft de enige bron voor het grid en wordt niet breder.
         { label: "weekplanner -1", laad: () => getPlanner(maandagVoor(1)) },
@@ -1401,6 +1417,7 @@ export async function loadSchemaWeek(): Promise<{
           Awaited<ReturnType<typeof getPowerZones>>,
           Awaited<ReturnType<typeof getEventOvername>>,
           Awaited<ReturnType<typeof getDoelPassend>>,
+          Awaited<ReturnType<typeof getIjking>>,
           Awaited<ReturnType<typeof getPlanner>>,
           Awaited<ReturnType<typeof getPlanner>>,
           Awaited<ReturnType<typeof getPlanner>>,
@@ -1639,7 +1656,35 @@ export async function loadSchemaWeek(): Promise<{
     doelStart: settings?.doelStart ?? null,
     weekMondayISO: monday,
     todayISO,
+    // ROADMAP punt 59 — het bewaarde antwoord op DEZE opening. Vervangt de vluchtige module-Set in
+    // TestVoorstelCard die geen app-herstart overleefde.
+    ijkingBeantwoordBlok: ijkingRow.blok,
   });
+
+  // ROADMAP punt 59 — de STAAT van de drempelwaarde, los van of er een aanbod staat. Blijft
+  // zichtbaar nadat het aanbod is beantwoord; dat is de zichtbaarheid die M91 vraagt.
+  //
+  // DE DOEL-POORT STAAT HIER OOK. `buildTestVoorstel` valt voor Onderhoud op poort (2)
+  // (`blokCheckEnabled`, DOELEN-SPEC §3.2) en zonder `doelStart` op poort (1). Zonder dezelfde
+  // poort hier zou de staat-regel bij Onderhoud permanent "Ik heb je drempel nog nooit gemeten."
+  // tonen terwijl er per constructie nooit een ijkaanbod kan komen om er iets aan te doen — een
+  // melding die de gebruiker niet kan wegwerken. M55: niets tonen wat er niet is.
+  const ijkStaat =
+    settings?.doelStart && blokCheckEnabled(settings?.doel ?? null)
+      ? ijkStatus({
+          activities,
+          events,
+          overrides,
+          todayISO,
+          ijkingAntwoord: ijkingRow.antwoord,
+          ijkingBeantwoordBlok: ijkingRow.blok,
+          // De opening van het LOPENDE doelblok — de TWAALFWEEKSE teller, niet de vierweekse.
+          // `blokStartVoorWeek` stond hier eerst en dat was fout: die rijdt `blokWeekVanWeek`
+          // modulo BLOK_WEKEN (4). In de openingsweek vallen beide samen, dus geen test zag het;
+          // vanaf doelblokweek 5 viel `geldt` om en verdween de bevestiging van het scherm.
+          huidigeOpening: doelblokOpeningVoorWeek(settings.doelStart, monday),
+        })
+      : null;
 
   // PLAN-VAN-RECORD-GAT (aanpak A — docs/PLAN-VAN-RECORD-GAT-RECON.md). Een geplande dag die
   // gereden is vóórdat de app 'm als vooruit-dag zag, kreeg nooit een entry en valt uit de
@@ -1708,6 +1753,7 @@ export async function loadSchemaWeek(): Promise<{
     fatigue,
     blokReview,
     testVoorstel,
+    ijkStaat,
     dosisTredeVoorstel: kaarten.dosisTrede,
     eventOvernameVoorstel: kaarten.eventOvername,
     doelPassendVoorstel: kaarten.doelPassend,

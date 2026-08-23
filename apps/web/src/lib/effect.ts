@@ -264,6 +264,36 @@ export function laatsteGelegenheid(input: {
   events: EventItem[];
   overrides: OverrideEntry[];
   totISO: string;
+  /**
+   * SLUIT DE SPRONG-BRON UIT. Weggelaten of false → het gedrag van vóór 23-08-2026, met alle drie
+   * de bronnen. True → alleen `test` en `race`, dus alleen wat de app als GEDANE maximale
+   * inspanning kent.
+   *
+   * WAAROM DEZE VLAG BESTAAT (M91, GEPIND `docs/TRAININGSMODEL.md` §13): *"Een proxy vervangt de
+   * ijking niet ... Zij is informant (M17, M30) en mag het aanbod niet onderdrukken."* `rolling_ftp`
+   * is intervals' eigen SCHATTING van de drempel, dus een proxy in precies die zin. Een sprong
+   * toont dát er hard gereden is; hij toont niet WELKE waarde het blok moet doseren, en juist die
+   * waarde is het onderwerp van de ijking. GEMETEN vóór de ingreep: bij Daans sprongtempo werd 162
+   * van de 440 doelblok-openingen (36,8 procent) onderdrukt door een sprong alleen, zonder gereden
+   * race of test in dezelfde periode.
+   *
+   * DE VLAG EN NIET EEN VERWIJDERING, en dat is opzet: de sprong blijft INFORMANT. De blok-terugblik
+   * (`buildBlokReview` in `blok.ts`) leest `laatsteGelegenheid` ZONDER deze vlag en zegt "je ging
+   * voor het laatst vol op X; je rolling FTP sprong daar omhoog". Dat is informeren en geen
+   * onderdrukken, en dat mag van M91.
+   *
+   * DRIE AANROEPERS, NIET TWEE, en de functienaam hierboven is op 23-08-2026 rechtgezet. De eerste
+   * versie van dit blok schreef "`buildBlokReferent`" — die functie bestaat niet — en telde twee
+   * consumenten. Het zijn er drie: `buildTestVoorstel` poort (7) en `ijkStatus`, allebei MET de
+   * vlag, en `buildBlokReview` in `blok.ts` zonder. Alleen de derde ziet de sprong nog.
+   *
+   * DAT LEVERT TWEE DATUMS OP HETZELFDE SCHERM, en dat is bekend en geaccepteerd. Met een sprong op
+   * 02-09 en een gereden A-wedstrijd op 21-05 zegt de terugblik "voor het laatst vol op 2 september"
+   * en de ijk-staat "voor het laatst GEMETEN op 21 mei". Twee verschillende grootheden, met twee
+   * verschillende woorden — precies het onderscheid dat M91 maakt. De staat-regel rendert bovendien
+   * niet naast het aanbod, dus de twee zinnen staan nooit direct onder elkaar.
+   */
+  negeerSprong?: boolean;
 }): { bron: MetingBron; datum: string } | null {
   // Specifieker feit wint bij een gelijke datum: een INGEPLANDE test slaat een wedstrijd, en beide
   // slaan een kale sprong (waarvan de app niet weet wat voor rit het was).
@@ -287,8 +317,10 @@ export function laatsteGelegenheid(input: {
   for (const ov of input.overrides || []) {
     if (isTestOverride_(ov)) overweeg("test", ov.datum);
   }
-  for (const d of sprongDagen(input.activities, input.totISO)) {
-    overweeg("inspanning", d);
+  if (!input.negeerSprong) {
+    for (const d of sprongDagen(input.activities, input.totISO)) {
+      overweeg("inspanning", d);
+    }
   }
   return beste;
 }

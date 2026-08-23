@@ -78,6 +78,13 @@
       "when": 1785833967207,
       "tag": "0010_uneven_scarlet_spider",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1787495482617,
+      "tag": "0011_handy_the_hunter",
+      "breakpoints": true
     }
   ]
 }
