@@ -571,4 +571,63 @@ hier — met in dezelfde close-out een gedateerde regel in `docs/WERKWIJZE-LOG.m
   VAN 176 VAN DE 176 IS GEEN BEWIJS VAN JUISTHEID — hij is even goed het teken van een probe die
   stelselmatig hetzelfde verkeerde ding meet.
 
+- **EEN MEETHARNAS DAT HETZELFDE PREDICAAT GEBRUIKT ALS DE POORT DIE HET TOETST, MEET NIETS.** Het
+  orakel wordt ONAFHANKELIJK gebouwd VÓÓR de meting, en de grond van die onafhankelijkheid staat in
+  het bouwdocument. Twee rondes op rij ging het mis en allebei pas achteraf gevonden. Ronde 4 van
+  punt 47 telde "buiten een opening" met `mp.week === 1` — letterlijk de poortvoorwaarde — zodat de
+  teller per constructie niet kon oplopen. Ronde 5 verving dat door kalenderrekenwerk zonder
+  `computeMacroPhase`, en dat was CODE-onafhankelijk maar PREDICAAT-identiek: op een
+  maandag-`doelStart` viel het orakel exact samen met poort (1) plus (1b), dus "0 aanbiedingen
+  buiten een opening" bleef een tautologie. Bovendien ankerde het op de maandag vóór `doelStart`
+  terwijl de engine op `doelStart` zelf ankert, waardoor het bij zes van de zeven weekdagen élke
+  opening fout telde — een orakel dat niets kon aanwijzen én zelf fout was.
+  **CODE-ONAFHANKELIJK IS NIET GENOEG; DE EIS IS DAT HET ORAKEL KAN FALEN OP DE INGREEP DIE JE
+  MEET.** De voor de hand liggende vorm is een MUTATIE-CONTROLE: spuit een fout in de poort, draai
+  dezelfde meting, en laat zien dat het orakel alarm slaat. **Maar een mutatie-controle kan zelf de
+  tautologie zijn die zij moet uitsluiten, en bij punt 64 was zij dat.** Daar werd poort (1) van
+  week 1 naar week 2 gezet en sloeg het orakel aan — alleen: die constante is de ENIGE parameter van
+  het predicaat waarmee het orakel samenvalt, dus die mutatie is precies de klasse die het per
+  constructie moet betrappen. Gemeten dat het orakel BLIND was voor de ingreep die de ronde
+  werkelijk bouwde: de build zonder die ingreep gaf cijfer voor cijfer dezelfde uitkomst.
+  **DE TOETS IS DUS: MUTEER DE INGREEP VAN DEZE RONDE ZELF en kijk of het harnas dat ziet.** Ziet
+  het dat niet, dan is de meting een regressie-controle — nuttig, maar geen bevestiging — en dat
+  hoort er met zoveel woorden bij te staan. Twee vervolgvragen die er standaard bij horen: kijkt het
+  orakel naar iets anders dan de uitvoerverzameling die de ingreep ongemoeid laat, en bemonstert de
+  fixture de regio waar orakel en poort werkelijk uiteenlopen? Bij punt 64 was dat antwoord twee
+  keer nee — de keten begon op `doelStart` en kwam nooit in het geklemde gebied ervóór, zodat een
+  build zonder poort (1b) volledig groen doorkwam.
+  BOEKHOUDING ERBIJ: in ronde 5 is **CC-CHECKS CHECK 2 geschonden** door `apps/web/src/lib/schema.ts`
+  met een node-patch-script te bewerken. Die regel kent GEEN uitzondering — bestaande bestanden gaan
+  via de Edit-tool, nieuwe via de Write-tool — en de check hoeft daarvoor niet aangescherpt te
+  worden: hij stond er al, hij is gelezen, en hij is genegeerd. Een strengere formulering repareert
+  geen ongehoorzaamheid. Wat de check wél mist is een TOETS: hij toetst `node --check` op
+  `tools/*.mjs` maar niets dat een patch-script op bronbestanden zou betrappen. Zolang die er niet
+  is, draagt deze regel het.
+
+- **EEN FIXTURE-RIJ DRAAGT HAAR BEDOELING IN HAAR LABEL, EN DAT LABEL WORDT GETOETST TEGEN WAT DE
+  RIJ WERKELIJK DOET.** Aanleiding: ronde 5 van punt 47 rapporteerde een rij "niet-gereden test 5
+  dagen vóór de opening" als bewijs dat de vensterreparatie werkte. `opening − 5` is een woensdag,
+  en de fixture legde de achtergrondritten óók op woensdag (`i * 7 + 2`) — dus bij 21 van de 22
+  openingen per keten was die test WEL gereden en toetste de rij het tegenovergestelde van haar
+  label. Het verklaarde ook het rare dekkingsgetal van 420 van 440 dat niemand kon plaatsen: precies
+  de 20 ketens maal hun ene onbediende eerste opening.
+  DE TOETS IS GOEDKOOP EN HOORT IN HET SCRIPT: tel expliciet hoe vaak de geplande gebeurtenis
+  samenvalt met iets anders in de fixture, en druk dat getal af naast de rij. Bij punt 64 heet die
+  teller `rit-botsingen` en staat hij op 0. Een label is een bewering over de fixture, en een
+  bewering die niet geteld is, is niet gemeten. Zelfde familie als de dode OR-term uit CHECK 23: een
+  tak die per constructie niet kan vuren, en een rij die per constructie iets anders toetst dan haar
+  naam zegt, zijn allebei een noemer die niet meet wat hij belooft.
+  **DRIE VERSCHIJNINGSVORMEN ERBIJ, alle drie uit punt 64 en alle drie in mijn eigen scripts.**
+  (i) EEN FIXTURE-STAND DIE DE APP NIET KAN PRODUCEREN: de wisselrij bewaarde `"Onderhoud"` als
+  beantwoord doel, terwijl poort (2) dat doel niet doorlaat en de enige schrijver dus nooit zo'n rij
+  kan wegschrijven. De getallen klopten, het geval bestond niet. TOETS: vraag van elke opgeslagen
+  waarde in een fixture WIE hem geschreven zou hebben, en of die schrijver hem kan produceren.
+  (ii) EEN LUS DIE NIETS VARIEERT: `for (let z = 1; z <= 20; z++)` met een body die `z` nergens
+  gebruikt, gaf twintig byte-identieke replica's en een noemer van 5200 waar 260 hoorde. TOETS: grep
+  de lusvariabele in de body voordat je de noemer opschrijft.
+  (iii) EEN POORT DIE IN DE MEETOPSTELLING NOOIT VUURT: de V3-keten riep de bron één keer per week
+  aan, zodat de poort die de ronde WIJZIGDE 0 van de 440 keer vuurde en "voor is gelijk aan na" een
+  constructie-identiteit was. TOETS: zet een teller op de gewijzigde poort zelf en druk BEREIKT en
+  VUURT af naast elk getal. Vuurt hij nul keer, dan meet je iets anders dan je denkt.
+
 <!-- EINDE docs/WERKWIJZE-LESSEN.md -->

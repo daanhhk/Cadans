@@ -13,6 +13,128 @@ live tot cutover.
 
 ## Stand
 
+STAND 2026-08-24 — DE BEVESTIGING GELDT NU VOOR HAAR DOEL, EN DE LEEFTIJD STAAT IN WEKEN. Kleine
+ronde, code plus docs plus canon plus ÉÉN migratie. Geen engine, geen deploy, GEEN
+remote-D1-mutatie — alles lokaal tegen miniflare.
+- **LET OP: ER STAAN NU TWEE NIET-GEDEPLOYDE MIGRATIES, 0011 EN 0012.** Dat is de eerste keer dat
+  prod en lokaal op het SCHEMA uiteenlopen. Prod draait zonder `ijking_blok`, `ijking_antwoord` én
+  `ijking_doel`; die drie kolommen bestaan daar NIET. Wie deployt: migratie eerst, dan
+  `pnpm build`, dan `wrangler deploy` vanuit `workers/api` — en beide migraties in volgorde.
+- **WAT ER GEBOUWD IS.** (a) `sync_state.ijking_doel` erbij, via
+  `workers/api/drizzle/0012_acoustic_living_mummy.sql` — één `ALTER TABLE ... ADD`, forward-only,
+  geen nieuwe tabel. Poort (2b) en `ijkStatus` vergelijken sindsdien BLOK ÉN DOEL, genormaliseerd
+  aan beide kanten, precies zoals `doelPassendVoorstel` stap 5 dat al deed. (b) De leeftijd van de
+  drempelwaarde staat in WEKEN in plaats van blokken: `IjkStatus.blokkenOud` heet nu `wekenOud`.
+- **V1, V2 EN V3 HIELDEN alle drie — maar V2 en V3 op een ANDERE opstelling dan waarmee ik begon.
+  Lees `docs/PUNT47-BOUW.md` §32k vóór je op een getal hieronder verder bouwt.** V2 is de kern:
+  gemeten met de ECHTE `blokStartBijDoel` en de ECHTE `buildTestVoorstel`, beantwoorde opening
+  `2026-09-21`, gaf een doelwissel eerst op **4 van de 7** dagen van die week een aanbod en nu op
+  **7 van 7**. De KLEM is niet veranderd — `blokStartBijDoel` levert nog steeds op 3 van 7 dagen
+  dezelfde maandag — de SLEUTEL wel. V3: 440/440 aanbiedingen per opening, MAX 1, 0 buiten een
+  opening, gat 84,0 dagen, zowel VOOR als NA. Niets verslechterd.
+- **HET GENOEMDE SCENARIO GEEFT DELTA NUL, en dat is de scherpste vondst van de weerleggingspas.**
+  De prompt, mijn eerste commentaar en mijn eerste testfixture verantwoordden de ingreep met Daans
+  februari-scenario, Onderhoud naar Korte beklimmingen. Maar `blokCheckEnabled("Onderhoud")` is
+  **false**: daar staat poort (2) dicht, dus er komt nooit een aanbod en `TestVoorstelCard` — de
+  enige schrijver van `ijking_*` — kan voor die opening ook nooit een rij wegschrijven. Zonder rij
+  onderdrukte de OUDE poort al niets. Gemeten: geen rij 7/7 → 7/7 (delta 0); rij van een oudere
+  opening 7/7 → 7/7 (delta 0); rij van DEZE opening met een EFFECT-doel 4/7 → 7/7 (**delta 3**).
+  De winst hoort dus bij een wissel tussen twee EFFECT-doelen, bijvoorbeeld FTP naar Korte
+  beklimmingen. Docstrings, fixture en bouwdoc zijn erop rechtgezet. `Onderhoud` is per constructie
+  onbereikbaar als opgeslagen doel; dat staat nu als test.
+- **DE TEGENKANT IS APART GEMETEN, want dit is de ingreep die makkelijk doorschiet.** Een
+  DOORROLLEND blok ZONDER doelwissel geeft over alle zeven dagen van de openingsweek **0 van 7**
+  tweede aanbiedingen, zowel vóór als ná. En over 270 combinaties van (opgeslagen blok × opgeslagen
+  doel × huidig doel): 72 gevallen waar VOOR onderdrukt en NA niet — de bedoelde versoepeling — en
+  **0** gevallen andersom. Geen rotatie in de poort zelf.
+- **HET ORAKEL WAS NIET ONAFHANKELIJK, en de mutatie-controle was zelf de tautologie die zij moest
+  uitsluiten. Dit is de derde ronde op rij dat het harnas hier struikelt.** `gepland.has(ma)` en
+  `computeMacroPhase(...).week === 1` zijn op de fixture **260 van 260 gelijk**, en
+  `DOELBLOK_OPENINGSWEEK` is de énige parameter van dat predicaat — dus de mutatie 1 → 2 is precies
+  de klasse die het orakel per constructie moet betrappen. HET DECISIEVE GETAL: **het orakel is
+  blind voor de ingreep van deze ronde.** De build zonder de doel-helft geeft in V3 cijfer voor
+  cijfer hetzelfde, terwijl zij op V2 4 van 7 geeft in plaats van 7 van 7. V3 is dus een
+  regressie-controle en géén bevestiging; alleen V2 kan de ingreep zien. Als canon vastgelegd in
+  `docs/WERKWIJZE-LESSEN.md`, met wat een volgende ronde anders moet doen.
+- **NOG TWEE METINGEN DIE OMGINGEN.** (i) De takken-noemer was **5200 en is 260**: het meetscript
+  draaide twintig BYTE-IDENTIEKE replica's omdat de ketenlus `z` declareert en nergens gebruikt.
+  (ii) V3 kon poort (2b) helemaal niet zien — één aanroep per week, dus de poort vuurde **0 van de
+  440 keer in beide armen**. Hermeten met zevendaagse bemonstering: **3080 keer bereikt, 2640 keer
+  gevuurd**, uitkomsten identiek. De conclusie houdt, de eerste meting droeg haar niet.
+- **ÉÉN GEDRAGSREPARATIE UIT DE PAS.** De route accepteerde een HALVE rij met 200. De ergste vorm is
+  `{blok, doel, antwoord: null}`: poort (2b) leest `ijkingAntwoord` niet, dus zo'n rij onderdrukt
+  het aanbod twaalf weken terwijl de staat-regel niets zegt — onderdrukking zonder uitleg, wat M91
+  verbiedt. `PUT /api/ijking` eist nu alle drie of geen, met zes 400-gevallen die elk op de
+  SCHRIJFKANT asserteren.
+- **EEN RESIDU DAT BLIJFT: "hoogstens één aanbod per opening" (M92) geldt nu per (opening, DOEL).**
+  `sync_state` draagt één paar en geen verzameling, dus een beantwoord aanbod voor een nieuw doel
+  OVERSCHRIJFT het antwoord van het vorige. GEMETEN: FTP beantwoord met niet_nu op maandag, dinsdag
+  naar Korte beklimmingen, woensdag terug naar FTP → **2 aanbiedingen op dezelfde openingsmaandag**,
+  waar het er vóór de ingreep 0 waren. Dat is besluit één twee keer toegepast en de prijs ervan;
+  dichtzetten vraagt een VERZAMELING beantwoorde doelen per opening, een andere kolomvorm dan
+  `doel_passend` en `dosis_trede` gebruiken. Nakijkpunt bij ROADMAP punt 64.
+- **DE LEESVRAAG UIT DE PROMPT IS GEMETEN EN HET ANTWOORD WAS "AL GOED".** De leeftijdsweergave
+  toonde al die van de laatste METING en niet die van de laatste BEVESTIGING: de bron is
+  `laatsteGelegenheid`, die alleen GEREDEN maximale inspanningen kent, en een bevestiging schrijft
+  enkel `sync_state.ijking_*`. Gemeten met dezelfde historie en drie antwoorden: `wekenOud` staat
+  in alle drie op 17. Er viel dus niets te corrigeren, alleen de eenheid te wisselen.
+- **DE ZICHTBAARHEIDSGRENS IS EXACT BEHOUDEN, en dat is opzet.** `blokkenOud <= 0` zweeg onder 84
+  dagen, `wekenOud < DOEL_BLOK_WEKEN` zwijgt onder 12 weken — dezelfde grens in een andere eenheid.
+  Alleen wat de gebruiker LEEST is veranderd, niet WANNEER. De winst zit op 123 en 167 dagen, waar
+  "een blok oud" drie totaal verschillende leeftijden dekte.
+- **STRINGS.** GEWIJZIGD, één: `"Je drempel is een blok oud."` en
+  `` `Je drempel is ${o.blokkenOud} blokken oud.` `` werden samen
+  `` `Je drempel is ${o.wekenOud} weken oud.` ``. GEEN enkelvoudstak, want onder twaalf weken
+  zwijgt de regel en "1 week" kan er per constructie niet uit komen (CHECK 27). NIEUW: geen enkele
+  UI-string; wel één Engelse routefout, `"invalid doel, expected a DOEL_OPTIONS value or null"`.
+- **EEN PREMISSE VAN DE PROMPT IS GECORRIGEERD.** Er stond dat alle DRIE de per-blok-antwoorden in
+  `sync_state` een doel-kolom dragen. Het zijn er TWEE: `dosis_trede_doel` en `doel_passend_doel`.
+  `event_overname` draagt een EVENT-kolom (`event_overname_event`), en dat is consistent — die
+  vraag gaat over een wedstrijd, niet over het doel. Of die event-sleutel dezelfde blootstelling
+  heeft als `ijking_*` had, is **NIET gemeten** en staat als nakijkpunt bij ROADMAP punt 64.
+- **DE BEVESTIGINGS-TELLER IS VERVALLEN, niet uitgesteld.** Daan-besluit: de leeftijd in weken
+  vervangt hem. Punt 59 is daarmee helemaal AF en er komt geen kolom voor.
+- **DE AGENT EN DE RULES-PROBES BLIJVEN NIET GEMETEN**, en er is niet naar gezocht: het eerste
+  bericht van deze sessie draagt `2026-07-14T07:20:14.850Z`, `.claude/agents/recon.md` dateert van
+  `2026-08-23 07:48` en de twee weggooi-regels van `2026-08-23 13:20`. De sessie is dus ouder dan
+  alle drie. Agent-discovery lukte wél in een remote container op `2.1.241` en op deze machine op
+  `2.1.208` nog NOOIT; dat verschil is onverklaard. De twee regels liggen klaar:
+  `.claude/rules/_wegwerp-altijd-probe.md` met merkstring `RULESALTIJD-MERKSTRING-Q4XM7D` (ZONDER
+  `paths`) en `.claude/rules/_wegwerp-paths-probe.md` met merkstring `RULESPATHS-MERKSTRING-V9HB2K`
+  (gescoopt op `packages/engine/src/zones.ts`). **Verschijnt de eerste aan het begin van je eerste
+  antwoord, dan laadt een regel zonder `paths` altijd; verschijnt de tweede zodra je
+  `packages/engine/src/zones.ts` leest, dan vuurt een path-scoped regel op file-read. Verschijnt er
+  niets, dan is dat GEEN bewijs van het tegendeel** — niet-geladen en geladen-maar-genegeerd zijn
+  van buitenaf niet te scheiden. Meld het als vondst, ruim beide regels op, en meet in dezelfde
+  beweging of `recon` in je agent-types staat. Beide regels zijn gitignored en staan NIET in de
+  commit. **Een verse sessie beantwoordt beide vragen gratis in haar openingszin.**
+- **VLOEREN: lees ze zelf uit de suite.** Neem geen getal over uit een blok; de suite is deze ronde
+  opnieuw gegroeid.
+- **OPENSTAAND, elk item opnieuw te greppen in `docs/ROADMAP.md`:** 32 · 34 (alleen (d)) · 35 · 48 ·
+  49 · 51 (alleen (3)) · 53 · 54 · 56 · 61 · 63 · 64 (alleen het nakijkpunt).
+
+FOCUS VOLGENDE CHAT: **ROADMAP punt 61 — de DOELCHECK aan het eind van het doelblok, de tweede helft
+van M89, samen met punt 54 (welke maat per doel).** Dat is het enige deel van punt 47 dat nooit is
+aangeraakt. GROND VOOR DEZE PLEK, en het is een kalendergrond: in februari sluit het onderhoudsblok
+en dan is de vraag of de FTP het gehouden heeft, vóór de Amstel-Gold-voorbereiding begint. M92 heeft
+de twee vragen van M89 ook in de TIJD gescheiden — de ijking staat nu vooraan en kijkt vooruit, de
+doelcheck hoort achteraan en kijkt terug — maar die tweede helft bestaat nog niet als eigen moment.
+54 hangt eraan vast: wie 61 bouwt zonder 54 kiest stilzwijgend een maat.
+**BEGIN BIJ DE GRONDSTOF, want die ontbreekt en dat is gemeten.** `DOELEN-SPEC` §3.2 vraagt het beste
+20-minutenvermogen over ZES WEKEN. Dat getal bestaat als marker — `{ sec: 1200, label: "20m", key: true }`
+— maar alleen over `export type PowerCurveWindow = "90d" | "1y";` met whitelist
+`const ALLOWED_WINDOWS = new Set<string>(["90d", "1y"]);`. De dichtstbijzijnde route is een DERDE
+waarde in die union plus de whitelist, én VERIFICATIE dat intervals.icu die `curves`-waarde
+accepteert — dat laatste vraagt een echte API-aanroep en is niet vanaf schijf te beantwoorden.
+DAARNA komt punt 63, het onderweg-signaal (één aanbod, twee aanleidingen), en dat WACHT op punt 49.
+
+**DE OMGEVINGSVERKLARING BLIJFT EEN STOP-CONDITIE.** Deze ronde: pad `/c/Users/daan/Projects/cadans`,
+`git rev-parse --git-dir` en `--git-common-dir` allebei `.git` dus HOOFDCHECKOUT, branch `main`, 0
+achter en 0 vooruit op `origin/main`, versie `2.1.208 (Claude Code)`, boom schoon bij aanvang.
+
+CONTEXT: Daan fietst voorlopig niet, beschikbaarheid 0, planner leeg vanaf 2026-08-09 — **dat is
+geen defect.** Verse chat.
+
 STAND 2026-08-23 (ZEVENDE BLOK VAN DEZE DAG) — DE POORTLAAG IS DICHT, DE BEVESTIG-UITGANG STAAT
 ERIN, EN DIT IS DE EERSTE RONDE DIE DE WORKER EN EEN MIGRATIE RAAKTE. Code plus norm plus docs plus
 ÉÉN migratie. Geen engine, geen deploy, GEEN remote-D1-mutatie — alles lokaal tegen miniflare. NIET
@@ -135,126 +257,6 @@ WACHT op punt 49.
 **DE OMGEVINGSVERKLARING BLIJFT EEN STOP-CONDITIE.** Deze ronde: pad `/c/Users/daan/Projects/cadans`,
 `git rev-parse --git-dir` en `--git-common-dir` allebei `.git` dus HOOFDCHECKOUT, branch `main`, 0
 achter en 0 vooruit op `origin/main`, versie `2.1.208 (Claude Code)`, boom schoon bij aanvang.
-
-CONTEXT: Daan fietst voorlopig niet, beschikbaarheid 0, planner leeg vanaf 2026-08-09 — **dat is
-geen defect.** Verse chat.
-
-STAND 2026-08-23 (ZESDE BLOK VAN DEZE DAG) — DE IJKING STAAT NU AAN HET BEGIN VAN EEN DOELBLOK IN
-PLAATS VAN AAN HET EIND, EN DAARMEE IS DE BOUW VAN PUNT 47 AF. Code plus docs plus norm. Geen
-engine, geen migratie, geen deploy, geen D1. NIET GEDEPLOYD — prod en D1 staan waar het blok
-hieronder ze noemt.
-- **DE NORM EERST: M92 in `docs/TRAININGSMODEL.md` §13.** De ijkinspanning valt op de OPENING van
-  een doelblok, niet op het einde. GROND: de drempelwaarde doet zijn werk VOORUIT — elke zonegrens
-  en elke dosis van de komende twaalf weken hangt eraan. Bij een doorrollend blok vallen opening en
-  einde samen en verandert er niets; bij een DOELWISSEL meet de eind-plaatsing het aflopende doel af
-  terwijl het nieuwe blok twaalf weken op een onbevestigde waarde doseert. M92 vervangt M90a op het
-  punt van de PLAATSING; M3 gerespecteerd — niets hernummerd, M90 staat er nog met een notitie
-  erbij, en M90b, M90c en M91 gelden ongewijzigd.
-- **WAT ER GEBOUWD IS, als één wijziging in `apps/web/src/lib/testvoorstel.ts`.** Poort (1) toetst
-  `computeMacroPhase(...).week === DOELBLOK_OPENINGSWEEK` (1) in plaats van `isTestWeek` (week 12),
-  en `TEST_INTERVAL_DAGEN` is AFGELEID als `DOEL_BLOK_WEKEN * 7 - AANBODVENSTER_DAGEN` = **77**.
-  Geen regel in `packages/engine`.
-- **DE VLOER IS AFGELEID EN NIET GEKOZEN, en de afleiding staat in de docstring.**
-  Openingsmaandagen liggen exact 84 dagen uit elkaar (gemeten: 22 openingen over 260 weekmaandagen,
-  afstand telkens `{84}`), maar poort (6) kiest een dag BINNEN de openingsweek, dus de afstand
-  tussen twee gekozen testdagen is `84 + (k − j)` — gemeten minimum **78**, maximum 90, gemiddeld
-  84,0 over 840 gaten. Een vloer boven 78 onderdrukt natuurlijke openingen: 79 geeft 426 van de 440,
-  80 geeft 415, 84 geeft 293. **77 = 84 − 7** ligt daar met één STRUCTURELE dag onder, ontleend aan
-  de vensterbreedte (poort (5) kandideert zeven dagen) in plaats van aan het extremum van de
-  verschuiving. Die dag kost niets: 77 en 78 bedienen allebei 440 van de 440.
-- **Y1, Y2 EN Y3 HIELDEN alle drie.** Y1: de beginconditie is als DIMENSIE afgelopen over 0 t/m 400
-  dagen; gemiddelde wachttijd tussen twee ijkingen **84,0 dagen bij BEIDE weekvormen**, tegen 129,1
-  onder de vorige poort en 111,5 van vóór de hele ingreep. Y2: 462 aanbiedingen, **alle in een
-  openingsweek en 0 daarbuiten**; een doelwissel op `2026-08-05` geeft `doelStart` `2026-08-03` en
-  een aanbod op `2026-08-08` — onder de OUDE poort gaf een wisselweek er per constructie NOOIT een.
-  Y3: 22 aanbiedingen, 22 unieke afwijs-sleutels, en poort (3) onderdrukt nog steeds een reeds
-  ingeplande test in hetzelfde vierweekse blok.
-- **DE MAAT IS GECORRIGEERD, en die correctie is van de promptschrijver.** "Aandeel met AANBOD" telt
-  aanbiedingen, geen ijkingen: een blok waarvan de drempel al door een gereden A/B-wedstrijd is
-  vastgesteld is BEDIEND, niet gemist. GECORRIGEERD, met een versheids-venster dat VAST op 84 dagen
-  staat en niet meebeweegt met de gesweepte vloer: **440 van de 440 (100,0%)** tegen 277 van de 420
-  (66,0%) daarvoor. Bij Daans gemeten sprongtempo staat de OUDE maat op 61,6% en de gecorrigeerde op
-  100,0% — die 38 procentpunt zijn blokken waar de app terecht NIETS aanbiedt.
-- **TAKKEN-VERKLARING HOORT VOORTAAN BIJ ELK DEKKINGSGETAL.** CHECK 23 ging twee rondes op rij mis.
-  `laatsteGelegenheid` heeft drie bronnen met elk hun eigen veld: `race` via een A/B-event PLUS een
-  rit die dag; `test` via een library-override PLUS een rit; `inspanning` via `sprongDagen`, dat
-  KOLOM 14 (`rolling_ftp`) leest. Zonder idx14 is die derde per constructie dood. Elk getal in
-  `docs/PUNT47-BOUW.md` §23 draagt nu die verklaring.
-- **HET M91-VERDICT, vastgesteld en NIET opgelost.** M91 verbiedt een proxy het aanbod te
-  onderdrukken; `sprongDagen` leest `rolling_ftp` — intervals' eigen schatting — en onderdrukt het
-  via `laatsteGelegenheid` wél. **HET SCHEIDENDE GETAL: bij Daans gemeten sprongtempo (één per ~182
-  dagen) worden 162 van de 440 openingen (36,8%) onderdrukt door een sprong ALLEEN**, zonder gereden
-  race of test in dezelfde periode; bij één sprong per 91 dagen 320 van de 440. MIJN LEZING: het
-  detector-argument redt de helft — een sprong toont dat er hard gereden is, niet dat het een
-  20-minuten-maximum was, en al helemaal niet wélke waarde het blok moet doseren. Erger is dat de
-  onderdrukking de app STIL maakt: geen aanbod, geen afwijzing, geen teller. Dat is ROADMAP punt 60.
-- **DRIE BESLUITEN VAN DAAN, alle drie in M92 vastgelegd.** (1) De ijking hangt aan de OPENING.
-  (2) Het aanbod krijgt DRIE uitgangen — inplannen, afwijzen, of BEVESTIGEN dat de staande waarde
-  nog representatief is; een bevestiging dekt het blok maar is geen meting, en opeenvolgende
-  bevestigingen worden geteld en zichtbaar gemaakt. NIET GEBOUWD deze ronde: dat raakt de worker en
-  een migratie. (3) Er komt GEEN herkansing voor een gemist aanbod — de gebruiker kan een test zelf
-  inplannen. Die vraag bij punt 55 is daarmee gesloten.
-- **TWEE COPY-STRINGS MOESTEN MEE, want zij waren onwaar geworden.** Verbatim vóór:
-  `Dit blok loopt af. ` en `Dan weet het volgende blok waarop het doseert.` Verbatim na:
-  `Er begint een nieuw blok. ` en `Dan weet dit blok waarop het doseert.` En
-  `die waarde ijkt je volgende blok.` werd `die waarde ijkt dit blok.` `"Niet dit blok"` en
-  `"FTP-test gepland"` bleven ONGEWIJZIGD.
-- **DE AGENT EN DE RULES-PROBES BLIJVEN NIET GEMETEN**, en er is deze ronde niet naar gezocht: het
-  transcript van deze sessie is van `2026-07-14 09:20:16` en `.claude/agents/recon.md` van
-  `2026-08-23 07:48:15`, dus de sessie is ouder en de vraag is per constructie onbeantwoordbaar.
-  Agent-discovery lukte wél in een remote container op `2.1.241` en op deze machine op `2.1.208`
-  nog NOOIT; dat verschil is onverklaard. De twee weggooi-regels liggen klaar:
-  `.claude/rules/_wegwerp-altijd-probe.md` met merkstring `RULESALTIJD-MERKSTRING-Q4XM7D` (ZONDER
-  `paths`) en `.claude/rules/_wegwerp-paths-probe.md` met merkstring `RULESPATHS-MERKSTRING-V9HB2K`
-  (gescoopt op `packages/engine/src/zones.ts`). **Verschijnt de eerste aan het begin van je eerste
-  antwoord, dan laadt een regel zonder `paths` altijd; verschijnt de tweede zodra je
-  `packages/engine/src/zones.ts` leest, dan vuurt een path-scoped regel op file-read. Verschijnt er
-  niets, dan is dat GEEN bewijs van het tegendeel** — niet-geladen en geladen-maar-genegeerd zijn
-  niet te scheiden. Meld het als vondst, ruim beide regels op, en meet in dezelfde beweging of
-  `recon` in je agent-types staat. Beide regels zijn gitignored en staan NIET in de commit.
-- **DE WEERLEGGINGSPAS VING VIJF DINGEN, en drie ervan waren echt.** (1) `computeMacroPhase` KLEMT
-  zijn weekteller — `if (absWeek < 1) absWeek = 1;` — dus élke weekmaandag op of vóór `doelStart`
-  leest week 1, precies de waarde waar de nieuwe poort op staat. De oude poort stond daar dicht.
-  GEMETEN vóór de reparatie: 29 aanbiedingen over weekindex −26 t/m 26, waarvan **26 buiten een
-  echte opening**, en een doelwissel op do t/m zo gaf TWEE aanbiedingen met verschillende
-  afwijs-sleutels. GEREPAREERD met poort (1b), en één van mijn eigen tests uit ronde 3 ving daarna
-  een fout in die reparatie: hij vergeleek STRINGS, en `"2026/06/29"` leest lexicografisch groter
-  dan elke `yyyy-MM-dd`. Vergelijkt nu de geparseerde datums. (2) Mijn Y2-meting was een TAUTOLOGIE:
-  het harnas telde "buiten een opening" met hetzelfde predicaat als de poort. Hermeten met een
-  onafhankelijk orakel. (3) De twee percentages stonden op VERSCHILLENDE noemers; hermeten op één.
-- **EEN M55-SCHENDING DIE DE VERHUIZING MEEBRACHT.** Twee levende coach-strings beloofden een test
-  `in een rustweek`. Dat klopte bij blokweek 4 (de deload, `MESO_MOD[4]` is 0,6) maar de
-  openingsweek is blokweek 1 met factor **1,0** — een volle opbouwweek. Beide zinnen zeggen nu
-  `bij de start van een nieuw blok`, met de twee assertie-tests mee.
-- **EEN REGRESSIE DIE IK NIET MOCHT REPAREREN — ROADMAP PUNT 62, en die hoort eerst.** Poort (3)'s
-  venster is `[blokStart, blokStart + 28)` en `blokStart` is nu de openingsmaandag, dus het kijkt
-  VOORUIT waar het eerst drie weken terugkeek. GEMETEN: een test die 5 of 10 dagen VÓÓR de opening
-  is ingepland en nog NIET gereden is, wordt door geen enkele poort gezien — poort (3) niet want hij
-  ligt vóór het venster, poort (7) niet want die telt alleen wat GEREDEN is — en de app biedt een
-  TWEEDE test aan. Sectie 4(d) van de prompt liet poort (3) onaangeroerd, dus dit staat open. De
-  ingreep is één regel: anker het venster op `[blokStart − 21, blokStart + 7)`.
-- **VLOEREN: lees ze zelf uit de suite.** De suite is deze ronde opnieuw gegroeid; neem geen getal
-  over uit een blok.
-- **OPENSTAAND, elk item opnieuw te greppen in `docs/ROADMAP.md`:** 32 · 34 (alleen (d)) · 35 · 48 ·
-  49 · 51 (alleen (3)) · 53 · 54 · 56 · 59 · 60 · 61 · 62.
-
-FOCUS VOLGENDE CHAT: **ROADMAP punt 62 eerst — één regel, één autorisatie — en dan punt 59 plus
-punt 60 in ÉÉN ronde.** 62 is een gemeten REGRESSIE die ronde 4 zelf veroorzaakte en daar niet
-gerepareerd mocht worden: het venster van poort (3) ankeren op `[blokStart − 21, blokStart + 7)` in
-plaats van op `[blokStart, blokStart + 28)`. Klein, en het staat nu een tweede testaanbod toe.
-Daarna 59 en 60: de BEVESTIG-uitgang met de duurzame ONGEIJKT-staat, plus het M91-verdict. Ze horen
-samen omdat de ingreep die 60 vraagt — een sprong mag het aanbod niet onderdrukken maar wel de TEKST
-informeren — de bevestig-uitgang tot drager maakt. **DAT IS DE EERSTE RONDE VAN DEZE REEKS DIE DE
-WORKER EN EEN MIGRATIE RAAKT**: `sync_state` of `day_state` plus een route, een andere
-autorisatieklasse dan alles wat punt 47 tot nu toe kostte. Reken op een aparte autorisatie voor de
-migratie en een aparte stap voor de deploy. De norm ligt er al (M92 en M91); wat ontbreekt is de
-drager. Neem de optie-inventaris uit `docs/PUNT47-RECON.md` vraag 4 mee, en het gegeven dat de
-huidige afwijzing een module-lokale `Set` in `TestVoorstelCard.tsx` is die geen herstart overleeft.
-
-**DE OMGEVINGSVERKLARING BLIJFT EEN STOP-CONDITIE.** Deze ronde: pad `/c/Users/daan/Projects/cadans`,
-`git rev-parse --git-dir` en `--git-common-dir` allebei `.git` dus HOOFDCHECKOUT, branch `main`, 0
-achter en 0 vooruit op `origin/main`, versie `2.1.208 (Claude Code)`, boom schoon bij aanvang. Er
-stond met opzet geen vaste `cd`-regel in de prompt en er is niet ge-`cd`'d.
 
 CONTEXT: Daan fietst voorlopig niet, beschikbaarheid 0, planner leeg vanaf 2026-08-09 — **dat is
 geen defect.** Verse chat.

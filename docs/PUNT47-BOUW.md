@@ -1906,4 +1906,464 @@ Z2 met 271, 102 en 20. Z3 (één migratie, twee kolommen, `sync_state` verder on
 alle vijf. De tien route-tests, de neighbour-isolatie in beide richtingen en de drie 400-gevallen
 hield niemand aan het wankelen.
 
+## 32. RONDE 6 — DE BEVESTIGING KRIJGT HAAR DOEL (punt 64)
+
+### 32a. Omgevingsverklaring
+
+Werkpad `/c/Users/daan/Projects/cadans`; `git rev-parse --git-dir` en `--git-common-dir` geven
+allebei `.git`, dus HOOFDCHECKOUT en geen worktree; branch `main`; 0 achter en 0 vooruit op
+`origin/main`; `claude --version` is `2.1.208 (Claude Code)`; boom schoon bij aanvang.
+
+De AGENT- en RULES-PROBES blijven **NIET GEMETEN**, en er is niet naar gezocht. De sessie is ouder
+dan alle drie de bestanden: het eerste bericht draagt `2026-07-14T07:20:14.850Z`,
+`.claude/agents/recon.md` dateert van 23-08-2026 07:48 en de twee weggooi-regels van 23-08-2026
+13:20. Een sessie kan de laadmachinerie van haar eigen start niet achteraf waarnemen; "niet gemeten"
+is hier dus de enige eerlijke uitslag en niet "gemeten als afwezig".
+
+### 32b. Het idiom, HERTOETST tegen HEAD vóór het gekopieerd werd
+
+De prompt schreef dat de per-blok-antwoorden in `sync_state` **alle drie** al een blok- én een
+doel-kolom dragen. **Dat klopt niet, en het is twee van de drie.** Gegrept op HEAD `36b9659`:
+
+```
+dosisTredeBlok: text("dosis_trede_blok")        ·  dosisTredeDoel: text("dosis_trede_doel")
+doelPassendBlok: text("doel_passend_blok")      ·  doelPassendDoel: text("doel_passend_doel")
+eventOvernameBlok: text("event_overname_blok")  ·  eventOvernameEvent: text("event_overname_event")
+```
+
+`event_overname` draagt GEEN doel-kolom maar een EVENT-kolom, en dat is consistent: die vraag gaat
+over een specifieke wedstrijd, niet over het doel. Het idiom dat ik kopieer is dus dat van
+`doel_passend`, en de premisse van de prompt is op dit punt gecorrigeerd zonder dat het de bouw
+verandert.
+
+De VERGELIJKING is ook letterlijk overgenomen, uit `doelPassendVoorstel` stap 5
+(`apps/web/src/lib/doelpassend.ts`) — verbatim de twee regels waaraan de claim hangt:
+
+```
+  const huidigDoel = normalizeDoel_(doel);
+    input.beantwoordBlok === blokStart &&
+    input.beantwoordDoel === huidigDoel
+```
+
+Genormaliseerd aan beide kanten, met de schrijfkant strikt op `DOEL_OPTIONS` — dezelfde regel als
+`PUT /api/doel-passend`.
+
+### 32c. Het orakel — en waarom mijn onafhankelijkheids-claim NIET houdt
+
+**DEZE PARAGRAAF IS NA DE WEERLEGGINGSPAS HERSCHREVEN. De oorspronkelijke versie voerde drie
+gronden aan; twee daarvan zijn onderuit gegaan en de derde draagt minder dan zij beloofde.** Wat
+hieronder staat is wat er ná hermeting overeind blijft. De weggevallen tekst staat in §32k.
+
+Het orakel is `gepland.has(ma)` in `scratchpad/p64-meet.mjs`: een lijst openingsmaandagen
+(`geplandeOpeningen`, `week0 + 12k` weken) waarmee elke weekmaandag wordt vergeleken.
+
+**GROND (ii) HOUDT:** het orakel roept geen enkele app-functie aan — geen `computeMacroPhase`, geen
+`blokWeekVanWeek`, geen `blokStartVoorWeek`, alleen `Date`-rekenwerk.
+
+**GROND (i) VALT.** Ik noemde de lijst "de bouwtekening van de fixture, geen herleiding uit de
+invoer". Dat is niet waar: `keten()` zet `const week0 = DOEL_START` — exact de string die als
+`doelStart` de app in gaat — en de stapgrootte staat als `const DOEL_BLOK_WEKEN = 12` overgetypt uit
+`packages/engine/src/phase.ts`. De lijst is dus het POORT-PREDICAAT, opnieuw opgeschreven. GEMETEN:
+over de 260 fixture-weken zeggen `gepland.has(ma)` en `computeMacroPhase(doelStart, ma).week === 1`
+allebei JA op dezelfde 22 maandagen — **260 van 260 gelijk, 0 van 260 ongelijk**. Onafhankelijk in
+IMPLEMENTATIE, identiek in PREDICAAT. Dat is precies het patroon van ronde 4 en 5, netter
+opgeschreven maar niet doorbroken.
+
+**GROND (iii) VALT, en dit is de scherpste.** De mutatie-controle zette poort (1) op
+`DOELBLOK_OPENINGSWEEK = 2` en het orakel sloeg aan (440 buiten een opening tegen 0). Maar
+`DOELBLOK_OPENINGSWEEK` is de ENIGE parameter van het predicaat waarmee het orakel samenvalt, dus
+die mutatie is precies de klasse die het orakel PER CONSTRUCTIE moet betrappen. De controle toetste
+het enige waarvoor het orakel gevoelig is.
+
+**HET DECISIEVE GETAL, en ik heb het zelf gemeten: het orakel is BLIND voor de ingreep van deze
+ronde.** De build zonder de doel-helft van poort (2b) geeft in V3 cijfer voor cijfer hetzelfde als
+de build mét — 440/440, MAX 1, 0 buiten een opening, gat 84,0 — terwijl diezelfde build op V2
+4 van 7 wisseldagen geeft in plaats van 7 van 7. V3 kan de ingreep dus niet zien.
+
+**WAT DIT BETEKENT VOOR DE GETALLEN.** V3 is GEEN bevestiging dat de ingreep goed is; het is een
+regressie-controle die aantoont dat er niets kapot ging op de as die zij meet. Dat is nuttig maar
+bescheiden, en het rapport zei het te sterk. **Alleen V2 kan de ingreep zien**, en dat is dan ook
+de enige verwachting die er iets over bewijst.
+
+**WAT EEN VOLGENDE RONDE MOET DOEN.** Een orakel dat werkelijk onafhankelijk is, moet naar iets
+anders kijken dan naar de VERZAMELING AANBODDAGEN — want elke ingreep die die verzameling
+ongemoeid laat is er per constructie onzichtbaar voor. En de fixture moet de regio bemonsteren waar
+orakel en poort uiteenlopen: de weken VÓÓR `doelStart`, waar `computeMacroPhase` zijn weekteller
+klemt en poort (1) zonder poort (1b) op 26 van de 26 weken JA zou zeggen. De keten loopt vanaf
+`week0 = DOEL_START` en komt daar nooit, dus een build zonder poort (1b) komt volledig groen door
+V3. Vastgelegd als canon in `docs/WERKWIJZE-LESSEN.md`.
+
+### 32d. De takken-verklaring — met de GECORRIGEERDE noemer
+
+**DE NOEMER WAS 5200 EN IS 260.** `p64-takken2.mjs` draaide `for (let z = 1; z <= 20; z++)` maar
+gebruikt `z` nergens in de lusbody — geverifieerd: precies één treffer op `z` binnen de lus, en dat
+is de lusheader zelf. Het waren dus twintig BYTE-IDENTIEKE replica's van dezelfde 260 gevallen, en
+elk gerapporteerd getal was exact 20× de enkelvoudige telling. Dat is de noemer-fout die de canon
+benoemt, in mijn eigen script. Hermeten met één keten, `scratchpad/p64-hermeet.mjs`:
+
+```
+laatsteGelegenheid ZONDER de vlag  (noemer 260):  test  80 · race 54 · inspanning 118 · geen 8
+laatsteGelegenheid MET negeerSprong (noemer 260):  test 156 · race 96 · inspanning   0 · geen 8
+```
+
+Alle drie de takken LEVEN in de fixture. De `inspanning`-tak staat op 0 zodra de vlag erop staat, en
+dat is een UITSLUITING en geen dode fixture — M91, ROADMAP punt 60. Tegenproef op
+`isMaximaalEvent_`: een A-wedstrijd ZONDER rit geeft `null`, dezelfde wedstrijd MET rit geeft
+`{"bron":"race","datum":"2026-07-06"}`.
+
+**EN DE TAKKEN VAN DE FIXTURE DIE DE 440 PRODUCEERT, want die hoorde erbij en stond er niet.** De
+liveness in een ANDERE fixture rechtvaardigt de getallen van V3 niet. Per aanbod geteld in de
+V3-keten zelf, noemer **440 aanbiedingen**: **test 420 · race 20 · inspanning 0 · geen 0**. Voor
+420 van de 440 openingen beslist dus de terugkoppeling van de app op zichzelf (het vorige aanbod
+werd ingepland en gereden), de race-tak beslist er 20 — één per keten, de eerste opening — en de
+inspanning-tak nul, want poort (7) leest met `negeerSprong: true`.
+
+**EEN EERSTE VERSIE VAN DEZE PROBE WAS FOUT en is weggegooid.** `p64-takken.mjs` legde de
+A-wedstrijd 400 dagen vóór `doelStart`, waardoor elke latere test hem sloeg en de race-tak op **0**
+bleef staan: een OR-term die per constructie niet kon winnen (CC-CHECKS CHECK 23). Pas de tweede
+versie geeft elke tak een venster waarin hij de hoogste rang draagt.
+
+### 32e. De drie verwachtingen
+
+#### V1 — HOUDT
+
+Eén forward-only migratie, één kolom, geen nieuwe tabel. `workers/api/drizzle/0012_acoustic_living_mummy.sql`
+in zijn geheel:
+
+```
+ALTER TABLE `sync_state` ADD `ijking_doel` text;
+```
+
+`git diff --stat` op `0011_handy_the_hunter.sql` en `meta/0011_snapshot.json` is LEEG — 0011 is niet
+samengevouwen en niet aangeraakt, want een gewijzigde migratie is geen forward-only migratie.
+Vindplaats van de kolom: `workers/api/src/db/schema.ts`, `syncState.ijkingDoel`.
+
+#### V2 — HOUDT, maar op een ANDER scenario dan de prompt en mijn eerste versie noemden
+
+Gemeten met de ECHTE `blokStartBijDoel` uit `apps/web/src/lib/settings.ts` en de echte
+`buildTestVoorstel`, beantwoorde opening `2026-09-21`:
+
+```
+VOOR (alleen blok) | aanbod op 4 van 7 wisseldagen | ma- di- wo- do+ vr+ za+ zo+
+NA   (blok+doel)   | aanbod op 7 van 7 wisseldagen | ma+ di+ wo+ do+ vr+ za+ zo+
+```
+
+**HET GENOEMDE SCENARIO GEEFT DELTA NUL, en dat is een vondst uit de weerleggingspas die ik zelf heb
+nagemeten.** De prompt, mijn eerste code-commentaar en mijn eerste testfixture verantwoordden de
+ingreep met Daans februari-scenario: `Onderhoud` naar `Korte beklimmingen`. Maar
+`blokCheckEnabled("Onderhoud")` is **false**, dus poort (2) staat daar dicht: op Onderhoud komt nooit
+een aanbod, en `TestVoorstelCard` — de ENIGE schrijver van `ijking_*` — kan voor die opening dus ook
+nooit een rij wegschrijven. Zonder rij onderdrukte de OUDE poort al niets. Gemeten per databasestand
+die er echt kan zijn:
+
+```
+geen rij (Onderhoud kon er nooit een schrijven)  VOOR 7/7 -> NA 7/7   delta 0
+rij van een OUDERE opening                       VOOR 7/7 -> NA 7/7   delta 0
+rij van DEZE opening met een EFFECT-doel         VOOR 4/7 -> NA 7/7   delta 3
+```
+
+**De 4-van-7-basislijn bestaat alleen bij een wissel tussen twee EFFECT-doelen** — bijvoorbeeld
+`FTP` naar `Korte beklimmingen`. Dat is een echt en volstrekt gewoon geval, maar het is een ANDER
+geval dan het genoemde. De fixture, de test en de docstrings zijn erop rechtgezet; de tabel
+hierboven is met `FTP` als oud doel gemeten. Gemeten welke waarden `ijking_doel` überhaupt kan
+dragen: `FTP`, `Conditie`, `Korte beklimmingen` en `Lange beklimmingen` leveren een voorstel;
+`Onderhoud` levert er geen en is dus onbereikbaar. Vastgelegd als test.
+
+De KLEM is niet veranderd — `blokStartBijDoel` geeft nog steeds op 3 van de 7 dagen dezelfde maandag
+terug — maar de SLEUTEL wel, en die 3 zijn precies de dagen die kantelen. Vindplaats van de klem:
+`settings.ts`, `blokStartBijDoel`, verbatim de twee regels waaraan de claim hangt:
+
+```
+  const binnenVenster = dow >= 1 && dow <= WISSEL_LAATSTE_DAG;
+    dag.getDate() + naarMaandag + (binnenVenster ? 0 : 7),
+```
+
+**EN DE ANDERE KANT, want dit is de ingreep die makkelijk doorschiet.** Een DOORROLLEND blok zonder
+wissel, over alle zeven dagen van de openingsweek: **0 van 7** tweede aanbiedingen, zowel VOOR als
+NA. De verbreding raakt uitsluitend het geval waarvoor zij bedoeld is.
+
+Vindplaats van de poort: `apps/web/src/lib/testvoorstel.ts`, `buildTestVoorstel`, poort (2b),
+verbatim de vier regels waaraan de claim hangt:
+
+```
+    input.ijkingBeantwoordBlok != null &&
+    input.ijkingBeantwoordBlok === blokStart &&
+    input.ijkingBeantwoordDoel != null &&
+    input.ijkingBeantwoordDoel === huidigDoel
+```
+
+#### V3 — HOUDT, maar op een HERMETEN opstelling en met een veel bescheidener strekking
+
+**DE EERSTE V3-METING KON POORT (2b) NIET ZIEN, en dat is in de weerleggingspas boven water
+gekomen.** Zij riep `buildTestVoorstel` exact één keer per week aan met
+`todayISO === weekMondayISO`; de bewaarde `blokStart` is dan altijd die van de VORIGE opening, dus
+de blok-helft van de sleutel matchte nooit. GEMETEN met een teller op de poort zelf: **poort (2b)
+vuurde 0 van de 440 keer, in BEIDE armen.** "VOOR is gelijk aan NA" was daar een
+constructie-identiteit en geen meting — dode machinerie, precies het patroon uit de canon.
+Bovendien stond `doel` op elke aanroep op `"FTP"`, zodat de toegevoegde sleutelhelft binnen die
+keten sowieso een tautologie was.
+
+HERMETEN met ZEVENDAAGSE bemonstering — elke dag van elke week langs de poort, het eerste aanbod van
+een week ingepland, gereden én beantwoord, de resterende dagen daarna alsnog getoetst
+(`scratchpad/p64-hermeet.mjs`):
+
+```
+VOOR (alleen blok) | 36400 aanroepen | poort(2b) BEREIKT 3080 VUURT 2640
+                   | aanbod-in-opening 440/440 = 1.000 | MAX 1 | TWEEDE aanbod in dezelfde week 0
+                   | buiten een opening 0 | gem.gat 84,0
+NA   (blok+doel)   | 36400 aanroepen | poort(2b) BEREIKT 3080 VUURT 2640
+                   | aanbod-in-opening 440/440 = 1.000 | MAX 1 | TWEEDE aanbod in dezelfde week 0
+                   | buiten een opening 0 | gem.gat 84,0
+```
+
+Nu vuurt de gewijzigde poort **2640 keer per arm** en blijven de uitkomsten identiek. De conclusie
+van V3 houdt dus — maar op deze meting, niet op de eerste.
+
+**WAT V3 WÉL EN NIET ZEGT.** Het zegt: op een keten zonder doelwissel verandert er niets, en er
+komt geen tweede aanbod binnen dezelfde week (0 van 36400 aanroepen). Het zegt NIET dat de ingreep
+goed is: de build zónder de doel-helft levert exact dezelfde vijf getallen. V3 is een
+regressie-controle, geen bevestiging. Alleen V2 kan de ingreep zien.
+
+**EN 1,000 IS FIXTURE-GEBONDEN.** Het kopgetal geldt voor deze fixture — één A-wedstrijd ver terug
+en verder alleen achtergrondritten. Verrijk je haar met gereden A-wedstrijden of extra geplande
+tests, dan zakt het aanbod-per-opening en dat is GEWENST gedrag: poort (7) onderdrukt terecht bij
+een verse maximale inspanning. Wat de fixtures overleeft, is **MAX 1** en **0 buiten een opening**.
+
+### 32f. Besluit twee — wat de leeftijdsweergave TOONDE en wat zij NU toont
+
+Twee vragen apart gemeten, `scratchpad/p64-leeftijd.mjs`.
+
+**(A) DE EENHEID.** Dezelfde historie door de oude en de nieuwe weergave:
+
+```
+dagen sinds meting | VOOR                              | NU
+    83 | (niets)                          | (niets)
+    84 | Je drempel is een blok oud.      | Je drempel is 12 weken oud.
+   123 | Je drempel is een blok oud.      | Je drempel is 17 weken oud.
+   167 | Je drempel is een blok oud.      | Je drempel is 23 weken oud.
+   168 | Je drempel is 2 blokken oud.     | Je drempel is 24 weken oud.
+   252 | Je drempel is 3 blokken oud.     | Je drempel is 36 weken oud.
+```
+
+De ZICHTBAARHEIDSGRENS is onveranderd: beide zwijgen tot en met 83 dagen en spreken vanaf 84.
+`blokkenOud <= 0` en `wekenOud < DOEL_BLOK_WEKEN` zijn dezelfde grens in twee eenheden. Alleen wat de
+gebruiker LEEST is veranderd, niet WANNEER hij het leest — en het opvallendste winstpunt staat op
+rij 123 en 167, waar "een blok oud" drie totaal verschillende leeftijden dekte.
+
+**(B) WELKE LEEFTIJD — meting of bevestiging?** Dit was de leesvraag uit sectie 2. Gemeten door
+dezelfde historie drie keer te voeren met een ander antwoord:
+
+```
+geen antwoord  -> wekenOud 17 · "Je drempel is 17 weken oud. Voor het laatst gemeten op 21 mei."
+bevestigd      -> wekenOud 17 · "Je hebt je drempel bevestigd, niet gemeten. Je drempel is 17 weken oud. …"
+niet_nu        -> wekenOud 17 · "Je drempel is dit blok niet geijkt. Je drempel is 17 weken oud. …"
+```
+
+**Zij toonde al de leeftijd van de laatste METING, en dat is de goede.** De bron is
+`laatsteGelegenheid`, die uitsluitend GEREDEN maximale inspanningen kent; een bevestiging schrijft
+alleen `sync_state.ijking_*` — geen override, geen activiteit — en kan de teller per constructie niet
+verzetten. Er viel hier dus niets te corrigeren, alleen de eenheid te wisselen. Vastgelegd als test:
+"BEVESTIGEN maakt de drempel niet JONGER — besluit twee, gemeten".
+
+### 32g. De strings — verbatim
+
+**GEWIJZIGD**, en het is er één. Was: `"Je drempel is een blok oud."` en
+`` `Je drempel is ${o.blokkenOud} blokken oud.` ``. Is nu: `` `Je drempel is ${o.wekenOud} weken oud.` ``.
+
+**GEEN ENKELVOUDSTAK**, en dat is opzet. Onder twaalf weken zwijgt de regel, dus "1 week" kan er per
+constructie niet uit komen; een enkelvoudsvorm zou dode machinerie zijn die als levende mogelijkheid
+leest (CC-CHECKS CHECK 27).
+
+**ONGEWIJZIGD**: `"Ik heb je drempel nog nooit gemeten."`, `"Je hebt je drempel bevestigd, niet
+gemeten."`, `"Je drempel is dit blok niet geijkt."`, `" Voor het laatst gemeten op <datum>."`,
+`"Mijn waarde klopt nog"` en de bevestig-uitleg.
+
+**NIEUW**: geen enkele UI-string. Wel één nieuwe foutmelding op de route, en die is Engels omdat
+alle route-fouten dat zijn: `"invalid doel, expected a DOEL_OPTIONS value or null"`.
+
+### 32h. Meegegane tests, bij naam
+
+In `apps/web/src/lib/testvoorstel.test.ts`: "een beantwoorde opening geeft GEEN tweede aanbod" en
+"een antwoord op een ANDERE opening onderdrukt niet" (doel toegevoegd, zodat ze uitsluitend de
+blok-helft toetsen); "BEVESTIGD levert de staat bevestigd-niet-gemeten", "NIET-NU levert de
+ONGEIJKT-staat (M91)", "een antwoord op een OUDERE opening telt niet meer voor de staat", "de
+leeftijd telt SPRONGEN niet mee — een proxy is geen meting (M91)", "de teller vraagt geen eigen
+opslag: hij volgt uit de laatste ECHTE meting" (`blokkenOud` → `wekenOud`, met 0/1/2/3 blokken →
+11/12/24/36 weken op dezelfde 83/84/168/252 dagen); "de bevestiging blijft het HELE doelblok staan"
+en "en vervalt op de VOLGENDE opening".
+
+In `workers/api/test/routes.ijking.test.ts`: alle tien, via de drie gedeelde constanten `LEEG`,
+`BEVESTIGD` en `NIET_NU`; "GET op een lege rij geeft twee nullen" heet nu "drie nullen" en "PUT met
+beide null WIST" heet "PUT met alle drie null WIST".
+
+NIEUW: "een antwoord voor een ANDER DOEL onderdrukt niet (punt 64)", "het voorstel DRAAGT het
+genormaliseerde doel dat de kaart terugschrijft", "een antwoord voor een ANDER DOEL telt niet meer
+voor de staat (punt 64)", "de staat vergelijkt GENORMALISEERD, aan beide kanten (punt 64)",
+"BEVESTIGEN maakt de drempel niet JONGER — besluit twee, gemeten", de vier tests van de describe
+"een DOELWISSEL in de beantwoorde openingsweek geeft een nieuw aanbod (punt 64)", plus op de route
+"een ANDER DOEL op dezelfde opening is een ANDER antwoord (punt 64)" en "400 op een doel buiten
+DOEL_OPTIONS, en er is NIETS weggeschreven".
+
+### 32i. De randen van de tweeledige sleutel — de ROTATIE-vraag, zelf nagemeten
+
+Ronde 5 leerde dat een ingreep die iets NIEUWS afvangt stilletjes iets OUDS kan laten ontsnappen.
+Drie randen daarom vooraf gemeten, `scratchpad/p64-randen2.mjs`.
+
+**RAND 1 — een LEGACY-rij van vóór migratie 0012** (`ijking_blok` gezet, `ijking_doel` NULL): de
+vraag komt EENMALIG terug. Dat is de goede kant om op te falen — één vraag te veel is goedkoper dan
+twaalf weken doseren op een waarde die voor dit doel niemand bevestigd heeft. Vastgelegd als test.
+
+**RAND 2 — HEEN EN TERUG binnen dezelfde week.** Wisselt de gebruiker weg en weer terug, dan staat
+hij weer precies waar hij stond en geldt zijn oorspronkelijke antwoord opnieuw. Gemeten over de
+zeven dagen: HEEN geeft telkens een aanbod (ander doel), TERUG onderdrukt op ma/di/wo (**3 van 7**,
+de dagen waarop de klem dezelfde maandag geeft en de blok-helft dus nog matcht) en geeft een aanbod
+op do t/m zo (**4 van 7**, want daar schuift `doelStart` naar een verse maandag en is het werkelijk
+een ander blok). Er ontsnapt dus niets.
+
+**EEN EERSTE VERSIE VAN DEZE PROBE WAS FOUT en is weggegooid** — en zij is precies het patroon dat
+de canon verbiedt. `p64-randen.mjs` wisselde terug naar `Onderhoud`, en dat doel valt al op poort
+(2) (`blokCheckEnabled`, geen effect-meter). De uitslag "geen aanbod" kwam daar dus van poort (2) en
+niet van poort (2b): twee dingen tegelijk in één probe. De tweede versie wisselt tussen `FTP` en
+`Korte beklimmingen`, die BEIDE poort (2) passeren, zodat alleen de sleutel verschilt. Gemeten
+poort-(2)-uitslag per doel: FTP `true`, Conditie `true`, Korte beklimmingen `true`, Lange
+beklimmingen `true`, Onderhoud `false`.
+
+**RAND 3 — normalisatie aan de twee kanten.** Opgeslagen `"FTP"` tegen huidig `"VO2max"`, opgeslagen
+`"Korte beklimmingen"` tegen huidig `"Beklimmingen"`, en opgeslagen `"FTP"` tegen huidig `"onzin"`
+of `""`: alle vier correct ONDERDRUKT, want `normalizeDoel_` vouwt ze op dezelfde
+`DOEL_OPTIONS`-waarde.
+
+**EN HET SCHRIJFPAD AAN BEIDE UITEINDEN (CHECK 19).** `TestVoorstelCard` stuurt `voorstel.doel`, en
+de route weigert alles buiten `DOEL_OPTIONS` met een 400. Zou `normalizeDoel_` ooit iets buiten die
+lijst opleveren, dan verdween de tik van de gebruiker zonder melding. `normalizeDoel_` is TOTAAL op
+`DOEL_OPTIONS` — alle vier de takken geven een lid terug — en dat is nu vastgelegd in de test "het
+gedragen doel is ALTIJD een DOEL_OPTIONS-waarde — anders faalt de tik stil".
+
+**CHECK 24 — de 400-tests zijn ROOD gemeten.** De schrijfactie is tijdelijk vóór de validatie
+gezet; vier van de twaalf route-tests werden rood ("400 op een blok dat geen yyyy-MM-dd is", "400 op
+een doel buiten DOEL_OPTIONS", "400 op een antwoord buiten de twee waarden", "400 op een antwoord
+dat geen string is"). De probe is daarna volledig teruggedraaid — `grep` op de markering geeft 0 —
+en de twaalf tests staan weer groen.
+
+### 32j. Wat benoemd is en NIET gebouwd
+
+De **bevestigings-teller** is per besluit twee VERVALLEN, niet uitgesteld: de leeftijd in weken
+vervangt hem, en een teller van opeenvolgende bevestigingen zou een grootheid tellen die de renner
+niet nodig heeft. Punt 59 is daarmee helemaal AF.
+
+Verder onaangeroerd, met opzet: poort (1), poort (1b), poort (3), het venster, de vloer,
+`WEDSTRIJD_HORIZON_DAGEN`, `packages/engine`. Geen deploy, geen remote-D1-mutatie.
+
+**NIET NAGEKEKEN, en dat is een openstaand punt:** of `dosis_trede_*` en `event_overname_*` dezelfde
+blootstelling hebben als `ijking_*` had. `dosis_trede_doel` bestaat, dus daar is de sleutel compleet;
+`event_overname` draagt een EVENT-kolom in plaats van een doel-kolom en of dát volstaat is niet
+gemeten. Staat als nakijkpunt bij ROADMAP punt 64.
+
+## 32k. De weerleggingspas van ronde 6 — de CODE hield, de METINGEN niet
+
+Vijf lenzen. Drie kwamen terug met `weerlegd: true`, twee met `false`. **Geen enkele bevinding raakte
+de gebouwde functionaliteit** — poort (2b), `ijkStatus`, de migratie en de route doen wat zij moeten
+doen — **maar vier van de zes claims waarmee ik dat onderbouwde, hielden geen stand.** Elke bevinding
+hieronder is door mij hermeten voordat ik haar overnam; wat ik niet kon reproduceren staat er niet.
+
+### Wat KANTELDE aan de metingen
+
+**1. Het orakel was niet onafhankelijk, en de mutatie-controle was zelf de tautologie die zij moest
+uitsluiten.** Volledig uitgeschreven in §32c. Kern: `gepland.has(ma)` en
+`computeMacroPhase(...).week === 1` zijn op de fixture 260 van 260 gelijk, en
+`DOELBLOK_OPENINGSWEEK` is de enige parameter van dat predicaat — dus de gekozen mutatie is precies
+de klasse die het orakel moet betrappen. Het decisieve getal heb ik zelf: **het orakel is blind voor
+de ingreep van deze ronde.** De build zonder de doel-helft geeft in V3 dezelfde vijf getallen als de
+build mét, terwijl zij op V2 4 van 7 geeft in plaats van 7 van 7.
+
+**2. De takken-noemer was 5200 en is 260.** `p64-takken2.mjs` draait `for (let z = 1; z <= 20; z++)`
+maar gebruikt `z` nergens in de body — geverifieerd met één grep: de enige treffer binnen de lus is
+de lusheader. Twintig byte-identieke replica's. Elk getal was exact 20× de enkelvoudige telling.
+Gecorrigeerd in §32d.
+
+**3. V3 kon poort (2b) niet zien.** Eén aanroep per week met `todayISO === weekMondayISO`, dus de
+bewaarde `blokStart` matchte nooit: **poort (2b) vuurde 0 van de 440 keer, in beide armen.** "VOOR is
+gelijk aan NA" was daar een constructie-identiteit. Hermeten met zevendaagse bemonstering en een
+teller op de poort: **3080 keer bereikt, 2640 keer gevuurd**, uitkomsten identiek. De conclusie
+houdt, de eerste meting droeg haar niet. Gecorrigeerd in §32e.
+
+**4. Het scenario waarmee de ingreep verantwoord werd, geeft delta NUL.** `Onderhoud` kan per
+constructie nooit in `ijking_doel` staan. Volledig uitgeschreven in §32e onder V2; de docstrings, de
+testfixture en het bouwdoc zijn erop rechtgezet.
+
+### Wat KANTELDE aan het GEDRAG, en gerepareerd is
+
+**5. De route accepteerde een HALVE rij met 200.** De docstring boven `writeIjking` belooft "ALLE
+DRIE OF GEEN", maar de route dwong dat niet af. De gevaarlijkste vorm is
+`{blok, doel, antwoord: null}`: poort (2b) leest `ijkingAntwoord` NIET — hij sleutelt alleen op blok
+en doel — dus die rij onderdrukt het aanbod twaalf weken lang terwijl `ijkStatus` zowel `bevestigd`
+als `ongeijkt` op false zet en de staat-regel dus NIETS zegt. Onderdrukking zonder uitleg is precies
+wat M91 verbiedt. Vandaag onbereikbaar vanuit `TestVoorstelCard`, maar een tweede schrijver maakt
+hem zo. GEREPAREERD: de route eist nu alle drie of geen, met zes 400-gevallen in de test, elk
+geasserteerd op de schrijfkant.
+
+### Wat KANTELDE en als RESIDU is vastgelegd
+
+**6. "Hoogstens één aanbod per opening" (M92) geldt nu per (opening, doel).** `sync_state` draagt
+ÉÉN paar en geen verzameling, dus een beantwoord aanbod voor een nieuw doel OVERSCHRIJFT het
+antwoord van het vorige. GEMETEN, zelf nagerekend: FTP beantwoord met `niet_nu` op maandag, dinsdag
+naar Korte beklimmingen en woensdag terug naar FTP geeft **2 aanbiedingen op dezelfde
+openingsmaandag `2026-09-21`**; vóór de ingreep waren dat er 0. Dat is besluit één twee keer
+toegepast — elke wissel is een nieuw blok met een nieuwe doelstelling — en het is de prijs ervan.
+Dichtzetten vraagt een VERZAMELING beantwoorde doelen per opening, en dat is een andere kolomvorm
+dan `doel_passend` en `dosis_trede` gebruiken. Vastgelegd bij poort (2b) en als nakijkpunt bij
+ROADMAP punt 64.
+
+**7. De migratie heeft geen backfill, en dat kost meer dan alleen het aanbod.** Een rij die
+0011 heeft achtergelaten draagt `ijking_doel` NULL. Dat het AANBOD dan terugkomt was al opgeschreven
+als de veilige kant. Wat er niet stond: `ijkStatus.bevestigd` en `.ongeijkt` vallen allebei naar
+false, dus ook de M91-regel "Je drempel is dit blok niet geijkt." verdwijnt tot de gebruiker opnieuw
+antwoordt. Zelfherstellend na één tik, en er staat vandaag geen zo'n rij in prod (0011 is niet
+gedeployd), maar het hoort genoemd.
+
+### Wat NIET kantelde
+
+**Claim (1) — de migratie.** Twee lenzen bevestigden hem en één maakte hem scherper: `0012` is één
+`ALTER TABLE ADD`, `git diff` op `0011.sql` en `0011_snapshot.json` is nul, `_journal.json` is puur
+append (idx 12), de snapshotketen klopt (`0012.prevId === 0011.id`), 12 tabellen vóór en ná, en de
+enige kolomdelta over alle twaalf tabellen is `sync_state` +`ijking_doel`, 0 verwijderd.
+
+**Claim (5) — besluit twee.** Niet te weerleggen, met een exhaustieve sweep van 9 ankers × 501 dagen
+= **4509 gevallen, 0 verschillen** in zwijgen-versus-spreken tussen de oude en de nieuwe vorm, en de
+eerste sprekende afstand op 84 dagen bij élk anker — ook bij ankers die de DST-sprongen van 2026 en
+de schrikkeldag 2028-02-29 kruisen. Dat DST er niet doorheen komt is geen toeval: `dagenTussen_`
+gebruikt `Math.round` en niet `floor`. De ontbrekende enkelvoudstak is aantoonbaar onbereikbaar:
+`ijkStaatRegel` heeft precies één niet-test-aanroeper (`SchemaView.tsx`), en `Preview.tsx` rendert
+hem niet.
+
+**De tegenkant van V2**, en breder dan ik zelf gemeten had: een doorrollend blok zonder wissel geeft
+0 tweede aanbiedingen over alle twaalf blokweken × 7 dagen, en over de volledige 260-weekse keten
+met telkens `niet_nu` blijven beide armen op 22 aanbiedingen, 22/22 openingen, MAX 1, 0 buiten.
+
+**Geen rotatie in poort (2b) zelf.** Kruistabel over 270 combinaties van (opgeslagen blok × opgeslagen
+doel × huidig doel): 72 gevallen waar VOOR onderdrukt en NA niet — de bedoelde versoepeling — en
+**0 gevallen** waar NA onderdrukt en VOOR niet. De poort is per constructie een verzwakking (een
+conjunctie erbij), dus daar kan niets nieuws onderdrukt worden. De rotatie die er wél is, zit in de
+OPSLAG (punt 6) en in de MIGRATIE (punt 7).
+
+**De client kan de route niet stil laten falen.** `normalizeDoel_` is totaal op `DOEL_OPTIONS` over
+19 fuzz-invoeren, en over 176 geproduceerde voorstellen was er 0 met een `blokStart` die `isIsoDate`
+zou weigeren en 0 met een doel buiten de lijst. Vastgelegd als test.
+
+### Twee bevindingen BUITEN deze ronde, gemeld en niet gebouwd
+
+**(i) De PLAN-uitgang verzet de leeftijd wel.** Mijn formulering "`laatsteGelegenheid` kent alleen
+GEREDEN maximale inspanningen" is te sterk: de functie kent een GEPLANDE test op een dag waarop
+minstens `GELEGENHEID_MIN_MINUTEN` (15) is gefietst, en 15 minuten is geen maximale inspanning.
+Gemeten: met een test-override op vandaag plus 20 gereden minuten valt `wekenOud` van 17 naar 0; met
+14 minuten gebeurt er niets. Naast de bevestig-knop, die de teller bewust niet mag verzetten, staat
+dus een knop die hem wel verzet. Dat is bestaand gedrag van vóór deze ronde en raakt besluit twee
+niet — bevestigen maakt de drempel niet jonger, en dat blijft gemeten waar — maar het hoort genoteerd.
+
+**(ii) Dode machinerie in poort (5).** Het filter `d.gedaan !== true` kan per constructie nooit vals
+zijn: `planner_days.gedaan` heeft één schrijver in de worker die hem altijd op 0 zet, de PUT-route
+weigert het veld, en `buildTestVoorstel` krijgt de RAUWE rijen uit `schema.ts` zonder
+`derivePlannerDays`. Een conditie die als levende beveiliging leest — CHECK 27. Bestaand gedrag, niet
+van deze ronde, en niet gerepareerd omdat sectie 4(d) poort (5) onaangeroerd laat.
+
 <!-- EINDE docs/PUNT47-BOUW.md -->

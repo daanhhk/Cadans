@@ -2468,7 +2468,15 @@ punten staat onder *Gesloten — vindplaats*.
     440 van de 440. 77 ligt daar met één structurele dag onder, ontleend aan de vensterbreedte in
     plaats van aan het extremum van de verschuiving. Het residu is daarmee weg: dekking 100,0
     procent bij beide weekvormen.
-59. **De BEVESTIG-uitgang, de duurzame ONGEIJKT-staat en de bevestigings-teller** — open · CLIENT
+59. **De BEVESTIG-uitgang, de duurzame ONGEIJKT-staat en de bevestigings-teller** — **AF
+    (24-08-2026, ronde 6).** (a) en (b) zijn op 23-08-2026 gebouwd; (c), de teller van opeenvolgende
+    bevestigingen, is op 24-08-2026 **VERVALLEN met grond** en niet uitgesteld. Daan-besluit: de
+    zichtbaarheid van een niet-gemeten drempel is de LEEFTIJD IN WEKEN, niet een teller van
+    bevestigingen — weken zijn wat de renner nodig heeft om te oordelen, "drie blokken" is een
+    teleenheid van de app en een teller van bevestigingen telt een handeling in plaats van een
+    ouderdom. `ijkStaatRegel` leest sinds die dag `wekenOud`, en die leeftijd hangt aan de laatste
+    GEREDEN maximale inspanning; een bevestiging kan hem per constructie niet verzetten (gemeten,
+    `docs/PUNT47-BOUW.md` §32f). Er komt dus geen kolom bij voor (c).
     plus DATA plus norm. ÉÉN punt en één ronde, want alle drie delen dezelfde drager. Norm ligt er
     al: M92 (drie uitgangen bij een opening) en M91 (een afwijzing is geen meting; de app draagt de
     ONGEIJKT-staat en zegt haar).
@@ -2543,7 +2551,40 @@ punten staat onder *Gesloten — vindplaats*.
     338; bij één per 8 weken 420. En het tilt de frequentie NIET: met de sprong eruit geeft de bron
     bij alle drie de tempo's precies **440 van de 440 openingen één aanbod**, maximum 1 — poort (1)
     en de vloer bewaken M90b, niet de sprong.
-64. **Het ijk-antwoord heeft geen DOEL-kolom, en de openingsmaandag alleen volstaat niet** — open ·
+64. **Het ijk-antwoord heeft geen DOEL-kolom, en de openingsmaandag alleen volstaat niet** — **AF
+    (24-08-2026, ronde 6).** `sync_state.ijking_doel` erbij via
+    `workers/api/drizzle/0012_acoustic_living_mummy.sql` (één `ALTER TABLE ... ADD`, forward-only,
+    0011 onaangeroerd). Poort (2b) en `ijkStatus` vergelijken sindsdien BLOK ÉN DOEL, genormaliseerd
+    aan beide kanten, precies zoals `doelPassendVoorstel` stap 5 dat al deed.
+    GEMETEN met de echte `blokStartBijDoel` en de echte `buildTestVoorstel`, beantwoorde opening
+    2026-09-21: een doelwissel gaf **op 4 van de 7 dagen** van die week een aanbod en geeft er nu
+    **7 van 7**. De klem is niet veranderd — `blokStartBijDoel` levert nog steeds op 3 van 7 dagen
+    dezelfde maandag — de SLEUTEL wel.
+    **HET SCENARIO IS RECHTGEZET NA DE WEERLEGGINGSPAS.** Dit punt schreef eerst dat het om Daans
+    februari-scenario ging, Onderhoud naar Korte beklimmingen. Dat geeft juist DELTA NUL:
+    `blokCheckEnabled("Onderhoud")` is false, dus daar komt nooit een aanbod en kan er voor die
+    opening ook nooit een rij worden weggeschreven — zonder rij onderdrukte de oude poort al niets
+    (7/7 vóór én ná). De winst hoort bij een wissel tussen twee EFFECT-doelen, bijvoorbeeld FTP naar
+    Korte beklimmingen. `Onderhoud` is per constructie onbereikbaar als opgeslagen doel.
+    TEGENKANT gemeten: een doorrollend blok ZONDER wissel geeft **0 van 7** tweede aanbiedingen,
+    zowel vóór als ná, dus de ingreep schiet niet door. De getallen van ronde 5 zijn onaangeroerd:
+    440/440 aanbiedingen per opening, MAX 1, gat 84,0 dagen op dezelfde noemer.
+    **DRIE NAKIJKPUNTEN DIE OPEN BLIJVEN.**
+    (a) M92's "hoogstens één aanbod per opening" geldt sinds deze ronde per (opening, DOEL).
+    `sync_state` draagt één paar en geen verzameling, dus een beantwoord aanbod voor een nieuw doel
+    OVERSCHRIJFT dat van het vorige. GEMETEN: FTP beantwoord met niet_nu op maandag, dinsdag naar
+    Korte beklimmingen, woensdag terug naar FTP geeft **2 aanbiedingen op dezelfde openingsmaandag**
+    waar het er vóór de ingreep 0 waren. Dichtzetten vraagt een VERZAMELING beantwoorde doelen per
+    opening — een andere kolomvorm dan `doel_passend` en `dosis_trede` gebruiken.
+    (b) Migratie 0012 heeft geen BACKFILL. Een rij die 0011 achterliet draagt `ijking_doel` NULL;
+    dan komt niet alleen het aanbod terug (de bewuste veilige kant) maar verdwijnt ook de
+    M91-regel "Je drempel is dit blok niet geijkt." tot de gebruiker opnieuw antwoordt.
+    Zelfherstellend, en er staat vandaag geen zo'n rij in prod omdat 0011 niet gedeployd is.
+    (c) Of `dosis_trede_*` en `event_overname_*` dezelfde blootstelling hebben. `dosis_trede_doel`
+    bestaat, dus daar is de sleutel compleet; `event_overname` draagt een EVENT-kolom
+    (`event_overname_event`) in plaats van een doel-kolom, en of dát volstaat is NIET gemeten. Merk
+    op dat het idiom dus twee-van-drie is en niet drie-van-drie.
+    De oorspronkelijke diagnose staat hieronder.
     MIGRATIE plus client. GEMETEN 23-08-2026 op de echte `blokStartBijDoel`, weerleggingspas ronde 5
     (`docs/PUNT47-BOUW.md` §31b punt 3). Met `WISSEL_LAATSTE_DAG = 3` klemt een doelwissel op
     maandag, dinsdag of woensdag naar de maandag van DEZE week. Valt zo'n wissel in de week waarin
@@ -2903,15 +2944,31 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
     (3) is uitgelijnd op de opening. 60: de sprong is uit de ijk-poort, met een vlag zodat de
     terugblik hem als informant houdt. 59: de bevestig-uitgang staat op `sync_state.ijking_*` met
     één migratie, en de vluchtige module-`Set` is weg. Eerste ronde van deze reeks die de worker en
-    een migratie raakte. Wat van 59 openblijft is de letterlijke bevestigings-teller; zie het punt.
+    een migratie raakte. Wat van 59 openbleef is de letterlijke bevestigings-teller; die is in 11d-2
+    VERVALLEN.
+11d-2. **64 + 59(c)** — AF (24-08-2026, ronde 6), kleine ronde en de TWEEDE en LAATSTE keer dat deze
+    reeks D1 raakt. 64: `sync_state.ijking_doel` erbij met migratie 0012, zodat een bevestiging geldt
+    voor het DOEL waarvoor zij gegeven is — gemeten van **4 van 7 naar 7 van 7** wisseldagen met een
+    aanbod, terwijl een doorrollend blok op **0 van 7** blijft. 59(c): de bevestigings-teller is
+    VERVALLEN met grond en vervangen door de LEEFTIJD IN WEKEN; punt 59 is daarmee helemaal af.
     **DE VOLGENDE IS 11e.**
 11e. **61 (+ 54)** — de DOELCHECK aan het eind van het doelblok, de tweede helft van M89.
+    **DIT IS DE EERSTVOLGENDE RONDE**, bevestigd 24-08-2026. Het is het enige deel van punt 47 dat
+    nooit is aangeraakt.
     **NAAR VOREN GEHAALD op Daan-besluit van 23-08-2026, met een DATUM als grond:** in februari
     sluit het onderhoudsblok en dan is de vraag of de FTP het gehouden heeft, vóór de
     Amstel-Gold-voorbereiding begint. Dat is een harde kalendergrond en geen voorkeur, en hij zet 61
     vóór 48, 49, 35 en 32. 54 (welke maat per doel) hangt eraan vast en wordt in dezelfde beweging
-    beslist. De grondstof voor de §3.2-maat ontbreekt nog; de dichtstbijzijnde route is het
-    power-curve-venster verbreden, en wat daar precies aan mist staat bij het punt.
+    beslist.
+    **DE LEESVRAAG IS BEANTWOORD (ronde 5, `docs/PUNT47-BOUW.md` §30) en de uitkomst is: de
+    grondstof ontbreekt op HEAD.** `DOELEN-SPEC` §3.2 vraagt het beste 20-minutenvermogen over ZES
+    WEKEN. Dat getal bestaat als marker — `PC_MARKERS_` draagt `{ sec: 1200, label: "20m", key: true }`
+    — maar alleen over de twee vensters die de power-curve kent:
+    `export type PowerCurveWindow = "90d" | "1y";` met route-whitelist
+    `const ALLOWED_WINDOWS = new Set<string>(["90d", "1y"]);`. De dichtstbijzijnde route is dus een
+    DERDE waarde in die union plus de whitelist, én — het onbekende — VERIFICATIE dat intervals.icu
+    die `curves`-waarde accepteert op `GET /athlete/{id}/power-curves?type=Ride&curves=<window>`.
+    Dat laatste vraagt een echte API-aanroep en is niet vanaf schijf te beantwoorden.
 11f. **63** — het ONDERWEG-SIGNAAL: één aanbod, twee aanleidingen. DAARNA, en niet eerder, want het
     WACHT op punt 49: de app moet per rit in de TIJDLIJN kunnen kijken en zoneminuten-totalen dragen
     dat niet.
