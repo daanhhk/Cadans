@@ -661,6 +661,23 @@ Verder bevestigde pas 1 twee dingen zelfstandig die ik daarna heb nagemeten: `nu
 hebben precies **twee** aanroepplekken (de settings-PUT en de planner-PUT), en de planner-tak guard't
 met `== null` **vóór** de helper, dus die route ziet nooit een null en is byte-identiek gebleven.
 
+### De deploy
+
+**GEDAAN, met Daans akkoord en niet onder auto.** De volledige regel staat in
+`docs/PROD-STAND.md`.
+
+```
+nieuwe versie  0fcb0ddf-1796-4084-ae6e-0062c7033a28   (100%, 2026-08-24T14:53:25.510Z)
+weg terug      npx wrangler rollback 940414c4-be95-4968-9eef-542a188db563
+```
+
+De weg terug is VOORAF geverifieerd in `wrangler versions list` (die houdt er tien; het doel stond
+er als nieuwste in). Geen migratie, geen D1-mutatie. Na-verificatie: de versie draait op 100 procent
+en de geüploade bundelnaam is gelijk aan die in de lokale `apps/web/dist/index.html`. **CC-CHECKS 37
+is NIET gedraaid** — de byte-vergelijking vraagt de live `index.html` en de origin zit achter een
+basic-auth-gate met een deploy-only secret. Wat Daan moet aanklikken om de reparatie zelf te zien,
+staat in `docs/PROD-STAND.md`.
+
 ### Wat NIET is gerepareerd, en dat is een bewuste grens
 
 De stille `catch` is niet één plek maar een SJABLOON: gemeten **14 `catch {`-blokken in 12

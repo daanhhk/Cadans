@@ -62,6 +62,16 @@ gerepareerd, getest en uitgerold.
   M92; het is gepromoveerd tot **M93 (NORM)** — M92 gaat over de PLAATSING van de ijking, M93 over de
   REKENREGEL. Tegelijk rechtgezet: die eerste versie schond **M2** (geen bestandsnamen of
   regelnummers in de canon); de vindplaatsen staan nu in het verdict-document.
+- **DE REPARATIE IS UITGEROLD**, met Daans akkoord en niet onder auto. Nieuwe worker-versie
+  **`0fcb0ddf-1796-4084-ae6e-0062c7033a28`** (100%, `2026-08-24T14:53:25.510Z`); de weg terug is
+  VOORAF geverifieerd en luidt `npx wrangler rollback 940414c4-be95-4968-9eef-542a188db563`. Geen
+  migratie, geen D1-mutatie — remote D1 draagt onveranderd 0000 t/m 0012. Volledig in
+  `docs/PROD-STAND.md`.
+- **WAT NA DE DEPLOY NIET IS VASTGESTELD, en dat is geen detail.** CC-CHECKS 37 is opnieuw NIET
+  gedraaid (basic-auth-gate, deploy-only secret); er is alleen een NAAM-vergelijking van de bundel
+  (`assets/index-DTgN90UH.js`, gelijk aan de lokale `index.html`). En of de doel-wissel op PROD landt,
+  heb ik niet kunnen toetsen — dezelfde gate, én de kaart vuurt alleen bij een doel MET urenvloer,
+  dus niet bij `FTP`. Wat Daan moet aanklikken staat in `docs/PROD-STAND.md`.
 - **VLOEREN: lees ze zelf uit de suite.** Neem geen getal over uit een blok.
 - **OPENSTAAND, elk item opnieuw te greppen in `docs/ROADMAP.md`:** 32 · 34 (alleen (d)) · 35 · 48 ·
   49 · 51 (alleen (3)) · 53 · 54 · 56 · 61 · 63 · 64 · 65 (alleen de REPARATIE) · 66 · 67 · 68 · 69 ·

@@ -466,6 +466,50 @@ of een tijdelijke `doelStart`-verzetting, en dat laatste is zelf een schrijfacti
 er geen 500 staat op het schema-scherm. Meer valt er vandaag niet aan te zien — en dat is precies
 wat hierboven staat.
 
+## 2026-08-24 — DEPLOY: de reparatie van punt 73
+
+**Uitgerold:** commit `1dcd1e1` (de reparatie zelf zit in `5a15544`). Geen migratie, geen
+D1-mutatie — remote D1 draagt onveranderd 0000 t/m 0012.
+
+```
+nieuwe versie   0fcb0ddf-1796-4084-ae6e-0062c7033a28   (100%)
+aangemaakt      2026-08-24T14:53:23.751Z
+uitgerold       2026-08-24T14:53:25.510Z
+vorige versie   940414c4-be95-4968-9eef-542a188db563   (sinds 2026-08-24T05:35:34.799Z)
+```
+
+**DE WEG TERUG, en die is VOORAF gemeten en niet aangenomen:**
+`npx wrangler rollback 940414c4-be95-4968-9eef-542a188db563` vanuit `workers/api`. Die versie stond
+vóór de deploy geverifieerd in `wrangler versions list` — die lijst houdt er **tien**, en het doel
+stond er als nieuwste in. Een worker-deploy raakt D1 niet, dus de rollback IS de weg terug; Time
+Travel is hier niet aan de orde.
+
+**WAT ERIN ZIT.** Een expliciete `null` in een `PUT /api/settings`-body is nu een LEGE WAARDE in
+plaats van een 400. Daarmee werkt de doel-wissel-knop weer: die stuurde het volledige settings-object
+terug (wat FULL-REPLACE ook vereist), dat object draagt nulls, en de kaart at de 400 stil op.
+
+**DE NA-VERIFICATIE, en wees precies over wat er wél en niet is vastgesteld:**
+
+- **WAT IS VASTGESTELD.** De versie draait op 100 procent (`wrangler deployments list`), en de
+  geüploade bundelnaam `assets/index-DTgN90UH.js` is gelijk aan die in de lokale
+  `apps/web/dist/index.html`.
+- **CC-CHECKS 37 IS NIET GEDRAAID**, om dezelfde reden als op 24-08-2026 eerder: die check wil de
+  LIVE `index.html` byte-voor-byte tegen de lokale build leggen, en de hele origin zit achter een
+  basic-auth-gate waarvan het wachtwoord een deploy-only secret is. Wat er is, is een
+  NAAM-vergelijking. Dat vervangt de byte-vergelijking niet.
+- **OF DE DOEL-WISSEL OP PROD LANDT, IS NIET DOOR MIJ GETOETST** — zelfde gate. En het is ook niet
+  vanzelf zichtbaar: de kaart vuurt alleen als het staande doel een URENVLOER draagt waar de
+  opgegeven weekuren onder zitten, en bij doel `FTP` is er per constructie geen vloer.
+
+**WAT DAAN KAN CONTROLEREN, en waar hij precies naar kijkt:** open
+`https://cadans-api.dtkorteweg.workers.dev/`, log in met de basic-auth, en kijk of de weekkaart
+normaal laadt en het schema-scherm geen 500 geeft — dat is de rooktest op de deploy zelf. Wil hij de
+REPARATIE zien werken, dan moet de doel-passend-kaart zichtbaar zijn: dat vraagt een doel mét
+urenvloer (dus niet FTP) en weekuren daaronder. Staat die kaart er, dan is de toets één tik op
+**"Wissel naar …"** — vóór deze deploy deed die knop niets en zei hij niets; nu hoort het doel te
+wisselen en de kaart te verdwijnen. Mislukt het toch, dan staat er sinds deze ronde een melding in
+plaats van stilte.
+
 ## Wat een volgende ronde hier moet bijwerken
 
 - Elke toegepaste migratie: naam, `applied_at`, en of er backfill nodig was.
