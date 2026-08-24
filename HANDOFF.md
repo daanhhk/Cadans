@@ -13,8 +13,20 @@ live tot cutover.
 
 ## Stand
 
-STAND 2026-08-24 (VIERDE BLOK VAN DEZE DAG) — HET FTP-VOORSTEL IS ONDERZOCHT EN **WACHT OP ÉÉN
-BESLUIT VAN DAAN**. Punt 69. Bouwronde geworden tot onderzoeksronde: **er is geen regel code
+STAND 2026-08-24 (VIERDE BLOK VAN DEZE DAG) — HET FTP-VOORSTEL IS ONDERZOCHT, EN **HET BESLUIT IS
+NOG IN DEZELFDE SESSIE GEVALLEN**. Punt 69.
+
+**BOVENAAN, want het verandert de stand van dit punt: DAAN KOOS OP 24-08-2026 WEG A.** De nieuwe
+drempelwaarde is **95 procent van het beste twintigminutenvermogen uit de testrit**, afgelezen op
+`secs = 1200`. Vastgelegd mét herkomst-etiket en drie randvoorwaarden in `docs/TRAININGSMODEL.md`
+§13, direct onder M92 — dus in de CANON, en dat was precies het gat dat Q2 deed omvallen. **Q2 is
+gesloten en de bouw uit `docs/PUNT69-BOUW.md` §6 is VRIJGEGEVEN.** Hij is niet meer in deze ronde
+uitgevoerd: de close-out was al gedaan en migratie 0013 is een prod-handeling met een eigen
+goedkeuring. Wat onlosmakelijk bij die bouw hoort: punt 73 (zonder partieel schrijfpad kan de
+goedkeuring niets wegschrijven), een poort die vaststelt dat de test ook echt GEREDEN is, en een
+plausibiliteitsgrens.
+
+Wat hieronder staat is de stand zoals die was toen de vraag gesteld werd. Bouwronde geworden tot onderzoeksronde: **er is geen regel code
 geschreven**, want verwachting Q2 viel om en de prompt had precies dat geval voor-geautoriseerd. Het
 volledige stuk staat in `docs/PUNT69-BOUW.md`; **het besluitblok is §10 en dat is wat Daan moet
 lezen.**
@@ -82,10 +94,19 @@ lezen.**
   49 · 51 (alleen (3)) · 53 · 54 · 56 · 61 · 63 · 64 · 65 (alleen de REPARATIE) · 66 · 67 · 68 ·
   69 (wacht op het besluit) · 71 · 72 · 73 · 74.
 
-FOCUS VOLGENDE CHAT: **ROADMAP punt 61 — de DOELCHECK aan het eind van het doelblok, de tweede helft
-van M89, samen met punt 54 (welke maat per doel).** Punt 69 ligt stil tot Daan de factor kiest; zodra
-dat besluit er is, is de bouw één ronde — §6 van `docs/PUNT69-BOUW.md` beschrijft hem volledig, en punt
-73 hoort daar dan bij omdat de goedkeuring anders niets kan wegschrijven. **BEGIN BIJ DE GRONDSTOF, en
+FOCUS VOLGENDE CHAT: **ROADMAP punt 69 BOUWEN — het FTP-voorstel, samen met punt 73.**
+
+**DIT WIJKT AF VAN DE PROMPT, die de doelcheck als FOCUS voorschreef, en de reden is dat het besluit
+tijdens de ronde viel.** De prompt schreef die FOCUS toen punt 69 nog op een open besluit wachtte;
+dat besluit is er nu, dus punt 69 is niet langer geblokkeerd en staat in de volgorde (11d-7) vóór
+punt 61. Het is bovendien een half afgemaakte functie in gebruikershanden: de app vraagt vandaag om
+een meting en doet niets met de uitslag. De bouw ligt volledig beschreven in `docs/PUNT69-BOUW.md`
+§6 en is naar schatting één ronde. Neem punt 73 mee — zonder partieel schrijfpad kan de goedkeuring
+niets wegschrijven — en reken op migratie 0013 met een eigen prod-goedkeuring. Wie het toch anders
+wil, draait de volgorde om en zet punt 61 voorop; beide zijn verdedigbaar.
+
+**DAARNA punt 61 — de DOELCHECK aan het eind van het doelblok, de tweede helft van M89, samen met
+punt 54 (welke maat per doel). BEGIN BIJ DE GRONDSTOF, en
 die is deze week gemeten:** `DOELEN-SPEC` §3.2 vraagt het beste 20-minutenvermogen over ZES WEKEN,
 en dat venster BESTAAT — `curves=42d` werkt, `curves=6w` wordt geweigerd met 422, en `curves=42d,90d`
 geeft beide vensters in ÉÉN verzoek. Let op twee dingen die in `docs/RITDATA-RECON.md` staan:
