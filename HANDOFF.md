@@ -13,6 +13,95 @@ live tot cutover.
 
 ## Stand
 
+STAND 2026-08-24 (VIERDE BLOK VAN DEZE DAG) — HET FTP-VOORSTEL IS ONDERZOCHT EN **WACHT OP ÉÉN
+BESLUIT VAN DAAN**. Punt 69. Bouwronde geworden tot onderzoeksronde: **er is geen regel code
+geschreven**, want verwachting Q2 viel om en de prompt had precies dat geval voor-geautoriseerd. Het
+volledige stuk staat in `docs/PUNT69-BOUW.md`; **het besluitblok is §10 en dat is wat Daan moet
+lezen.**
+- **DE VRAAG AAN DAAN, in één zin: met welk getal zet de app twintig minuten om in een
+  drempelwaarde?** Weg A is 95 procent van de beste twintig minuten uit de rit — wat beide apps al
+  TONEN. Weg B is 95 procent van het gemiddelde over het voorgeschreven blok `20-MIN ALL-OUT`, dichter
+  bij de letter van het protocol maar een tweede verzoek per rit. Weg C is een ander percentage. **Zonder
+  dat getal kan het voorstel niet gebouwd worden**, en dat is geen bouwdetail: het bepaalt elke zone en
+  elke dosis van de twaalf weken erna.
+- **Q1 HOUDT, gemeten.** De 20-minutenwaarde staat DIRECT afleesbaar op het exacte roosterpunt
+  `secs = 1200` van de per-rit-kromme: `secs.indexOf(1200) = 109`, `values[109] = 195 W`, 5353 bytes,
+  één verzoek. Geen stream (**363535** bytes, ongeveer 68 keer zo groot) en geen engine-wijziging —
+  een index-lookup in de worker volstaat. **Lees op 1200 en neem geen lopend maximum**, zie het blok
+  hieronder.
+- **Q2 VALT, op TWEE onafhankelijke gronden, en dat stopte de ronde.** (1) De canon zwijgt: geen
+  omrekenregel in `TRAININGSMODEL` of `DOELEN-SPEC`. Pas op met de twee 95-en die er wél staan —
+  `TRAININGSMODEL:505/509` is een ZONEGRENS en `DOELEN-SPEC:252` een BEHOUD-VLOER die FTP met FTP
+  vergelijkt. (2) **Het is niet ÉÉN regel: de test is DOEL-AFHANKELIJK.** `planner.ts:2071` kiest vier
+  protocollen over vijf doelen en alleen FTP draagt een omrekening; Conditie meet HR-drift,
+  Beklimmingen is een manuele PR-vergelijking, en `vo2max.ts` kent helemaal geen test. Een voorstel dat
+  na ELKE test vuurt, leidt onder de andere doelen een drempel af uit een rit die daar niet voor is.
+- **DE UITWEGEN ZIJN ALLEBEI DICHT, en dat is gemeten.** `powerModels` en `ranks` op de
+  intervals-respons zijn **null**, dus de bron levert zelf geen schatting. En intervals' eigen
+  schatting mág niet: `TRAININGSMODEL:630` zegt dat `rolling_ftp` *"een proxy in precies de zin die
+  M91 verbiedt"* is. De bevroren GAS-app deed precies dát — `src/Sync.gs:696` `setFtp(newFtp)` uit
+  `s.mmp_model.ftp` — en dat pad is voor Cadans bewust niet geport.
+- **HERKOMST IS GEEN GEZAG, en dat staat in de werkwijze.** De 95 procent staat twee keer in de
+  bevroren bron (`src/Workouts/Ftp.gs:123`, `src/Doel.gs:22`), maar `docs/WERKWIJZE.md:57`:
+  *"GAS is een PORT-referentie, geen normbron."* Wat wél waar is en wat ik eerst verkeerd had: de
+  regel is niet lezerloos — hij RENDERT (`WorkoutDetail.tsx:167`), dus **Daan ziet die zin elk
+  testblok op zijn scherm.**
+- **NIEUW EN LIVE: ROADMAP PUNT 73 — `PUT /api/settings` kan geen enkel veld wijzigen zonder de rest
+  te wissen, en de doel-wissel loopt daar VANDAAG stil op stuk.** `writeSettings` is full-replace, dus
+  een partiële body nult vijftien velden; een volledige body klapt op `numField`/`strField`
+  (`api.ts:124-135`) zodra een veld null is. GEMETEN op de lokale D1: **`fase` is null**.
+  `DoelPassendCard.wissel()` stuurt het volledige object terug, krijgt een 400, en de
+  `catch { setSaving(false) }` slikt hem — **de knop doet niets en zegt niets.** Niet gemeten: of de
+  PROD-rij ook een null-veld draagt. Punt 69 heeft dit pad nodig om een goedgekeurde FTP weg te
+  schrijven.
+- **ROADMAP PUNT 74:** zes van de 21 kolommen op `sync_state` zijn dood, waaronder `ftp_last_sync` —
+  de port-schaduw van `setFtpLastSync` in GAS. Die naam nodigt uit tot hergebruik door precies de
+  ronde die het FTP-voorstel bouwt.
+- **DE WEERLEGGINGSPAS: 4 VAN 4 LENZEN VOLTOOID, nul gestorven, en hij draaide VOOROP.** Drie van de
+  vier haalden hun claim onderuit — en het waren mijn eigen zinnen. Zwaarste correctie: *"`testResultaat`
+  doet die match al"* is FOUT. Die functie leest uitsluitend de OVERRIDE en raakt geen enkele
+  activiteit; de koppeling plan→rit is niet meer dan dezelfde kalenderdag plus 15 fietsminuten, en bij
+  twee ritten houdt `done.idExt` de LANGSTE. Er is dus **geen bestaande poort** die zegt dat de test
+  ook echt gereden is.
+- **DE BACKFILL IS NIET GEDRAAID en er is niets voor gebouwd**, met grond: §7 van de prompt zette de
+  volgorde vast op bouwen-dan-droogdraaien-dan-akkoord, en de bouw vond niet plaats. De
+  randvoorwaarden staan genoteerd (gedoseerd, teller, harde bovengrens die GOOIT, HERSTARTBAAR, alleen
+  lezen) voor de ronde die hem wél bouwt: ongeveer **255 ritten**, ongeveer **1,4 MB**, één verzoek per rit.
+- **NIEUW IN DE WERKWIJZE: CC-MODUS.** Auto mag voor recon en client-only bouw; hij gaat UIT zodra
+  prod, remote D1 of een deploy in beeld komt, en voor elke handeling die naar buiten schrijft of in
+  bulk leest — een backfill hoort daarbij. En auto is nooit toestemming om door een omgevallen
+  verwachting heen te lopen.
+- **TWEE GET-VERZOEKEN aan intervals.icu**, allebei op `/activity/i172391866/power-curve`, achter een
+  bovengrens die GOOIT. Geen mutatie, nergens. De sleutel heet `INTERVALS_API_KEY` en zijn waarde staat
+  nergens.
+- **`docs/RITDATA-RECON.md` §2 IS ALSNOG RECHTGEZET.** Die meetsectie droeg de premisse die punt 70
+  introk nog steeds als feit; §8 stond al goed maar §2 was blijven staan. Nu doorgehaald met de
+  correctie erbij.
+- **VLOEREN: lees ze zelf uit de suite.** Neem geen getal over uit een blok.
+- **OPENSTAAND, elk item opnieuw te greppen in `docs/ROADMAP.md`:** 32 · 34 (alleen (d)) · 35 · 48 ·
+  49 · 51 (alleen (3)) · 53 · 54 · 56 · 61 · 63 · 64 · 65 (alleen de REPARATIE) · 66 · 67 · 68 ·
+  69 (wacht op het besluit) · 71 · 72 · 73 · 74.
+
+FOCUS VOLGENDE CHAT: **ROADMAP punt 61 — de DOELCHECK aan het eind van het doelblok, de tweede helft
+van M89, samen met punt 54 (welke maat per doel).** Punt 69 ligt stil tot Daan de factor kiest; zodra
+dat besluit er is, is de bouw één ronde — §6 van `docs/PUNT69-BOUW.md` beschrijft hem volledig, en punt
+73 hoort daar dan bij omdat de goedkeuring anders niets kan wegschrijven. **BEGIN BIJ DE GRONDSTOF, en
+die is deze week gemeten:** `DOELEN-SPEC` §3.2 vraagt het beste 20-minutenvermogen over ZES WEKEN,
+en dat venster BESTAAT — `curves=42d` werkt, `curves=6w` wordt geweigerd met 422, en `curves=42d,90d`
+geeft beide vensters in ÉÉN verzoek. Let op twee dingen die in `docs/RITDATA-RECON.md` staan:
+`curves=42d` is feitelijk **43 dagen** (`days` 43, `end_date_local` een dag ná vandaag), en §3.2 draagt
+TWEE criteria op TWEE grootheden terwijl een 42d-piek er maar één levert. De whitelist die verbreed
+moet worden is `const ALLOWED_WINDOWS = new Set<string>(["90d", "1y"]);` naast
+`export type PowerCurveWindow = "90d" | "1y";`.
+
+**DE OMGEVINGSVERKLARING BLIJFT EEN STOP-CONDITIE.** Deze ronde: pad `/c/Users/daan/Projects/cadans`,
+`git rev-parse --git-dir` en `--git-common-dir` allebei `.git` dus HOOFDCHECKOUT, branch `main`, 0
+achter en 0 vooruit op `origin/main`, versie `2.1.208 (Claude Code)`, boom schoon bij aanvang.
+Agent-discovery blijft NIET GEMETEN: deze sessie is ouder dan `.claude/agents/recon.md`.
+
+CONTEXT: Daan fietst voorlopig niet, beschikbaarheid 0, planner leeg vanaf 2026-08-09 — **dat is
+geen defect.** Daan GEBRUIKT de gedeployde app; prod is geen proefopstelling. Verse chat.
+
 STAND 2026-08-24 (DERDE BLOK VAN DEZE DAG) — DE RONDE TROK ZICHZELF IN. Punt 70 bestond om een
 leesfout in de power-curve te repareren. **Die leesfout bestaat niet.** De reparatie is geschreven,
 groen getest, en daarna volledig teruggedraaid. **Er is deze ronde GEEN REGEL CODE gewijzigd**, en dat
@@ -79,91 +168,6 @@ het onderweg-signaal (punt 63).
 **DE OMGEVINGSVERKLARING BLIJFT EEN STOP-CONDITIE.** Deze ronde: pad `/c/Users/daan/Projects/cadans`,
 `git rev-parse --git-dir` en `--git-common-dir` allebei `.git` dus HOOFDCHECKOUT, branch `main`, 0
 achter en 0 vooruit op `origin/main`, versie `2.1.208 (Claude Code)`, boom schoon bij aanvang.
-
-CONTEXT: Daan fietst voorlopig niet, beschikbaarheid 0, planner leeg vanaf 2026-08-09 — **dat is
-geen defect.** Daan GEBRUIKT de gedeployde app; prod is geen proefopstelling. Verse chat.
-
-STAND 2026-08-24 (TWEEDE BLOK VAN DEZE DAG) — DE RITDATA IS IN KAART GEBRACHT EN ER LIGT EEN KEUZE
-VOOR DAAN. RECON-ronde: geen bouw, geen migratie, geen deploy, read-only op de repo en LEZEND op
-intervals.icu. **De deliverable is `docs/RITDATA-RECON.md` en die eindigt met VIJF WEGEN in gewone
-taal — Daan leest dat blok en kiest.**
-- **DRIE BEHOEFTEN WACHTTEN OP DEZELFDE ONTBREKENDE GRONDSTOF, en ze blijken drie VERSCHILLENDE
-  dingen te vragen.** (1) Een piek uit ÉÉN rit, voor het FTP-VOORSTEL na een gereden ijkinspanning
-  (nieuw Daan-besluit, ROADMAP punt 69). (2) Een piek over ZES WEKEN, voor de doelcheck. (3) De
-  TIJDLIJN binnen een rit, voor het onderweg-signaal.
-- **DE ZESWEEKSE GRONDSTOF BESTAAT WÉL, en dat was de open vraag.** `curves=42d` geeft 200;
-  `curves=6w` geeft 422 `"Invalid curve: [6w]"`. Het venster is een `<n>d`-vorm en `n` is vrij. **En
-  `curves=42d,90d` geeft BEIDE vensters in ÉÉN verzoek**, dus het lift mee op een aanroep die Cadans
-  al doet.
-- ~~**MAAR "DIRECT AFLEESBAAR" WAS ONJUIST, en dat is de scherpste vondst van de weerleggingspas.**~~
-  **INGETROKKEN 24-08-2026 — DEZE BULLET WAS FOUT. ZIE HET BOVENSTE BLOK.** De waarneming klopte (de
-  `values`-reeks is niet monotoon dalend; 1200s = 261 W en 1380s = 264 W op rit `i166073333`), maar
-  de conclusie eronder niet. "Een echte mean-max-kromme kan niet stijgen met de duur" is wiskundig
-  onjuist, en dus onderschat aflezen op `secs 1200` NIETS. `pcMarkerAt_` leest correct. **Neem hier
-  geen lopend maximum uit over.**
-- **`curves=42d` IS 43 DAGEN.** Gemeten: `label` `"42 days"`, maar `days` **43**, met
-  `end_date_local` een dag NA vandaag. Wie letterlijk zes weken wil, stuurt `oldest`/`newest` mee.
-- **DE HISTORIE-VRAAG IS BEANTWOORD EN FEBRUARI IS GEEN PROBLEEM.** `oldest`/`newest` begrenzen het
-  venster ECHT — gemeten op drie historische bereiken, waarbij niet alleen de DATUM maar ook de
-  WATTS per bereik verschilden (254 W in januari, 265 W in het najaar, 231 W in het voorjaar). De
-  doelcheck hoeft dus NIET vanaf nu op te bouwen; zij kan met terugwerkende kracht elk venster
-  opvragen. Per-rit-krommen zijn ook te backfillen: 255 ritten, ~1,4 MB. Streams zouden ~93 MB zijn.
-- **U1 VALT, U2 HOUDT.** U1: de piek-per-rit en de piek-over-zes-weken komen uit TWEE
-  endpoint-klassen. Bewijs dat ze niet inwisselbaar zijn: het 42d-venster wees rit `i166073333` aan
-  en het 90d-venster `i158575314` — de marker geeft de BESTE rit, niet de LAATSTE. U2: streams zijn
-  363535 bytes tegen 5353 voor de per-rit-kromme, ongeveer 68 keer, bij hetzelfde aantal verzoeken.
-- **EEN VIERDE WEG DIE OP GEEN ENKELE LIJST STOND, en hij is GRATIS.** De activiteitenlijst die
-  Cadans al ophaalt draagt per rit `decoupling` (12/12 ritten), `icu_power_hr_z2` (11/12),
-  `icu_power_hr_z2_mins` en `icu_efficiency_factor` (12/12) — 61.412 bytes voor 42 dagen in ÉÉN
-  verzoek dat er toch al is. Dat zijn AGGREGATEN per rit en geen tijdlijn, maar het onderweg-signaal
-  vraagt een TREND over weken. **Blijkt dat genoeg, dan is het onderweg-signaal de GOEDKOOPSTE van
-  de drie behoeften in plaats van de duurste** — en dat verschuift de volgorde.
-- **TWEE DINGEN DIE DE WEG NIET DICHT.** (i) §3.2 draagt TWEE criteria op TWEE grootheden: een
-  VLOER op "de FTP waarmee de winter begon" (een FTP op een ankerdatum, niet een piek) en een
-  DELTA-METER die een basislijn nodig heeft. Een 42d-piek levert alleen de meter-helft. (ii) De
-  omrekenregel van 20 minuten naar een drempelwaarde BESTAAT in de repo — `ftp.ts`, verbatim
-  *"Nieuwe FTP = 95% van gemiddeld vermogen over de 20 min"* — maar als UI-tekst met nul lezers in
-  code, en op het TESTBLOK en niet op de beste 20 minuten van de hele rit. Dat zijn twee getallen en
-  er moet één gekozen worden. ROADMAP punt 69 stelde dat de regel nergens staat; rechtgezet.
-- **DE POORT VOOR BEHOEFTE 1 BESTAAT AL.** De lens wees erop dat de kromme een getal geeft voor
-  ELKE rit — de 195 W kwam van een Z2-rit, en 0,95 × 195 = 185 tegen een gezette FTP van 280. Maar
-  Cadans WEET welke dag een test was: de override draagt `workoutType: "test"` plus
-  `testBadgeLabel()`, en `testResultaat` herkent die combinatie al. De poort is er; zij is alleen
-  niet met de piek verbonden.
-- **STREAMS ZIJN GEEN ZUIVERE 1 Hz.** `time` loopt van 0 tot 4544 over 4510 samples: vier gaten,
-  35 seconden. Rekenen moet over `time`, niet over de index.
-- **NEGENTIEN GET-VERZOEKEN aan intervals.icu**, alle met een harde bovengrens die GOOIT in plaats
-  van door te gaan — de les van de vorige ronde. Een dagsync doet er drie, dus dit is ongeveer zes
-  dagsyncs. Geen enkele mutatie. De sleutel heet `INTERVALS_API_KEY` en zijn waarde staat nergens.
-- **DE WEERLEGGINGSPAS: 1 VAN DE 4 LENZEN VOLTOOID, over TWEE pogingen.** De pas is vroeg gestart om
-  te kunnen herstarten; dat was nodig en het hielp niet. Poging 1: één lens klaar, drie stopten met
-  schrijven en leverden geen enkel resultaat, ook geen foutrapport. Poging 2 (`resumeFromRunId`):
-  vier agents kwamen op gang, schreven ongeveer een minuut en stopten op dezelfde manier. Vorige
-  ronde stierven er twee op een expliciete `529 Overloaded`; nu zonder melding. **Dat is een
-  omgevingsprobleem en geen uitslag.** Wat NIET is aangevallen: de INVENTARIS van de vijf endpoints
-  en de HISTORIE-claim — die rusten op mijn eigen meting alleen. **De historie-claim is de
-  gevoeligste, want zij beslist of de doelcheck in februari data heeft; wie hierop verder bouwt doet
-  er goed aan die pas alsnog te draaien.** Eindstand in `docs/RITDATA-RECON.md` §6.
-- **VLOEREN: lees ze zelf uit de suite.** Neem geen getal over uit een blok.
-- **OPENSTAAND, elk item opnieuw te greppen in `docs/ROADMAP.md`:** 32 · 34 (alleen (d)) · 35 · 48 ·
-  49 · 53 · 54 · 56 · 61 · 63 · 64 · 65 (alleen de REPARATIE) · 66 · 67 · 68 · **69 (nieuw — het
-  FTP-voorstel na een test)**.
-
-FOCUS VOLGENDE CHAT: **DAAN KIEST EERST.** `docs/RITDATA-RECON.md` eindigt met vijf wegen; zonder die
-keuze is er niets te bouwen, want de drie behoeften delen hun bron NIET vanzelf. Ligt de keuze er, dan
-is de eerstvolgende bouw wat die keuze aanwijst — waarschijnlijk **ROADMAP punt 69 (het FTP-voorstel
-na een test)** of **punt 61 (de doelcheck)**, en die twee delen alleen de reken-ingreep hieronder.
-~~**EEN DING IS GEEN KEUZE en hoort in ELKE weg:** waar de app een 20-minutenwaarde uit een kromme
-haalt, moet zij het lopende MAXIMUM vanaf 1200 seconden nemen en niet de waarde OP 1200 aflezen.~~
-**INGETROKKEN 24-08-2026, zie het bovenste blok: dit hoort in GEEN ENKELE weg.** Het lopende maximum
-levert een getal op dat de renner niet gereden heeft. Aflezen OP 1200 is de juiste lezing en de
-bestaande niveaukaart is in orde.
-
-**DE OMGEVINGSVERKLARING BLIJFT EEN STOP-CONDITIE.** Deze ronde: pad `/c/Users/daan/Projects/cadans`,
-`git rev-parse --git-dir` en `--git-common-dir` allebei `.git` dus HOOFDCHECKOUT, branch `main`, 0
-achter en 0 vooruit op `origin/main`, versie `2.1.208 (Claude Code)`, boom schoon bij aanvang.
-Agent-discovery blijft NIET GEMETEN: deze sessie begon `2026-07-14T07:20:14.850Z` en
-`.claude/agents/recon.md` dateert van `2026-08-23 07:48`.
 
 CONTEXT: Daan fietst voorlopig niet, beschikbaarheid 0, planner leeg vanaf 2026-08-09 — **dat is
 geen defect.** Daan GEBRUIKT de gedeployde app; prod is geen proefopstelling. Verse chat.
