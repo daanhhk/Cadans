@@ -25,11 +25,12 @@ volledige draaiende applicatie vervangt. Zie `docs/WERKWIJZE.md`, *Migraties en 
 | laatste migratie | `0012_acoustic_living_mummy.sql`, toegepast `2026-08-23 17:17:43` (D1-klok, UTC) |
 | openstaande migraties | **geen** |
 | Worker gedeployd | **JA** |
-| live versie | `e994c768-3d73-4aec-876b-b614b7fe1302` |
-| live sinds | `2026-08-10T13:19:32.453Z` |
-| live COMMIT | **niet gemeten** — afgeleid als `95751a10f1fddeacce7ab77a6b0bb295cc875352`, zie hieronder |
-| deployments totaal | **minimaal 10, totaal niet gemeten** — zie hieronder |
-| Worker loopt achter op main | **JA, en fors** — zie hieronder |
+| live versie | `940414c4-be95-4968-9eef-542a188db563` |
+| live sinds | `2026-08-24T05:35:36.574Z` |
+| live COMMIT | `46f2103ed7921ca12b9e855e3b2e46ceac204d88` — de eerste regel in dit logboek die de commit WEL noteert |
+| terugvaldoel | `e994c768-3d73-4aec-876b-b614b7fe1302` (de vorige live versie, sinds 2026-08-10) |
+| deployments totaal | **minimaal 11, totaal niet gemeten** — de CLI toont er tien, zie hieronder |
+| Worker loopt achter op main | **NEE, sinds 24-08-2026** — bij was hij tot dan ruim twee weken achter |
 
 > Bovenstaande tabel is de enige plek in de repo waar deze feiten staan. Werk hem bij in DEZELFDE
 > ronde waarin je er iets aan verandert; een stand die een ronde later wordt bijgewerkt is een stand
@@ -50,10 +51,14 @@ nadat ik ze eerst wél als meting had opgeschreven.**
   document in de bijwerk-lijst — deze eerste regel voldoet er zelf niet aan, en dat is de reden dat
   de eis er staat.**
 
-**DE WORKER LOOPT VER ACHTER, en dat is een GEMETEN vondst van deze ronde.** De live versie dateert
-van 10-08-2026. Alles wat sinds die datum is gebouwd — het hele punt-47-blok, de ijking, de drie
-uitgangen, de doel-kolom — draait NIET op prod. Dat is geen defect maar het was ook nergens
-opgeschreven, en het verandert hoe je de tabel hierboven leest: het SCHEMA is bij, de CODE niet.
+**DAAN GEBRUIKT DEZE APP.** Dat stond tot 24-08-2026 nergens vastgelegd en het is het belangrijkste
+feit op deze bladzijde: prod is geen proefopstelling. Elke handeling hier weegt daarnaar, en elke
+prod-mutatie draagt vooraf haar weg terug (`docs/WERKWIJZE.md`).
+
+> **DE WORKER LIEP VER ACHTER — opgelost op 24-08-2026.** Van 10-08 tot 24-08 draaide prod op code
+> van vóór het hele punt-47-blok: het schema was bij, de code niet. Dat was geen defect maar het
+> stond ook nergens opgeschreven, en het is precies het soort feit waarvoor dit document bestaat.
+> Sinds de deploy van 24-08 loopt prod weer gelijk met `main`.
 
 **DAT IS OOK PRECIES WAAROM DE MIGRATIE VEILIG WAS, en dat is gemeten en niet aangenomen.** De
 commit die op `main` stond ten tijde van de deploy is `95751a10f1fddeacce7ab77a6b0bb295cc875352`
@@ -394,9 +399,72 @@ Volledig in `docs/TZ-RECON.md`. Samengevat: de UTC-klok wijkt af in **24 van 384
 `power_curve_cache.fetched_on` is en die een cache-bucket is. T1 en T2 hielden allebei, dus de
 deploy-blokkade van punt 65 verviel.
 
-#### De deploy
+#### De deploy — DOORGEGAAN
 
-Zie hieronder — deze paragraaf wordt in dezelfde ronde afgemaakt.
+Alle vier de voorwaarden waren vervuld: een gemeten weg terug, T1 en T2 hielden, en gate plus CI
+stonden groen op `46f2103`. Uitgevoerd vanuit `workers/api`, met een verse `pnpm build` ervóór omdat
+de assets-binding naar `apps/web/dist` wijst:
+
+```
+pnpm build            (root)
+npx wrangler deploy   (vanuit workers/api)
+```
+
+```
+Found 3 new or modified static assets to upload
+  + /index.html  + /sw.js  + /assets/index-BiwPwGBR.js
+Uploaded 3 files (63 already uploaded)
+Total Upload: 325.28 KiB / gzip: 70.37 KiB · Worker Startup Time: 7 ms
+Deployed cadans-api triggers
+Current Version ID: 940414c4-be95-4968-9eef-542a188db563
+```
+
+**ALLEEN DE CODESPRONG, geen tijdzone-reparatie in dezelfde handeling.** Die is een eigen besluit met
+een eigen ronde: een reparatie en een twee weken oude codesprong tegelijk uitrollen maakt elke
+storing onherleidbaar.
+
+#### De na-verificatie
+
+| wat | uitkomst |
+| --- | --- |
+| live versie | `940414c4-be95-4968-9eef-542a188db563`, 100 procent, `2026-08-24T05:35:36.574Z` |
+| draait de nieuwe Worker-code? | JA — de origin geeft `401` mét `WWW-Authenticate: Basic realm="Secure Area"`, en die header komt uit de `basicAuth`-middleware van de Worker zelf |
+| `sync_state` ongewijzigd? | JA — 1 rij, 21 kolommen, waarde-voor-waarde gelijk aan de vóór-staat |
+| geuploade bundel | `/assets/index-BiwPwGBR.js`, en die naam staat in de lokale `apps/web/dist/index.html` |
+
+De `sync_state`-rij ná de deploy, naast de vóór-staat gelegd: `user_id` 1, `dosis_trede` 0,
+`dosis_trede_blok` `"2026-07-27"`, `dosis_trede_doel` `"FTP"`,
+`power_zones_json` `"[55,75,90,105,120,150,999]"`, de drie `ijking_`-kolommen NULL, de overige
+dertien NULL. **Nul verschillen.**
+
+#### Twee dingen die de na-verificatie NIET kon aantonen
+
+**(1) CHECK 37 is NIET GEDRAAID.** Die check wil de LIVE `index.html` ophalen en het asset waar hij
+naar wijst byte-voor-byte tegen de lokale build leggen. De hele origin zit achter een
+basic-auth-gate waarvan het wachtwoord een deploy-only secret is (`BASIC_AUTH_PASSWORD`), en
+inloggen doe ik niet. Wat er wél is: de bundelnaam die wrangler uploadde komt overeen met die in de
+lokale `index.html`. **Dat is een naam-vergelijking en geen byte-vergelijking.** Daan kan de check
+afmaken door in de browser in te loggen op `https://cadans-api.dtkorteweg.workers.dev/` en te kijken
+of de app laadt.
+
+**(2) DE IJKING-LAAG IS VIER WEKEN INERT en een rooktest kan hem niet tonen.** Met de ECHTE
+prod-instellingen — `doel` `FTP`, `doel_start` `2026-06-29`, gelezen van remote D1 — geeft
+`computeMacroPhase` voor de weekmaandagen hierna:
+
+```
+2026-08-24  ->  week  9  fase Peak   ijkaanbod mogelijk: nee
+2026-08-31  ->  week 10  fase Peak   nee
+2026-09-14  ->  week 12  fase Test   nee
+2026-09-21  ->  week  1  fase Base   JA
+```
+
+Poort (1) eist doelblokweek 1, dus **het eerste ijkaanbod verschijnt op 2026-09-21**. Wie vandaag
+kijkt en niets ziet, ziet het JUISTE gedrag. Dat vaststellen vraagt geen actie; het vraagt geduld,
+of een tijdelijke `doelStart`-verzetting, en dat laatste is zelf een schrijfactie op prod.
+
+**WAT DAAN NU KAN CONTROLEEREN, als hij wil:** open de app, kijk of de weekkaart normaal laadt en of
+er geen 500 staat op het schema-scherm. Meer valt er vandaag niet aan te zien — en dat is precies
+wat hierboven staat.
 
 ## Wat een volgende ronde hier moet bijwerken
 
