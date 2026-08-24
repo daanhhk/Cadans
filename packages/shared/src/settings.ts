@@ -1,7 +1,10 @@
 /**
  * settings — HTTP-contract voor GET /api/settings (volledige respons; `null`
  * voor een verse user) én de PUT /api/settings-body (als `Partial<SettingsInput>`;
- * FULL-REPLACE — weggelaten velden → null, expliciete null → 400).
+ * FULL-REPLACE — een WEGGELATEN veld wordt gewist, en sinds ROADMAP punt 73 doet een
+ * EXPLICIETE `null` precies hetzelfde. Die twee hoorden altijd al synoniem te zijn: elk
+ * veld hieronder is `T | null`, dus null weigeren was de runtime tegen zijn eigen type in
+ * laten gaan. Tot 24-08-2026 gaf een expliciete null een 400, en dat brak de doel-wissel).
  *
  * Dit is de WIRE-vorm: `doelStart` is een ISO-datumstring "yyyy-MM-dd". De
  * Worker-interne repo-vorm (`EngineSettings`) houdt `doelStart` als Date en wordt

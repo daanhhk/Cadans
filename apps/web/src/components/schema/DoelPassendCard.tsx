@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { putDoelPassend, putSettings } from "../../lib/api";
+import { schrijfMisluktRegel } from "../../lib/coachNarrative";
 import {
   type DoelPassendVoorstel,
   doelPassendSettingsPatch,
@@ -34,14 +35,21 @@ export function DoelPassendCard({
   coachNaam: string | null;
 }) {
   const [saving, setSaving] = useState(false);
+  const [fout, setFout] = useState<string | null>(null);
 
+  // ROADMAP punt 73 — DE MISLUKKING IS NIET LANGER STIL. Tot deze ronde deed `catch` alleen
+  // `setSaving(false)`: het scherm was daarna identiek aan vóór de tik, dus een mislukte
+  // schrijfactie was van een geslaagde niet te onderscheiden. Bij de wissel-knop was dat geen
+  // theorie — die kreeg een deterministische 400 en at hem op.
   async function wissel() {
     if (saving || !settings) return;
     setSaving(true);
+    setFout(null);
     try {
       await putSettings(doelPassendSettingsPatch(settings, voorstel) as never);
       bumpPlannerVersion();
     } catch {
+      setFout(schrijfMisluktRegel("je doel is niet gewijzigd"));
       setSaving(false);
     }
   }
@@ -49,10 +57,12 @@ export function DoelPassendCard({
   async function hou() {
     if (saving) return;
     setSaving(true);
+    setFout(null);
     try {
       await putDoelPassend(voorstel.blokStart, voorstel.huidigDoel);
       bumpPlannerVersion();
     } catch {
+      setFout(schrijfMisluktRegel("je antwoord is niet bewaard"));
       setSaving(false);
     }
   }
@@ -125,6 +135,23 @@ export function DoelPassendCard({
           {`Hou ${voorstel.huidigDoel}`}
         </button>
       </div>
+      {fout && (
+        <div
+          role="alert"
+          style={{
+            marginTop: "var(--s-3)",
+            padding: "var(--s-3)",
+            borderRadius: "var(--r-md)",
+            background: "var(--danger-soft)",
+            border: "1px solid var(--danger)",
+            color: "var(--danger)",
+            fontFamily: "var(--font-sans)",
+            fontSize: "var(--fs-label)",
+          }}
+        >
+          {fout}
+        </div>
+      )}
       <div
         style={{
           marginTop: "var(--s-2)",

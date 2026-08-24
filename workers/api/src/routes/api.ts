@@ -121,13 +121,37 @@ const readJsonObject = async (c: Context): Promise<Record<string, unknown>> => {
 };
 
 // Per-veld typeof-guards (expliciet, geen dynamische index-access/any-cast).
-const numField = (v: unknown, name: string): number => {
+/**
+ * ROADMAP punt 73 — EEN EXPLICIETE `null` IS EEN LEGE WAARDE, GEEN TYPEFOUT.
+ *
+ * Onder de FULL-REPLACE-semantiek van `writeSettings` betekent een WEGGELATEN veld "wissen"
+ * (het veld krijgt `?? null`). Een EXPLICIETE `null` betekent exact hetzelfde. Ze verschillend
+ * behandelen was de fout: `Partial<SettingsInput>` STAAT null toe — elk veld is `T | null` —
+ * dus de runtime weigerde wat zijn eigen wire-type belooft.
+ *
+ * WAT DAT KOSTTE. Elke null-kolom werd een latente 400. GEMETEN op de settings-rij: van de 21
+ * kolommen staan er VIJF op null, en GEEN ENKELE datakolom draagt `.notNull()` — dus alle
+ * zestien velden die de route accepteert kunnen null zijn. Het defect sloeg toe zodra een
+ * client het VOLLEDIGE settings-object terugstuurde, wat onder FULL-REPLACE juist de
+ * VOORGESCHREVEN vorm is: `DoelPassendCard` deed dat, kreeg een 400, en zijn `catch` at hem op.
+ * De doel-wissel deed daardoor niets en zei niets.
+ *
+ * NIET GEWIJZIGD: de full-replace-semantiek zelf. Weglaten cleart nog steeds, en `doel` en
+ * `doelStart` blijven aan elkaar gelast — een body met alleen `doel` wist `doelStart`, precies
+ * zoals ROADMAP punt 28 dat nodig heeft. Een merge (afwezig = ongewijzigd) zou die lassing
+ * STIL losmaken en is daarom bewust NIET gebouwd. `docs/UI-SYNC-SETTINGS-RECON.md` noemt die
+ * merge als OPEN BESLISPUNT — niet als afgewezen weg — met de aantekening dat hij "afwijkt van
+ * het gekozen contract"; gekozen is full-replace, en dat is nooit herzien.
+ */
+const numField = (v: unknown, name: string): number | null => {
+  if (v === null) return null;
   if (typeof v !== "number") {
     throw new HTTPException(400, { message: `field '${name}' has wrong type` });
   }
   return v;
 };
-const strField = (v: unknown, name: string): string => {
+const strField = (v: unknown, name: string): string | null => {
+  if (v === null) return null;
   if (typeof v !== "string") {
     throw new HTTPException(400, { message: `field '${name}' has wrong type` });
   }
@@ -876,8 +900,11 @@ api.get("/power-curve", async (c) => {
 
 // ── Fase 4c — D1-WRITE-routes (PUT) ──────────────────────────────────
 // Onbekende body-velden worden GENEGEERD (whitelist-passthrough, tolerant t.o.v.
-// PWA-versie-drift). NB: writeSettings VERVANGT de rij volledig (weggelaten velden
-// → null; PUT-semantiek), geen partial-merge. Maandag-weekdag wordt NIET
+// PWA-versie-drift). NB: writeSettings VERVANGT de rij (weggelaten velden → null, en sinds
+// ROADMAP punt 73 doet een expliciete null hetzelfde); PUT-semantiek, geen partial-merge.
+// PRECIEZER DAN "VOLLEDIG", want dat klopte niet: `vals` dekt user_id plus 16 velden terwijl
+// de tabel 21 kolommen heeft. `threshold_pace`, `ftp_auto_update`, `weight_auto_update` en
+// `email_digest` staan er NIET in en blijven bij een update onaangeroerd. Maandag-weekdag wordt NIET
 // gevalideerd (consistent met de 4a-GET; de PWA levert maandagen — aanname).
 
 api.put("/settings", async (c) => {
@@ -903,23 +930,30 @@ api.put("/settings", async (c) => {
     patch.profielPreset = strField(body.profielPreset, "profielPreset");
   }
   // Presentatie-velden (geen engine-input): cap op 24 tekens (GAS-parity, WebApp.gs:1529).
+  // `?? null` na de cap: `strField` mag nu null teruggeven en `null.slice` zou een 500 zijn.
   if ("coachNaam" in body) {
-    patch.coachNaam = strField(body.coachNaam, "coachNaam").slice(0, 24);
+    patch.coachNaam =
+      strField(body.coachNaam, "coachNaam")?.slice(0, 24) ?? null;
   }
   if ("coachPersona" in body) {
-    patch.coachPersona = strField(body.coachPersona, "coachPersona").slice(
-      0,
-      24,
-    );
+    patch.coachPersona =
+      strField(body.coachPersona, "coachPersona")?.slice(0, 24) ?? null;
   }
   if ("naam" in body) {
-    patch.naam = strField(body.naam, "naam").slice(0, 24);
+    patch.naam = strField(body.naam, "naam")?.slice(0, 24) ?? null;
   }
   if ("doelStart" in body) {
-    if (typeof body.doelStart !== "string" || !isIsoDate(body.doelStart)) {
+    // Null cleart, net als weglaten; een string moet nog steeds een geldige ISO-datum zijn.
+    if (body.doelStart === null) {
+      patch.doelStart = null;
+    } else if (
+      typeof body.doelStart !== "string" ||
+      !isIsoDate(body.doelStart)
+    ) {
       throw new HTTPException(400, { message: "doelStart must be yyyy-MM-dd" });
+    } else {
+      patch.doelStart = fromD1(body.doelStart);
     }
-    patch.doelStart = fromD1(body.doelStart);
   }
   await writeSettings(db, CURRENT_USER_ID, patch);
   return c.json({ ok: true });

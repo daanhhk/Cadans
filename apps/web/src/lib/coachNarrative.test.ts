@@ -5,6 +5,7 @@ import {
   blokReviewRegel,
   coachNarrative,
   faseOvergangRegel,
+  schrijfMisluktRegel,
 } from "./coachNarrative";
 import type { EffectReferent } from "./effect";
 
@@ -593,5 +594,31 @@ describe("blokEffectRegel — de doel-takken", () => {
       expect(stijging.startsWith(behoud)).toBe(true);
       expect(stijging.length).toBeGreaterThan(behoud.length);
     }
+  });
+});
+
+// ROADMAP punt 73 — de eerste MISLUKKING-regel. `apps/web` heeft geen render-testinfrastructuur
+// (zie de docstring van `doelPassendSettingsPatch`), dus de KAART is hier niet toetsbaar; de
+// STRING wel, en die draagt de belofte.
+describe("schrijfMisluktRegel (ROADMAP punt 73)", () => {
+  it("zegt WAT er niet gebeurd is en belooft geen oorzaak", () => {
+    const r = schrijfMisluktRegel("je doel is niet gewijzigd");
+    expect(r).toBe(
+      "Niet gelukt — je doel is niet gewijzigd. Probeer het zo nog eens.",
+    );
+  });
+
+  it("claimt nooit dat het wél gelukt is (M55)", () => {
+    const r = schrijfMisluktRegel("je antwoord is niet bewaard");
+    expect(r.startsWith("Niet gelukt")).toBe(true);
+    // De BEVESTIGENDE vorm mag er niet in staan. "niet bewaard" wel — dat is juist de mededeling.
+    expect(r).not.toMatch(/\bis bewaard\b|\bis opgeslagen\b|\bgelukt:/);
+  });
+
+  // De rauwe serverstring is Engels en technisch ("field 'fase' has wrong type") en hoort niet
+  // in een Nederlandstalige coach-kaart; de regel neemt hem dus niet over.
+  it("draagt geen serverstring en geen statuscode", () => {
+    const r = schrijfMisluktRegel("je doel is niet gewijzigd");
+    expect(r).not.toMatch(/400|500|field|wrong type/);
   });
 });

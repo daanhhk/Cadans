@@ -50,7 +50,9 @@ export function getSettings(): Promise<SettingsInput | null> {
 
 /**
  * PUT /api/settings — FULL-REPLACE. `body` bevat ALLEEN de te bewaren velden
- * (weglaten = clearen naar null; nooit null/"" sturen — dat geeft 400). Non-2xx
+ * (weglaten = clearen naar null). Sinds ROADMAP punt 73 doet een EXPLICIETE null
+ * hetzelfde als weglaten; daarvóór gaf zij een 400 en dat brak de doel-wissel. Een
+ * lege string is iets DERDES: die passeert en landt als '' in D1. Non-2xx
  * → throw met de server-foutreden (bv. de 400-melding). Zie lib/settings.ts voor
  * de pure form→body-serialisatie.
  */

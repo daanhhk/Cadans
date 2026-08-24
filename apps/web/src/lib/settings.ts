@@ -3,8 +3,10 @@ import type { SettingsInput } from "@cadans/shared";
 
 // Settings-form-laag: pre-fill (GET → form-state) + serialisatie (form-state →
 // PUT-body). Het PUT-contract is FULL-REPLACE: een weggelaten sleutel cleart het
-// veld naar null; een expliciete null of "" geeft 400. Dus de serializer stuurt
-// NOOIT null/""/NaN — een leeg veld wordt WEGGELATEN.
+// veld naar null, en sinds ROADMAP punt 73 doet een expliciete null hetzelfde.
+// Deze serializer stuurt nog steeds NOOIT null/""/NaN en laat een leeg veld WEG —
+// niet meer omdat null een 400 zou geven (dat is gerepareerd), maar omdat een
+// lege string wél iets anders betekent: die landt als '' en niet als NULL.
 
 /** Form-state = elk EngineSettings-veld als string (input-value). */
 export type SettingsForm = Record<keyof SettingsInput, string>;
@@ -78,8 +80,10 @@ export function settingsToForm(s: SettingsInput | null): SettingsForm {
 
 /**
  * PURE form-state → PUT-body. FULL-REPLACE-veilig: een leeg/NaN-veld wordt
- * WEGGELATEN (→ de handler cleart het naar null). Nooit een sleutel met null/""/NaN
- * (dat zou een 400 triggeren). number-velden komen als number (niet string).
+ * WEGGELATEN (→ de handler cleart het naar null). Nooit een sleutel met null/""/NaN.
+ * Voor null is dat sinds ROADMAP punt 73 geen 400 meer maar het blijft de heldere vorm;
+ * voor "" is het een ECHT verschil, want een lege string landt als '' en niet als NULL.
+ * number-velden komen als number (niet string).
  */
 export function settingsFormToBody(f: SettingsForm): Partial<SettingsInput> {
   const b: Partial<SettingsInput> = {};

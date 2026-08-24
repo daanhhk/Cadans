@@ -912,3 +912,23 @@ export function faseOvergangRegel(o: {
       : "";
   return `Vanaf deze week ${s.verandering}${waarom}: ${s.merk}.`;
 }
+
+/**
+ * ROADMAP punt 73 — DE EERSTE MISLUKKING-REGEL in dit bestand, en dat is zelf de vondst.
+ *
+ * Tot 24-08-2026 droeg dit bestand geen enkele zin voor een MISLUKTE schrijfactie, terwijl de
+ * coach-kaarten er veertien stille `catch`-blokken op nahielden: de tik deed niets en het scherm
+ * bleef identiek. Er is ook geen gedeelde foutcomponent — het foutmelding-patroon staat handmatig
+ * herhaald op de pagina's en nergens gedeeld.
+ *
+ * DEZE REGEL ZEGT ALLEEN WAT ER NIET GEBEURD IS (M55). Hij belooft geen oorzaak, want de client
+ * kan een 400 niet van een netwerkfout onderscheiden — `putSettings` gooit een kale `Error`. Hij
+ * toont ook de RAUWE serverstring niet: die is Engels en technisch en hoort niet in een
+ * Nederlandstalige coach-kaart.
+ *
+ * `watNietGebeurde` beschrijft de UITKOMST die uitbleef, in de tweede persoon en zonder punt —
+ * bijvoorbeeld "je doel is niet gewijzigd".
+ */
+export function schrijfMisluktRegel(watNietGebeurde: string): string {
+  return `Niet gelukt — ${watNietGebeurde}. Probeer het zo nog eens.`;
+}

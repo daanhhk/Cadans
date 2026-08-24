@@ -111,6 +111,86 @@ describe("Fase 4c — D1-write-routes (PUT, SELF.fetch)", () => {
     expect((await call("/api/settings")).body.weekUren).toBeNull();
   });
 
+  // ── ROADMAP punt 73 — EEN EXPLICIETE NULL IS EEN LEGE WAARDE, GEEN TYPEFOUT ──────────
+  // Onder de FULL-REPLACE-semantiek betekent een WEGGELATEN veld "wissen". Een EXPLICIETE
+  // null betekent precies hetzelfde. Tot deze ronde gooiden `numField`/`strField` een 400 op
+  // null, en dat maakte van ELKE null-kolom een latente 400: op de gemeten settings-rij staan
+  // er VIJF op null. `Partial<SettingsInput>` staat null bovendien TOE — elk veld is
+  // `T | null` — dus de runtime weigerde wat zijn eigen type belooft.
+  it("null op een NUMERIEK veld wordt aanvaard en cleart, net als weglaten", async () => {
+    await put("/api/settings", { ftp: 280, doelDuur: 12 });
+    expect((await repo.readSettings(db, U))?.doelDuur).toBe(12);
+    const r = await put("/api/settings", { ftp: 280, doelDuur: null });
+    expect(r.status).toBe(200);
+    expect((await repo.readSettings(db, U))?.doelDuur).toBeNull();
+    expect((await repo.readSettings(db, U))?.ftp).toBe(280); // buurman ongemoeid
+  });
+
+  it("null op een STRING-veld wordt aanvaard en cleart", async () => {
+    await put("/api/settings", { ftp: 280, fase: "maintain" });
+    expect((await repo.readSettings(db, U))?.fase).toBe("maintain");
+    const r = await put("/api/settings", { ftp: 280, fase: null });
+    expect(r.status).toBe(200);
+    expect((await repo.readSettings(db, U))?.fase).toBeNull();
+  });
+
+  it("null op doelStart wordt aanvaard en cleart", async () => {
+    await put("/api/settings", { ftp: 280, doelStart: "2026-03-09" });
+    expect((await repo.readSettings(db, U))?.doelStart).not.toBeNull();
+    const r = await put("/api/settings", { ftp: 280, doelStart: null });
+    expect(r.status).toBe(200);
+    expect((await repo.readSettings(db, U))?.doelStart).toBeNull();
+  });
+
+  // HET LIVE DEFECT, in de vorm waarin het zich voordeed. De doel-wissel-kaart stuurt het
+  // VOLLEDIGE settings-object terug (dat moet ook: FULL-REPLACE), inclusief de kolommen die
+  // null zijn. Dat gaf een 400 die de kaart stil opat. Deze test is de regressie-vangst.
+  it("een VOLLEDIG settings-object mét nulls landt — de doel-wissel van punt 73", async () => {
+    await put("/api/settings", {
+      ftp: 280,
+      lthr: 178,
+      gewicht: 75,
+      doel: "Onderhoud",
+    });
+    // ALLE ZESTIEN sleutels die `readSettings` teruggeeft — dat is precies wat de kaart spreidt.
+    // De drie presentatie-velden horen erbij: die lopen door `?.slice(0, 24) ?? null` en zouden
+    // op een null anders klappen op `null.slice`.
+    const heleObject = {
+      ftp: 280,
+      lthr: 178,
+      gewicht: 75,
+      doel: "FTP",
+      doelStart: "2026-03-09",
+      hrMax: null,
+      hrRest: null,
+      doelDuur: null,
+      weekUren: null,
+      fase: null,
+      profielPreset: null,
+      coachNaam: null,
+      coachPersona: null,
+      naam: null,
+      pendelDuurMin: null,
+      pendelAantal: null,
+    };
+    const r = await put("/api/settings", heleObject);
+    expect(r.status).toBe(200);
+    const s = await repo.readSettings(db, U);
+    expect(s?.doel).toBe("FTP"); // de wissel LANDT
+    expect(s?.ftp).toBe(280); // en wist de buren niet
+    expect(s?.coachNaam).toBeNull(); // `null.slice` zou hier een 500 zijn geweest
+    expect(s?.naam).toBeNull();
+  });
+
+  // De LEGE STRING is iets DERDES naast null en weglaten, en dat is opzettelijk zo gebleven:
+  // '' passeert `strField` en landt als lege string, niet als NULL. Vastgepind omdat de
+  // docstrings er tot deze ronde ten onrechte "geeft 400" over zeiden.
+  it("een lege string is GEEN null: '' landt als '' en niet als NULL", async () => {
+    const r = await put("/api/settings", { ftp: 280, coachNaam: "" });
+    expect(r.status).toBe(200);
+    expect((await repo.readSettings(db, U))?.coachNaam).toBe("");
+  });
+
   it("PUT /api/settings weekUren verkeerd type (string) → 400", async () => {
     const r = await put("/api/settings", { weekUren: "7" });
     expect(r.status).toBe(400);
