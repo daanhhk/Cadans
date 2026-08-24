@@ -92,6 +92,27 @@ export const activities = sqliteTable(
     rollingFtp: integer("rolling_ftp"),
     zoneTimesJson: text("zone_times_json"), // icu_zone_times als JSON-blob
     activityIdExt: text("activity_id_ext"), // intervals.icu id (leeg = pre-migratie)
+    /** ROADMAP punt 69 — het beste TWINTIGMINUTENVERMOGEN van deze rit in watt, afgelezen op het
+     * exacte duurpunt `secs = 1200` van `GET /activity/{id}/power-curve`. NOOIT op een naburig
+     * duurpunt en NOOIT als lopend maximum: een mean-max-kromme mag stijgen met de duur, en het
+     * lopende maximum levert een getal op dat de renner niet gereden heeft (ROADMAP punt 70).
+     *
+     * DIT IS DE GRONDSTOF, NIET DE DREMPELWAARDE. M93 rekent hem om met 95 procent; die omrekening
+     * gebeurt bij het VOORSTEL en wordt hier niet opgeslagen.
+     *
+     * NULL betekent "geen bruikbare waarde" — te korte rit, geen vermogensmeter, of geen exact
+     * 1200-punt in het rooster. Onderscheid dat van "nog niet opgehaald": dat leest `piekGehaaldOp`.
+     *
+     * DEZE KOLOM STAAT BEWUST NIET IN `actValsFromRow`. Die functie bouwt een VAST object van
+     * 17 velden en `upsertActivity` gebruikt datzelfde object als `set`, dus een kolom die er niet
+     * in staat wordt door de activiteiten-sync niet aangeraakt en overleeft elke resync. */
+    piek1200W: integer("piek_1200_w"),
+    /** De dag (yyyy-MM-dd) waarop de per-rit-kromme voor deze rit is OPGEHAALD, ongeacht of er een
+     * bruikbare waarde uit kwam. Dit is wat de backfill HERSTARTBAAR maakt: een afgebroken run
+     * hervat op `WHERE piek_gehaald_op IS NULL` en haalt niets twee keer op. Zonder deze kolom zou
+     * een lege `piek_1200_w` niet te onderscheiden zijn van een nog-niet-opgehaalde rit, en dan
+     * probeert elke herstart de kansloze ritten opnieuw. */
+    piekGehaaldOp: text("piek_gehaald_op"),
   },
   (t) => [
     // mergeById_-idempotente upsert-sleutel; meerdere ritten/dag mogen (multi-sessie).
