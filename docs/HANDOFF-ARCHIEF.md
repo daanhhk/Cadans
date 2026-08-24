@@ -11,6 +11,76 @@ of uit de publieke repo.
 De levende projectstand staat in `HANDOFF.md`. Dat bestand droeg tot 21-08-2026 de twaalf nieuwste
 STAND-blokken; sindsdien draagt het er TWEE, en schuift het oudste bij elke close-out hierheen.
 
+STAND 2026-08-24 (DERDE BLOK VAN DEZE DAG) — DE RONDE TROK ZICHZELF IN. Punt 70 bestond om een
+leesfout in de power-curve te repareren. **Die leesfout bestaat niet.** De reparatie is geschreven,
+groen getest, en daarna volledig teruggedraaid. **Er is deze ronde GEEN REGEL CODE gewijzigd**, en dat
+is de opbrengst en geen mislukking.
+- **DE PREMISSE WAS FOUT, en zij stond in twee documenten en in een HANDOFF-blok.** Verbatim: *"Een
+  mean-max-kromme hoort niet te STIJGEN met de duur: wie X watt over 23 minuten volhield, hield per
+  definitie ook ergens 20 minuten ≥X watt vol."* De tweede helft is geen stelling. Tegenvoorbeeld met
+  de hand, het signaal `[10, 0, 10]`: beste 2s-gemiddelde **5,00 W**, beste 3s-gemiddelde **6,67 W**.
+  Een langer venster mag het ZWAKKE MIDDEN meetellen zolang beide STERKE RANDEN erin passen; een
+  korter venster moet één rand opgeven.
+- **EN HET GEBEURT ECHT, op Daans eigen data.** Herberekend uit de rauwe 1 Hz-`watts`-stream van rit
+  `i171448183` (4407 samples), uitputtend: beste 140s = **357,643 W** over 4268 vensters, beste 165s =
+  **366,927 W** over 4243. Beslissend: het beste 140s-blok van de hele rit LIGT IN dat 165s-venster en
+  haalt daar 357,643 W. De "reparatie" zou 140s op **366,9 W** zetten — een gemiddelde dat in geen van
+  die 4268 vensters bestaat. **Zij verving een JUIST getal door een ONHAALBAAR getal.**
+- **`pcMarkerAt_` LAS AL GOED.** Op het 42d-venster is 261 W op 1200 s het beste twintigminutenblok en
+  264 W op 1380 s het beste drieëntwintigminutenblok. Twee vragen, twee antwoorden, allebei juist. De
+  bestaande niveaukaart is in orde en de doelcheck erft geen leesfout.
+- **DE WEERLEGGINGSPAS: 3 VAN 3 LENZEN VOLTOOID — en hij verdiende zichzelf dezelfde ronde terug.**
+  Vooropgedraaid, zoals sinds deze ronde de regel is. Was hij als sluitstuk gedraaid, dan was
+  `monotoniseerKromme` groen, gecommit en gedeployd geweest. **De volgorde van de pas is geen
+  procesdetail; zij was hier het verschil.** Vastgelegd in `docs/WERKWIJZE.md`.
+- **DE DIEPERE LES, en die is groter dan deze ronde.** Alle drie de verwachtingen waren toetsbaar en
+  twee werden bevestigd door echte metingen op echte data. Toch was de conclusie fout: geen van die
+  metingen raakte de AANNAME eronder. P2 mat "is het lopende maximum ooit lager" — 0 keer op 566
+  punten over drie vensters — en een lopend maximum KÁN niet lager zijn. Dat is zijn definitie, geen
+  bevinding. **Een verwachting die niet kan falen, toetst niets en leest achteraf als bewijs.** Nieuw:
+  `docs/CC-CHECKS.md` **CHECK 40** — zoek het kleinste tegenvoorbeeld met de hand vóór je een
+  definitorische aanname laat dragen.
+- **TWEE BIJVANGSTEN, allebei zelf nagemeten en allebei een nieuw punt.** (71) De `curve`-array in de
+  power-curve-DTO heeft **GEEN enkele lezer**: de grafiek komt uit `markers`
+  (`Rijdersprofiel.tsx:45` is `function CurveChart({ markers }: { markers: PowerCurveMarker[] })`).
+  (72) `scripts/powercurve-smoke.mjs:61` is een **DERDE ingang** naar `pcNormalize_`, buiten
+  `workers/api/src/integrations/powercurve.ts` om — in de teruggedraaide code stond een commentaarregel
+  dat die grens "de enige ingang" was, en dat was aangenomen en niet getoetst.
+- **NUMMERING, en meld dit terug aan de chat.** De prompt heette "punt 68", maar 68 was in
+  `docs/ROADMAP.md` al bezet door *"De per-blok-antwoorden dragen TWEE doel-kolommen"* en 69 door
+  *"HET FTP-VOORSTEL NA EEN GEREDEN TEST"*. Deze ronde staat daarom als **punt 70**, de bijvangsten
+  als 71 en 72.
+- **HET BLOK HIERONDER IS OP TWEE PLEKKEN DOORGEHAALD**, want het droeg de fout: de bullet over
+  "direct afleesbaar" en de FOCUS-regel die het lopende maximum in ELKE weg voorschreef.
+  `docs/RITDATA-RECON.md` §8 is herschreven van reparatie naar intrekking.
+- **DRIE GET-VERZOEKEN aan intervals.icu**, alle met een harde bovengrens die GOOIT. Geen mutatie,
+  nergens — geen migratie, geen deploy, geen remote-D1-schrijfactie. De sleutel heet
+  `INTERVALS_API_KEY` en zijn waarde staat nergens.
+- **VLOEREN: lees ze zelf uit de suite.** Neem geen getal over uit een blok.
+- **OPENSTAAND, elk item opnieuw te greppen in `docs/ROADMAP.md`:** 32 · 34 (alleen (d)) · 35 · 48 ·
+  49 · 51 (alleen (3)) · 53 · 54 · 56 · 61 · 63 · 64 · 65 (alleen de REPARATIE) · 66 · 67 · 68 · 69 ·
+  71 · 72.
+
+FOCUS VOLGENDE CHAT: **ROADMAP punt 69 — HET FTP-VOORSTEL NA EEN GEREDEN TEST.** Rijdt Daan een
+aangeboden ijkinspanning, dan berekent de app een nieuwe drempelwaarde en STELT DIE VOOR met de oude
+ernaast; vandaag vraagt de app om een meting en doet niets met de uitslag. De grondstof is gemeten en
+bestaat: `GET /activity/{id}/power-curve` geeft de 20-minutenpiek van ÉÉN rit direct, 5353 bytes, één
+verzoek — en de athlete-curve kan dat NIET vervangen, want die wijst de BESTE rit in het venster aan
+en niet de laatste. **WAT EERST EEN DAAN-BESLUIT VRAAGT: de omrekenregel.** Van 20 minuten naar een
+drempelwaarde hoort een factor (klassiek circa 95 procent) en die staat NERGENS in de repo of in
+`DOELEN-SPEC` — behalve als UI-tekst in `ftp.ts` met nul lezers in code, en die gaat over het
+TESTBLOK en niet over de beste 20 minuten van de rit. Dat zijn twee verschillende getallen en er moet
+één gekozen worden. **EN NEEM GEEN LOPEND MAXIMUM:** lees de waarde OP 1200 seconden, zie het
+bovenstaande blok. De keuze uit `docs/RITDATA-RECON.md` §7 blijft open voor de doelcheck (punt 61) en
+het onderweg-signaal (punt 63).
+
+**DE OMGEVINGSVERKLARING BLIJFT EEN STOP-CONDITIE.** Deze ronde: pad `/c/Users/daan/Projects/cadans`,
+`git rev-parse --git-dir` en `--git-common-dir` allebei `.git` dus HOOFDCHECKOUT, branch `main`, 0
+achter en 0 vooruit op `origin/main`, versie `2.1.208 (Claude Code)`, boom schoon bij aanvang.
+
+CONTEXT: Daan fietst voorlopig niet, beschikbaarheid 0, planner leeg vanaf 2026-08-09 — **dat is
+geen defect.** Daan GEBRUIKT de gedeployde app; prod is geen proefopstelling. Verse chat.
+
 STAND 2026-08-24 (TWEEDE BLOK VAN DEZE DAG) — DE RITDATA IS IN KAART GEBRACHT EN ER LIGT EEN KEUZE
 VOOR DAAN. RECON-ronde: geen bouw, geen migratie, geen deploy, read-only op de repo en LEZEND op
 intervals.icu. **De deliverable is `docs/RITDATA-RECON.md` en die eindigt met VIJF WEGEN in gewone

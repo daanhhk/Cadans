@@ -13,6 +13,82 @@ live tot cutover.
 
 ## Stand
 
+STAND 2026-08-24 (VIJFDE BLOK VAN DEZE DAG) — **EEN LIVE DEFECT IS WEG EN PUNT 69 IS ONTBLOKT.**
+Punt 73, kleine reparatieronde. De doel-wissel-knop deed sinds zijn bouw niets en zei niets; dat is
+gerepareerd, getest en uitgerold.
+- **HET DEFECT, in één zin.** `PUT /api/settings` weigerde een expliciete `null` met een 400, terwijl
+  het wire-type `Partial<SettingsInput>` elk veld als `T | null` typeert — de route ging tegen zijn
+  eigen gepubliceerde type in. Onder FULL-REPLACE betekent een WEGGELATEN veld al "wissen"; een
+  expliciete null hoort hetzelfde te betekenen. **De reparatie is dat en niet meer:** `numField` en
+  `strField` geven nu `null` terug, de `doelStart`-tak accepteert null, en de drie presentatie-velden
+  gebruiken `?.slice(0, 24) ?? null`.
+- **DE OMVANG WAS GROTER DAN ÉÉN KOLOM.** GEMETEN op de settings-rij: **21 kolommen, VIJF op NULL**
+  (`threshold_pace`, `fase`, `ftp_auto_update`, `weight_auto_update`, `email_digest`), en GEEN ENKELE
+  datakolom draagt `.notNull()`. Alle zestien velden die de route accepteert konden dus een 400 geven.
+  En `fase` was niet de algemene dader: de negen `numField`-poorten staan op positie 1 t/m 9 en `fase`
+  pas op 11, dus een leeggelaten `doelDuur` of `lthr` gooit eerder. Dat het hier `fase` was, is een
+  eigenschap van díe rij.
+- **ROOD GEMETEN, en dat is de kern van het bewijs.** De regressietest faalde vóór de reparatie met
+  precies `expected 400 to be 200` op een volledig settings-object met nulls — het live defect,
+  gereproduceerd in de harness. Daarna groen.
+- **ER IS GEEN ENKELE BESTAANDE TEST GEWIJZIGD**, en dat is de toets dat de semantiek niet verschoven
+  is. Full-replace staat, weglaten cleart nog steeds, en de lassing tussen `doel` en `doelStart` is
+  intact — een body met alleen `doel` wist `doelStart`, precies zoals punt 28 nodig heeft.
+- **DE WEERLEGGINGSPAS VERANDERDE HET ONTWERP, en dat is de belangrijkste opbrengst.** Ik wilde van
+  PUT een MERGE maken. Pas 1 (**4 van 4 VOLTOOID**, drie weerlegd) haalde dat onderuit: een merge
+  maakt de doel/doelStart-lassing STIL los, geen van de aanroepers heeft haar nodig, en zij kantelt
+  negen tests waar de gekozen vorm er nul kantelt. **DRIE AANROEPERS, niet één** — en de derde,
+  `tools/shots/shot.mjs`, had het probleem al opgelost: hij filtert nulls eruit en legt de reden
+  erbij uit.
+- **PAS 2 (3 van 3 VOLTOOID) WEERLEGDE DE REPARATIE NIET**, maar ving wel drie dingen: een OVERCLAIM
+  van mij (ik schreef dat de merge in `docs/UI-SYNC-SETTINGS-RECON.md` "afgewezen" was — hij staat
+  daar als OPEN BESLISPUNT), drie docstrings die het oude contract bleven verkondigen, en een gat in
+  mijn eigen regressietest (dertien van de zestien sleutels; precies de drie herschreven
+  presentatie-velden ontbraken). Alle drie rechtgezet.
+- **DE LEGE STRING IS IETS DERDES**, en dat is nu vastgepind: `""` passeert `strField` en landt als
+  `''` in D1, niet als NULL. Dat was al zo en is niet gewijzigd; de docstrings beweerden er ten
+  onrechte "geeft 400" over.
+- **NIEUW: ROADMAP PUNT 75** — er zijn **14 stille `catch`-blokken over 12 coach-kaartbestanden**, een
+  gekopieerd sjabloon, en er is GEEN gedeelde foutmelding. Deze ronde repareerde er één (de kaart waar
+  het defect zat) en liet de rest bewust staan. `coachNarrative.ts` draagt sinds nu één
+  mislukking-regel, `schrijfMisluktRegel` — het begin van het idiom, niet het einde.
+- **NIEUW: ROADMAP PUNT 76 — PROD-D1 IS NIET TE LEZEN met deze sessie.** `wrangler d1 execute
+  --remote` geeft `code 7403`; `wrangler whoami` toont een token met `workers`- en
+  `workers_scripts`-scopes maar **zonder `d1`**. Daardoor is verwachting R3 **NIET GEMETEN**: of de
+  PROD-rij ook een null-veld draagt, staat niet vast. De AFLEIDING is sterk — het formulier biedt voor
+  `fase` alleen "" (Automatisch) en "maintain", dus wie nooit "maintain" koos heeft null — maar een
+  afleiding is geen meting en wordt hier ook niet als meting gepresenteerd.
+- **M93 DRAAGT NU EEN EIGEN NUMMER.** Het factor-besluit van vorige ronde leefde als blokquote onder
+  M92; het is gepromoveerd tot **M93 (NORM)** — M92 gaat over de PLAATSING van de ijking, M93 over de
+  REKENREGEL. Tegelijk rechtgezet: die eerste versie schond **M2** (geen bestandsnamen of
+  regelnummers in de canon); de vindplaatsen staan nu in het verdict-document.
+- **VLOEREN: lees ze zelf uit de suite.** Neem geen getal over uit een blok.
+- **OPENSTAAND, elk item opnieuw te greppen in `docs/ROADMAP.md`:** 32 · 34 (alleen (d)) · 35 · 48 ·
+  49 · 51 (alleen (3)) · 53 · 54 · 56 · 61 · 63 · 64 · 65 (alleen de REPARATIE) · 66 · 67 · 68 · 69 ·
+  71 · 72 · 74 · 75 · 76.
+
+FOCUS VOLGENDE CHAT: **ROADMAP punt 69 — HET FTP-VOORSTEL NA EEN GEREDEN TEST BOUWEN.** Alles wat het
+blokkeerde is weg: de factor staat als **M93** in de canon (95 procent van het beste
+twintigminutenvermogen, afgelezen op `secs = 1200`) en het schrijfpad werkt sinds punt 73, dus een
+goedgekeurde FTP kan landen. Het ontwerp ligt volledig in `docs/PUNT69-BOUW.md` §6.
+**WAT DIE RONDE NOG MOET OPLOSSEN, en het is allebei GEMETEN:** (1) de koppeling plan→rit is ZWAK —
+`testResultaat` leest alleen de override en raakt geen enkele activiteit; de enige koppeling is
+dezelfde kalenderdag plus een vloer van 15 fietsminuten, en bij twee ritten houdt `done.idExt` de
+LANGSTE. (2) De app kan NIET zien of er vol gereden is: een Z2-rit gaf 195 W, waaruit 185 W zou volgen
+tegen een gezette FTP van 280 — een verlaging van **34 procent**. **DE PLAUSIBILITEITSGRENS DIE DAT
+MOET VANGEN IS EEN DREMPEL EN WORDT OP DE ECHTE REEKS GEIJKT, nooit in een gesprek gekozen.** De
+backfill van ongeveer **255** per-rit-krommes (ongeveer **1,4 MB**, één verzoek per rit) levert
+daarvoor de kalibratieset en is daarmee méér dan compleetheid. Randvoorwaarden van Daan: gedoseerd,
+teller, HARDE bovengrens die GOOIT, HERSTARTBAAR, alleen lezen.
+
+**DE OMGEVINGSVERKLARING BLIJFT EEN STOP-CONDITIE.** Deze ronde: pad `/c/Users/daan/Projects/cadans`,
+`git rev-parse --git-dir` en `--git-common-dir` allebei `.git` dus HOOFDCHECKOUT, branch `main`, 0
+achter en 0 vooruit op `origin/main`, versie `2.1.208 (Claude Code)`, boom schoon bij aanvang.
+Agent-discovery blijft NIET GEMETEN: deze sessie is ouder dan `.claude/agents/recon.md`.
+
+CONTEXT: Daan fietst voorlopig niet, beschikbaarheid 0, planner leeg vanaf 2026-08-09 — **dat is
+geen defect.** Daan GEBRUIKT de gedeployde app; prod is geen proefopstelling. Verse chat.
+
 STAND 2026-08-24 (VIERDE BLOK VAN DEZE DAG) — HET FTP-VOORSTEL IS ONDERZOCHT, EN **HET BESLUIT IS
 NOG IN DEZELFDE SESSIE GEVALLEN**. Punt 69.
 
@@ -119,76 +195,6 @@ moet worden is `const ALLOWED_WINDOWS = new Set<string>(["90d", "1y"]);` naast
 `git rev-parse --git-dir` en `--git-common-dir` allebei `.git` dus HOOFDCHECKOUT, branch `main`, 0
 achter en 0 vooruit op `origin/main`, versie `2.1.208 (Claude Code)`, boom schoon bij aanvang.
 Agent-discovery blijft NIET GEMETEN: deze sessie is ouder dan `.claude/agents/recon.md`.
-
-CONTEXT: Daan fietst voorlopig niet, beschikbaarheid 0, planner leeg vanaf 2026-08-09 — **dat is
-geen defect.** Daan GEBRUIKT de gedeployde app; prod is geen proefopstelling. Verse chat.
-
-STAND 2026-08-24 (DERDE BLOK VAN DEZE DAG) — DE RONDE TROK ZICHZELF IN. Punt 70 bestond om een
-leesfout in de power-curve te repareren. **Die leesfout bestaat niet.** De reparatie is geschreven,
-groen getest, en daarna volledig teruggedraaid. **Er is deze ronde GEEN REGEL CODE gewijzigd**, en dat
-is de opbrengst en geen mislukking.
-- **DE PREMISSE WAS FOUT, en zij stond in twee documenten en in een HANDOFF-blok.** Verbatim: *"Een
-  mean-max-kromme hoort niet te STIJGEN met de duur: wie X watt over 23 minuten volhield, hield per
-  definitie ook ergens 20 minuten ≥X watt vol."* De tweede helft is geen stelling. Tegenvoorbeeld met
-  de hand, het signaal `[10, 0, 10]`: beste 2s-gemiddelde **5,00 W**, beste 3s-gemiddelde **6,67 W**.
-  Een langer venster mag het ZWAKKE MIDDEN meetellen zolang beide STERKE RANDEN erin passen; een
-  korter venster moet één rand opgeven.
-- **EN HET GEBEURT ECHT, op Daans eigen data.** Herberekend uit de rauwe 1 Hz-`watts`-stream van rit
-  `i171448183` (4407 samples), uitputtend: beste 140s = **357,643 W** over 4268 vensters, beste 165s =
-  **366,927 W** over 4243. Beslissend: het beste 140s-blok van de hele rit LIGT IN dat 165s-venster en
-  haalt daar 357,643 W. De "reparatie" zou 140s op **366,9 W** zetten — een gemiddelde dat in geen van
-  die 4268 vensters bestaat. **Zij verving een JUIST getal door een ONHAALBAAR getal.**
-- **`pcMarkerAt_` LAS AL GOED.** Op het 42d-venster is 261 W op 1200 s het beste twintigminutenblok en
-  264 W op 1380 s het beste drieëntwintigminutenblok. Twee vragen, twee antwoorden, allebei juist. De
-  bestaande niveaukaart is in orde en de doelcheck erft geen leesfout.
-- **DE WEERLEGGINGSPAS: 3 VAN 3 LENZEN VOLTOOID — en hij verdiende zichzelf dezelfde ronde terug.**
-  Vooropgedraaid, zoals sinds deze ronde de regel is. Was hij als sluitstuk gedraaid, dan was
-  `monotoniseerKromme` groen, gecommit en gedeployd geweest. **De volgorde van de pas is geen
-  procesdetail; zij was hier het verschil.** Vastgelegd in `docs/WERKWIJZE.md`.
-- **DE DIEPERE LES, en die is groter dan deze ronde.** Alle drie de verwachtingen waren toetsbaar en
-  twee werden bevestigd door echte metingen op echte data. Toch was de conclusie fout: geen van die
-  metingen raakte de AANNAME eronder. P2 mat "is het lopende maximum ooit lager" — 0 keer op 566
-  punten over drie vensters — en een lopend maximum KÁN niet lager zijn. Dat is zijn definitie, geen
-  bevinding. **Een verwachting die niet kan falen, toetst niets en leest achteraf als bewijs.** Nieuw:
-  `docs/CC-CHECKS.md` **CHECK 40** — zoek het kleinste tegenvoorbeeld met de hand vóór je een
-  definitorische aanname laat dragen.
-- **TWEE BIJVANGSTEN, allebei zelf nagemeten en allebei een nieuw punt.** (71) De `curve`-array in de
-  power-curve-DTO heeft **GEEN enkele lezer**: de grafiek komt uit `markers`
-  (`Rijdersprofiel.tsx:45` is `function CurveChart({ markers }: { markers: PowerCurveMarker[] })`).
-  (72) `scripts/powercurve-smoke.mjs:61` is een **DERDE ingang** naar `pcNormalize_`, buiten
-  `workers/api/src/integrations/powercurve.ts` om — in de teruggedraaide code stond een commentaarregel
-  dat die grens "de enige ingang" was, en dat was aangenomen en niet getoetst.
-- **NUMMERING, en meld dit terug aan de chat.** De prompt heette "punt 68", maar 68 was in
-  `docs/ROADMAP.md` al bezet door *"De per-blok-antwoorden dragen TWEE doel-kolommen"* en 69 door
-  *"HET FTP-VOORSTEL NA EEN GEREDEN TEST"*. Deze ronde staat daarom als **punt 70**, de bijvangsten
-  als 71 en 72.
-- **HET BLOK HIERONDER IS OP TWEE PLEKKEN DOORGEHAALD**, want het droeg de fout: de bullet over
-  "direct afleesbaar" en de FOCUS-regel die het lopende maximum in ELKE weg voorschreef.
-  `docs/RITDATA-RECON.md` §8 is herschreven van reparatie naar intrekking.
-- **DRIE GET-VERZOEKEN aan intervals.icu**, alle met een harde bovengrens die GOOIT. Geen mutatie,
-  nergens — geen migratie, geen deploy, geen remote-D1-schrijfactie. De sleutel heet
-  `INTERVALS_API_KEY` en zijn waarde staat nergens.
-- **VLOEREN: lees ze zelf uit de suite.** Neem geen getal over uit een blok.
-- **OPENSTAAND, elk item opnieuw te greppen in `docs/ROADMAP.md`:** 32 · 34 (alleen (d)) · 35 · 48 ·
-  49 · 51 (alleen (3)) · 53 · 54 · 56 · 61 · 63 · 64 · 65 (alleen de REPARATIE) · 66 · 67 · 68 · 69 ·
-  71 · 72.
-
-FOCUS VOLGENDE CHAT: **ROADMAP punt 69 — HET FTP-VOORSTEL NA EEN GEREDEN TEST.** Rijdt Daan een
-aangeboden ijkinspanning, dan berekent de app een nieuwe drempelwaarde en STELT DIE VOOR met de oude
-ernaast; vandaag vraagt de app om een meting en doet niets met de uitslag. De grondstof is gemeten en
-bestaat: `GET /activity/{id}/power-curve` geeft de 20-minutenpiek van ÉÉN rit direct, 5353 bytes, één
-verzoek — en de athlete-curve kan dat NIET vervangen, want die wijst de BESTE rit in het venster aan
-en niet de laatste. **WAT EERST EEN DAAN-BESLUIT VRAAGT: de omrekenregel.** Van 20 minuten naar een
-drempelwaarde hoort een factor (klassiek circa 95 procent) en die staat NERGENS in de repo of in
-`DOELEN-SPEC` — behalve als UI-tekst in `ftp.ts` met nul lezers in code, en die gaat over het
-TESTBLOK en niet over de beste 20 minuten van de rit. Dat zijn twee verschillende getallen en er moet
-één gekozen worden. **EN NEEM GEEN LOPEND MAXIMUM:** lees de waarde OP 1200 seconden, zie het
-bovenstaande blok. De keuze uit `docs/RITDATA-RECON.md` §7 blijft open voor de doelcheck (punt 61) en
-het onderweg-signaal (punt 63).
-
-**DE OMGEVINGSVERKLARING BLIJFT EEN STOP-CONDITIE.** Deze ronde: pad `/c/Users/daan/Projects/cadans`,
-`git rev-parse --git-dir` en `--git-common-dir` allebei `.git` dus HOOFDCHECKOUT, branch `main`, 0
-achter en 0 vooruit op `origin/main`, versie `2.1.208 (Claude Code)`, boom schoon bij aanvang.
 
 CONTEXT: Daan fietst voorlopig niet, beschikbaarheid 0, planner leeg vanaf 2026-08-09 — **dat is
 geen defect.** Daan GEBRUIKT de gedeployde app; prod is geen proefopstelling. Verse chat.
