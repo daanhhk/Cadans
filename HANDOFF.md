@@ -13,6 +13,76 @@ live tot cutover.
 
 ## Stand
 
+STAND 2026-08-24 (DERDE BLOK VAN DEZE DAG) — DE RONDE TROK ZICHZELF IN. Punt 70 bestond om een
+leesfout in de power-curve te repareren. **Die leesfout bestaat niet.** De reparatie is geschreven,
+groen getest, en daarna volledig teruggedraaid. **Er is deze ronde GEEN REGEL CODE gewijzigd**, en dat
+is de opbrengst en geen mislukking.
+- **DE PREMISSE WAS FOUT, en zij stond in twee documenten en in een HANDOFF-blok.** Verbatim: *"Een
+  mean-max-kromme hoort niet te STIJGEN met de duur: wie X watt over 23 minuten volhield, hield per
+  definitie ook ergens 20 minuten ≥X watt vol."* De tweede helft is geen stelling. Tegenvoorbeeld met
+  de hand, het signaal `[10, 0, 10]`: beste 2s-gemiddelde **5,00 W**, beste 3s-gemiddelde **6,67 W**.
+  Een langer venster mag het ZWAKKE MIDDEN meetellen zolang beide STERKE RANDEN erin passen; een
+  korter venster moet één rand opgeven.
+- **EN HET GEBEURT ECHT, op Daans eigen data.** Herberekend uit de rauwe 1 Hz-`watts`-stream van rit
+  `i171448183` (4407 samples), uitputtend: beste 140s = **357,643 W** over 4268 vensters, beste 165s =
+  **366,927 W** over 4243. Beslissend: het beste 140s-blok van de hele rit LIGT IN dat 165s-venster en
+  haalt daar 357,643 W. De "reparatie" zou 140s op **366,9 W** zetten — een gemiddelde dat in geen van
+  die 4268 vensters bestaat. **Zij verving een JUIST getal door een ONHAALBAAR getal.**
+- **`pcMarkerAt_` LAS AL GOED.** Op het 42d-venster is 261 W op 1200 s het beste twintigminutenblok en
+  264 W op 1380 s het beste drieëntwintigminutenblok. Twee vragen, twee antwoorden, allebei juist. De
+  bestaande niveaukaart is in orde en de doelcheck erft geen leesfout.
+- **DE WEERLEGGINGSPAS: 3 VAN 3 LENZEN VOLTOOID — en hij verdiende zichzelf dezelfde ronde terug.**
+  Vooropgedraaid, zoals sinds deze ronde de regel is. Was hij als sluitstuk gedraaid, dan was
+  `monotoniseerKromme` groen, gecommit en gedeployd geweest. **De volgorde van de pas is geen
+  procesdetail; zij was hier het verschil.** Vastgelegd in `docs/WERKWIJZE.md`.
+- **DE DIEPERE LES, en die is groter dan deze ronde.** Alle drie de verwachtingen waren toetsbaar en
+  twee werden bevestigd door echte metingen op echte data. Toch was de conclusie fout: geen van die
+  metingen raakte de AANNAME eronder. P2 mat "is het lopende maximum ooit lager" — 0 keer op 566
+  punten over drie vensters — en een lopend maximum KÁN niet lager zijn. Dat is zijn definitie, geen
+  bevinding. **Een verwachting die niet kan falen, toetst niets en leest achteraf als bewijs.** Nieuw:
+  `docs/CC-CHECKS.md` **CHECK 40** — zoek het kleinste tegenvoorbeeld met de hand vóór je een
+  definitorische aanname laat dragen.
+- **TWEE BIJVANGSTEN, allebei zelf nagemeten en allebei een nieuw punt.** (71) De `curve`-array in de
+  power-curve-DTO heeft **GEEN enkele lezer**: de grafiek komt uit `markers`
+  (`Rijdersprofiel.tsx:45` is `function CurveChart({ markers }: { markers: PowerCurveMarker[] })`).
+  (72) `scripts/powercurve-smoke.mjs:61` is een **DERDE ingang** naar `pcNormalize_`, buiten
+  `workers/api/src/integrations/powercurve.ts` om — in de teruggedraaide code stond een commentaarregel
+  dat die grens "de enige ingang" was, en dat was aangenomen en niet getoetst.
+- **NUMMERING, en meld dit terug aan de chat.** De prompt heette "punt 68", maar 68 was in
+  `docs/ROADMAP.md` al bezet door *"De per-blok-antwoorden dragen TWEE doel-kolommen"* en 69 door
+  *"HET FTP-VOORSTEL NA EEN GEREDEN TEST"*. Deze ronde staat daarom als **punt 70**, de bijvangsten
+  als 71 en 72.
+- **HET BLOK HIERONDER IS OP TWEE PLEKKEN DOORGEHAALD**, want het droeg de fout: de bullet over
+  "direct afleesbaar" en de FOCUS-regel die het lopende maximum in ELKE weg voorschreef.
+  `docs/RITDATA-RECON.md` §8 is herschreven van reparatie naar intrekking.
+- **DRIE GET-VERZOEKEN aan intervals.icu**, alle met een harde bovengrens die GOOIT. Geen mutatie,
+  nergens — geen migratie, geen deploy, geen remote-D1-schrijfactie. De sleutel heet
+  `INTERVALS_API_KEY` en zijn waarde staat nergens.
+- **VLOEREN: lees ze zelf uit de suite.** Neem geen getal over uit een blok.
+- **OPENSTAAND, elk item opnieuw te greppen in `docs/ROADMAP.md`:** 32 · 34 (alleen (d)) · 35 · 48 ·
+  49 · 51 (alleen (3)) · 53 · 54 · 56 · 61 · 63 · 64 · 65 (alleen de REPARATIE) · 66 · 67 · 68 · 69 ·
+  71 · 72.
+
+FOCUS VOLGENDE CHAT: **ROADMAP punt 69 — HET FTP-VOORSTEL NA EEN GEREDEN TEST.** Rijdt Daan een
+aangeboden ijkinspanning, dan berekent de app een nieuwe drempelwaarde en STELT DIE VOOR met de oude
+ernaast; vandaag vraagt de app om een meting en doet niets met de uitslag. De grondstof is gemeten en
+bestaat: `GET /activity/{id}/power-curve` geeft de 20-minutenpiek van ÉÉN rit direct, 5353 bytes, één
+verzoek — en de athlete-curve kan dat NIET vervangen, want die wijst de BESTE rit in het venster aan
+en niet de laatste. **WAT EERST EEN DAAN-BESLUIT VRAAGT: de omrekenregel.** Van 20 minuten naar een
+drempelwaarde hoort een factor (klassiek circa 95 procent) en die staat NERGENS in de repo of in
+`DOELEN-SPEC` — behalve als UI-tekst in `ftp.ts` met nul lezers in code, en die gaat over het
+TESTBLOK en niet over de beste 20 minuten van de rit. Dat zijn twee verschillende getallen en er moet
+één gekozen worden. **EN NEEM GEEN LOPEND MAXIMUM:** lees de waarde OP 1200 seconden, zie het
+bovenstaande blok. De keuze uit `docs/RITDATA-RECON.md` §7 blijft open voor de doelcheck (punt 61) en
+het onderweg-signaal (punt 63).
+
+**DE OMGEVINGSVERKLARING BLIJFT EEN STOP-CONDITIE.** Deze ronde: pad `/c/Users/daan/Projects/cadans`,
+`git rev-parse --git-dir` en `--git-common-dir` allebei `.git` dus HOOFDCHECKOUT, branch `main`, 0
+achter en 0 vooruit op `origin/main`, versie `2.1.208 (Claude Code)`, boom schoon bij aanvang.
+
+CONTEXT: Daan fietst voorlopig niet, beschikbaarheid 0, planner leeg vanaf 2026-08-09 — **dat is
+geen defect.** Daan GEBRUIKT de gedeployde app; prod is geen proefopstelling. Verse chat.
+
 STAND 2026-08-24 (TWEEDE BLOK VAN DEZE DAG) — DE RITDATA IS IN KAART GEBRACHT EN ER LIGT EEN KEUZE
 VOOR DAAN. RECON-ronde: geen bouw, geen migratie, geen deploy, read-only op de repo en LEZEND op
 intervals.icu. **De deliverable is `docs/RITDATA-RECON.md` en die eindigt met VIJF WEGEN in gewone
@@ -25,14 +95,12 @@ taal — Daan leest dat blok en kiest.**
   `curves=6w` geeft 422 `"Invalid curve: [6w]"`. Het venster is een `<n>d`-vorm en `n` is vrij. **En
   `curves=42d,90d` geeft BEIDE vensters in ÉÉN verzoek**, dus het lift mee op een aanroep die Cadans
   al doet.
-- **MAAR "DIRECT AFLEESBAAR" WAS ONJUIST, en dat is de scherpste vondst van de weerleggingspas.** De
-  `values`-reeks is NIET monotoon dalend — 11 schendingen op de 42d-curve. Rond de maat, alle punten
-  uit DEZELFDE rit `i166073333`: 1200s = **261 W** maar 1380s = **264 W**. Een echte mean-max-kromme
-  kan niet stijgen met de duur. **Aflezen op `secs 1200` onderschat met 1,1 procent; je moet het
-  lopende MAXIMUM over alle `secs >= 1200` nemen.** Op de per-rit-curve dezelfde vorm: 195 tegen 197.
-  **EN DE ENGINE LEEST HEM VANDAAG NET ZO** — `pcMarkerAt_` neemt de eerste index waar
-  `secs[i] >= targetSec`, dus de bestaande niveaukaart draagt diezelfde onderschatting. Dat raakt
-  een criterium dat over "enkele procenten" gaat.
+- ~~**MAAR "DIRECT AFLEESBAAR" WAS ONJUIST, en dat is de scherpste vondst van de weerleggingspas.**~~
+  **INGETROKKEN 24-08-2026 — DEZE BULLET WAS FOUT. ZIE HET BOVENSTE BLOK.** De waarneming klopte (de
+  `values`-reeks is niet monotoon dalend; 1200s = 261 W en 1380s = 264 W op rit `i166073333`), maar
+  de conclusie eronder niet. "Een echte mean-max-kromme kan niet stijgen met de duur" is wiskundig
+  onjuist, en dus onderschat aflezen op `secs 1200` NIETS. `pcMarkerAt_` leest correct. **Neem hier
+  geen lopend maximum uit over.**
 - **`curves=42d` IS 43 DAGEN.** Gemeten: `label` `"42 days"`, maar `days` **43**, met
   `end_date_local` een dag NA vandaag. Wie letterlijk zes weken wil, stuurt `oldest`/`newest` mee.
 - **DE HISTORIE-VRAAG IS BEANTWOORD EN FEBRUARI IS GEEN PROBLEEM.** `oldest`/`newest` begrenzen het
@@ -85,10 +153,11 @@ FOCUS VOLGENDE CHAT: **DAAN KIEST EERST.** `docs/RITDATA-RECON.md` eindigt met v
 keuze is er niets te bouwen, want de drie behoeften delen hun bron NIET vanzelf. Ligt de keuze er, dan
 is de eerstvolgende bouw wat die keuze aanwijst — waarschijnlijk **ROADMAP punt 69 (het FTP-voorstel
 na een test)** of **punt 61 (de doelcheck)**, en die twee delen alleen de reken-ingreep hieronder.
-**EEN DING IS GEEN KEUZE en hoort in ELKE weg:** waar de app een 20-minutenwaarde uit een kromme
-haalt, moet zij het lopende MAXIMUM vanaf 1200 seconden nemen en niet de waarde OP 1200 aflezen. Dat
-scheelt ongeveer één procent op een criterium dat over enkele procenten oordeelt, en het raakt ook de
-BESTAANDE niveaukaart via `pcMarkerAt_`.
+~~**EEN DING IS GEEN KEUZE en hoort in ELKE weg:** waar de app een 20-minutenwaarde uit een kromme
+haalt, moet zij het lopende MAXIMUM vanaf 1200 seconden nemen en niet de waarde OP 1200 aflezen.~~
+**INGETROKKEN 24-08-2026, zie het bovenste blok: dit hoort in GEEN ENKELE weg.** Het lopende maximum
+levert een getal op dat de renner niet gereden heeft. Aflezen OP 1200 is de juiste lezing en de
+bestaande niveaukaart is in orde.
 
 **DE OMGEVINGSVERKLARING BLIJFT EEN STOP-CONDITIE.** Deze ronde: pad `/c/Users/daan/Projects/cadans`,
 `git rev-parse --git-dir` en `--git-common-dir` allebei `.git` dus HOOFDCHECKOUT, branch `main`, 0
@@ -98,103 +167,6 @@ Agent-discovery blijft NIET GEMETEN: deze sessie begon `2026-07-14T07:20:14.850Z
 
 CONTEXT: Daan fietst voorlopig niet, beschikbaarheid 0, planner leeg vanaf 2026-08-09 — **dat is
 geen defect.** Daan GEBRUIKT de gedeployde app; prod is geen proefopstelling. Verse chat.
-
-STAND 2026-08-24 (EERSTE BLOK VAN DEZE DAG) — DE TIJDZONE-SCHULD IS GEMETEN EN PROD DRAAIT WEER OP
-MAIN. Geen code, alleen meting plus docs — en de eerste WORKER-DEPLOY sinds 10-08-2026.
-- **DAAN GEBRUIKT DE GEDEPLOYDE APP.** Dat stond tot deze ronde nergens vastgelegd en het is het
-  belangrijkste feit voor elke volgende prod-handeling: prod is GEEN proefopstelling. Elke
-  prod-mutatie draagt vanaf nu vooraf haar WEG TERUG, gemeten en niet aangenomen — vastgelegd in
-  `docs/WERKWIJZE.md`.
-- **DE PROD-STAND, en het logboek is `docs/PROD-STAND.md`.** Remote D1 `cadans` draagt 0000 t/m
-  0012. De Worker draait nu op **`940414c4-be95-4968-9eef-542a188db563`** sinds
-  `2026-08-24T05:35:36.574Z`, gebouwd uit commit `46f2103`. Terugvaldoel is de vorige versie
-  `e994c768-3d73-4aec-876b-b614b7fe1302`. Prod loopt daarmee weer GELIJK met main; van 10-08 tot
-  24-08 was het schema bij en de code niet.
-- **DE WEG TERUG IS GEMETEN, niet uit documentatie overgenomen.** Worker:
-  `npx wrangler rollback <version-id>` bestaat en het terugvaldoel stond geverifieerd in
-  `wrangler versions list` (die lijst kapt af op de tien nieuwste — zakt je doel eruit, dan is er
-  geen weg terug). D1: Time Travel, bereik aan BEIDE randen getoetst — 25 dagen terug levert een
-  bookmark, 40 dagen terug wordt geweigerd met *"within the last 30 days"*. Een worker-deploy raakt
-  D1 niet, dus voor de deploy is de rollback de weg terug en niet Time Travel.
-- **DE METING VAN PUNT 65 — `docs/TZ-RECON.md`, en dit is de eerste keer dat dat punt een MAAT
-  draagt.** (M-A) Precies VIJF plekken in `workers/api` produceren een datum uit de ambient klok:
-  het sync-venster van `syncActivities` en `syncWellness`, de dag-bucket `fetchedOn` en de
-  cache-sleutel `today` in `powercurve.ts`, plus het absolute `toISOString` in `writeCheckin`.
-  `weekplanFreeze.ts` is GEEN producent — hij krijgt `todayISO` uit de client-body, wat een aanname
-  corrigeert die er twee rondes stond. (M-B) Dezelfde instants langs twee klokken, **210.240
-  vergelijkingen** (elk kwartier van 2026 × zes `daysBack`-waarden): **alle verschillen liggen in de
-  UTC-uren 22 en 23, daarbuiten NUL.** (M-C) **0 scheve rijen, en structureel nul**: de enige door
-  de Worker geproduceerde datumkolom is `power_curve_cache.fetched_on`, een TTL-bucket waarvan de
-  faalwijze een overbodige re-fetch is. T1 en T2 hielden allebei.
-- **DE WEERLEGGINGSPAS BRAK DRIE VAN MIJN EIGEN GETALLEN, en twee van de vier lenzen stierven op
-  een server-fout (529 en mid-response) — de lenzen op M-A en M-C zijn dus NIET gedraaid.** Wat wél
-  kantelde en door mij is hermeten: de eerste noemer was 384 (vier dagen) en kon per constructie
-  geen DST-OVERSPANNEND venster bevatten; "2 uur zomer, 1 uur winter" is te grof, want welk van de
-  uren 22 en 23 verschilt hangt af van het DST-regime bij ELKE RAND apart; en 6,3 procent is geen
-  constante maar 6,58 tot 7,60 procent, met 6,88 (activiteiten) en 7,25 (wellness) als de waarden
-  die prod werkelijk gebruikt. Eén TEGENSPRAAK tussen twee lenzen is door mijn eigen telling
-  beslecht: verschillen buiten de UTC-uren 22 en 23 zijn er niet, 0 op 210.240.
-- **DRIE VONDSTEN DIE DE REPARATIE-RICHTING RAKEN, en ze wijzen TEGEN een simpele Amsterdam-pin.**
-  (i) Het venster SCHUIFT niet alleen maar KRIMPT en GROEIT: `oldest` gebruikt een
-  MILLISECONDEN-aftrek, dus onder Amsterdam is de span 59/60/61 dagen waar hij onder UTC altijd
-  exact `daysBack` is. (ii) De datetime-round-trip is onder UTC exact (0 van 1152) en onder
-  Amsterdam een uur scheef in het DST-GAT (12 van 1152, allemaal 2026-03-29 tussen 02:00 en 02:55 —
-  een uur dat in Amsterdam niet bestaat). (iii) `newest` onder UTC is NOOIT later dan bedoeld, wel
-  2300 keer één dag eerder, dus de faalwijze is een TIJDELIJK ONTBREKENDE rij die de volgende sync
-  herstelt. De vermoedelijk betere reparatie is de ms-aftrek vervangen door KALENDERrekenwerk, niet
-  de proceszone verzetten — maar dat is een eigen besluit op een eigen meting.
-- **ER IS GEEN CRON.** De syncs worden alleen aangeroepen als de client het schema-scherm opent, dus
-  de blootstelling is niet een uniforme 6,88 procent maar de kans dat Daan de app tussen 00:00 en
-  02:00 lokaal opent. Stond er wél een cron in de band, dan was die kans 100 procent geweest.
-- **WAT DE NA-VERIFICATIE NIET KON AANTONEN, en dat is geen tekortkoming maar de stand van zaken.**
-  (1) **CC-CHECKS 37 is NIET gedraaid**: die wil de LIVE `index.html` byte-voor-byte tegen de lokale
-  build leggen, en de hele origin zit achter een basic-auth-gate waarvan het wachtwoord een
-  deploy-only secret is. Wat er wél is: de geuploade bundelnaam `/assets/index-BiwPwGBR.js` komt
-  overeen met die in de lokale `index.html` — een naam-vergelijking, geen byte-vergelijking.
-  (2) **DE IJKING-LAAG IS INERT TOT 2026-09-21.** Met de echte prod-instellingen (`doel` FTP,
-  `doel_start` `2026-06-29`) geeft `computeMacroPhase` voor 24-08 week 9 (Peak); poort (1) eist week
-  1. Wie vandaag kijkt en geen ijkaanbod ziet, ziet het JUISTE gedrag. Een rooktest kan de nieuwe
-  laag dus niet tonen.
-- **WAT DAAN KAN CONTROLEREN:** open de app op `https://cadans-api.dtkorteweg.workers.dev/`, log in
-  met de basic-auth, en kijk of de weekkaart normaal laadt en het schema-scherm geen 500 geeft. Meer
-  valt er vandaag niet aan te zien.
-- **NIEUW VANGNET: CC-CHECKS 39.** De persistente lokale D1 moet dezelfde migratiestand dragen als
-  de repo. De GATE kan dat per constructie niet zien — vitest migreert een verse database per run —
-  en dat gat kostte twee rondes waarin `wrangler dev` de ijking-routes niet kon bedienen.
-- **VLOEREN: lees ze zelf uit de suite.** Neem geen getal over uit een blok.
-- **OPENSTAAND, elk item opnieuw te greppen in `docs/ROADMAP.md`:** 32 · 34 (alleen (d)) · 35 · 48 ·
-  49 · 51 (alleen (3)) · 53 · 54 · 56 · 61 · 63 · 64 (alleen de nakijkpunten) · 65 (alleen de
-  REPARATIE, de meting is af) · 66 · 67 · 68.
-
-FOCUS VOLGENDE CHAT: **ROADMAP punt 61 — de DOELCHECK aan het eind van het doelblok, de tweede helft
-van M89, samen met punt 54 (welke maat per doel).** De TZ-reparatie is NIET de eerstvolgende: zij is
-nu gemeten, blijkt een randgeval van 1 tot 2 uur per etmaal zonder blijvend gevolg, en heeft geen
-haast. De doelcheck wel — in februari sluit het onderhoudsblok en dan is de vraag of de FTP het
-gehouden heeft, vóór de Amstel-Gold-voorbereiding begint. Het is bovendien het enige deel van punt
-47 dat nooit is aangeraakt. 54 hangt eraan vast: wie 61 bouwt zonder 54 kiest stilzwijgend een maat.
-**BEGIN BIJ DE GRONDSTOF, want die ontbreekt en dat is gemeten.** `DOELEN-SPEC` §3.2 vraagt het beste
-20-minutenvermogen over ZES WEKEN. Dat getal bestaat als marker — `{ sec: 1200, label: "20m", key: true }`
-— maar alleen over `export type PowerCurveWindow = "90d" | "1y";` met whitelist
-`const ALLOWED_WINDOWS = new Set<string>(["90d", "1y"]);`. De dichtstbijzijnde route is een DERDE
-waarde in die union plus de whitelist, én VERIFICATIE dat intervals.icu die `curves`-waarde
-accepteert — dat laatste vraagt een echte API-aanroep en is niet vanaf schijf te beantwoorden.
-DAARNA komt punt 63, het onderweg-signaal, en dat WACHT op punt 49.
-
-**DE OMGEVINGSVERKLARING BLIJFT EEN STOP-CONDITIE.** Deze ronde: pad `/c/Users/daan/Projects/cadans`,
-`git rev-parse --git-dir` en `--git-common-dir` allebei `.git` dus HOOFDCHECKOUT, branch `main`, 0
-achter en 0 vooruit op `origin/main`, versie `2.1.208 (Claude Code)`, boom schoon bij aanvang.
-
-**DE TWEE WEGGOOI-REGELS ZIJN OPGERUIMD.** `.claude/rules/` is leeg; beide probes zijn beantwoord.
-`RULESALTIJD-MERKSTRING-Q4XM7D`: een regel ZONDER `paths` laadt bij sessiestart — gemeten, 5 van 6
-verse agents gaven hem verbatim terug terwijl hij 0 keer in hun opdracht stond.
-`RULESPATHS-MERKSTRING-V9HB2K`: een PAD-GESCOOPTE regel vuurt op de FILE-READ en niet eerder —
-gemeten met één agent die `packages/engine/src/zones.ts` las en de merkstring pas NA het
-Read-resultaat zag. ROADMAP punt 51 stap (2) is daarmee AF. Wat NIET gemeten is en niet meetbaar
-was: of een regel zonder `paths` ook in de HOOFDsessie laadt — deze sessie is ouder dan het bestand.
-Een verse chat beantwoordt dat gratis in haar openingszin.
-
-CONTEXT: Daan fietst voorlopig niet, beschikbaarheid 0, planner leeg vanaf 2026-08-09 — **dat is
-geen defect.** Verse chat.
 
 De oudere STAND-blokken en de historische projectsecties staan in `docs/HANDOFF-ARCHIEF.md`.
 Dit bestand draagt de TWEE nieuwste blokken; komt er een derde bij, dan schuiven de oudste in

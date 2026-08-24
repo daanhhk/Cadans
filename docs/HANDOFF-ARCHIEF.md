@@ -11,6 +11,103 @@ of uit de publieke repo.
 De levende projectstand staat in `HANDOFF.md`. Dat bestand droeg tot 21-08-2026 de twaalf nieuwste
 STAND-blokken; sindsdien draagt het er TWEE, en schuift het oudste bij elke close-out hierheen.
 
+STAND 2026-08-24 (EERSTE BLOK VAN DEZE DAG) — DE TIJDZONE-SCHULD IS GEMETEN EN PROD DRAAIT WEER OP
+MAIN. Geen code, alleen meting plus docs — en de eerste WORKER-DEPLOY sinds 10-08-2026.
+- **DAAN GEBRUIKT DE GEDEPLOYDE APP.** Dat stond tot deze ronde nergens vastgelegd en het is het
+  belangrijkste feit voor elke volgende prod-handeling: prod is GEEN proefopstelling. Elke
+  prod-mutatie draagt vanaf nu vooraf haar WEG TERUG, gemeten en niet aangenomen — vastgelegd in
+  `docs/WERKWIJZE.md`.
+- **DE PROD-STAND, en het logboek is `docs/PROD-STAND.md`.** Remote D1 `cadans` draagt 0000 t/m
+  0012. De Worker draait nu op **`940414c4-be95-4968-9eef-542a188db563`** sinds
+  `2026-08-24T05:35:36.574Z`, gebouwd uit commit `46f2103`. Terugvaldoel is de vorige versie
+  `e994c768-3d73-4aec-876b-b614b7fe1302`. Prod loopt daarmee weer GELIJK met main; van 10-08 tot
+  24-08 was het schema bij en de code niet.
+- **DE WEG TERUG IS GEMETEN, niet uit documentatie overgenomen.** Worker:
+  `npx wrangler rollback <version-id>` bestaat en het terugvaldoel stond geverifieerd in
+  `wrangler versions list` (die lijst kapt af op de tien nieuwste — zakt je doel eruit, dan is er
+  geen weg terug). D1: Time Travel, bereik aan BEIDE randen getoetst — 25 dagen terug levert een
+  bookmark, 40 dagen terug wordt geweigerd met *"within the last 30 days"*. Een worker-deploy raakt
+  D1 niet, dus voor de deploy is de rollback de weg terug en niet Time Travel.
+- **DE METING VAN PUNT 65 — `docs/TZ-RECON.md`, en dit is de eerste keer dat dat punt een MAAT
+  draagt.** (M-A) Precies VIJF plekken in `workers/api` produceren een datum uit de ambient klok:
+  het sync-venster van `syncActivities` en `syncWellness`, de dag-bucket `fetchedOn` en de
+  cache-sleutel `today` in `powercurve.ts`, plus het absolute `toISOString` in `writeCheckin`.
+  `weekplanFreeze.ts` is GEEN producent — hij krijgt `todayISO` uit de client-body, wat een aanname
+  corrigeert die er twee rondes stond. (M-B) Dezelfde instants langs twee klokken, **210.240
+  vergelijkingen** (elk kwartier van 2026 × zes `daysBack`-waarden): **alle verschillen liggen in de
+  UTC-uren 22 en 23, daarbuiten NUL.** (M-C) **0 scheve rijen, en structureel nul**: de enige door
+  de Worker geproduceerde datumkolom is `power_curve_cache.fetched_on`, een TTL-bucket waarvan de
+  faalwijze een overbodige re-fetch is. T1 en T2 hielden allebei.
+- **DE WEERLEGGINGSPAS BRAK DRIE VAN MIJN EIGEN GETALLEN, en twee van de vier lenzen stierven op
+  een server-fout (529 en mid-response) — de lenzen op M-A en M-C zijn dus NIET gedraaid.** Wat wél
+  kantelde en door mij is hermeten: de eerste noemer was 384 (vier dagen) en kon per constructie
+  geen DST-OVERSPANNEND venster bevatten; "2 uur zomer, 1 uur winter" is te grof, want welk van de
+  uren 22 en 23 verschilt hangt af van het DST-regime bij ELKE RAND apart; en 6,3 procent is geen
+  constante maar 6,58 tot 7,60 procent, met 6,88 (activiteiten) en 7,25 (wellness) als de waarden
+  die prod werkelijk gebruikt. Eén TEGENSPRAAK tussen twee lenzen is door mijn eigen telling
+  beslecht: verschillen buiten de UTC-uren 22 en 23 zijn er niet, 0 op 210.240.
+- **DRIE VONDSTEN DIE DE REPARATIE-RICHTING RAKEN, en ze wijzen TEGEN een simpele Amsterdam-pin.**
+  (i) Het venster SCHUIFT niet alleen maar KRIMPT en GROEIT: `oldest` gebruikt een
+  MILLISECONDEN-aftrek, dus onder Amsterdam is de span 59/60/61 dagen waar hij onder UTC altijd
+  exact `daysBack` is. (ii) De datetime-round-trip is onder UTC exact (0 van 1152) en onder
+  Amsterdam een uur scheef in het DST-GAT (12 van 1152, allemaal 2026-03-29 tussen 02:00 en 02:55 —
+  een uur dat in Amsterdam niet bestaat). (iii) `newest` onder UTC is NOOIT later dan bedoeld, wel
+  2300 keer één dag eerder, dus de faalwijze is een TIJDELIJK ONTBREKENDE rij die de volgende sync
+  herstelt. De vermoedelijk betere reparatie is de ms-aftrek vervangen door KALENDERrekenwerk, niet
+  de proceszone verzetten — maar dat is een eigen besluit op een eigen meting.
+- **ER IS GEEN CRON.** De syncs worden alleen aangeroepen als de client het schema-scherm opent, dus
+  de blootstelling is niet een uniforme 6,88 procent maar de kans dat Daan de app tussen 00:00 en
+  02:00 lokaal opent. Stond er wél een cron in de band, dan was die kans 100 procent geweest.
+- **WAT DE NA-VERIFICATIE NIET KON AANTONEN, en dat is geen tekortkoming maar de stand van zaken.**
+  (1) **CC-CHECKS 37 is NIET gedraaid**: die wil de LIVE `index.html` byte-voor-byte tegen de lokale
+  build leggen, en de hele origin zit achter een basic-auth-gate waarvan het wachtwoord een
+  deploy-only secret is. Wat er wél is: de geuploade bundelnaam `/assets/index-BiwPwGBR.js` komt
+  overeen met die in de lokale `index.html` — een naam-vergelijking, geen byte-vergelijking.
+  (2) **DE IJKING-LAAG IS INERT TOT 2026-09-21.** Met de echte prod-instellingen (`doel` FTP,
+  `doel_start` `2026-06-29`) geeft `computeMacroPhase` voor 24-08 week 9 (Peak); poort (1) eist week
+  1. Wie vandaag kijkt en geen ijkaanbod ziet, ziet het JUISTE gedrag. Een rooktest kan de nieuwe
+  laag dus niet tonen.
+- **WAT DAAN KAN CONTROLEREN:** open de app op `https://cadans-api.dtkorteweg.workers.dev/`, log in
+  met de basic-auth, en kijk of de weekkaart normaal laadt en het schema-scherm geen 500 geeft. Meer
+  valt er vandaag niet aan te zien.
+- **NIEUW VANGNET: CC-CHECKS 39.** De persistente lokale D1 moet dezelfde migratiestand dragen als
+  de repo. De GATE kan dat per constructie niet zien — vitest migreert een verse database per run —
+  en dat gat kostte twee rondes waarin `wrangler dev` de ijking-routes niet kon bedienen.
+- **VLOEREN: lees ze zelf uit de suite.** Neem geen getal over uit een blok.
+- **OPENSTAAND, elk item opnieuw te greppen in `docs/ROADMAP.md`:** 32 · 34 (alleen (d)) · 35 · 48 ·
+  49 · 51 (alleen (3)) · 53 · 54 · 56 · 61 · 63 · 64 (alleen de nakijkpunten) · 65 (alleen de
+  REPARATIE, de meting is af) · 66 · 67 · 68.
+
+FOCUS VOLGENDE CHAT: **ROADMAP punt 61 — de DOELCHECK aan het eind van het doelblok, de tweede helft
+van M89, samen met punt 54 (welke maat per doel).** De TZ-reparatie is NIET de eerstvolgende: zij is
+nu gemeten, blijkt een randgeval van 1 tot 2 uur per etmaal zonder blijvend gevolg, en heeft geen
+haast. De doelcheck wel — in februari sluit het onderhoudsblok en dan is de vraag of de FTP het
+gehouden heeft, vóór de Amstel-Gold-voorbereiding begint. Het is bovendien het enige deel van punt
+47 dat nooit is aangeraakt. 54 hangt eraan vast: wie 61 bouwt zonder 54 kiest stilzwijgend een maat.
+**BEGIN BIJ DE GRONDSTOF, want die ontbreekt en dat is gemeten.** `DOELEN-SPEC` §3.2 vraagt het beste
+20-minutenvermogen over ZES WEKEN. Dat getal bestaat als marker — `{ sec: 1200, label: "20m", key: true }`
+— maar alleen over `export type PowerCurveWindow = "90d" | "1y";` met whitelist
+`const ALLOWED_WINDOWS = new Set<string>(["90d", "1y"]);`. De dichtstbijzijnde route is een DERDE
+waarde in die union plus de whitelist, én VERIFICATIE dat intervals.icu die `curves`-waarde
+accepteert — dat laatste vraagt een echte API-aanroep en is niet vanaf schijf te beantwoorden.
+DAARNA komt punt 63, het onderweg-signaal, en dat WACHT op punt 49.
+
+**DE OMGEVINGSVERKLARING BLIJFT EEN STOP-CONDITIE.** Deze ronde: pad `/c/Users/daan/Projects/cadans`,
+`git rev-parse --git-dir` en `--git-common-dir` allebei `.git` dus HOOFDCHECKOUT, branch `main`, 0
+achter en 0 vooruit op `origin/main`, versie `2.1.208 (Claude Code)`, boom schoon bij aanvang.
+
+**DE TWEE WEGGOOI-REGELS ZIJN OPGERUIMD.** `.claude/rules/` is leeg; beide probes zijn beantwoord.
+`RULESALTIJD-MERKSTRING-Q4XM7D`: een regel ZONDER `paths` laadt bij sessiestart — gemeten, 5 van 6
+verse agents gaven hem verbatim terug terwijl hij 0 keer in hun opdracht stond.
+`RULESPATHS-MERKSTRING-V9HB2K`: een PAD-GESCOOPTE regel vuurt op de FILE-READ en niet eerder —
+gemeten met één agent die `packages/engine/src/zones.ts` las en de merkstring pas NA het
+Read-resultaat zag. ROADMAP punt 51 stap (2) is daarmee AF. Wat NIET gemeten is en niet meetbaar
+was: of een regel zonder `paths` ook in de HOOFDsessie laadt — deze sessie is ouder dan het bestand.
+Een verse chat beantwoordt dat gratis in haar openingszin.
+
+CONTEXT: Daan fietst voorlopig niet, beschikbaarheid 0, planner leeg vanaf 2026-08-09 — **dat is
+geen defect.** Verse chat.
+
 STAND 2026-08-23 (NEGENDE BLOK VAN DEZE DAG) — DE TWEE MIGRATIES STAAN OP REMOTE D1. Geen code van
 betekenis, geen engine, en met opzet GEEN worker-deploy. Voor het eerst is de prod-stand
 opgeschreven, en dat is nu een eigen document: **`docs/PROD-STAND.md`.**
