@@ -13,8 +13,94 @@ live tot cutover.
 
 ## Stand
 
-STAND 2026-08-24 — DE TIJDZONE-SCHULD IS GEMETEN EN PROD DRAAIT WEER OP MAIN. Geen code, alleen
-meting plus docs — en de eerste WORKER-DEPLOY sinds 10-08-2026.
+STAND 2026-08-24 (TWEEDE BLOK VAN DEZE DAG) — DE RITDATA IS IN KAART GEBRACHT EN ER LIGT EEN KEUZE
+VOOR DAAN. RECON-ronde: geen bouw, geen migratie, geen deploy, read-only op de repo en LEZEND op
+intervals.icu. **De deliverable is `docs/RITDATA-RECON.md` en die eindigt met VIJF WEGEN in gewone
+taal — Daan leest dat blok en kiest.**
+- **DRIE BEHOEFTEN WACHTTEN OP DEZELFDE ONTBREKENDE GRONDSTOF, en ze blijken drie VERSCHILLENDE
+  dingen te vragen.** (1) Een piek uit ÉÉN rit, voor het FTP-VOORSTEL na een gereden ijkinspanning
+  (nieuw Daan-besluit, ROADMAP punt 69). (2) Een piek over ZES WEKEN, voor de doelcheck. (3) De
+  TIJDLIJN binnen een rit, voor het onderweg-signaal.
+- **DE ZESWEEKSE GRONDSTOF BESTAAT WÉL, en dat was de open vraag.** `curves=42d` geeft 200;
+  `curves=6w` geeft 422 `"Invalid curve: [6w]"`. Het venster is een `<n>d`-vorm en `n` is vrij. **En
+  `curves=42d,90d` geeft BEIDE vensters in ÉÉN verzoek**, dus het lift mee op een aanroep die Cadans
+  al doet.
+- **MAAR "DIRECT AFLEESBAAR" WAS ONJUIST, en dat is de scherpste vondst van de weerleggingspas.** De
+  `values`-reeks is NIET monotoon dalend — 11 schendingen op de 42d-curve. Rond de maat, alle punten
+  uit DEZELFDE rit `i166073333`: 1200s = **261 W** maar 1380s = **264 W**. Een echte mean-max-kromme
+  kan niet stijgen met de duur. **Aflezen op `secs 1200` onderschat met 1,1 procent; je moet het
+  lopende MAXIMUM over alle `secs >= 1200` nemen.** Op de per-rit-curve dezelfde vorm: 195 tegen 197.
+  **EN DE ENGINE LEEST HEM VANDAAG NET ZO** — `pcMarkerAt_` neemt de eerste index waar
+  `secs[i] >= targetSec`, dus de bestaande niveaukaart draagt diezelfde onderschatting. Dat raakt
+  een criterium dat over "enkele procenten" gaat.
+- **`curves=42d` IS 43 DAGEN.** Gemeten: `label` `"42 days"`, maar `days` **43**, met
+  `end_date_local` een dag NA vandaag. Wie letterlijk zes weken wil, stuurt `oldest`/`newest` mee.
+- **DE HISTORIE-VRAAG IS BEANTWOORD EN FEBRUARI IS GEEN PROBLEEM.** `oldest`/`newest` begrenzen het
+  venster ECHT — gemeten op drie historische bereiken, waarbij niet alleen de DATUM maar ook de
+  WATTS per bereik verschilden (254 W in januari, 265 W in het najaar, 231 W in het voorjaar). De
+  doelcheck hoeft dus NIET vanaf nu op te bouwen; zij kan met terugwerkende kracht elk venster
+  opvragen. Per-rit-krommen zijn ook te backfillen: 255 ritten, ~1,4 MB. Streams zouden ~93 MB zijn.
+- **U1 VALT, U2 HOUDT.** U1: de piek-per-rit en de piek-over-zes-weken komen uit TWEE
+  endpoint-klassen. Bewijs dat ze niet inwisselbaar zijn: het 42d-venster wees rit `i166073333` aan
+  en het 90d-venster `i158575314` — de marker geeft de BESTE rit, niet de LAATSTE. U2: streams zijn
+  363535 bytes tegen 5353 voor de per-rit-kromme, ongeveer 68 keer, bij hetzelfde aantal verzoeken.
+- **EEN VIERDE WEG DIE OP GEEN ENKELE LIJST STOND, en hij is GRATIS.** De activiteitenlijst die
+  Cadans al ophaalt draagt per rit `decoupling` (12/12 ritten), `icu_power_hr_z2` (11/12),
+  `icu_power_hr_z2_mins` en `icu_efficiency_factor` (12/12) — 61.412 bytes voor 42 dagen in ÉÉN
+  verzoek dat er toch al is. Dat zijn AGGREGATEN per rit en geen tijdlijn, maar het onderweg-signaal
+  vraagt een TREND over weken. **Blijkt dat genoeg, dan is het onderweg-signaal de GOEDKOOPSTE van
+  de drie behoeften in plaats van de duurste** — en dat verschuift de volgorde.
+- **TWEE DINGEN DIE DE WEG NIET DICHT.** (i) §3.2 draagt TWEE criteria op TWEE grootheden: een
+  VLOER op "de FTP waarmee de winter begon" (een FTP op een ankerdatum, niet een piek) en een
+  DELTA-METER die een basislijn nodig heeft. Een 42d-piek levert alleen de meter-helft. (ii) De
+  omrekenregel van 20 minuten naar een drempelwaarde BESTAAT in de repo — `ftp.ts`, verbatim
+  *"Nieuwe FTP = 95% van gemiddeld vermogen over de 20 min"* — maar als UI-tekst met nul lezers in
+  code, en op het TESTBLOK en niet op de beste 20 minuten van de hele rit. Dat zijn twee getallen en
+  er moet één gekozen worden. ROADMAP punt 69 stelde dat de regel nergens staat; rechtgezet.
+- **DE POORT VOOR BEHOEFTE 1 BESTAAT AL.** De lens wees erop dat de kromme een getal geeft voor
+  ELKE rit — de 195 W kwam van een Z2-rit, en 0,95 × 195 = 185 tegen een gezette FTP van 280. Maar
+  Cadans WEET welke dag een test was: de override draagt `workoutType: "test"` plus
+  `testBadgeLabel()`, en `testResultaat` herkent die combinatie al. De poort is er; zij is alleen
+  niet met de piek verbonden.
+- **STREAMS ZIJN GEEN ZUIVERE 1 Hz.** `time` loopt van 0 tot 4544 over 4510 samples: vier gaten,
+  35 seconden. Rekenen moet over `time`, niet over de index.
+- **NEGENTIEN GET-VERZOEKEN aan intervals.icu**, alle met een harde bovengrens die GOOIT in plaats
+  van door te gaan — de les van de vorige ronde. Een dagsync doet er drie, dus dit is ongeveer zes
+  dagsyncs. Geen enkele mutatie. De sleutel heet `INTERVALS_API_KEY` en zijn waarde staat nergens.
+- **DE WEERLEGGINGSPAS: 1 VAN DE 4 LENZEN VOLTOOID, over TWEE pogingen.** De pas is vroeg gestart om
+  te kunnen herstarten; dat was nodig en het hielp niet. Poging 1: één lens klaar, drie stopten met
+  schrijven en leverden geen enkel resultaat, ook geen foutrapport. Poging 2 (`resumeFromRunId`):
+  vier agents kwamen op gang, schreven ongeveer een minuut en stopten op dezelfde manier. Vorige
+  ronde stierven er twee op een expliciete `529 Overloaded`; nu zonder melding. **Dat is een
+  omgevingsprobleem en geen uitslag.** Wat NIET is aangevallen: de INVENTARIS van de vijf endpoints
+  en de HISTORIE-claim — die rusten op mijn eigen meting alleen. **De historie-claim is de
+  gevoeligste, want zij beslist of de doelcheck in februari data heeft; wie hierop verder bouwt doet
+  er goed aan die pas alsnog te draaien.** Eindstand in `docs/RITDATA-RECON.md` §6.
+- **VLOEREN: lees ze zelf uit de suite.** Neem geen getal over uit een blok.
+- **OPENSTAAND, elk item opnieuw te greppen in `docs/ROADMAP.md`:** 32 · 34 (alleen (d)) · 35 · 48 ·
+  49 · 53 · 54 · 56 · 61 · 63 · 64 · 65 (alleen de REPARATIE) · 66 · 67 · 68 · **69 (nieuw — het
+  FTP-voorstel na een test)**.
+
+FOCUS VOLGENDE CHAT: **DAAN KIEST EERST.** `docs/RITDATA-RECON.md` eindigt met vijf wegen; zonder die
+keuze is er niets te bouwen, want de drie behoeften delen hun bron NIET vanzelf. Ligt de keuze er, dan
+is de eerstvolgende bouw wat die keuze aanwijst — waarschijnlijk **ROADMAP punt 69 (het FTP-voorstel
+na een test)** of **punt 61 (de doelcheck)**, en die twee delen alleen de reken-ingreep hieronder.
+**EEN DING IS GEEN KEUZE en hoort in ELKE weg:** waar de app een 20-minutenwaarde uit een kromme
+haalt, moet zij het lopende MAXIMUM vanaf 1200 seconden nemen en niet de waarde OP 1200 aflezen. Dat
+scheelt ongeveer één procent op een criterium dat over enkele procenten oordeelt, en het raakt ook de
+BESTAANDE niveaukaart via `pcMarkerAt_`.
+
+**DE OMGEVINGSVERKLARING BLIJFT EEN STOP-CONDITIE.** Deze ronde: pad `/c/Users/daan/Projects/cadans`,
+`git rev-parse --git-dir` en `--git-common-dir` allebei `.git` dus HOOFDCHECKOUT, branch `main`, 0
+achter en 0 vooruit op `origin/main`, versie `2.1.208 (Claude Code)`, boom schoon bij aanvang.
+Agent-discovery blijft NIET GEMETEN: deze sessie begon `2026-07-14T07:20:14.850Z` en
+`.claude/agents/recon.md` dateert van `2026-08-23 07:48`.
+
+CONTEXT: Daan fietst voorlopig niet, beschikbaarheid 0, planner leeg vanaf 2026-08-09 — **dat is
+geen defect.** Daan GEBRUIKT de gedeployde app; prod is geen proefopstelling. Verse chat.
+
+STAND 2026-08-24 (EERSTE BLOK VAN DEZE DAG) — DE TIJDZONE-SCHULD IS GEMETEN EN PROD DRAAIT WEER OP
+MAIN. Geen code, alleen meting plus docs — en de eerste WORKER-DEPLOY sinds 10-08-2026.
 - **DAAN GEBRUIKT DE GEDEPLOYDE APP.** Dat stond tot deze ronde nergens vastgelegd en het is het
   belangrijkste feit voor elke volgende prod-handeling: prod is GEEN proefopstelling. Elke
   prod-mutatie draagt vanaf nu vooraf haar WEG TERUG, gemeten en niet aangenomen — vastgelegd in
@@ -106,118 +192,6 @@ gemeten met één agent die `packages/engine/src/zones.ts` las en de merkstring 
 Read-resultaat zag. ROADMAP punt 51 stap (2) is daarmee AF. Wat NIET gemeten is en niet meetbaar
 was: of een regel zonder `paths` ook in de HOOFDsessie laadt — deze sessie is ouder dan het bestand.
 Een verse chat beantwoordt dat gratis in haar openingszin.
-
-CONTEXT: Daan fietst voorlopig niet, beschikbaarheid 0, planner leeg vanaf 2026-08-09 — **dat is
-geen defect.** Verse chat.
-
-STAND 2026-08-23 (NEGENDE BLOK VAN DEZE DAG) — DE TWEE MIGRATIES STAAN OP REMOTE D1. Geen code van
-betekenis, geen engine, en met opzet GEEN worker-deploy. Voor het eerst is de prod-stand
-opgeschreven, en dat is nu een eigen document: **`docs/PROD-STAND.md`.**
-- **DE PROD-STAND IN ÉÉN ADEM.** Remote D1 `cadans` draagt migraties **0000 t/m 0012**, dertien
-  stuks, geen gaten, niets openstaand. De Worker **IS gedeployd**: versie
-  `e994c768-3d73-4aec-876b-b614b7fe1302`, live sinds `2026-08-10T13:19:32.453Z`, 10 deployments in
-  totaal. **HET SCHEMA IS BIJ, DE CODE NIET** — alles van na 10-08-2026 draait niet op prod,
-  inclusief het hele punt-47-blok. Dat stond nergens genoteerd en is deze ronde gemeten.
-- **W1, W2 EN W3 HIELDEN alle drie, en ze zijn gemeten VÓÓRDAT er iets is toegepast.** W1: remote
-  droeg 11 migraties, `0000` t/m `0010` aaneengesloten, met precies `0011` en `0012` openstaand en
-  13 `.sql`-bestanden lokaal — 11 + 2 = 13, geen drift. W2: geen rij met `ijking_blok` gevuld, en
-  dat kón ook niet want de kolom bestond niet; omdat beide migraties in ÉÉN handeling zijn
-  toegepast heeft er nooit een venster bestaan waarin een rij onder 0011-alleen kon ontstaan, dus
-  de backfill-schuld die ronde 6 noteerde is per constructie leeg gebleken. W3: **1 rij vóór en ná,
-  0 gewijzigde waarden op de 18 bestaande kolommen, exact drie kolommen erbij, alle drie NULL.**
-- **TOEGEPAST MET:** `npx wrangler d1 migrations apply cadans --remote` vanuit `workers/api` — de
-  migratie-route, nooit met de hand SQL op prod-D1. Drie statements, alle drie `ALTER TABLE
-  sync_state ADD`. Wrangler stelde zijn eigen bevestigingsvraag en beantwoordde die met
-  `Using fallback value in non-interactive context: yes` omdat deze shell geen TTY is; er is GEEN
-  `--yes`-vlag meegegeven. Wie dat strakker wil, moet het aan de wrangler-kant afdwingen.
-- **STAAND BELEID VANAF NU (Daan-besluit):** elke ronde die een migratie TOEVOEGT, past hem in
-  DIEZELFDE ronde toe op remote. Niet opsparen — opsparen maakt de uiteindelijke toepassing
-  riskanter en niet veiliger. Vastgelegd in `docs/WERKWIJZE.md` onder *Migraties en deploys*, met
-  de scheiding erbij: **een remote migratie is GEEN worker-deploy en de twee zijn aparte
-  goedkeuringen met een ander risico.** En met de les die deze ronde erbij leverde: toepassen is
-  TWEE handelingen, `--local` én `--remote`.
-- **DE VERIFICATIEPAS VOND EEN ECHT DEFECT, en het zat NIET op remote maar LOKAAL.** De persistente
-  miniflare-database had `0011` en `0012` NOOIT toegepast gekregen — gemeten:
-  `SELECT ijking_blok FROM sync_state --local` gaf `no such column: ijking_blok`. **Dus
-  `wrangler dev` op 8787 en `tools/shots/shot.mjs` konden `GET`/`PUT /api/ijking` helemaal niet
-  bedienen**, twee rondes lang. De GATE zag dat nooit: `workers/api/vitest.config.ts` past alle
-  dertien migraties toe op een VERSE D1 per run, dus de suite draait altijd op het volle schema.
-  **Een groene gate sluit een kapotte dev-omgeving niet uit.** Gerepareerd met
-  `pnpm db:migrate:local`; lokaal en remote dragen nu allebei 21 kolommen en 0 openstaand.
-- **MIJN EIGEN HOOFDCLAIM IS OP ZIJN EERSTE HELFT WEERLEGD.** "Remote draagt nu hetzelfde schema
-  als lokaal" was ONWAAR op het moment dat ik het opschreef: een lens vergeleek alle tabellen
-  kolom-voor-kolom en vond 14 van de 15 identiek met **alleen `sync_state`** afwijkend, remote 21
-  tegen lokaal 18. Het toepassen op remote liet de twee juist UITEENLOPEN. Ná de lokale reparatie
-  klopt de claim, en nu gemeten in plaats van aangenomen. Twee kleinere correcties: "deployments
-  totaal 10" is de PAGINEERGRENS van de CLI (verbatim *"Displays the 10 most recent deployments"*)
-  en geen telling, en "0 verwijzingen naar `ijking`" was een verkeerd greppatroon — dat geeft 3
-  treffers binnen *afwijking* en *vergelijking*; met `ijking_` is het 0, en sterker: die string
-  bestaat pas sinds 23-08-2026.
-- **DE VÓÓR-SNAPSHOT IS CEREMONIE GEBLEKEN, geen bewijs.** Omdat `ADD COLUMN` per definitie geen
-  bestaande waarde kan wijzigen, is "na-staat minus de drie nieuwe sleutels" noodzakelijk gelijk aan
-  de vóór-staat — een lens reproduceerde het bestand byte-voor-byte. Wat "niets verloren" wérkelijk
-  draagt is de DDL plus `d1_migrations`: SQLite laat `ADD COLUMN` falen op een bestaande naam, dus
-  een geregistreerde geslaagde toepassing bewíjst de afwezigheid. **Voor een niet-additieve migratie
-  geldt dat niet** — daar is een echte vóór-snapshot wél bewijs, en dan hoort de ruwe
-  wrangler-uitvoer mee bewaard.
-- **PROD IS GEEN STILLE DATABASE, en dat is niet vooraf afgewogen.** `wellness` draagt een rij van
-  `2026-08-23` en `power_curve_cache` een `fetched_on` van diezelfde dag; de migratie liep om
-  `17:17:43` UTC. Of die schrijfacties ervóór of erná vielen is NIET vast te stellen — beide velden
-  dragen alleen een dag. `ADD COLUMN` is metadata-only en er is aantoonbaar niets misgegaan, maar er
-  is geen onderhoudsvenster gekozen en geen herstelpunt vastgelegd. Bij iets zwaarders dan
-  `ADD COLUMN` is dat wél het verschil.
-- **WAAROM ER NIET GEDEPLOYD IS, en dat is een harde voorwaarde geworden: ROADMAP punt 65.** De
-  engine formatteert met LOKALE getters en leunt op `TZ=Europe/Amsterdam`; een gedeployde Worker
-  draait UTC, en `workers/api/src/db/dates.ts` is de enige conversielaag en spiegelt diezelfde
-  aanname. `docs/ARCHITECTUUR.md` draagt die schuld al als open. **Punt 65 gaat vooraf aan elke
-  worker-deploy**, en het begint met MÉTEN in plaats van beredeneren: draai de datumlaag onder
-  `TZ=UTC` naast `TZ=Europe/Amsterdam` op de randen die tellen (maandag rond middernacht, de
-  DST-overgangen, `toD1Date` heen en terug), en beslis pas dáárna of de engine expliciet moet of de
-  Worker gepind.
-- **DE RULES-PROBES ZIJN NU BEIDE GEMETEN, en dat sluit ROADMAP punt 51 stap (2).** De
-  `paths`-LOZE regel laadt bij SESSIESTART: 5 van de 6 weerleggings-agents van de vorige ronde
-  gaven `RULESALTIJD-MERKSTRING-Q4XM7D` verbatim terug terwijl die string 0 keer in hun opdracht
-  stond. De PAD-GESCOOPTE regel vuurt op de FILE-READ: één agent kreeg opdracht
-  `packages/engine/src/zones.ts` te lezen en te rapporteren wát hij aan instructies aantrof — de
-  merkstring is hem NIET genoemd — en hij rapporteerde `RULESPATHS-MERKSTRING-V9HB2K` mét het
-  onderscheid dat die **pas ná** het Read-resultaat verscheen, terwijl de eerste er al vanaf de
-  start stond. **WAT OPEN BLIJFT:** of een regel zonder `paths` ook in de HOOFDsessie laadt; deze
-  sessie is ouder dan het bestand en kan haar eigen start niet waarnemen. Een verse chat
-  beantwoordt dat gratis in haar openingszin. Beide regels zijn gitignored en blijven liggen.
-- **M92 IS AANGESCHERPT NAAR PER (OPENING, DOEL)** in `docs/TRAININGSMODEL.md` — een preciezere
-  formulering van dezelfde regel, geen nieuwe regel, M3 gerespecteerd. Het gedrag blijft: een doel
-  waarvoor niemand heeft geantwoord hoort de vraag te krijgen. De prijs staat erbij en wordt
-  aanvaard: heen-en-weer wisselen binnen de beantwoorde week geeft twee aanbiedingen op dezelfde
-  openingsmaandag.
-- **EEN DATUMFOUT VAN DE VORIGE RONDE IS RECHTGEZET.** Ronde 6 is gedateerd op 24-08-2026 terwijl
-  zij op **23-08-2026** landde — de commits staan op `2026-08-23 18:53`. 24 provenance-vermeldingen
-  in 8 bestanden zijn gecorrigeerd; de 12 vóórkomens van `2026-08-24` als KALENDERDATUM (Daans
-  Peak-maandag) zijn met opzet blijven staan. Het blok hieronder heette daardoor eerst
-  "STAND 2026-08-24" en is nu het ACHTSTE blok van deze dag.
-- **VLOEREN: lees ze zelf uit de suite.** Neem geen getal over uit een blok.
-- **OPENSTAAND, elk item opnieuw te greppen in `docs/ROADMAP.md`:** 32 · 34 (alleen (d)) · 35 · 48 ·
-  49 · 53 · 54 · 56 · 61 · 63 · 64 (alleen de drie nakijkpunten) · **65 (nieuw — de TZ-schuld, vóór
-  elke deploy)** · **66 (nieuw — de plan-uitgang verzet de leeftijd)** · **67 (nieuw — dode
-  machinerie in poort (5))** · **68 (nieuw — twee doel-kolommen, niet drie)**.
-
-FOCUS VOLGENDE CHAT: **ROADMAP punt 61 — de DOELCHECK aan het eind van het doelblok, de tweede helft
-van M89, samen met punt 54 (welke maat per doel).** Dat is het enige deel van punt 47 dat nooit is
-aangeraakt. GROND VOOR DEZE PLEK, en het is een kalendergrond: in februari sluit het onderhoudsblok
-en dan is de vraag of de FTP het gehouden heeft, vóór de Amstel-Gold-voorbereiding begint. M92 heeft
-de twee vragen van M89 ook in de TIJD gescheiden — de ijking staat nu vooraan en kijkt vooruit, de
-doelcheck hoort achteraan en kijkt terug — maar die tweede helft bestaat nog niet als eigen moment.
-54 hangt eraan vast: wie 61 bouwt zonder 54 kiest stilzwijgend een maat.
-**BEGIN BIJ DE GRONDSTOF, want die ontbreekt en dat is gemeten.** `DOELEN-SPEC` §3.2 vraagt het beste
-20-minutenvermogen over ZES WEKEN. Dat getal bestaat als marker — `{ sec: 1200, label: "20m", key: true }`
-— maar alleen over `export type PowerCurveWindow = "90d" | "1y";` met whitelist
-`const ALLOWED_WINDOWS = new Set<string>(["90d", "1y"]);`. De dichtstbijzijnde route is een DERDE
-waarde in die union plus de whitelist, én VERIFICATIE dat intervals.icu die `curves`-waarde
-accepteert — dat laatste vraagt een echte API-aanroep en is niet vanaf schijf te beantwoorden.
-DAARNA komt punt 63, het onderweg-signaal, en dat WACHT op punt 49.
-
-**DE OMGEVINGSVERKLARING BLIJFT EEN STOP-CONDITIE.** Deze ronde: pad `/c/Users/daan/Projects/cadans`,
-`git rev-parse --git-dir` en `--git-common-dir` allebei `.git` dus HOOFDCHECKOUT, branch `main`, 0
-achter en 0 vooruit op `origin/main`, versie `2.1.208 (Claude Code)`, boom schoon bij aanvang.
 
 CONTEXT: Daan fietst voorlopig niet, beschikbaarheid 0, planner leeg vanaf 2026-08-09 — **dat is
 geen defect.** Verse chat.

@@ -2011,6 +2011,25 @@ punten staat onder *Gesloten — vindplaats*.
     `WEDSTRIJD_HORIZON_DAGEN` dagen vóór een A/B-wedstrijd; wat dit punt toevoegt is dat het
     besluit expliciet vastligt en niet als bijvangst van die ene constante blijft leven. GEEN
     prioriteitsvertakking (C telt niet mee, zoals nu) en GEEN taper-uitzondering.
+69. **HET FTP-VOORSTEL NA EEN GEREDEN TEST** — open · CLIENT plus DATA plus norm. **NIEUW PUNT,
+    Daan-besluit van 24-08-2026.** Rijdt Daan een aangeboden ijkinspanning, dan BEREKENT de app een
+    nieuwe drempelwaarde en STELT DIE VOOR, met de oude ernaast; Daan keurt goed. Vandaag moet hij
+    zijn waarde met de hand in de instellingen zetten, en dat laat de ijking half af: **de app
+    vraagt om een meting en doet niets met de uitslag.**
+    DE GRONDSTOF IS ER, en dat is gemeten in `docs/RITDATA-RECON.md`:
+    `GET /activity/{id}/power-curve` geeft de 20-minutenpiek van ÉÉN rit DIRECT — gemeten 195 W op
+    rit `i172391866`, 5353 bytes, één verzoek. De athlete-curve kan dit NIET vervangen: die wijst de
+    BESTE rit in het venster aan, niet de laatste (gemeten: `42d` wees `i166073333` aan en `90d`
+    `i158575314`).
+    **WAT ER NOG NIET IS: de omrekenregel.** Van een 20-minutenwaarde naar een drempelwaarde hoort
+    een factor (klassiek circa 95 procent), en die staat vandaag NERGENS in de repo of in
+    `DOELEN-SPEC`. Zonder die regel kan het voorstel niet gedaan worden; hem kiezen is een
+    Daan-besluit en geen bouwdetail.
+    **DIT PUNT LOST PUNT 66 OP.** Dat punt meldt dat de PLAN-uitgang de leeftijd van de
+    drempelwaarde verzet zodra er een geplande test plus 15 gereden minuten staat, terwijl er niets
+    is vastgesteld. Met een goedkeur-stap is er pas GEIJKT als Daan een waarde overneemt — dat is
+    M5, en het maakt de 15-minutengrens als ijk-criterium overbodig.
+
 49. **De doelcheck aflezen uit een sleutelsessie** — open · DATA plus CLIENT. Bij de drie doelen
     zonder FTP-check (punt 47) is de check geen aparte test maar een SLEUTELSESSIE waarvan je de
     uitkomst afleest: staat herhaling 5 en 6 nog op niveau, hoe lang was het langste aanhoudende
@@ -2027,6 +2046,17 @@ punten staat onder *Gesloten — vindplaats*.
     DIT IS DUS EEN PERSISTENTIE-VRAAG, geen ontsluitingsvraag. `ride.ts` is expliciet stateless —
     "geen cache, geen schema-touch" — en een doelcheck over twaalf weken vraagt opslag én
     aggregatie. Dat raakt het D1-schema en hoort daarom een eigen bouw met een eigen migratie.
+    **AANGEVULD 24-08-2026 (`docs/RITDATA-RECON.md`), en er is meer bereikbaar dan dit punt wist.**
+    Naast `/intervals` bestaan er twee endpoints die hier niet in stonden. `GET
+    /activity/{id}/power-curve` geeft de vermogenskromme van ÉÉN rit (5353 bytes, 20-min direct
+    afleesbaar). `GET /activity/{id}/streams` geeft de volledige TIJDLIJN — 13 parallelle
+    1 Hz-streams, waaronder `time`, `watts` en `heartrate` uitgelijnd op dezelfde index, 363535
+    bytes voor een rit van 75 minuten. Dat laatste is precies de per-blok-data die dit punt mist,
+    en het is de duurste van de drie bronnen: ongeveer 68 keer de omvang van de per-rit-kromme.
+    **EN `/intervals` IS NIET BETROUWBAAR ALS ENIGE BRON:** het aantal intervallen hangt af van hoe
+    de rit gestructureerd is. Gemeten op een vrije rit van 75 minuten: `icu_intervals` bevatte ÉÉN
+    interval over de hele duur. Voor een gestructureerde sleutelsessie staan de blokken er wel in,
+    voor een vrije rit niet.
     EERSTE STAP VAN DIT PUNT, en nog NIET gedaan: meten of `icu_intervals` voor Daans ritten
     werkelijk gevuld is. Dat vraagt een HTTP-call naar intervals.icu, en die is in de meetronde
     van 21-08 bewust niet gedaan.

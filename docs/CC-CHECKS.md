@@ -237,6 +237,7 @@ CONDITIE : DEPLOY
 TOETS    : haal de live `index.html` op, lees het asset waar hij naar wijst, en vergelijk dat byte-voor-byte met de lokale build.
 UITKOMST : de sha256 en de bytecount van het live asset zijn gelijk aan die van `apps/web/dist`. Een health-endpoint zonder versieveld bewijst dat de Worker LEEFT, niet welke bundel eronder zit.
 HERKOMST : 146
+NOTITIE 24-08-2026 : deze check is bij de deploy van 24-08-2026 NIET GEDRAAID en kan door CC ook niet gedraaid worden zolang de origin achter de basic-auth-gate zit — het wachtwoord is een deploy-only secret en CC voert geen wachtwoorden in. WAT ER WÉL WAS: de geuploade bundelnaam kwam overeen met die in de lokale `index.html` (een naam-vergelijking, geen byte-vergelijking), en **Daan heeft de app daarna met de hand gecontroleerd en die deed normaal**. Noteer dat als de verificatie die er is; het vervangt de byte-vergelijking niet.
 
 CHECK 38
 CONDITIE : METING
