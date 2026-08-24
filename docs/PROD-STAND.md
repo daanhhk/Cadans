@@ -346,6 +346,58 @@ verloren data.
 
 ---
 
+### 24-08-2026 — de WEG TERUG gemeten, en de deploy
+
+**AANLEIDING:** de vorige regel in dit logboek is zonder herstelpunt uitgevoerd. Bij een additieve
+migratie kwam dat er niet op aan; bij een deploy wel, want **Daan gebruikt deze app**. Dat laatste
+stond tot deze ronde nergens vastgelegd en het verandert de risicoweging van elke prod-handeling:
+prod is geen proefopstelling.
+
+#### De weg terug — GEMETEN tegen deze omgeving, niet aangenomen
+
+**WORKER — er IS een rollback.** `npx wrangler rollback [version-id]` bestaat op wrangler 4.106.0 en
+neemt een versie-id. Het terugvaldoel is geverifieerd aanwezig:
+
+```
+npx wrangler versions list --json  →  10 versies
+DOELVERSIE e994c768-3d73-4aec-876b-b614b7fe1302 aanwezig: JA
+  gemaakt 2026-08-10T13:19:30.57281Z · door dtkorteweg@gmail.com · bron wrangler
+```
+
+Het commando om terug te vallen, vanuit `workers/api`:
+
+```
+npx wrangler rollback e994c768-3d73-4aec-876b-b614b7fe1302
+```
+
+> LET OP: die versielijst kapt af op de tien nieuwste. Zolang het terugvaldoel daarin staat is er
+> een weg terug; zakt het eruit, dan niet meer.
+
+**D1 — Time Travel, en het bereik is aan beide randen getoetst.**
+
+```
+huidige bookmark              : 0000011f-00000000-000050d1-9aad022c788316175394fbbd69adf9c8
+bookmark vlak vóór de migratie: 00000118-0000007e-000050d0-e30be9f907d2a4f5c6de6d94e8fe3c18
+                                (timestamp 2026-08-23T17:00:00Z)
+25 dagen terug (2026-07-30)   : bookmark geleverd
+40 dagen terug (2026-07-15)   : GEWEIGERD — "Please provide a timestamp within the last 30 days"
+```
+
+Het bereik is dus **30 dagen**, gemeten en niet uit documentatie overgenomen. Merk op dat een
+worker-deploy D1 niet aanraakt: voor de deploy is de rollback de weg terug, niet Time Travel.
+
+#### De meethelft van punt 65
+
+Volledig in `docs/TZ-RECON.md`. Samengevat: de UTC-klok wijkt af in **24 van 384 gemeten instants
+(6,3 procent)**, uitsluitend in een venster van 1 tot 2 uur dat eindigt op 00:00 UTC, en er staan
+**0 scheve rijen** op prod — structureel nul, omdat de enige door de Worker geproduceerde datumkolom
+`power_curve_cache.fetched_on` is en die een cache-bucket is. T1 en T2 hielden allebei, dus de
+deploy-blokkade van punt 65 verviel.
+
+#### De deploy
+
+Zie hieronder — deze paragraaf wordt in dezelfde ronde afgemaakt.
+
 ## Wat een volgende ronde hier moet bijwerken
 
 - Elke toegepaste migratie: naam, `applied_at`, en of er backfill nodig was.

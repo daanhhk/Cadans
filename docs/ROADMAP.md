@@ -2597,8 +2597,35 @@ punten staat onder *Gesloten — vindplaats*.
     heeft als `ijking_*` had vóór punt 64, is **NIET gemeten**. Eén meting volstaat: wisselt de
     gebruiker van doel terwijl er een beantwoorde event-overname staat, telt dat antwoord dan nog?
 
-65. **DE TZ-SCHULD: de engine rekent lokaal, een gedeployde Worker draait UTC** — open · ENGINE plus
-    WORKER. **DIT PUNT GAAT VOORAF AAN ELKE WORKER-DEPLOY.** Zo vastgesteld op 23-08-2026 bij de
+65. **DE TZ-SCHULD: de engine rekent lokaal, een gedeployde Worker draait UTC** — **GEMETEN
+    24-08-2026, reparatie open · ENGINE plus WORKER.** De volledige meting staat in
+    `docs/TZ-RECON.md`; dit is de eerste keer dat dit punt een MAAT draagt.
+    **DE UITKOMST IN ÉÉN ZIN: de afwijking is echt en scherp begrensd, maar zij kan op dit schema
+    geen enkele verkeerde datum opslaan.**
+    GEMETEN. (M-A) Er zijn precies VIJF plekken in `workers/api` die een datum PRODUCEREN uit de
+    ambient klok — het sync-venster van `syncActivities` en van `syncWellness`, de dag-bucket
+    `fetchedOn` en de cache-sleutel `today` in `powercurve.ts`, en het absolute
+    `new Date().toISOString()` in `writeCheckin` (TZ-invariant). Alle andere datumpaden zijn
+    ROUND-TRIPS en die zijn TZ-invariant. `weekplanFreeze.ts` is GEEN producent: hij krijgt
+    `todayISO` uit de client-body — dat corrigeert een aanname die er twee rondes stond.
+    (M-B) Dezelfde instants langs twee klokken, noemer **384** (4 dagen × 96 kwartieren):
+    **24 van 384 = 6,3 procent** verschilt, uitsluitend in een venster dat EINDIGT op 00:00 UTC —
+    2,00 uur in zomertijd, 1,00 uur in wintertijd. De randen `oldest` en `newest` slaan op
+    VERSCHILLENDE uren om zodra het venster een DST-omschakeling overspant.
+    (M-C) **0 scheve rijen op prod, en dat is structureel nul**: de enige door de Worker
+    geproduceerde datumkolom in het hele schema is `power_curve_cache.fetched_on`, en die is een
+    TTL-dag-bucket waarvan de faalwijze een OVERBODIGE re-fetch is en geen bederf. `wellness.datum`
+    komt uit de API-respons, `activities.datum` uit `start_date_local`. `wellness` is gatloos sinds
+    de deploy: 15 rijen op 15 kalenderdagen. `activities` draagt 0 rijen in die periode omdat Daan
+    niet fietst, dus daar is niets meetbaar — niet gemeten, nooit "gemeten als afwezig".
+    **DE REPARATIE IS DAARMEE NIET URGENT EN NIET GROOT.** Eén plek dekt alle vijf de producenten:
+    `toD1Date`/`toD1DateTime` in `workers/api/src/db/dates.ts`. Er is GEEN datamigratie nodig — er
+    staat niets scheefs. WAT DE REPARATIE-RONDE EERST MOET METEN: of het pinnen van de Worker-TZ de
+    engine-selftest en de bestaande D1-round-trips ongemoeid laat. Dat is een eigen besluit.
+    **DE DEPLOY-BLOKKADE IS HIERMEE OPGEHEVEN.** Zij stond er omdat de omvang onbekend was; nu is
+    zij gemeten en blijkt zij een randgeval van 1 tot 2 uur per etmaal zonder blijvend gevolg.
+    De oorspronkelijke diagnose staat hieronder.
+    **DIT PUNT GING VOORAF AAN ELKE WORKER-DEPLOY.** Zo vastgesteld op 23-08-2026 bij de
     prod-migratieronde, en dat is de reden dat die ronde de migraties wél en de deploy NIET deed.
     `docs/ARCHITECTUUR.md` draagt de schuld al verbatim: *"leunt op `TZ=Europe/Amsterdam`. Het
     root-testscript zet die pin via `cross-env`. Een gedeployde Worker draait UTC; dat verschil
@@ -3020,6 +3047,15 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
     zie `docs/WERKWIJZE.md`, *Migraties en deploys*. De prod-stand staat vanaf nu in
     `docs/PROD-STAND.md`, en daar bleek meteen iets uit dat nergens genoteerd stond: **de live
     Worker draait sinds 10-08-2026** en mist dus het hele punt-47-blok.
+11d-4. **65 (meethelft) + DEPLOY** — AF (24-08-2026). De TZ-schuld is voor het eerst GEMETEN in
+    plaats van beredeneerd: `docs/TZ-RECON.md`. Uitkomst — 24 van 384 instants verschillen (6,3
+    procent), uitsluitend in een venster van 1 tot 2 uur dat eindigt op 00:00 UTC, en **0 scheve
+    rijen op prod**, structureel nul omdat de enige door de Worker geproduceerde datumkolom een
+    cache-bucket is. T1 en T2 hielden allebei, dus de deploy-blokkade van punt 65 is opgeheven en de
+    twee weken oude codesprong is uitgerold. De REPARATIE van de TZ-schuld staat nog open, nu mét
+    een maat. Ook nieuw: `docs/CC-CHECKS.md` CHECK 39 (de persistente lokale D1 tegen de repo) en de
+    staande regel dat elke prod-mutatie vooraf haar weg terug draagt, allebei uit gaten die deze
+    reeks zelf opleverde.
     **DE VOLGENDE IS 11e.**
 11e. **61 (+ 54)** — de DOELCHECK aan het eind van het doelblok, de tweede helft van M89.
     **DIT IS DE EERSTVOLGENDE RONDE**, bevestigd 23-08-2026. Het is het enige deel van punt 47 dat

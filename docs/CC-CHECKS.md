@@ -9,8 +9,9 @@ DIT DOCUMENT VOEGT GEEN REGELS TOE. Elke eis komt uit een van de 53 lessen; waar
 omzetbaar bleek zonder hem te verzwakken, staat dat als NIET OMZETBAAR met de reden — een check
 die minder eist dan de les is een intrekking en geen omzetting.
 
-TELLING PER CONDITIE — ALTIJD 3 · METING 12 · HARNESS 5 · DEPLOY 1 · COMMIT 2 · ENGINE 14 ·
-NIET OMZETBAAR 1. TOTAAL 38 checks, samen 53 gedekte lessen.
+TELLING PER CONDITIE — ALTIJD 4 · METING 12 · HARNESS 5 · DEPLOY 1 · COMMIT 2 · ENGINE 14 ·
+NIET OMZETBAAR 1. TOTAAL 39 checks, samen 53 gedekte lessen plus ÉÉN check (39) die niet uit de
+lessen komt maar uit een gemeten gat in de gate zelf.
 
 De drie ALTIJD-toetsen zijn in de omzetronde zelf gedraaid en waren uitvoerbaar; een controleregel
 die niet kan draaien is niet te onderscheiden van een geslaagde controle.
@@ -242,5 +243,11 @@ CONDITIE : METING
 TOETS    : leg de gemeten reeks naast het gepinde ijkpunt voordat je er een conclusie op bouwt.
 UITKOMST : het ijkpunt reproduceert exact — teller gelijk aan noemer — en dat getal staat in het rapport vóór enige andere uitslag. Dit is de meetkant van CHECK 7: daar wordt het INSTRUMENT op twee gelijke runs geijkt, hier de UITKOMST tegen een bekend punt.
 HERKOMST : 095
+
+CHECK 39
+CONDITIE : ALTIJD
+TOETS    : cd workers/api ; npx wrangler d1 migrations list cadans --local
+UITKOMST : "No migrations to apply!". Staat er iets open, dan draagt de PERSISTENTE lokale D1 een ANDERE migratiestand dan de repo, en is elke dev-waarneming ongeldig voordat je `pnpm db:migrate:local` hebt gedraaid. DIT IS EEN GAT DAT DE GATE PER CONSTRUCTIE NIET KAN ZIEN: `workers/api/vitest.config.ts` draait `readD1Migrations` over `./drizzle` en past ALLE migraties toe op een VERSE database per run, dus de suite ziet altijd het volle schema terwijl `wrangler dev` op 8787 en `tools/shots/shot.mjs` op de persistente database draaien. GEMETEN 23-08-2026: die database liep twee migraties achter, zodat `GET`/`PUT /api/ijking` daar `no such column: ijking_blok` gaf terwijl de suite groen stond — twee rondes lang. Een groene gate sluit een kapotte dev-omgeving dus niet uit. Draai deze check VÓÓR elke ronde die een route of een scherm aanraakt, en ALTIJD in de ronde die een migratie toevoegt: toepassen is twee handelingen, `--local` én `--remote`.
+HERKOMST : deze check komt niet uit de 53 lessen maar uit de prod-migratieronde van 23-08-2026; hij staat als ALTIJD omdat de kosten nul zijn en de faalwijze stil.
 
 <!-- EINDE docs/CC-CHECKS.md -->

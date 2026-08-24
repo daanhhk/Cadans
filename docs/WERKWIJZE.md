@@ -264,6 +264,30 @@ bewijs dat er is; bewaar hem dan met de RUWE `--json`-uitvoer erbij, inclusief d
 sync-paden. `ADD COLUMN` is metadata-only en daarmee vrijwel risicoloos, maar alles wat een tabel
 herschrijft hoort een herstelpunt (D1 Time Travel) en een gekozen venster te krijgen.
 
+### Elke prod-mutatie draagt VOORAF haar weg terug
+
+**GEMETEN, NIET AANGENOMEN.** Vóór je iets op prod verandert, stel je vast HOE je het terugdraait,
+en je toetst dat tegen DEZE omgeving in plaats van tegen productdocumentatie. AANLEIDING: bij de
+prod-migratieronde van 23-08-2026 is er zonder herstelpunt aan prod gezeten. Bij een additieve
+migratie kwam dat er niet op aan; bij een deploy op een app die dagelijks gebruikt wordt wel — en
+**Daan gebruikt de gedeployde app**, dus prod is geen proefopstelling.
+
+DE TWEE WEGEN TERUG, apart, want ze horen bij verschillende handelingen:
+
+- **WORKER — een rollback naar de vorige versie.** `npx wrangler rollback <version-id>` vanuit
+  `workers/api`. Toets vóóraf dat het doel er nog IS: `npx wrangler versions list` toont de
+  bewaarde versies, en die lijst kapt af op de tien nieuwste. Staat je terugvaldoel er niet meer
+  in, dan is er geen rollback en gaat de deploy niet door.
+- **D1 — Time Travel.** `npx wrangler d1 time-travel info <db>` geeft de huidige bookmark;
+  `--timestamp=<RFC3339>` geeft de bookmark die bij een moment hoort. Het bereik is op deze
+  omgeving GEMETEN op 30 dagen: een timestamp van 25 dagen terug levert een bookmark, 40 dagen
+  terug wordt geweigerd met *"Please provide a timestamp within the last 30 days"*. Noteer de
+  bookmark VÓÓR de mutatie; achteraf is hij niet meer af te leiden.
+
+**BESTAAT ER GEEN WEG TERUG, dan gaat de handeling niet door.** Voor een puur additieve migratie mag
+de weg terug "niet nodig, en waarom" zijn — maar dan staat dat er, met de grond, in
+`docs/PROD-STAND.md`.
+
 DE STAND HOORT IN `docs/PROD-STAND.md`. Dat document is het lopende logboek van wat er op remote
 staat, en het wordt bijgewerkt in de ronde die er iets aan verandert — niet een ronde later. "Wat
 staat er op prod" is precies het soort feit dat verdampt: tot 23-08-2026 stond het nergens, en toen
