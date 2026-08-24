@@ -449,4 +449,223 @@ niet de mijne.
   niet.
 - Weerleggingspas 2 is niet gedraaid, met de grond in §7.
 
+---
+
+## 12. DE REPARATIE VAN HET SCHRIJFPAD — ROADMAP punt 73
+
+De vondst uit §5(1) is hier afgehandeld, in een eigen ronde op 24-08-2026. **Dit was geen fout in
+nieuw werk maar een defect in wat Daan vandaag op zijn scherm heeft.**
+
+### Omgevingsverklaring
+
+```
+werkpad          /c/Users/daan/Projects/cadans
+git-dir          .git       git-common-dir  .git      -> HOOFDCHECKOUT, geen worktree
+branch           main       origin/main     0 achter, 0 vooruit
+HEAD bij aanvang cd96414    boom            schoon
+claude --version 2.1.208 (Claude Code)
+```
+
+Nummering gecontroleerd: `docs/ROADMAP.md:2054` draagt `73.`, en dat klopt met de prompt.
+Agent-discovery blijft **NIET GEMETEN**.
+
+### De aanroepers — er zijn er DRIE, en één is een harnas
+
+Gezocht met een grep op `putSettings`, `writeSettings` en `/api/settings` over `apps`, `workers`,
+`tools` en `scripts`:
+
+| aanroeper | vindplaats | wat hij stuurt |
+| --- | --- | --- |
+| de Instellingen-pagina | `apps/web/src/pages/Instellingen.tsx:499` via `settingsFormToBody` | alleen GEVULDE velden; leeglaten = wissen |
+| de doel-wissel-kaart | `apps/web/src/components/schema/DoelPassendCard.tsx:42` via `doelPassendSettingsPatch` | het VOLLEDIGE object, inclusief nulls |
+| de screenshot-harness | `tools/shots/shot.mjs:397` (`seedSettings`) en `:801` | het volledige object **met de nulls eruit gefilterd** |
+
+**DE DERDE IS DE INTERESSANTSTE**, want die had het al opgelost. `seedSettings` draagt verbatim de
+regel én de reden:
+
+```
+ * PUT /api/settings is effectively FULL-REPLACE: writeSettings writes `?? null` for every
+ * field the patch lacks, and an explicit null is a 400. So carry every field that currently
+ * HAS a value, drop the ones that are already null, and apply the overrides on top.
+```
+
+en filtert dan met `if (v !== null && v !== undefined) body[k] = v;`. Er is bovendien een LATENTE
+vierde: `apps/web/src/pages/Preview.tsx` mount `SchemaView` met een synthetisch settings-object.
+
+Het contract stond dus al twee keer opgeschreven — ook in `apps/web/src/lib/settings.ts`, verbatim:
+*"Nooit een sleutel met null/""/NaN (dat zou een 400 triggeren)."* Alleen
+`doelPassendSettingsPatch` hield zich er niet aan, en zijn eigen test pint dat vast: het `describe`
+heet *"doelPassendSettingsPatch — de FULL-REPLACE-valkuil"* en de fixture draagt `doelDuur: null` en
+`fase: null`.
+
+### R1 — HOUDT
+
+Geen migratie en geen engine-wijziging nodig. De reparatie zit in twee helperfuncties en één
+component; `git diff --stat packages/engine` is leeg.
+
+### R2 — HOUDT, maar anders dan ik dacht
+
+De verwachting was dat alle aanroepers met één vorm te bedienen zijn. Dat klopt — maar niet via de
+vorm die ik eerst ontwierp. **Ik wilde van PUT een MERGE maken (afwezig = ongewijzigd) en die
+gedachte is door de weerleggingspas onderuit gehaald**, op drie gronden die ik daarna zelf heb
+nagemeten:
+
+1. **De merge maakt een lassing los.** Onder full-replace zijn `doel` en `doelStart` aan elkaar
+   vastgeklonken: wie alleen `doel` stuurt, wist `doelStart`. Onder een merge zou een verse doelwissel
+   STIL het lopende blok erven — precies het defect waarvoor punt 28 gebouwd is.
+2. **Niemand heeft de merge nodig.** Instellingen zou onder een merge expliciete nulls moeten sturen
+   en schrijft dan byte-voor-byte dezelfde rij als vandaag; de doel-wissel-kaart stuurt sowieso alle
+   zestien velden mee.
+3. **De prijs klopt niet.** De merge kantelt negen tests; de gekozen reparatie kantelt er nul.
+
+De merge stond bovendien al één keer op papier, en **niet als afgewezen weg maar als OPEN
+BESLISPUNT** — `docs/UI-SYNC-SETTINGS-RECON.md:119-123`, onder het kopje *"Ambiguïteiten / open
+beslispunten"*: *"Alternatief = PUT naar partial-merge ombouwen (wijkt af van het gekozen contract).
+**Beslispunt.**"* Gekozen is destijds full-replace, en dat is nooit herzien. *(Ik schreef eerst dat
+de merge daar "afgewezen" was; dat was een overclaim, gevangen door weerleggingspas 2 en hier
+rechtgezet.)*
+
+De vorm die WEL alle drie bedient is veel kleiner: laat full-replace met rust en laat een expliciete
+`null` betekenen wat een weggelaten veld al betekent.
+
+### R3 — NIET TE METEN, en dat is geen "houdt"
+
+De verwachting was de prod-rij read-only te meten. Dat kon niet:
+
+```
+npx wrangler d1 execute cadans --remote  ->  code 7403
+"The given account is not valid or is not authorized to access this service"
+```
+
+`npx wrangler whoami` toont een OAuth-token voor `dtkorteweg@gmail.com` op account
+`9218229b9be1015defcbacc8c430ca34`, met scopes voor `workers`, `workers_scripts`, `pages` en meer —
+maar **`d1` staat er niet bij**. Lezen op remote D1 kan met deze sessie dus niet, en de origin zit
+achter een basic-auth-gate waarvan het wachtwoord een deploy-only secret is. **De blootstelling op
+prod is dus NIET GEMETEN.**
+
+Wat er wel is, is een sterke AFLEIDING — en zij is als afleiding gelabeld, niet als meting. Het
+formulier biedt voor `fase` exact twee keuzes, `""` (Automatisch) en `"maintain"`, en de code zegt
+erbij: *"leeg = automatisch (weggelaten uit de body → null)"*. Wie nooit "Onderhoud (maintain)" heeft
+gekozen, heeft `fase` op null. Dat is de default-toestand.
+
+### Wat er gebouwd is
+
+**EEN EXPLICIETE `null` IS EEN LEGE WAARDE, GEEN TYPEFOUT.** In
+`workers/api/src/routes/api.ts` geven `numField` en `strField` nu `null` terug in plaats van te
+gooien; de `doelStart`-tak accepteert `null` naast een geldige ISO-datum; en de drie
+presentatie-velden gebruiken `?.slice(0, 24) ?? null` zodat de cap niet op een null klapt.
+
+De grond staat in het wire-type zelf. `packages/shared/src/settings.ts` typeert **elk** veld als
+`T | null`, en de docstring beweerde tegelijk *"expliciete null → 400"*. De runtime ging dus tegen
+zijn eigen gepubliceerde type in. Die docstring is meegewijzigd.
+
+**WAT NIET IS GEWIJZIGD:** `writeSettings`, de full-replace-semantiek, de lassing tussen `doel` en
+`doelStart`, en geen enkele aanroeper. `packages/engine` is niet aangeraakt.
+
+**EN ÉÉN COMMENTAAR IS RECHTGEZET.** De route beweerde *"writeSettings VERVANGT de rij volledig"*.
+GEMETEN: de tabel heeft **21 kolommen**, `vals` dekt `user_id` plus **16 velden**.
+`threshold_pace`, `ftp_auto_update`, `weight_auto_update` en `email_digest` staan er niet in en
+blijven bij een update onaangeroerd. "Volledig" was onjuist; het commentaar zegt nu wat er echt
+gebeurt.
+
+### De omvang van het defect, gemeten
+
+```
+settings-rij (lokale D1) : 21 kolommen, 5 op NULL
+                           threshold_pace · fase · ftp_auto_update · weight_auto_update · email_digest
+notNull-kolommen         : GEEN, behalve de primary key
+```
+
+Elk van de zestien velden die de route accepteert kon dus een 400 geven. En het was niet `fase` die
+als eerste zou gooien in het algemene geval: de negen `numField`-poorten staan op positie 1 tot en met
+9 en `fase` pas op 11, dus een leeggelaten `doelDuur` of `lthr` gooit eerder. Dat het op deze rij
+`fase` was, is een eigenschap van deze rij en niet van de code.
+
+### Strings
+
+**ÉÉN NIEUWE, en het is de eerste van zijn soort in dat bestand.** In
+`apps/web/src/lib/coachNarrative.ts`:
+
+```
+export function schrijfMisluktRegel(watNietGebeurde: string): string
+  -> "Niet gelukt — je doel is niet gewijzigd. Probeer het zo nog eens."
+  -> "Niet gelukt — je antwoord is niet bewaard. Probeer het zo nog eens."
+```
+
+Geen bestaande string is gewijzigd. De regel noemt alleen de UITKOMST die uitbleef en geen oorzaak,
+want de client kan een 400 niet van een netwerkfout onderscheiden — `putSettings` gooit een kale
+`Error`. Hij toont ook de rauwe serverstring niet: die luidt `field 'fase' has wrong type`, Engels en
+technisch, en hoort niet in een Nederlandstalige coach-kaart.
+
+### Tests
+
+**ROOD GEMETEN VÓÓR DE REPARATIE.** Vier nieuwe tests in `workers/api/test/routes.writes.test.ts`
+faalden alle vier, en de belangrijkste — *"een VOLLEDIG settings-object mét nulls landt — de
+doel-wissel van punt 73"* — met precies `expected 400 to be 200`. Dat is het live defect,
+gereproduceerd in de harness. Na de reparatie: 20 van 20 groen in dat bestand.
+
+NIEUW: *"null op een NUMERIEK veld wordt aanvaard en cleart, net als weglaten"*, *"null op een
+STRING-veld wordt aanvaard en cleart"*, *"null op doelStart wordt aanvaard en cleart"*, en de
+regressievangst hierboven. Plus drie in `apps/web/src/lib/coachNarrative.test.ts` op
+`schrijfMisluktRegel`.
+
+BESTAANDE TESTS DIE HET CONTRACT VASTPINNEN EN DIE ONGEWIJZIGD MEEGAAN: *"weekUren weggelaten →
+FULL-REPLACE cleart naar null"* (`routes.writes.test.ts:105`), de vijf 400-tests op verkeerde TYPES in
+hetzelfde bestand, en het hele `describe` *"settingsFormToBody (FULL-REPLACE-serialisatie)"* in
+`apps/web/src/lib/settings.test.ts`. **Geen enkele bestaande test is aangepast** — dat is de toets
+dat de semantiek niet verschoven is.
+
+### De twee weerleggingspassen
+
+**PAS 1 — VOOROP, vóór er een regel geschreven was. VIER VAN DE VIER LENZEN VOLTOOID, nul gestorven.**
+Drie van de vier haalden hun claim onderuit, en zij hebben deze ronde van ontwerp doen veranderen.
+
+| lens | uitkomst |
+| --- | --- |
+| `null-velden` | **VOLTOOID** · weerlegd: JA — `fase` is niet het enige null-veld en niet de eerste worp |
+| `semantiek` | **VOLTOOID** · weerlegd: JA — de merge is de verkeerde vorm |
+| `stille-fout` | **VOLTOOID** · weerlegd: JA — het zijn er veertien, niet één |
+| `punt69-pasvorm` | **VOLTOOID** · weerlegd: JA — de goedkeuring van punt 69 is TWEE schrijfacties |
+
+Wat kantelde: (1) mijn merge-ontwerp, met de doel/doelStart-lassing als beslissend argument; (2)
+"`fase` is het enige null-veld" — het zijn er vijf, en in het algemene geval gooit een numeriek veld
+eerder; (3) "één stille catch" — het zijn er veertien; (4) de vondst van een DERDE aanroeper
+(`tools/shots/shot.mjs`) die het probleem al had opgelost.
+
+**PAS 2 — op de GEBOUWDE code, vóór de commit. DRIE VAN DE DRIE VOLTOOID, en GEEN ENKELE weerlegde de
+reparatie.**
+
+| lens | uitkomst |
+| --- | --- |
+| `breekt-iets` | **VOLTOOID** · **NIET WEERLEGD** |
+| `lost-het-op` | **VOLTOOID** · **NIET WEERLEGD** |
+| `zichtbaarheid` | **VOLTOOID** · **NIET WEERLEGD** |
+
+Wat pas 2 wél opleverde, en het is alle drie keer nagemeten en gerepareerd:
+
+1. **Een overclaim van mij.** Ik schreef dat de merge in `docs/UI-SYNC-SETTINGS-RECON.md` "afgewezen"
+   was. Hij staat daar onder *"Ambiguïteiten / open beslispunten"* en eindigt op *"**Beslispunt.**"* —
+   OPEN, niet afgewezen. Rechtgezet op drie plaatsen.
+2. **Drie docstrings die het oude contract bleven verkondigen** — `apps/web/src/lib/api.ts`,
+   `apps/web/src/lib/settings.ts` (twee keer) en `docs/UI-SYNC-SETTINGS-RECON.md`. Allemaal bijgewerkt.
+3. **Een gat in mijn eigen regressietest**: die stuurde dertien van de zestien sleutels en liet precies
+   de drie presentatie-velden weg — de regels die deze ronde herschreef naar `?.slice(0, 24) ?? null`.
+   Aangevuld tot alle zestien, plus een assertie dat `coachNaam` en `naam` als null landen in plaats van
+   op `null.slice` te klappen.
+
+En één inhoudelijke vondst die bleef staan: **de lege string is iets DERDES.** `""` passeert `strField`
+en landt als `''` in D1, niet als NULL. Dat was vóór deze ronde al zo en is niet gewijzigd, maar het is
+nu vastgepind met een eigen test — de docstrings beweerden er ten onrechte "geeft 400" over.
+
+Verder bevestigde pas 1 twee dingen zelfstandig die ik daarna heb nagemeten: `numField`/`strField`
+hebben precies **twee** aanroepplekken (de settings-PUT en de planner-PUT), en de planner-tak guard't
+met `== null` **vóór** de helper, dus die route ziet nooit een null en is byte-identiek gebleven.
+
+### Wat NIET is gerepareerd, en dat is een bewuste grens
+
+De stille `catch` is niet één plek maar een SJABLOON: gemeten **14 `catch {`-blokken in 12
+coach-kaartbestanden**. Er is geen gedeelde foutcomponent — het meldingspatroon staat handmatig
+herhaald op de pagina's. Deze ronde repareert de kaart waar het defect zich voordeed en laat de andere
+staan; dat is opgenomen als een eigen ROADMAP-punt in plaats van half gedaan.
+
 <!-- EINDE docs/PUNT69-BOUW.md -->

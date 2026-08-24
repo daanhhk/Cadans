@@ -80,7 +80,7 @@ Date | null }`.
   12 kolommen via `s.x ?? null` en doet `insert().onConflictDoUpdate({ target: userId, set: vals })`.
   → een **weggelaten veld wordt op `null` gezet** (gecleared).
 - Succes → **200** `{ ok: true }`.
-- **Expliciete null:** `numField(null)`/`strField(null)` → typeof mismatch → **400**; `doelStart:null`
+- **Expliciete null:** ~~`numField(null)`/`strField(null)` → typeof mismatch → **400**~~ — **ACHTERHAALD per 24-08-2026 (ROADMAP punt 73): een expliciete null is nu een LEGE WAARDE en doet hetzelfde als weglaten.** De 400 hierboven was het live defect dat de doel-wissel brak. `doelStart:null`
   → **400**. Dus **expliciete null geeft al 400**.
 - **required vs optional:** GEEN veld is verplicht — een leeg body `{}` is 200 en cleart álles naar
   null. Elk aanwezig veld wordt getypecheckt.

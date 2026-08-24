@@ -2052,8 +2052,31 @@ punten staat onder *Gesloten — vindplaats*.
     (§5.3), en migratie 0013. Die migratie is een prod-handeling met een eigen goedkeuring.
 
 73. **`PUT /api/settings` kan een instelling niet wijzigen zonder de rest te wissen, en de bestaande
-    doel-wissel loopt daar STIL op stuk** — open · WORKER plus CLIENT. **GEMETEN 24-08-2026 in punt
-    69; dit is een LIVE DEFECT in gedeployde code en niet iets dat punt 69 introduceert.**
+    doel-wissel loopt daar STIL op stuk** — **AF per 24-08-2026 · WORKER plus CLIENT.** Was een LIVE
+    DEFECT in gedeployde code.
+    **DE REPARATIE, en zij is kleiner dan het punt hieronder voorstelde.** Een expliciete `null` is nu
+    een LEGE WAARDE en geen typefout: `numField` en `strField` geven `null` terug in plaats van te
+    gooien, de `doelStart`-tak accepteert `null`, en de drie presentatie-velden gebruiken
+    `?.slice(0, 24) ?? null`. GROND: `packages/shared/src/settings.ts` typeert ELK veld als `T | null`
+    terwijl de runtime null weigerde — de route ging tegen zijn eigen wire-type in. Onder full-replace
+    betekent een weggelaten veld al "wissen"; een expliciete null hoort hetzelfde te betekenen.
+    **HET VOORSTEL HIERONDER — een partieel schrijfpad in de vorm van `writeIjking` — IS NIET
+    GEBOUWD, en dat is een correctie op dit punt zelf.** De weerleggingspas haalde die richting
+    onderuit: een merge-semantiek maakt de lassing tussen `doel` en `doelStart` STIL los (punt 28),
+    geen enkele van de drie aanroepers heeft haar nodig, en zij kantelt negen tests waar de gekozen
+    vorm er nul kantelt. `docs/UI-SYNC-SETTINGS-RECON.md:119-123` noemt de merge bovendien al als
+    OPEN BESLISPUNT — niet als afgewezen weg — met de aantekening dat hij "afwijkt van het gekozen
+    contract"; gekozen is full-replace, en dat is nooit herzien.
+    **DE OMVANG WAS GROTER DAN "fase".** GEMETEN: de settings-rij heeft 21 kolommen waarvan er VIJF
+    op null staan (`threshold_pace`, `fase`, `ftp_auto_update`, `weight_auto_update`, `email_digest`),
+    en GEEN ENKELE datakolom draagt `.notNull()`. Alle zestien velden die de route accepteert konden
+    dus een 400 geven, en in het algemene geval gooit een leeggelaten NUMERIEK veld eerder dan `fase`
+    — de negen `numField`-poorten staan op positie 1 t/m 9, `fase` pas op 11.
+    **NIET GEMETEN GEBLEVEN: de blootstelling op PROD.** `wrangler d1 execute --remote` geeft
+    `code 7403`; het OAuth-token van deze sessie draagt geen `d1`-scope. Zie punt 76.
+    ROOD GEMETEN vóór de reparatie: `expected 400 to be 200` op een volledig settings-object met
+    nulls. Volledig in `docs/PUNT69-BOUW.md` §12.
+    De oorspronkelijke diagnose, bewaard als aanleiding: GEMETEN 24-08-2026 in punt 69.
     HET MECHANISME. `writeSettings` (`workers/api/src/db/repo.ts:56`) is full-replace — elk veld
     krijgt `?? null` — en de route zegt dat verbatim (`workers/api/src/routes/api.ts:879-881`):
     *"NB: writeSettings VERVANGT de rij volledig (weggelaten velden → null; PUT-semantiek), geen
@@ -2080,6 +2103,34 @@ punten staat onder *Gesloten — vindplaats*.
     Cadans heeft de kolom overgenomen zonder het pad. De naam nodigt uit tot hergebruik door precies
     de ronde die een FTP-voorstel bouwt. CC-CHECKS CHECK 27: weghalen of aansluiten is een besluit,
     stilzwijgend laten staan niet.
+
+75. **VEERTIEN coach-kaart-catches slikken een mislukte schrijfactie in stilte, en er is geen
+    gedeelde foutmelding** — open · CLIENT. GEMETEN 24-08-2026 in punt 73 (weerleggingspas, daarna
+    zelf nageteld): **14 `catch {`-blokken over 12 bestanden** in `apps/web/src/components/schema/` —
+    `DispositionAffordance`, `DoelPassendCard` (×2), `DosisTredeCard`, `EventOvernameCard`,
+    `FatigueCard`, `GemistCard`, `OverriddenDetail`, `RideDetailSheet`, `RpeRating`,
+    `TestVoorstelCard` (×2), `VerlengCard`, `VerlichtCard`. Elk vangt een schrijfactie en zet alleen
+    `setSaving(false)` terug, waarna het scherm identiek is aan vóór de tik: een mislukte actie is
+    niet van een geslaagde te onderscheiden.
+    **HET IS EEN GEKOPIEERD SJABLOON EN GEEN VERGISSING**, dus de volgende kaart brengt de stilte
+    opnieuw mee. Punt 73 repareerde er ÉÉN — de kaart waar het live defect zat — en liet de rest
+    bewust staan.
+    WAT ERBIJ HOORT: er is GEEN gedeelde foutcomponent; het meldingspatroon staat handmatig herhaald
+    op de pagina's (`Instellingen`, `Events`, `Weekplanner`, `Trainingen`) en nergens geëxporteerd.
+    En `putSettings` gooit een kale `Error`, dus de UI kan een 400 niet van een netwerkfout
+    onderscheiden. `apps/web/src/lib/coachNarrative.ts` draagt sinds punt 73 één mislukking-regel
+    (`schrijfMisluktRegel`); dat is het begin van het idiom, niet het einde.
+
+76. **Het wrangler-token van de CC-sessie draagt geen `d1`-scope, dus prod-D1 is niet te LEZEN** —
+    open · TOOLING, klein maar het blokkeert metingen. GEMETEN 24-08-2026 in punt 73:
+    `npx wrangler d1 execute cadans --remote --command "SELECT ..."` geeft `code 7403`, *"The given
+    account is not valid or is not authorized to access this service"*. `npx wrangler whoami` toont
+    een OAuth-token voor account `9218229b9be1015defcbacc8c430ca34` met scopes voor `workers`,
+    `workers_scripts`, `workers_kv`, `pages` en meer — maar `d1` staat er niet tussen.
+    WAT DAT KOST: verwachting R3 van punt 73 kon niet gemeten worden (draagt de PROD-rij ook een
+    null-veld?), en elke volgende ronde die een prod-stand wil vaststellen loopt op dezelfde muur.
+    De migraties van 23-08-2026 kwamen er wél doorheen, dus de scope is sindsdien veranderd of het
+    token is opnieuw uitgegeven. Eén keer opnieuw inloggen met een token dat `d1` omvat lost het op.
 
 49. **De doelcheck aflezen uit een sleutelsessie** — open · DATA plus CLIENT. Bij de drie doelen
     zonder FTP-check (punt 47) is de check geen aparte test maar een SLEUTELSESSIE waarvan je de
@@ -3197,6 +3248,28 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
     Bijvangst: punt **73** (een LIVE defect — de doel-wissel loopt stil op een 400) en punt **74**
     (zes dode kolommen op `sync_state`). **DE BOUW LIGT KLAAR** — §6 van dat document — en kost naar
     schatting één ronde zodra de factor er is.
+11d-8. **73** — AF (24-08-2026), kleine reparatieronde met een DEPLOY. Het live defect is weg: een
+    expliciete `null` in een settings-body is nu een lege waarde in plaats van een 400, dus de
+    doel-wissel landt weer. De reparatie is KLEINER dan punt 73 zelf voorstelde — de weerleggingspas
+    haalde de merge-richting onderuit (zij maakt de lassing tussen `doel` en `doelStart` stil los en
+    kantelt negen tests waar deze vorm er nul kantelt). Bijvangst: punt **75** (14 stille catches, geen
+    gedeelde foutmelding) en punt **76** (het wrangler-token mist de `d1`-scope, dus prod-D1 is niet te
+    lezen). **DIT DEBLOKKEERT PUNT 69**: de goedkeuring van een FTP-voorstel kan nu wegschrijven.
+    **DE VOLGENDE IS 11d-9.**
+11d-9. **69** — het FTP-VOORSTEL NA EEN GEREDEN TEST. **DIT IS DE EERSTVOLGENDE RONDE.** De factor is
+    besloten (M93: 95 procent van het beste twintigminutenvermogen, afgelezen op `secs = 1200`) en het
+    schrijfpad werkt sinds punt 73. Het ontwerp ligt volledig in `docs/PUNT69-BOUW.md` §6.
+    WAT DIE RONDE NOG MOET OPLOSSEN, en wat er daarover al GEMETEN is: (1) de koppeling
+    plan→rit is ZWAK — `testResultaat` leest alleen de override en raakt geen enkele activiteit; de
+    enige koppeling is dezelfde kalenderdag plus een vloer van 15 fietsminuten, en bij twee ritten
+    houdt `done.idExt` de LANGSTE (`docs/PUNT69-BOUW.md` §5.2). (2) De app kan NIET zien of er vol
+    gereden is — een Z2-rit gaf 195 W, waaruit 185 W zou volgen tegen een gezette FTP van 280: een
+    verlaging van **34 procent** (§5.3).
+    **DE PLAUSIBILITEITSGRENS DIE DAT MOET VANGEN IS EEN DREMPEL EN WORDT OP DE ECHTE REEKS GEIJKT,
+    nooit in een gesprek gekozen.** Daarvoor is een kalibratieset nodig, en die levert de backfill van
+    ongeveer 255 per-rit-krommes (ongeveer 1,4 MB, één verzoek per rit). Die backfill is daarmee méér
+    dan compleetheid: hij is het meetgereedschap voor de grens. Randvoorwaarden van Daan: gedoseerd,
+    met teller en een HARDE bovengrens die GOOIT, HERSTARTBAAR, en alleen lezen.
     **DE VOLGENDE IS 11e.**
 11e. **61 (+ 54)** — de DOELCHECK aan het eind van het doelblok, de tweede helft van M89.
     **DIT IS DE EERSTVOLGENDE RONDE**, bevestigd 23-08-2026. Het is het enige deel van punt 47 dat
