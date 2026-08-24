@@ -2029,6 +2029,50 @@ punten staat onder *Gesloten — vindplaats*.
     drempelwaarde verzet zodra er een geplande test plus 15 gereden minuten staat, terwijl er niets
     is vastgesteld. Met een goedkeur-stap is er pas GEIJKT als Daan een waarde overneemt — dat is
     M5, en het maakt de 15-minutengrens als ijk-criterium overbodig.
+    **ONDERZOCHT 24-08-2026, GEEN CODE — WACHT OP ÉÉN DAAN-BESLUIT.** De volledige meting staat in
+    `docs/PUNT69-BOUW.md`. Q1 HOUDT: de 20-minutenwaarde staat DIRECT afleesbaar op het exacte
+    roosterpunt `secs = 1200` van de per-rit-kromme (gemeten `secs.indexOf(1200) = 109`,
+    `values[109] = 195 W`, 5353 bytes), dus zonder stream en zonder engine-wijziging. **Q2 VALT**, en
+    dat stopte de ronde: de canon draagt de omrekenregel niet, en de regel is bovendien niet ÉÉN regel
+    maar DOEL-AFHANKELIJK — `planner.ts:2071` kiest vier protocollen over vijf doelen en alleen het
+    FTP-protocol draagt een omrekening; Conditie meet HR-drift en Beklimmingen is een manuele
+    PR-vergelijking. `powerModels` en `ranks` op de intervals-respons zijn null, dus de bron levert
+    ook geen schatting. En intervals' eigen schatting mag niet: `TRAININGSMODEL` M91 verbiedt die
+    proxy expliciet. Q3 HOUDT op de migratie-eis (0013, drie `ADD COLUMN` op `sync_state` is de
+    bestaande vorm; een piek-kolom op `activities` overleeft de sync omdat `actValsFromRow` een vast
+    17-veldenobject bouwt). **WAT ER NOG MOET GEBEUREN VOORDAT DIT GEBOUWD KAN WORDEN:** Daan kiest de
+    factor, die krijgt een plek in `TRAININGSMODEL` met een herkomst-etiket, en er komt een partieel
+    schrijfpad voor `settings.ftp` — zie punt 73.
+
+73. **`PUT /api/settings` kan een instelling niet wijzigen zonder de rest te wissen, en de bestaande
+    doel-wissel loopt daar STIL op stuk** — open · WORKER plus CLIENT. **GEMETEN 24-08-2026 in punt
+    69; dit is een LIVE DEFECT in gedeployde code en niet iets dat punt 69 introduceert.**
+    HET MECHANISME. `writeSettings` (`workers/api/src/db/repo.ts:56`) is full-replace — elk veld
+    krijgt `?? null` — en de route zegt dat verbatim (`workers/api/src/routes/api.ts:879-881`):
+    *"NB: writeSettings VERVANGT de rij volledig (weggelaten velden → null; PUT-semantiek), geen
+    partial-merge."* Er zijn dus twee mogelijke bodies en ze falen allebei. Een PARTIËLE body
+    `{ ftp }` nult vijftien andere velden. Een VOLLEDIGE body klapt op `numField`/`strField`
+    (`api.ts:124-135`), die een 400 gooien zodra een veld `null` is.
+    EN DAT TWEEDE GEVAL DOET ZICH VOOR. `GET /api/settings` geeft nulls door — `serializeSettings`
+    (`api.ts:140`) is `{ ...s }` en `readSettings` (`repo.ts:106`) doet `fase: r.fase`. GEMETEN op de
+    lokale D1: `fase` is **NULL**. `DoelPassendCard.wissel()`
+    (`apps/web/src/components/schema/DoelPassendCard.tsx:38-47`) stuurt via
+    `doelPassendSettingsPatch` (`apps/web/src/lib/doelpassend.ts:114`) het VOLLEDIGE settings-object
+    terug, inclusief `fase: null`. De route antwoordt 400 en de `catch { setSaving(false) }` slikt
+    hem: **de knop doet niets en zegt niets.**
+    NIET GEMETEN: of de PROD-rij ook een null-veld draagt. De faalwijze staat vast, de blootstelling
+    op prod niet — één leesactie op remote D1 beantwoordt dat.
+    DE INGREEP is een partieel schrijfpad in de vorm van `writeIjking`, dat wél alleen zijn eigen
+    kolommen zet. Punt 69 heeft datzelfde pad nodig om een goedgekeurde FTP weg te schrijven.
+
+74. **Zes van de 21 kolommen op `sync_state` zijn dood** — open · klein, dood hout. GEMETEN
+    24-08-2026 in punt 69. `last_sync`, `meso_week`, `load_carry`, `ftp_last_sync`, `weight_last_sync`
+    en `debt_opt_in_week` komen in heel `workers/api/src` uitsluitend in `schema.ts` zelf voor — geen
+    enkele lees- of schrijfaanroep. `ftp_last_sync` verdient aparte aandacht: het is de port-schaduw
+    van `setFtpLastSync(new Date())` in de bevroren bron (`src/Sync.gs`, de regel ná `setFtp`), en
+    Cadans heeft de kolom overgenomen zonder het pad. De naam nodigt uit tot hergebruik door precies
+    de ronde die een FTP-voorstel bouwt. CC-CHECKS CHECK 27: weghalen of aansluiten is een besluit,
+    stilzwijgend laten staan niet.
 
 49. **De doelcheck aflezen uit een sleutelsessie** — open · DATA plus CLIENT. Bij de drie doelen
     zonder FTP-check (punt 47) is de check geen aparte test maar een SLEUTELSESSIE waarvan je de
@@ -3139,6 +3183,13 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
     CHECK 40, de regel dat de weerleggingspas VOOROP draait, de regel dat een verwachting die niet
     kan falen niets toetst, en de punten **71** en **72** als bijvangst. **DE GOEDKOOPSTE RONDE VAN
     DE REEKS, want zij leverde geen code op en dat was de winst.**
+11d-7. **69** — ONDERZOCHT (24-08-2026), **GEEN CODE, wacht op één Daan-besluit**. Q1 HOUDT, Q2 VALT,
+    Q3 HOUDT op de migratie-eis. De ronde stopte waar de prompt dat had voor-geautoriseerd: de factor
+    die twintig minuten in een drempelwaarde omzet is nergens met gezag vastgelegd, en hij is
+    bovendien doel-afhankelijk. Volledig in `docs/PUNT69-BOUW.md`; het besluitblok staat in §10.
+    Bijvangst: punt **73** (een LIVE defect — de doel-wissel loopt stil op een 400) en punt **74**
+    (zes dode kolommen op `sync_state`). **DE BOUW LIGT KLAAR** — §6 van dat document — en kost naar
+    schatting één ronde zodra de factor er is.
     **DE VOLGENDE IS 11e.**
 11e. **61 (+ 54)** — de DOELCHECK aan het eind van het doelblok, de tweede helft van M89.
     **DIT IS DE EERSTVOLGENDE RONDE**, bevestigd 23-08-2026. Het is het enige deel van punt 47 dat

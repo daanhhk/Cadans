@@ -90,29 +90,25 @@ curves=400d  ->  200
 NA vandaag. Wie letterlijk zes weken wil, stuurt `oldest`/`newest` mee in plaats van op het label te
 vertrouwen.
 
-**EN DE 20-MINUTENWAARDE IS NIET AF TE LEZEN — hij moet GEREKEND worden.** Dit is de scherpste
-correctie van deze ronde en zij kwam uit de weerleggingspas. De `values`-reeks is NIET monotoon
-dalend; gemeten op de 42d-curve: **11 schendingen**. Rond de maat zelf, alle punten uit DEZELFDE rit
-`i166073333`:
+~~**EN DE 20-MINUTENWAARDE IS NIET AF TE LEZEN — hij moet GEREKEND worden.**~~
 
-```
-1140s = 265 W   1200s = 261 W   1260s = 263 W   1320s = 263 W   1380s = 264 W   1440s = 261 W
-```
+> **INGETROKKEN 24-08-2026 — DEZE HELE PASSAGE WAS FOUT. Zie §8.** De WAARNEMING klopt en blijft
+> staan: de `values`-reeks is niet monotoon dalend (11 schendingen op de 42d-curve), en op rit
+> `i166073333` staat er `1140s = 265 W · 1200s = 261 W · 1260s = 263 W · 1320s = 263 W ·
+> 1380s = 264 W · 1440s = 261 W`. De CONCLUSIE eronder was onjuist. *"Een echte mean-max-kromme kan
+> dat niet"* is wiskundig fout — een mean-max-kromme KAN stijgen met de duur, want een langer venster
+> mag een zwak midden meenemen zolang beide sterke randen erin passen. Tegenvoorbeeld met de hand:
+> het signaal `[10, 0, 10]` heeft een beste 2s-gemiddelde van 5,00 W en een beste 3s-gemiddelde van
+> 6,67 W. **Aflezen op `secs 1200` onderschat dus NIETS**: 261 W is het beste twintigminutenblok en
+> 264 W het beste drieëntwintigminutenblok — twee grootheden, twee antwoorden, allebei juist.
+> `pcMarkerAt_` leest correct, en de bestaande niveaukaart is in orde. **Neem uit deze passage geen
+> lopend maximum over.** Dit is in deze ronde alsnog rechtgezet; §8 stond al goed maar deze
+> meetsectie was blijven staan.
 
-De reeks STIJGT tussen 1200 en 1380 seconden. Een echte mean-max-kromme kan dat niet: wie 264 W over
-23 minuten volhield, hield per definitie ook ergens 20 minuten ≥264 W vol. **Aflezen op `secs 1200`
-geeft 261 W; het lopende maximum over alle `secs ≥ 1200` geeft 264 W — 1,1 procent hoger.** Dezelfde
-vorm op de per-rit-curve: 195 W afgelezen tegen 197 W gerekend, 1,0 procent.
-
-*(De OORZAAK van de niet-monotonie is niet gemeten — het kan binning of afronding aan de
-intervals.icu-kant zijn. Het GEVOLG is wel gemeten en dat is wat telt.)*
-
-**WAAROM DAT ERTOE DOET:** §3.2 meet of de piek "niet meer dan enkele procenten" zakt. Een
-systematische onderschatting van ongeveer één procent zit in dezelfde orde als het criterium zelf.
-
-**EN DE ENGINE LEEST HEM VANDAAG OOK ZO.** `pcMarkerAt_` in `packages/engine/src/niveau.ts` neemt de
-EERSTE index waar `secs[i] >= targetSec` en geeft die waarde terug — dus 261, niet 264. Dat is
-bestaand gedrag en raakt de bestaande niveaukaart, niet alleen een toekomstige doelcheck.
+**WAT ER WÉL UIT VOLGT:** lees een duurwaarde op HAAR EIGEN duurpunt. De 20-minutenwaarde staat op
+`secs = 1200` en nergens anders. Gemeten op de per-rit-curve van `i172391866`:
+`secs.indexOf(1200) = 109`, `values[109] = 195 W` — een exact roosterpunt, dus zonder interpolatie
+en zonder een naburig punt te lenen.
 
 ### Kandidaat B — de PER-RIT curve: `/activity/{id}/power-curve`
 
@@ -122,8 +118,10 @@ secs: array[153] van 1 tot 4500       values: array[153]
    300s =  211 W      1200s =  195 W      3600s =  191 W
 ```
 
-Bestaat, en geeft de 20-minutenwaarde van ÉÉN rit — met dezelfde reken-in-plaats-van-aflezen-nuance
-(13 schendingen; 195 afgelezen tegen 197 gerekend). Naast `secs`/`values` draagt de respons
+Bestaat, en geeft de 20-minutenwaarde van ÉÉN rit — DIRECT AFLEESBAAR op het exacte roosterpunt
+`secs = 1200` (gemeten: `secs.indexOf(1200) = 109`, `values[109] = 195 W`). Ook deze kromme stijgt
+plaatselijk (13 stijgende stappen van de 152), en dat is ECHT en wordt NIET gerepareerd — zie §8.
+Naast `secs`/`values` draagt de respons
 `watts_per_kg`, `submax_values`, `powerModels`, `ranks` en `vo2max_5m`.
 
 ### Kandidaat C — de TIJDLIJN: `/activity/{id}/streams`
@@ -181,8 +179,9 @@ modelparameter, geen piek.
 
 **DAANS VERMOEDEN — "het is af te leiden" — KLOPT, en scherper dan gedacht.** Het hoeft niet uit een
 tijdreeks afgeleid te worden: zowel het venster als de per-rit-curve levert een kant-en-klare
-kromme. Maar er moet wél GEREKEND worden — een lopend maximum over de kromme — en dat is precies het
-stukje dat "direct afleesbaar" leek en het niet is.
+kromme, en de waarde staat DIRECT AFLEESBAAR op haar eigen duurpunt `secs = 1200`. ~~Maar er moet
+wél GEREKEND worden — een lopend maximum over de kromme.~~ **INGETROKKEN 24-08-2026, zie §8: er hoeft
+niets gerekend te worden.** Het lopende maximum was juist de fout.
 
 ---
 

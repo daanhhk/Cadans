@@ -240,6 +240,24 @@ STOP DE DEV-SERVERS VÓÓR `pnpm test`. Een draaiende `wrangler dev` maakt de ga
 
 Prod-acties zijn approval-gated en gaan nooit stilzwijgend: `wrangler deploy` **vanuit `workers/api`** (niet `pnpm deploy`), met **`pnpm build` ervoor** omdat de assets-binding naar `apps/web/dist` wijst. Remote-D1-mutaties idem, in strikte volgorde: migratie eerst, dan deploy. Nooit prod-D1 met de hand bewerken.
 
+### CC-MODUS — waar auto MAG en waar hij UIT gaat
+
+**AUTO IS TOEGESTAAN** voor recon en voor client-only bouw: lezen, meten, en code schrijven die de
+gebruiker niet raakt zonder tussenkomst.
+
+**AUTO GAAT UIT** zodra prod, remote D1 of een deploy in beeld komt, en voor elke handeling die naar
+buiten SCHRIJFT of in bulk naar buiten LEEST — een backfill hoort daar expliciet bij, ook als hij
+alleen leest.
+
+**AUTO IS GEEN TOESTEMMING OM DOOR EEN OMGEVALLEN VERWACHTING HEEN TE LOPEN.** Valt er een
+verwachting om, dan stopt de ronde daar, in auto net zo goed als daarbuiten.
+
+GROND, en die is eerlijk over wat er gemeten is: auto haalde in de ronde van 24-08-2026 (punt 70) de
+streep, maar dat was een TERUGTREK-ronde — er werd niets gebouwd, dus de vorm is daar nauwelijks op
+de proef gesteld. Het risico zit in de ronde waar halverwege een verwachting omvalt en er wordt
+doorgelopen; precies dat geval heeft nog geen bewijs. De grens staat daarom aan de voorzichtige kant
+tot er een ronde is die hem wél belast.
+
 ### Migraties en deploys — TWEE GOEDKEURINGEN, NIET ÉÉN
 
 **EEN REMOTE MIGRATIE IS GEEN WORKER-DEPLOY, en ze horen apart te worden goedgekeurd.** Het risico
