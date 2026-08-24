@@ -685,4 +685,337 @@ coach-kaartbestanden**. Er is geen gedeelde foutcomponent — het meldingspatroo
 herhaald op de pagina's. Deze ronde repareert de kaart waar het defect zich voordeed en laat de andere
 staan; dat is opgenomen als een eigen ROADMAP-punt in plaats van half gedaan.
 
+---
+
+## 13. DE HERKENNER — GEMETEN, EN HIJ BESTAAT NIET
+
+Ronde van 24-08-2026, meten en kalibreren. **Er is geen herkenner gebouwd, en dat is de uitkomst:
+alle drie de kandidaten vielen om, en de vierde — mijn eigen alternatief — ook.** Wat er wél uit
+kwam is groter dan de vraag: **de staande drempelwaarde wordt door geen enkele rit van het afgelopen
+jaar gedragen.**
+
+### Omgevingsverklaring
+
+```
+werkpad          /c/Users/daan/Projects/cadans
+git-dir          .git       git-common-dir  .git      -> HOOFDCHECKOUT, geen worktree
+branch           main       origin/main     0 achter, 0 vooruit
+HEAD bij aanvang 9d99910    boom            schoon
+claude --version 2.1.208 (Claude Code)
+```
+
+Agent-discovery blijft **NIET GEMETEN**. Nummering: `docs/ROADMAP.md:2014` draagt punt 69, in de
+volgorde `11d-9`.
+
+### Het besluit dat deze ronde nodig maakte
+
+Het FTP-voorstel hangt aan de RIT en niet aan de agenda: rijdt Daan een inspanning waar een
+drempelwaarde uit te halen valt, dan stelt de app die voor, ook zonder aangeboden test. Twijfelt de
+app, dan toont zij NIETS. De grond is goed — de koppeling plan→rit is structureel zwak (§5.2) — en
+door de rit zelf te laten beslissen vervalt die koppeling als afhankelijkheid.
+
+**De meting hieronder laat zien dat de VOORWAARDE van dat besluit niet vervuld kan worden.** "Een
+inspanning waar een drempelwaarde uit te halen valt" is op deze data niet herkenbaar.
+
+### (a) Welke signalen zijn er, en (b) welk signaal scheidt
+
+**GEEN ENKEL.** Gemeten op **222 fiets-ritten** (`Ride` plus `VirtualRide`, 2025-07-06 t/m
+2026-08-04, 394 dagen) uit de lokale D1.
+
+**EERST EEN FOUT VAN MIJZELF, want zij bepaalde de rest.** Ik begon met een filter op `type='Ride'`
+en had daarmee **14 rijen** buiten beeld — waaronder de meest test-achtige rit van de hele reeks:
+2026-01-13, een `VirtualRide` van **20 minuten op IF 100,77**, de enige rit met IF ≥ 100 van de 222.
+Dat filter produceerde ook een VALS LABEL: ik telde 2026-01-17 als sprong, maar daar DAALT
+`rolling_ftp` van 277 naar 276; de echte sprong (+10) lag vier dagen eerder, op die VirtualRide.
+Gevangen door de weerleggingspas, daarna zelf nagemeten.
+
+**DE SPRONG IN `rolling_ftp`** — Daans kandidaat, en al per rit opgeslagen. Alle 57 veranderingen
+over de reeks:
+
+```
+-1  achtenveertig keer      +1   EEN keer
+-2  vijf keer               +10  een keer
+                            +11  een keer
+                            +29  een keer
+```
+
+Er zijn dus **DRIE** sprongen en niet vier. De vierde die ik meende te zien is een stap van **+1** —
+exact even groot als de decay-stap die 48 keer voorkomt. Dat is de ruisvloer als signaal lezen. Drie
+sprongen over 394 dagen; over alleen de twee `Ride`-sprongen is dat 197 dagen per sprong, wat
+overeenkomt met wat `docs/TRAININGSMODEL.md` zelf al vastlegt ("ongeveer 182 dagen"). Mijn eerdere
+"één per 98 dagen" was het artefact.
+
+**DE SPRONGEN EN DE TWINTIGMINUTENWAARDE, en hier moet ik mijn eigen formulering bijstellen.** Ik
+schreef eerst dat de sprongen NIET vallen op de ritten die het beste twintigminutenvermogen dragen.
+Dat is waar voor de twee VENSTER-beste ritten, maar ONWAAR voor de grootste sprong van de reeks, en
+dat weerlegde geval draait de betekenis om. Op 2025-07-17 valt de sprong van +29 wél op de rit met de
+hoogste piek van het hele jaar (310 W) — en daar geldt `0,95 × 310 = 294,5` tegenover een
+`rolling_ftp` die op **295** uitkomt. **Op die ene rit reproduceert de M93-formule intervals' eigen
+schatting tot op een halve watt.** Dat is een onafhankelijke getuige die mijn nieuwe kolom bevestigt
+op een waarde die lang vóór de backfill al in D1 stond.
+
+Wat overeind blijft, is de zwakkere maar nog altijd dragende vorm: de ritten die de VENSTERS op
+`secs = 1200` aanwijzen, springen niet:
+
+```
+1y-venster,  secs=1200 -> 268 W   rit i102823590   2025-10-20  61 min  IF 90,37
+                                  rolling_ftp 278 vóór -> 278 op de rit   GEEN SPRONG
+90d-venster, secs=1200 -> 268 W   rit i158575314   2026-06-19 120 min  IF 81,82
+                                  rolling_ftp 270 vóór -> 270 op de rit   GEEN SPRONG
+```
+
+Geen van beide staat in de drie sprongen. En omgekeerd dragen de sprongen zelf middelmatige
+twintigminutenwaarden: 2026-01-13 geeft **227 W** ondanks IF 100,77 (een variabele intervalrit, geen
+volgehouden inspanning) en 2026-05-21 geeft **225 W**. De detector is niet zwak — hij is
+**anti-gecorreleerd** met wat we nodig hebben.
+
+**DE OVERIGE VELDEN.** Op `if_pct` is de overlap grof: 95 van de 202 niet-springers (47 procent)
+staan op of boven de laagste springer. En `if_pct` is bovendien een BEWEGENDE maat — het is
+`norm_w / ftp` van dát moment, en `ftp` verspringt vier keer binnen de reeks.
+
+### (c) Waar ligt de drempel
+
+**NERGENS, want er is niets om een drempel op te leggen.** Een leave-one-out op de vier labels laat
+zien dat de noemer op de beslissende dimensie feitelijk **N=1** is: laat je het (valse) label
+2026-06-16 weg, dan schuift de IF-grens van 76,36 naar 81,82 en kantelen 35 van de 202 ritten; laat
+je een van de andere weg, dan verschuift er niets. Eén geval draagt de hele drempel, en dat geval is
+een tik van één watt op een integer.
+
+### DE ANDERE WEG, en die viel ook om
+
+Ik ontwierp onderweg een alternatief dat de herkenner overbodig leek te maken: **een maximale
+inspanning bewijst alleen iets NAAR BOVEN** — je kunt onder je kunnen rijden, nooit erboven — dus
+stel alleen een HOGERE drempelwaarde voor en laat een lage waarde niets doen. Elegant, en op deze
+data dood.
+
+Gemeten op de volle reeks, met de backfill uit §14 als grondstof:
+
+```
+215 ritten met een twintigminutenwaarde
+piek_1200_w:  min 118   p25 186   med 208   p75 232   p90 249   p95 258   max 310
+
+staande FTP 280  ->  vuren vraagt een piek boven 294,7 W
+ritten die dat halen: 1 van 215   (2025-07-17, 310 W -> voorstel 294 W)
+```
+
+Die ene rit heet **"De Ronde Venen - FTP build up"**, duurt 88 minuten op IF 92,22, draagt de grootste
+`rolling_ftp`-sprong (+29), en ligt met 310 W **39 watt (14,4 procent)** boven de nummer twee. Drie
+onafhankelijke signalen wijzen dezelfde rit aan. Dat is bemoedigend — en het helpt niet:
+
+```
+venster 365d (195 ritten)  beste piek 268 W -> 255 W   ritten boven 280: 0
+venster  90d ( 51 ritten)  beste piek 268 W -> 255 W   ritten boven 280: 0
+venster  42d ( 23 ritten)  beste piek 261 W -> 248 W   ritten boven 280: 0
+```
+
+**Die ene vurende rit is 383 dagen oud en valt dus BUITEN het jaarvenster.** In de laatste twaalf
+maanden vuurt de regel **nul keer**, en dat is geen schatting maar een bovengrens: het
+venstermaximum is per constructie een bovengrens op elke afzonderlijke rit erin.
+
+### WAT DE METING WÉL OPLEVERT — en hier had ik het eerst MIS
+
+Mijn eerste conclusie luidde: *"de staande drempelwaarde van 280 W wordt door geen enkele rit van het
+afgelopen jaar gedragen, dus hij staat te hoog."* **Weerleggingspas 2 haalde dat onderuit en ik heb
+het zelf nagemeten. De rekensom klopte; de gevolgtrekking niet.**
+
+**EERST DE FOUT DIE ERONDER LAG.** Ik schreef eerder dat `powerModels` op de intervals-respons null
+is. Dat was gemeten op de PER-RIT-kromme van één Z2-rit. De GECACHTE VENSTER-krommes dragen hem wél,
+en daar staat het antwoord in:
+
+```
+venster 1y   FFT_CURVES  ftp 277   (criticalPower 271)
+             ECP         ftp 271   (criticalPower 271)
+venster 90d  MS_2P       ftp 283
+             FFT_CURVES  ftp 266
+             MORTON_3P   ftp 249
+```
+
+**De staande 280 ligt BINNEN die band en 3 watt van de jaarschatting.** Mijn afgeleide 255 ligt onder
+alle modellen. De drempel staat dus niet te hoog — en ik had dat kunnen weten uit data die al in D1
+stond. Eén probe op één rustige rit, en ik generaliseerde hem naar de hele bron.
+
+**EN DE TWEE LEZINGEN ZIJN WÉL TE SCHEIDEN**, wat ik ook ten onrechte ontkende. Ik schreef dat de app
+niet kan uitmaken of de drempel te hoog staat of dat er niet vol gereden is. Dat kan zij wel, en het
+staat in dezelfde tabel:
+
+```
+kwartaal   n    max piek   gem piek   ritten IF >= 90   aandeel
+2025Q3    57      310       212,5           7           12,3%
+2025Q4    49      268       207,9           6           12,2%
+2026Q1    36      254       209,2           2            5,6%
+2026Q2    54      268       207,8           0            0,0%
+2026Q3    19      261       215,4           0            0,0%
+```
+
+**In de laatste twee kwartalen staat GEEN ENKELE van de 73 ritten op IF ≥ 90.** Dat is een telling,
+geen gevolgtrekking. En de pieken zelf DALEN niet: de regressie over de 195 ritten in het jaarvenster
+loopt **+0,0162 W per dag, oftewel +5,9 W per jaar**, en het laatste kwartaal draagt het HOOGSTE
+gemiddelde van de vijf.
+
+**Vlakke tot licht stijgende pieken bij nul harde ritten is het patroon van "er is niet vol gegaan",
+niet van conditieverlies.** Het jaarbeste van 268 W bevestigt dat van de andere kant: die waarde komt
+van een rit van 120 minuten op IF 81,82 met een gemiddelde van 173 W, en diezelfde rit zet ook de
+punten op 1800, 2400 én 3600 seconden. Dat is een plak uit een lange duurrit, geen
+twintigminuteninspanning.
+
+**DE JUISTE CONCLUSIE IS DUS DE OMGEKEERDE VAN MIJN EERSTE.** Er is geen bewijs dat de drempelwaarde
+te hoog staat. Er is bewijs dat er in een jaar geen maximale twintigminuteninspanning is gereden — en
+dat is precies de toestand waarvoor het ijkaanbod bestaat.
+
+### De drie verwachtingen
+
+| | uitkomst |
+| --- | --- |
+| **S1** — er bestaat een signaal dat scheidt, met kleine genoeg overlap | **VALT** |
+| **S2** — de herkenner werkt zonder de streams-route | **HOUDT** |
+| **S3** — intervals' schatting mag als DETECTOR, want zij bepaalt de waarde niet | **VALT** |
+
+**S3 viel op de norm en niet op de meting, en het antwoord stond er al.** De detector-lezing is op
+23-08-2026 BIJ NAAM beoordeeld en verworpen, één dag vóór M93 werd besloten —
+`docs/TRAININGSMODEL.md`, verbatim: *"Het detector-argument - een sprong toont dat er hard gereden is
+- haalt de eindstreep niet: hij toont niet WELKE waarde het blok moet doseren, en juist die waarde is
+het onderwerp van de ijking."* Die grond hangt NIET van de polariteit af: hij geldt even hard of de
+proxy het aanbod nu onderdrukt of aanzet. En de code draagt dezelfde grens al dragend —
+`apps/web/src/lib/effect.ts:220`, verbatim: *"een sprong als bewijs van gelegenheid gebruiken is
+CIRCULAIR. (…) zou een sprong zelf de gelegenheid zijn, dan is "geen sprong" per definitie "geen
+gelegenheid""*.
+
+Daarmee valt ook de laatste steun onder "toont de app niets bij twijfel": **een regel die bij twijfel
+zwijgt IS een onderdrukkingsregel**, en dat is precies de stille toestand die M91 uitsluit.
+
+### De twee weerleggingspassen
+
+**PAS 1 — VOOROP, vóór de kalibratie. VIER VAN DE VIER VOLTOOID, en alle vier weerlegd.**
+
+| lens | uitkomst |
+| --- | --- |
+| `scheider` | **VOLTOOID** · weerlegd — mijn labels deugden niet |
+| `asymmetrie` | **VOLTOOID** · weerlegd — de alleen-omhoog-variant vuurt nul keer |
+| `noemer` | **VOLTOOID** · weerlegd — de noemer is feitelijk N=1 |
+| `norm` | **VOLTOOID** · weerlegd — de detector-lezing was al bij naam verworpen |
+
+**PAS 2 — op de KALIBRATIE, vóór de commit. DRIE VAN DE DRIE VOLTOOID; één niet weerlegd, twee wel.**
+
+| lens | uitkomst |
+| --- | --- |
+| `meting-deugt` | **VOLTOOID** · **NIET WEERLEGD** — de meetketen houdt op elke toets |
+| `anker` | **VOLTOOID** · weerlegd — "280 staat te hoog" is niet gerechtvaardigd |
+| `aanbeveling` | **VOLTOOID** · weerlegd — mijn advies rustte op een weg die niet bestaat |
+
+**WAT PAS 2 BEVESTIGDE.** De backfill reproduceert wat er onafhankelijk al in D1 stond: beide
+gecachte vensters wijzen op `secs = 1200` een rit aan, en diezelfde rit draagt in `activities` exact
+dezelfde waarde (268/268, twee treffers op twee). Het venstermaximum klopt in beide vensters; op het
+90d-venster is de dekking 50 van 50 en daarmee sluitend. De zes mislukte ritten vallen **één-op-één**
+samen met de zes fiets-ritten zónder enige vermogensdata — er is geen kandidaat verloren gegaan. De
+ene rit zonder 1200-punt duurt acht minuten, en geen enkele rit korter dan twintig minuten draagt een
+waarde. Dekking **215 van 222 = 96,85 procent**.
+
+**WAT PAS 2 OMVER GOOIDE — en het waren mijn conclusies, niet mijn metingen.** Alle drie hierboven
+uitgeschreven: `powerModels` is niet null op de vensterkrommes (dus 280 ligt binnen intervals' eigen
+band), de twee lezingen zijn wél te scheiden (nul ritten op IF ≥ 90 in twee kwartalen bij een vlakke
+tot stijgende piekreeks), en mijn aanbeveling verbood de bouw waar zij naar verwees.
+
+**EEN GRENS DIE BLIJFT STAAN:** de kalibratieset houdt op **2026-08-04** en is dus twintig dagen oud;
+de gecachte krommes zijn van 2026-08-07 en 2026-07-28. "De laatste 365 dagen" is gemeten vanaf de
+laatste rit en niet vanaf vandaag.
+
+### (d) Wat het kost in gebruik
+
+Weinig, en dat is de enige onbeschadigde uitkomst. De twintigminutenwaarde komt uit
+`GET /activity/{id}/power-curve`, **5353 bytes en één verzoek per rit**, tegen 363535 bytes voor de
+streams-route. **S2 HOUDT.** En Cadans draagt het venster-antwoord vandaag al: `power_curve_cache`
+bevat `secs`/`values`/`activity_id` als parallelle arrays, dus het beste twintigminutenvermogen én
+welke rit het zette staan al in D1 zonder enige nieuwe aanroep.
+
+---
+
+## 14. DE BACKFILL — GEDRAAID
+
+**Met Daans akkoord, niet onder auto**, na een droge run op vijf ritten die vijf waarden opleverde
+(240 · 184 · 240 · 212 · 173 W), nul mislukt en **niets weggeschreven**.
+
+```
+verzoeken aan intervals.icu : 222   (harde bovengrens 230, GOOIT bij overschrijding)
+waarde gevonden             : 215
+geen exact 1200-punt        :   1
+mislukt (HTTP)              :   6
+weggeschreven               : 216 rijen
+nog open na deze run        :   6   -> HERSTARTBAAR, hervat op piek_gehaald_op IS NULL
+```
+
+Het script is `tools/backfill/piek1200.mjs`. De vier randvoorwaarden zitten erin: gedoseerd
+(250 ms), teller plus een bovengrens die GOOIT in plaats van door te gaan, herstartbaar, en
+uitsluitend GET — met een vangnet op `globalThis.fetch` zodat een verzoek buiten de ene toegestane
+functie om stukloopt in plaats van stil te vertrekken.
+
+**DE WAARDE WORDT AFGELEZEN OP `secs = 1200` EN NERGENS ANDERS** — geen naburig duurpunt, geen lopend
+maximum (ROADMAP punt 70).
+
+### De migratie
+
+**0013_brown_sage.sql**, forward-only, twee kolommen op `activities`:
+
+```
+ALTER TABLE `activities` ADD `piek_1200_w` integer;
+ALTER TABLE `activities` ADD `piek_gehaald_op` text;
+```
+
+**LOKAAL TOEGEPAST, REMOTE NIET.** Die tweede kolom is wat de backfill herstartbaar maakt: zonder
+haar is "geen bruikbare waarde" niet te onderscheiden van "nog niet opgehaald", en probeert elke
+herstart de zes mislukte ritten opnieuw. Beide kolommen staan bewust NIET in `actValsFromRow`, dus de
+activiteiten-sync raakt ze niet aan en de waarden overleven elke resync.
+
+**REMOTE TOEPASSEN IS NIET GELUKT EN DAT IS PUNT 76:** `wrangler d1 execute --remote` geeft
+`code 7403` omdat het token van deze sessie geen `d1`-scope draagt. De migratie staat lokaal en moet
+op remote nog worden toegepast zodra dat token er is. Er is niets gedeployd deze ronde.
+
+---
+
+## 15. WAT DE BOUWRONDE MOET WETEN
+
+**BOUW DE HERKENNER NIET.** Er is er geen, en de drie kandidaten zijn niet zwak maar verkeerd: de
+sprong is anti-gecorreleerd met de twintigminutenwaarde, IF overlapt op bijna de helft van de reeks,
+en de detector-lezing is normatief al verworpen.
+
+**MAAR BOUW HET VOORSTEL WÉL.** Mijn eerste versie van deze sectie raadde dat af, en die aanbeveling
+is door weerleggingspas 2 onderuit gehaald op twee punten die ik daarna zelf heb nagelopen.
+
+**FOUT 1 — ik velde een verdict over ontwerp A met de meting van ontwerp C.** "Vuurt nul keer op een
+heel jaar" is gemeten op de ALLEEN-OMHOOG-variant die ik zelf bedacht en verwierp. §6 zoals
+geschreven kent helemaal geen richtingsbeperking. Er is dus niets gemeten dat §6 diskwalificeert.
+
+**FOUT 2 — de weg die ik als kosteloze uitweg aanwees, bestaat niet.** Ik schreef dat het bestaande
+ijkaanbod het probleem oplost "zonder één regel nieuwe code". Dat is aantoonbaar onwaar:
+`PUT /api/ijking` draagt exact drie velden — `blok`, `doel`, `antwoord` — en geen enkel
+vermogensveld, en nergens in de code staat een omrekening van een twintigminutenpiek naar een
+drempelwaarde. **M93 is vandaag een norm zonder uitvoerder.** Rijdt Daan de test op 2026-09-21, dan
+eindigt de keten bij een gereden rit en gebeurt er niets. §6 IS die ontbrekende schakel; mijn
+aanbeveling verbood precies de bouw waar zij naar verwees.
+
+**EN EEN NEERWAARTS VOORSTEL IS NIET VERBODEN.** Niets in M91, M92 of M93 sluit het uit — M93
+randvoorwaarde (2) bestaat juist omdát neerwaartse voorstellen in scope zijn: zij eist een
+plausibiliteitsgrens tegen een te lage waarde uit een rustige rit. De asymmetrie was mijn eigen
+redenering en niet de norm.
+
+**WAT DE BOUWRONDE DUS MOET DOEN:**
+
+1. **Bouw §6, zonder richtingsbeperking.** Het voorstel toont de afgeleide waarde naast de staande en
+   Daan keurt goed; pas dan is er geijkt (M91). Dat is de uitvoerder die M93 mist.
+2. **Laat poort (ii) uit §6 stap 3 vervallen** — "de rit hoort bij een aangeboden test". Het
+   rit-besluit van deze ronde haalt de agenda uit de keten, en de koppeling was toch al zwak (§5.2).
+3. **De plausibiliteitsgrens is de open vraag, en zij is NIET "was dit een maximale inspanning".** Die
+   vraag is deze ronde gemeten en onbeantwoordbaar gebleken. Wat er wél is: een grens die een
+   ONGELOOFWAARDIGE SPRONG afwijst, in beide richtingen, ten opzichte van wat de reeks draagt. De
+   backfill levert daar nu de grondstof voor — 215 waarden, `piek_1200_w` per rit — en intervals'
+   eigen modellen (1y: 271 en 277) geven een tweede referentie om tegen te ijken.
+4. **Neem de vergelijking mee met wat er al ligt.** Op de enige rit met een echte maximale inspanning
+   reproduceerde M93 intervals' schatting tot op een halve watt. Dat is geen bewijs, maar het is de
+   scherpste aanwijzing in de reeks dat de formule klopt.
+
+**WAT ER GEEN WEG IS:** een voorstel dat bij twijfel zwijgt. Dat is een onderdrukkingsregel en zij
+maakt de app stil in precies het geval waarin er iets te zeggen valt (M91).
+
+**EN WAT DEZE RONDE TERLOOPS HEEFT OPGELOST:** punt 61, de doelcheck, stond geblokkeerd op de
+ontbrekende grondstof — het beste twintigminutenvermogen per rit over een venster. Die staat er nu.
+
 <!-- EINDE docs/PUNT69-BOUW.md -->

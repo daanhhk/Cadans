@@ -2131,6 +2131,31 @@ punten staat onder *Gesloten — vindplaats*.
     null-veld?), en elke volgende ronde die een prod-stand wil vaststellen loopt op dezelfde muur.
     De migraties van 23-08-2026 kwamen er wél doorheen, dus de scope is sindsdien veranderd of het
     token is opnieuw uitgegeven. Eén keer opnieuw inloggen met een token dat `d1` omvat lost het op.
+    **AANGESCHERPT 24-08-2026:** het blokkeert nu ook een MIGRATIE. `0013_brown_sage.sql` staat
+    lokaal toegepast en kon niet naar remote. Dat is geen fout van die ronde maar een openstaande
+    handeling.
+
+77. **ER IS IN EEN JAAR GEEN MAXIMALE TWINTIGMINUTENINSPANNING GEREDEN** — open · norm plus DATA.
+    **GEMETEN 24-08-2026 in punt 69 (1), op 215 ritten met een echte twintigminutenwaarde.**
+    DE TELLING. Het aandeel ritten op IF ≥ 90 zakt per kwartaal **12,3 → 12,2 → 5,6 → 0,0 → 0,0
+    procent**: in 2026Q2 en 2026Q3 samen staat GEEN ENKELE van de 73 ritten op IF ≥ 90. Tegelijk
+    DALEN de pieken niet — de regressie over de 195 ritten in het jaarvenster loopt **+0,0162 W per
+    dag (+5,9 W per jaar)** en het laatste kwartaal draagt het hoogste gemiddelde van de vijf. Vlakke
+    tot licht stijgende pieken bij nul harde ritten is het patroon van "er is niet vol gegaan", niet
+    van conditieverlies.
+    **DIT PUNT HEETTE EERST "de staande drempelwaarde wordt niet gedragen" EN DAT WAS ONJUIST.** De
+    rekensom klopte — het jaarbeste is 268 W en M93 maakt daar 255 W van, tegen een staande 280 —
+    maar de gevolgtrekking niet. `power_curve_cache` draagt op de VENSTER-krommes een veld
+    `powerModels` dat ik eerst over het hoofd zag: 1y geeft `FFT_CURVES` ftp **277** en `ECP` ftp
+    **271**, 90d geeft `MS_2P` **283** en `FFT_CURVES` **266**. **De staande 280 ligt binnen die band
+    en 3 watt van de jaarschatting.** Gecorrigeerd in weerleggingspas 2.
+    HET JAARBESTE IS BOVENDIEN GEEN INSPANNING: de 268 W komt van een rit van 120 minuten op IF
+    81,82 met een gemiddelde van 173 W, en diezelfde rit zet ook de punten op 1800, 2400 en 3600
+    seconden — een plak uit een lange duurrit.
+    WAT ERUIT VOLGT: dit is precies de toestand waarvoor het ijkaanbod bestaat (M92; eerste aanbod
+    **2026-09-21** volgens `docs/PROD-STAND.md`). Maar dat aanbod kan vandaag niets wegschrijven —
+    zie punt 69: `PUT /api/ijking` draagt alleen `blok`, `doel` en `antwoord`, en **M93 is een norm
+    zonder uitvoerder**.
 
 49. **De doelcheck aflezen uit een sleutelsessie** — open · DATA plus CLIENT. Bij de drie doelen
     zonder FTP-check (punt 47) is de check geen aparte test maar een SLEUTELSESSIE waarvan je de
@@ -3256,7 +3281,33 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
     gedeelde foutmelding) en punt **76** (het wrangler-token mist de `d1`-scope, dus prod-D1 is niet te
     lezen). **DIT DEBLOKKEERT PUNT 69**: de goedkeuring van een FTP-voorstel kan nu wegschrijven.
     **DE VOLGENDE IS 11d-9.**
-11d-9. **69** — het FTP-VOORSTEL NA EEN GEREDEN TEST. **DIT IS DE EERSTVOLGENDE RONDE.** De factor is
+11d-10. **69 (1) — DE HERKENNER** — AF (24-08-2026), meetronde. **ER IS GEEN HERKENNER, en dat is de
+    uitkomst.** S1 VALT, S2 HOUDT, S3 VALT. De drie sprongen in `rolling_ftp` (+29, +10, +11 over 394
+    dagen) vallen NIET op de ritten die het beste twintigminutenvermogen dragen; `if_pct` overlapt op
+    47 procent van de reeks; en de detector-lezing was normatief al bij naam verworpen. Mijn eigen
+    alternatief — alleen omhoog voorstellen — viel ook: **nul keer in 365 dagen**, en dat is een
+    bovengrens en geen schatting. Bijvangst: punt **77** — er is in een jaar geen maximale
+    twintigminuteninspanning gereden, en dat is iets ANDERS dan een te hoge drempelwaarde.
+    De backfill is gedraaid (222 verzoeken, 215 waarden, 216 rijen, 6 open) met migratie **0013**
+    lokaal toegepast en remote nog niet (punt 76). Volledig in `docs/PUNT69-BOUW.md` §13 t/m §15.
+    **DE VOLGENDE IS 11d-11.**
+11d-11. **69 (2) — HET VOORSTEL BOUWEN.** **DIT IS DE EERSTVOLGENDE RONDE.** M93 is vandaag een norm
+    ZONDER UITVOERDER: `PUT /api/ijking` draagt alleen `blok`, `doel` en `antwoord`, en nergens staat
+    een omrekening van een twintigminutenpiek naar een drempelwaarde. Rijdt Daan de test op
+    2026-09-21, dan eindigt de keten bij een gereden rit en gebeurt er niets. `docs/PUNT69-BOUW.md`
+    §6 is die ontbrekende schakel.
+    DRIE DINGEN DIE ERBIJ HOREN, alle drie uit punt 69 (1): (1) bouw hem ZONDER richtingsbeperking —
+    niets in M91, M92 of M93 sluit een neerwaarts voorstel uit, en M93 randvoorwaarde (2) bestaat
+    juist omdát die in scope zijn; (2) poort (ii) uit §6 stap 3 VERVALT ("de rit hoort bij een
+    aangeboden test"); (3) de plausibiliteitsgrens is NIET "was dit een maximale inspanning" — die
+    vraag is gemeten en onbeantwoordbaar — maar een grens tegen een ONGELOOFWAARDIGE SPRONG in beide
+    richtingen. De backfill levert daarvoor 215 waarden, en intervals' eigen modellen (1y: 271 en
+    277) geven een tweede referentie.
+    HET SCHERPSTE HOUVAST: op de enige rit met een echte maximale inspanning reproduceert M93
+    intervals' eigen schatting tot op een halve watt — `0,95 × 310 = 294,5` tegenover `rolling_ftp`
+    295.
+11d-9. **69** — het FTP-VOORSTEL NA EEN GEREDEN TEST. ~~**DIT IS DE EERSTVOLGENDE RONDE.**~~
+    **ACHTERHAALD 24-08-2026: zie 11d-10 en 11d-11.** De factor is
     besloten (M93: 95 procent van het beste twintigminutenvermogen, afgelezen op `secs = 1200`) en het
     schrijfpad werkt sinds punt 73. Het ontwerp ligt volledig in `docs/PUNT69-BOUW.md` §6.
     WAT DIE RONDE NOG MOET OPLOSSEN, en wat er daarover al GEMETEN is: (1) de koppeling
