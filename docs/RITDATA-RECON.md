@@ -427,10 +427,172 @@ van samen ongeveer anderhalve megabyte. Je geeft op: de gratis route van weg 1.
 
 ### Wat er in ELKE weg moet gebeuren
 
-Eén ding is geen keuze. Waar de app een 20-minutenwaarde uit een kromme haalt, moet zij het hoogste
-punt vanaf twintig minuten NEMEN en niet de waarde op precies twintig minuten AFLEZEN. Dat scheelt
-ongeveer één procent, en de doelcheck oordeelt op "een paar procent" — dus die ene procent is geen
-afronding maar een deel van het antwoord. **Dit raakt ook de bestaande niveaukaart**, die vandaag op
-dezelfde manier afleest.
+~~Eén ding is geen keuze. Waar de app een 20-minutenwaarde uit een kromme haalt, moet zij het hoogste
+punt vanaf twintig minuten NEMEN en niet de waarde op precies twintig minuten AFLEZEN.~~
+
+**DOORGEHAALD, en zie §8: deze alinea was FOUT.** Zij rustte op de aanname dat een mean-max-kromme
+niet kan stijgen met de duur. Dat is wiskundig onjuist. De waarde op precies twintig minuten AFLEZEN
+is de JUISTE lezing; het hoogste punt vanaf twintig minuten nemen levert een getal op dat de renner
+niet gereden heeft. Er is hier dus géén reparatie nodig — niet in een nieuwe weg, en niet in de
+bestaande niveaukaart.
+
+---
+
+## 8. GEEN REPARATIE — de krommelezer had GELIJK (ROADMAP punt 70)
+
+**NUMMERING:** de ronde heette in de prompt "punt 68", maar in `docs/ROADMAP.md` was 68 al bezet door
+*"De per-blok-antwoorden dragen TWEE doel-kolommen, niet drie"* en 69 door *"HET FTP-VOORSTEL NA EEN
+GEREDEN TEST"* — het punt waar §7 van dit document naar verwijst. Dit item staat daarom als
+**punt 70**, met twee bijvangsten als 71 en 72.
+
+**Deze ronde is een INTREKKING.** Punt 68 bestond om een leesfout te repareren. Die leesfout bestaat
+niet. De reparatie is geschreven, groen getest, en daarna volledig teruggedraaid. Wat hier staat is
+het bewijs, want de verkeerde aanname is aantrekkelijk en zal terugkomen.
+
+### De aanname die het hele punt droeg — en die ONJUIST is
+
+Verbatim zoals zij in de diagnose stond:
+
+> Een mean-max-kromme hoort niet te STIJGEN met de duur: wie X watt over 23 minuten volhield, hield
+> per definitie ook ergens 20 minuten ≥X watt vol.
+
+De tweede helft klinkt als een stelling maar is er geen. Tegenvoorbeeld, met de hand na te rekenen —
+het vermogenssignaal `[10, 0, 10]`:
+
+```
+beste 1s-gemiddelde: 10,00 W
+beste 2s-gemiddelde:  5,00 W      <- de twee vensters zijn [10,0] en [0,10]
+beste 3s-gemiddelde:  6,67 W      <- HOGER dan het beste 2s-gemiddelde
+```
+
+De mean-max-kromme STIJGT hier van 2 naar 3 seconden. De reden is meteen het mechanisme: bij een
+langer venster mag het ZWAKKE MIDDEN meegeteld worden zolang beide STERKE RANDEN erin passen. Een
+korter venster moet één rand opgeven. **Een mean-max-kromme is niet monotoon, en hoeft dat niet te
+zijn.**
+
+### En het gebeurt ECHT, op Daans eigen data
+
+Herberekend uit de rauwe 1 Hz-`watts`-stream van rit `i171448183` (4407 samples), uitputtend over
+alle vensters — niet uit de kromme van intervals.icu, maar uit de brondata eronder:
+
+```
+beste 130s: 346,700 W   (over 4278 vensters)
+beste 140s: 357,643 W   (over 4268 vensters)   STIJGT
+beste 150s: 363,973 W   (over 4258 vensters)   STIJGT
+beste 160s: 366,606 W   (over 4248 vensters)   STIJGT
+beste 165s: 366,927 W   (over 4243 vensters)   STIJGT
+beste 170s: 366,388 W   (over 4238 vensters)
+beste 180s: 360,894 W   (over 4228 vensters)
+```
+
+De beslissende toets, want er is één ontsnappingsroute denkbaar — misschien ligt het beste 140s-blok
+gewoon ergens anders in de rit:
+
+```
+beste 165s over de hele rit        : 366,927 W
+beste 140s over de hele rit        : 357,643 W
+beste 140s BINNEN dat 165s-venster : 357,643 W   <- hetzelfde blok, en LAGER
+```
+
+Het beste 140s-blok van de hele rit ligt IN het beste 165s-venster, en haalt daar 357,6 W. De
+stijging is dus echt en niet een kwestie van twee losse inspanningen.
+
+### Wat de "reparatie" gedaan zou hebben
+
+Zij zette op 140 s het lopende maximum, dus **366,9 W — een gemiddelde dat in geen van de 4268
+140-seconden-vensters van die rit voorkomt.** Zij verving een JUIST getal door een ONHAALBAAR getal.
+
+Daarmee valt ook het concrete geval dat de ronde in gang zette. Op het 42d-venster stond 261 W op
+1200 s en 264 W op 1380 s. Dat is geen leesfout: 261 W IS het beste twintigminutenblok, en 264 W is
+het beste drieëntwintigminutenblok. Twee verschillende vragen, twee verschillende antwoorden, allebei
+goed. `pcMarkerAt_` las correct.
+
+### De verwachtingen, en wat er precies omviel
+
+| | uitkomst |
+| --- | --- |
+| **P1** — de niet-monotonie zit in de BRON | **HOUDT**, maar betekent iets anders |
+| **P2** — het lopende maximum is nooit lager | het GETAL houdt, de LEZING valt |
+| **P3** — één gedeelde functie, geen engine-wijziging | **VALT** — er is niets te repareren |
+
+**P1 houdt en is nu juist geruststellend.** `power_curve_cache.raw_json` is een verbatim
+`JSON.stringify` van de API-respons; de schendingen zitten al in die eigen kopie (1y: 9 op 222
+punten; 90d: 7 op 185; 42d: 16 op 159). Cadans veroorzaakt ze niet — maar het zijn ook geen
+schendingen. Het is een echte eigenschap van de renner zijn data.
+
+**P2 is de leerzame.** De meting deed precies wat zij beloofde: over 566 punten op drie vensters was
+het lopende maximum 0 keer lager. Dat is waar en het is nietszeggend, want een lopend maximum KAN
+niet lager zijn — dat is de definitie, geen bevinding. De meting bevestigde het getal en zei niets
+over de vraag of dat getal het juiste antwoord is. *Een meting die niet kan falen, toetst niets.*
+
+### Wat er is teruggedraaid
+
+`monotoniseerKromme` en de bedrading in `workers/api/src/integrations/powercurve.ts`, plus de vijf
+tests in `workers/api/test/powercurve.test.ts`. Teruggedraaid met een pad-scoped
+`git checkout HEAD --` op precies die twee bestanden; `git diff workers/api` is daarna leeg en
+`grep -c monotoniseer` geeft 0 in beide. `packages/engine` is nooit aangeraakt.
+
+### Verzoeken aan intervals.icu
+
+**DRIE GET-verzoeken** in deze ronde: twee voor het 42d-venster tijdens de diagnose, één voor de
+`watts`-stream van `i171448183` bij de naméting hierboven. Geen mutatie, nergens. De sleutel heet
+`INTERVALS_API_KEY` en zijn waarde staat nergens.
+
+### De weerleggingspas — DRIE VAN DRIE VOLTOOID
+
+| lens | uitkomst |
+| --- | --- |
+| `bron-of-pad` | **VOLTOOID** — weerlegt de premisse; hierboven zelf nagemeten en bevestigd |
+| `lezers` | **VOLTOOID** — weerlegt "dit is de enige ingang"; zelf nagemeten en bevestigd |
+| `slechter` | **VOLTOOID** — bevestigt het getal van P2, en legt bloot dat het niets toetst |
+
+Twee bevindingen van `lezers` zijn zelf nagemeten en blijven staan als kennis, ook nu de reparatie
+weg is:
+
+**Er is een DERDE lezer, buiten de grens die ik "de enige ingang" noemde.**
+`scripts/powercurve-smoke.mjs:61` bouwt zijn eigen intervals-URL en roept `pcNormalize_` rechtstreeks
+aan uit `packages/engine/dist`. Wie ooit iets aan die grens verandert, moet dit script meenemen — de
+transformatie in `powercurve.ts` bereikt het niet.
+
+**De `curve`-array in de DTO heeft GEEN enkele lezer.** De getekende grafiek komt uit `markers`:
+`Rijdersprofiel.tsx:45` is `function CurveChart({ markers }: { markers: PowerCurveMarker[] })`, en de
+component leest verder alleen `profile.markers` en `profile.riderType`. De curve-lus in
+`pcNormalize_` rekent dus een array uit die over de lijn gaat en daarna wordt weggegooid. Dood hout
+(CHECK 27) — niet in deze ronde opgeruimd, wel hier vastgelegd.
+
+### Wat blijft er over als open vraag
+
+Eén, en klein. `pcMarkerAt_` neemt de EERSTE index waar `secs[i] >= targetSec`. Heeft een kromme geen
+punt op precies 1200 s, dan leest hij het eerste punt DAARBOVEN en zet dat onder het label "20m" —
+een langere duur onder een kortere naam. Op de gemeten vensters deed dat geval zich niet voor (er
+stond een exact 1200 s-punt). Genoteerd, niet gerepareerd.
+
+## 9. De weerleggingspas draait vanaf nu VOOROP
+
+**Volgorde-besluit van deze ronde, en het is met schade betaald.** Twee rondes op rij is de pas
+grotendeels gestorven op serverfouten — bij punt 65 twee van de vier lenzen (`529 Overloaded` en
+`Server error mid-response`), bij punt 49 drie van de vier, en daar hielp een herstart ook niet.
+Beide keren bleven juist de DRAGENDE claims ongetoetst, omdat de pas als SLUITSTUK draaide en er
+geen tijd meer was.
+
+**Vanaf nu draait hij zodra de diagnose staat en VÓÓR de reparatie geschreven wordt.** Dan is er
+ruimte om te herstarten, en valt er iets om, dan valt het om vóórdat er code op gebouwd is. Vastgelegd
+in `docs/WERKWIJZE.md`.
+
+**EN HIJ VERDIENDE ZICHZELF DEZELFDE RONDE TERUG.** Drie van drie lenzen voltooid, en één van hen
+haalde de premisse onderuit waar de hele ronde op stond. Was de pas als sluitstuk gedraaid, dan was
+`monotoniseerKromme` groen, getest, gecommit en gedeployd geweest — een functie die correcte watts
+vervangt door watts die nooit gereden zijn, precies op de waarde waar de doelcheck straks op
+oordeelt. De ronde levert nu geen code op, en dat is de winst.
+
+**DE DIEPERE LES, en die is groter dan deze ronde.** Alle drie de verwachtingen waren toetsbaar
+geformuleerd en twee ervan werden bevestigd door echte metingen op echte data. Toch was de conclusie
+fout, want geen van die metingen raakte de AANNAME eronder. P2 mat of het lopende maximum ooit lager
+uitkomt — en een lopend maximum kán niet lager uitkomen. Dat is geen zwakke toets, dat is geen toets.
+
+Daarom: **een claim die op een wiskundige of definitorische eigenschap rust, toets je met een
+tegenvoorbeeld voordat je erop bouwt — niet met een meting die de eigenschap veronderstelt.** Het
+tegenvoorbeeld dat deze ronde omdraaide is `[10, 0, 10]` en kost tien seconden met de hand.
+Vastgelegd als CHECK 40 in `docs/CC-CHECKS.md`.
 
 <!-- EINDE docs/RITDATA-RECON.md -->

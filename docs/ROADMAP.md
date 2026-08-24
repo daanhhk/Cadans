@@ -2627,6 +2627,46 @@ punten staat onder *Gesloten — vindplaats*.
     heeft als `ijking_*` had vóór punt 64, is **NIET gemeten**. Eén meting volstaat: wisselt de
     gebruiker van doel terwijl er een beantwoorde event-overname staat, telt dat antwoord dan nog?
 
+70. **De krommelezer onderschat NIET — punt INGETROKKEN** — **AF per 24-08-2026, geen code
+    gewijzigd.** NUMMERING: de ronde heette in de prompt "punt 68", maar 68 was al bezet door het
+    punt hierboven en 69 door *"HET FTP-VOORSTEL NA EEN GEREDEN TEST"*; dit item staat daarom als
+    **70**. De volledige meting staat in `docs/RITDATA-RECON.md` §8.
+    WAT HET PUNT BEWEERDE. Dat `pcMarkerAt_` te laag las omdat het de waarde op precies de gevraagde
+    duur neemt in plaats van het hoogste punt vanaf die duur — op het 42d-venster 261 W op 1200 s
+    terwijl er op 1380 s 264 W stond.
+    WAAROM DAT ONJUIST IS. De aanname eronder — "een mean-max-kromme hoort niet te stijgen met de
+    duur, want wie X watt over 23 minuten volhield hield per definitie ook 20 minuten ≥X vol" — is
+    wiskundig fout. Tegenvoorbeeld met de hand: het signaal `[10, 0, 10]` heeft een beste
+    2s-gemiddelde van 5,00 W en een beste 3s-gemiddelde van 6,67 W, want een langer venster mag het
+    zwakke midden meenemen zolang beide sterke randen erin passen. GEMETEN op Daans eigen data, rit
+    `i171448183`, uitputtend over de rauwe 1 Hz-stream: beste 140s 357,643 W over 4268 vensters,
+    beste 165s 366,927 W over 4243 — en het beste 140s-blok LIGT in dat 165s-venster. De 261 W is
+    dus het juiste antwoord op "twintig minuten" en de 264 W het juiste antwoord op "drieëntwintig
+    minuten". `pcMarkerAt_` las correct.
+    WAT DE INGREEP GEDAAN ZOU HEBBEN: 366,9 W rapporteren als 140s-waarde — een gemiddelde dat in
+    geen van die 4268 vensters bestaat. Een correct getal vervangen door een onhaalbaar getal, precies
+    op de grootheid waar de doelcheck van `DOELEN-SPEC` §3.2 straks op oordeelt.
+    WAT ERUIT MEEGENOMEN IS: CC-CHECKS **CHECK 40** (zoek het kleinste tegenvoorbeeld vóór je een
+    definitorische aanname laat dragen, en vraag je af of je meting KÁN falen), en in
+    `docs/WERKWIJZE.md` de regel dat de weerleggingspas VOOROP draait — die pas ving dit, en ving het
+    vóórdat er code op gebouwd stond.
+
+71. **De `curve`-array in de power-curve-DTO heeft GEEN lezer** — open · klein, dood hout. GEMETEN
+    24-08-2026 in punt 70. `pcNormalize_` rekent een curve-array uit die over de lijn gaat en daarna
+    wordt weggegooid: de getekende grafiek komt uit `markers`
+    (`apps/web/src/components/niveau/Rijdersprofiel.tsx:45` is
+    `function CurveChart({ markers }: { markers: PowerCurveMarker[] })`), en de component leest
+    verder alleen `profile.markers` en `profile.riderType`. CC-CHECKS CHECK 27. Weghalen of
+    aansluiten is een besluit; stilzwijgend laten staan niet.
+
+72. **`scripts/powercurve-smoke.mjs` is een DERDE ingang naar `pcNormalize_`** — open · klein,
+    administratief. GEMETEN 24-08-2026 in punt 70. Het script bouwt zijn eigen intervals-URL en
+    roept `pcNormalize_` rechtstreeks aan uit `packages/engine/dist`
+    (`scripts/powercurve-smoke.mjs:61`), buiten `workers/api/src/integrations/powercurve.ts` om. Wie
+    ooit iets aan die grens verandert, moet dit script meenemen — een transformatie in `powercurve.ts`
+    bereikt het niet. In punt 70 stond in een commentaarregel dat die grens "de enige ingang" was;
+    dat was aangenomen en niet getoetst, en het klopte niet.
+
 65. **DE TZ-SCHULD: de engine rekent lokaal, een gedeployde Worker draait UTC** — **GEMETEN
     24-08-2026, reparatie open · ENGINE plus WORKER.** De volledige meting staat in
     `docs/TZ-RECON.md`; dit is de eerste keer dat dit punt een MAAT draagt.
@@ -3086,6 +3126,19 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
     een maat. Ook nieuw: `docs/CC-CHECKS.md` CHECK 39 (de persistente lokale D1 tegen de repo) en de
     staande regel dat elke prod-mutatie vooraf haar weg terug draagt, allebei uit gaten die deze
     reeks zelf opleverde.
+11d-5. **49 (RECON) + 69 (nieuw punt)** — AF (24-08-2026). Read-only verkenning van wat er aan
+    RITDATA te halen is: `docs/RITDATA-RECON.md`, eindigend in VIJF WEGEN waaruit Daan kiest. De
+    zesweekse grondstof BESTAAT (`curves=42d`; `curves=6w` wordt geweigerd), `oldest`/`newest`
+    begrenzen het venster echt zodat de doelcheck niet vanaf nu hoeft op te bouwen, en de
+    activiteitenlijst die Cadans al ophaalt draagt GRATIS al `decoupling` en `icu_power_hr_z2`.
+    Leverde punt **69** op als nieuw Daan-besluit. **DE KEUZE UIT §7 STAAT NOG OPEN** voor behoefte 2
+    (de doelcheck) en behoefte 3 (het onderweg-signaal).
+11d-6. **70** — AF (24-08-2026) en **INGETROKKEN ZONDER CODE**. De ronde bestond om de krommelezer
+    te repareren; de weerleggingspas haalde de PREMISSE onderuit en de reparatie is volledig
+    teruggedraaid. `pcMarkerAt_` las al goed. Wat de reeks eraan overhoudt: `docs/CC-CHECKS.md`
+    CHECK 40, de regel dat de weerleggingspas VOOROP draait, de regel dat een verwachting die niet
+    kan falen niets toetst, en de punten **71** en **72** als bijvangst. **DE GOEDKOOPSTE RONDE VAN
+    DE REEKS, want zij leverde geen code op en dat was de winst.**
     **DE VOLGENDE IS 11e.**
 11e. **61 (+ 54)** — de DOELCHECK aan het eind van het doelblok, de tweede helft van M89.
     **DIT IS DE EERSTVOLGENDE RONDE**, bevestigd 23-08-2026. Het is het enige deel van punt 47 dat

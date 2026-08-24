@@ -120,6 +120,23 @@ is de ingreep een VERLIESLOZE splitsing en geen inkorting.
   grootheid werd toegeschreven. Zonder deze pas is een samengevoegde recon-en-bouwronde goedkoper
   dan een gesplitste én minder betrouwbaar, en dat is de slechtste ruil die er is.
 
+- **EN DIE PAS DRAAIT VOOROP, NIET ALS SLUITSTUK: zodra de diagnose staat en VÓÓR de reparatie
+  geschreven wordt.** Twee redenen, allebei betaald. TIJD: bij punt 65 stierven twee van de vier
+  lenzen op serverfouten, bij punt 49 drie van de vier en hielp een herstart niet — als sluitstuk is
+  er dan geen ruimte meer om te herstarten en blijven juist de dragende claims ongetoetst. Een
+  gestorven lens is geen geslaagde lens en telt niet mee. VOLGORDE: bij punt 70 haalde de pas de
+  PREMISSE onderuit waar de hele ronde op stond. Vooropgedraaid kostte dat een teruggedraaide functie;
+  als sluitstuk was `monotoniseerKromme` groen, gecommit en gedeployd geweest — een functie die
+  correcte watts vervangt door watts die de renner nooit gereden heeft. Bouw pas verder als de pas
+  staat.
+
+- **EEN VERWACHTING DIE NIET KAN FALEN, TOETST NIETS — en leest achteraf als bewijs.** Vraag je bij
+  elke verwachting apart af welke uitkomst haar zou WEERLEGGEN, en of die uitkomst mogelijk is.
+  VINDPLAATS: punt 70, verwachting P2, "het lopende maximum is nooit lager dan de waarde op die
+  index" — gemeten over 566 punten op drie vensters, 0 keer lager, groen. Een lopend maximum KAN niet
+  lager zijn; dat is de definitie ervan en geen bevinding. De verwachting bevestigde een getal en
+  raakte de aanname eronder niet, terwijl juist die aanname fout was. Zie CHECK 40.
+
 ## Vorm van een CC-prompt
 
 - **Eén plain code-blok**, zonder taal-tag — dat is de één-tap-kopie op mobiel. Nooit proza in het blok mengen; Claude's kader eromheen staat als gewone tekst.
