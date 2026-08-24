@@ -391,7 +391,16 @@ achter een bovengrens die GOOIT in plaats van door te gaan.
 
 ---
 
-## 10. HET BESLUITBLOK — de enige vraag die openstaat
+## 10. HET BESLUITBLOK — BEANTWOORD OP 24-08-2026
+
+> **DAAN KOOS WEG A: de nieuwe drempelwaarde is 95 procent van het beste twintigminutenvermogen uit
+> de testrit**, afgelezen op het duurpunt `secs = 1200`. Het besluit is met zijn herkomst-etiket en
+> de drie randvoorwaarden vastgelegd in `docs/TRAININGSMODEL.md` §13, direct onder M92 — dus in de
+> CANON, wat precies het gat was dat Q2 deed omvallen. **Q2 is daarmee gesloten en de bouw uit §6 is
+> vrijgegeven**; hij is in deze ronde niet meer uitgevoerd, want de ronde was toen al afgesloten en
+> een migratie op remote D1 vraagt een eigen goedkeuring.
+>
+> De tekst hieronder blijft staan zoals hij bij het stellen van de vraag luidde.
 
 De app kan de twintigminutenwaarde uitlezen (§2). Wat zij niet kan, is die waarde in een
 drempelwaarde omzetten, want **het getal dat dat doet is nergens met gezag vastgelegd** (§3). Dat is

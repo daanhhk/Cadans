@@ -2040,9 +2040,16 @@ punten staat onder *Gesloten — vindplaats*.
     ook geen schatting. En intervals' eigen schatting mag niet: `TRAININGSMODEL` M91 verbiedt die
     proxy expliciet. Q3 HOUDT op de migratie-eis (0013, drie `ADD COLUMN` op `sync_state` is de
     bestaande vorm; een piek-kolom op `activities` overleeft de sync omdat `actValsFromRow` een vast
-    17-veldenobject bouwt). **WAT ER NOG MOET GEBEUREN VOORDAT DIT GEBOUWD KAN WORDEN:** Daan kiest de
-    factor, die krijgt een plek in `TRAININGSMODEL` met een herkomst-etiket, en er komt een partieel
-    schrijfpad voor `settings.ftp` — zie punt 73.
+    17-veldenobject bouwt).
+    **DE FACTOR IS BESLOTEN OP 24-08-2026 en Q2 is daarmee GESLOTEN.** Daan koos weg A uit
+    `docs/PUNT69-BOUW.md` §10: de nieuwe drempelwaarde is **95 procent van het beste
+    twintigminutenvermogen uit de testrit**, afgelezen op `secs = 1200`. Vastgelegd mét
+    herkomst-etiket en drie randvoorwaarden in `docs/TRAININGSMODEL.md` §13, onder M92 — de canon
+    draagt de regel nu dus wel. **DE BOUW IS VRIJGEGEVEN** en staat volledig beschreven in
+    `docs/PUNT69-BOUW.md` §6. Wat er onlosmakelijk bij hoort: een partieel schrijfpad voor
+    `settings.ftp` (punt 73, anders kan de goedkeuring niets wegschrijven), een poort die vaststelt
+    dat de test ook echt GEREDEN is (§5.2 — `testResultaat` doet dat NIET), een plausibiliteitsgrens
+    (§5.3), en migratie 0013. Die migratie is een prod-handeling met een eigen goedkeuring.
 
 73. **`PUT /api/settings` kan een instelling niet wijzigen zonder de rest te wissen, en de bestaande
     doel-wissel loopt daar STIL op stuk** — open · WORKER plus CLIENT. **GEMETEN 24-08-2026 in punt
