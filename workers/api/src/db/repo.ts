@@ -24,7 +24,17 @@ import type {
   SettingsInput,
   WellnessInput,
 } from "@cadans/shared";
-import { and, asc, eq, gte, isNotNull, lte } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  lte,
+} from "drizzle-orm";
 import type { Db } from "./client";
 import { fromD1, toD1Date, toD1DateTime } from "./dates";
 import type { Activity } from "./schema";
@@ -997,4 +1007,119 @@ export async function readPowerCurveCache(
     raw = null;
   }
   return { fetchedOn: r.fetchedOn, raw };
+}
+
+// ── ftp_voorstel (ROADMAP punt 69) ───────────────────────────────────
+/**
+ * De ritten die nog een FTP-voorstel kunnen dragen: fiets-ritten met een afgelezen
+ * twintigminutenwaarde waarvoor nog niets beantwoord is.
+ *
+ * `ftp_voorstel_antwoord IS NULL` is hier zowel het "nog niet beantwoord"-filter ALS het startpunt:
+ * migratie 0014 heeft alles wat er toen al stond op `'geseed'` gezet, dus de backfill-historie valt
+ * hier per constructie buiten. Zie de kolom-docstring in `schema.ts`.
+ */
+export async function readFtpVoorstelKandidaten(
+  db: Db,
+  userId: number,
+): Promise<
+  {
+    activityIdExt: string;
+    datum: string;
+    naam: string | null;
+    duurMin: number | null;
+    piek1200W: number | null;
+  }[]
+> {
+  const rows = await db
+    .select({
+      activityIdExt: activities.activityIdExt,
+      datum: activities.datum,
+      naam: activities.naam,
+      duurMin: activities.duurMin,
+      piek1200W: activities.piek1200W,
+    })
+    .from(activities)
+    .where(
+      and(
+        eq(activities.userId, userId),
+        isNull(activities.ftpVoorstelAntwoord),
+        isNotNull(activities.piek1200W),
+        inArray(activities.type, ["Ride", "VirtualRide"]),
+      ),
+    )
+    .orderBy(desc(activities.datum));
+  return rows
+    .filter((r) => r.activityIdExt)
+    .map((r) => ({
+      ...r,
+      activityIdExt: r.activityIdExt as string,
+      // KALE DATUM, en dat is hier geen opsmuk. `activities.datum` draagt een VOLLE tijdstempel
+      // ("2026-08-24T09:12:00"), en de kaart voert die datum door naar `datumKort_`, dat op een
+      // ANKERD patroon `^\d{4}-\d{2}-\d{2}$` matcht en bij een tijdstempel de rauwe string
+      // teruggeeft. De renner zou dan "Op 2026-08-24T09:12:00, in ..." te lezen krijgen.
+      // GEMETEN op de lokale database, niet beredeneerd: de eigen toetsen misten dit omdat zij
+      // met kale datums werken en de 215-fixture die ook draagt.
+      datum: r.datum.slice(0, 10),
+    }));
+}
+
+/**
+ * Legt het antwoord op één rit vast. PARTIEEL: raakt uitsluitend deze kolom, in de vorm van
+ * `writeIjking` en niet in die van `writeSettings` (die is full-replace).
+ */
+export async function writeFtpVoorstelAntwoord(
+  db: Db,
+  userId: number,
+  activityIdExt: string,
+  antwoord: "goedgekeurd" | "afgewezen",
+): Promise<void> {
+  await db
+    .update(activities)
+    .set({ ftpVoorstelAntwoord: antwoord })
+    .where(
+      and(
+        eq(activities.userId, userId),
+        eq(activities.activityIdExt, activityIdExt),
+      ),
+    );
+}
+
+/**
+ * GOEDKEUREN, als ÉÉN handeling: zet `settings.ftp` en markeert de rit als beantwoord.
+ *
+ * WAAROM GEBATCHT EN NIET TWEE LOSSE AWAITS — dit is een bevinding van de weerleggingspas en zij
+ * hield stand. Twee losse schrijfacties kunnen half slagen, en juist de helft die dan blijft liggen
+ * maakt de foutmelding op de kaart ONWAAR: die zegt *"je drempelwaarde is niet gewijzigd"* terwijl
+ * hij bij een val tussen de twee statements wél gewijzigd is (M55 — geen string mag beweren wat er
+ * niet gebeurt). Erger nog was het herstel: met de nieuwe waarde weggeschreven en de rit nog open
+ * levert de herberekening geen voorstel meer op — het voorstel is immers niet langer HOGER dan de
+ * staande waarde — dus elke volgende poging kreeg een 409 en de rit bleef eeuwig open staan.
+ * `db.batch` maakt er één D1-transactie van, en de vorm staat al in dit bestand (regel 465).
+ *
+ * De afwijzing houdt haar eigen enkelvoudige pad: daar is maar één schrijfactie, dus valt er niets
+ * te scheuren.
+ *
+ * DE FTP-KANT IS PARTIEEL, en dat is geen detail: `writeSettings` is FULL-REPLACE — die schrijft
+ * `?? null` voor élk veld, dus zou vijftien andere instellingen wissen bij een goedkeuring. Dat is
+ * exact het defect dat ROADMAP punt 73 blootlegde. Vandaar een gerichte `update` op één kolom, in
+ * de vorm van `writeIjking` en niet in die van `writeSettings`.
+ */
+export async function writeFtpGoedkeuring(
+  db: Db,
+  userId: number,
+  activityIdExt: string,
+  ftp: number,
+): Promise<void> {
+  await db.batch([
+    db.update(settings).set({ ftp }).where(eq(settings.userId, userId)),
+    db
+      .update(activities)
+      .set({ ftpVoorstelAntwoord: "goedgekeurd" })
+      .where(
+        and(
+          eq(activities.userId, userId),
+          eq(activities.activityIdExt, activityIdExt),
+        ),
+      ),
+  ]);
 }

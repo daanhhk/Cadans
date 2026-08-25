@@ -1,0 +1,1507 @@
+[
+  {
+    "activityIdExt": "i86277058",
+    "datum": "2025-07-06",
+    "naam": "Amsterdam Wegwielrennen",
+    "duurMin": 315,
+    "piek1200W": 240
+  },
+  {
+    "activityIdExt": "i86489160",
+    "datum": "2025-07-08",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 75,
+    "piek1200W": 184
+  },
+  {
+    "activityIdExt": "i86561635",
+    "datum": "2025-07-08",
+    "naam": "De Ronde Venen Wegwielrennen",
+    "duurMin": 64,
+    "piek1200W": 240
+  },
+  {
+    "activityIdExt": "i86811862",
+    "datum": "2025-07-10",
+    "naam": "Haarlem - JOIN Cycling - 3 sets 20-40's",
+    "duurMin": 51,
+    "piek1200W": 212
+  },
+  {
+    "activityIdExt": "i86911464",
+    "datum": "2025-07-11",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 72,
+    "piek1200W": 173
+  },
+  {
+    "activityIdExt": "i86964304",
+    "datum": "2025-07-11",
+    "naam": "De Ronde Venen - JOIN Cycling - 3x 10 min kracht",
+    "duurMin": 69,
+    "piek1200W": 249
+  },
+  {
+    "activityIdExt": "i87062188",
+    "datum": "2025-07-12",
+    "naam": "Breda Wegwielrennen",
+    "duurMin": 51,
+    "piek1200W": 214
+  },
+  {
+    "activityIdExt": "i87868974",
+    "datum": "2025-07-17",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 76,
+    "piek1200W": 154
+  },
+  {
+    "activityIdExt": "i87868987",
+    "datum": "2025-07-17",
+    "naam": "De Ronde Venen - FTP build up",
+    "duurMin": 88,
+    "piek1200W": 310
+  },
+  {
+    "activityIdExt": "i88198017",
+    "datum": "2025-07-19",
+    "naam": "Noord-Beveland - Sprint",
+    "duurMin": 75,
+    "piek1200W": 193
+  },
+  {
+    "activityIdExt": "i88334631",
+    "datum": "2025-07-20",
+    "naam": "Noord-Beveland - Basis",
+    "duurMin": 52,
+    "piek1200W": 242
+  },
+  {
+    "activityIdExt": "i88682107",
+    "datum": "2025-07-22",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 54,
+    "piek1200W": 194
+  },
+  {
+    "activityIdExt": "i88750483",
+    "datum": "2025-07-23",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 70,
+    "piek1200W": 190
+  },
+  {
+    "activityIdExt": "i88815027",
+    "datum": "2025-07-23",
+    "naam": "De Ronde Venen Wegwielrennen",
+    "duurMin": 76,
+    "piek1200W": 253
+  },
+  {
+    "activityIdExt": "i89277933",
+    "datum": "2025-07-26",
+    "naam": "Medemblik Wegwielrennen",
+    "duurMin": 37,
+    "piek1200W": 205
+  },
+  {
+    "activityIdExt": "i89277948",
+    "datum": "2025-07-26",
+    "naam": "Enkhuizen Wegwielrennen",
+    "duurMin": 32,
+    "piek1200W": 271
+  },
+  {
+    "activityIdExt": "i89551317",
+    "datum": "2025-07-28",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 79,
+    "piek1200W": 230
+  },
+  {
+    "activityIdExt": "i89647510",
+    "datum": "2025-07-29",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 71,
+    "piek1200W": 192
+  },
+  {
+    "activityIdExt": "i89736644",
+    "datum": "2025-07-29",
+    "naam": "De Ronde Venen - JOIN Cycling - Sweets spot",
+    "duurMin": 73,
+    "piek1200W": 254
+  },
+  {
+    "activityIdExt": "i90346461",
+    "datum": "2025-08-02",
+    "naam": "Noord-Beveland Wegwielrennen",
+    "duurMin": 96,
+    "piek1200W": 265
+  },
+  {
+    "activityIdExt": "i90606960",
+    "datum": "2025-08-04",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 74,
+    "piek1200W": 194
+  },
+  {
+    "activityIdExt": "i90662920",
+    "datum": "2025-08-04",
+    "naam": "De Ronde Venen Wegwielrennen",
+    "duurMin": 72,
+    "piek1200W": 192
+  },
+  {
+    "activityIdExt": "i90758339",
+    "datum": "2025-08-05",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 68,
+    "piek1200W": 186
+  },
+  {
+    "activityIdExt": "i90843073",
+    "datum": "2025-08-05",
+    "naam": "De Ronde Venen - JOIN Cycling - Afwisselende Vo2max intervallen",
+    "duurMin": 75,
+    "piek1200W": 246
+  },
+  {
+    "activityIdExt": "i91130969",
+    "datum": "2025-08-07",
+    "naam": "Beverwijk Wegwielrennen",
+    "duurMin": 56,
+    "piek1200W": 202
+  },
+  {
+    "activityIdExt": "i91179773",
+    "datum": "2025-08-07",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 35,
+    "piek1200W": 159
+  },
+  {
+    "activityIdExt": "i91934358",
+    "datum": "2025-08-12",
+    "naam": "Haren Wegwielrennen",
+    "duurMin": 69,
+    "piek1200W": 185
+  },
+  {
+    "activityIdExt": "i92154398",
+    "datum": "2025-08-13",
+    "naam": "Haren Wegwielrennen",
+    "duurMin": 127,
+    "piek1200W": 196
+  },
+  {
+    "activityIdExt": "i92330496",
+    "datum": "2025-08-14",
+    "naam": "Haren Wegwielrennen",
+    "duurMin": 105,
+    "piek1200W": 177
+  },
+  {
+    "activityIdExt": "i92619156",
+    "datum": "2025-08-16",
+    "naam": "Haarlem - Drempel",
+    "duurMin": 43,
+    "piek1200W": 247
+  },
+  {
+    "activityIdExt": "i93075882",
+    "datum": "2025-08-19",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 79,
+    "piek1200W": 170
+  },
+  {
+    "activityIdExt": "i93159251",
+    "datum": "2025-08-19",
+    "naam": "De Ronde Venen Wegwielrennen",
+    "duurMin": 74,
+    "piek1200W": 216
+  },
+  {
+    "activityIdExt": "i93427254",
+    "datum": "2025-08-21",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 73,
+    "piek1200W": 183
+  },
+  {
+    "activityIdExt": "i93496891",
+    "datum": "2025-08-21",
+    "naam": "De Ronde Venen Wegwielrennen",
+    "duurMin": 74,
+    "piek1200W": 258
+  },
+  {
+    "activityIdExt": "i93964111",
+    "datum": "2025-08-24",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 98,
+    "piek1200W": 234
+  },
+  {
+    "activityIdExt": "i94266683",
+    "datum": "2025-08-26",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 81,
+    "piek1200W": 177
+  },
+  {
+    "activityIdExt": "i94344002",
+    "datum": "2025-08-26",
+    "naam": "De Ronde Venen Wegwielrennen",
+    "duurMin": 67,
+    "piek1200W": 232
+  },
+  {
+    "activityIdExt": "i94635074",
+    "datum": "2025-08-28",
+    "naam": "Haarlem - Anaeroob",
+    "duurMin": 55,
+    "piek1200W": 221
+  },
+  {
+    "activityIdExt": "i95448180",
+    "datum": "2025-09-02",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 77,
+    "piek1200W": 178
+  },
+  {
+    "activityIdExt": "i95522049",
+    "datum": "2025-09-02",
+    "naam": "De Ronde Venen Wegwielrennen",
+    "duurMin": 67,
+    "piek1200W": 261
+  },
+  {
+    "activityIdExt": "i96172908",
+    "datum": "2025-09-06",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 157,
+    "piek1200W": 244
+  },
+  {
+    "activityIdExt": "i96443451",
+    "datum": "2025-09-08",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 76,
+    "piek1200W": 185
+  },
+  {
+    "activityIdExt": "i96499735",
+    "datum": "2025-09-08",
+    "naam": "De Ronde Venen Wegwielrennen",
+    "duurMin": 77,
+    "piek1200W": 186
+  },
+  {
+    "activityIdExt": "i96608457",
+    "datum": "2025-09-09",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 80,
+    "piek1200W": 174
+  },
+  {
+    "activityIdExt": "i96686123",
+    "datum": "2025-09-09",
+    "naam": "De Ronde Venen Wegwielrennen",
+    "duurMin": 78,
+    "piek1200W": 173
+  },
+  {
+    "activityIdExt": "i97027254",
+    "datum": "2025-09-11",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 52,
+    "piek1200W": 234
+  },
+  {
+    "activityIdExt": "i97293390",
+    "datum": "2025-09-13",
+    "naam": "Haarlem - Drempel",
+    "duurMin": 51,
+    "piek1200W": 244
+  },
+  {
+    "activityIdExt": "i97381659",
+    "datum": "2025-09-14",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 60,
+    "piek1200W": 223
+  },
+  {
+    "activityIdExt": "i97950150",
+    "datum": "2025-09-18",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 53,
+    "piek1200W": 240
+  },
+  {
+    "activityIdExt": "i98290084",
+    "datum": "2025-09-21",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 82,
+    "piek1200W": 171
+  },
+  {
+    "activityIdExt": "i98538828",
+    "datum": "2025-09-23",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 79,
+    "piek1200W": 178
+  },
+  {
+    "activityIdExt": "i98599775",
+    "datum": "2025-09-23",
+    "naam": "De Ronde Venen Wegwielrennen",
+    "duurMin": 69,
+    "piek1200W": 254
+  },
+  {
+    "activityIdExt": "i98754356",
+    "datum": "2025-09-24",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 50,
+    "piek1200W": 214
+  },
+  {
+    "activityIdExt": "i98974315",
+    "datum": "2025-09-26",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 85,
+    "piek1200W": 186
+  },
+  {
+    "activityIdExt": "i99048592",
+    "datum": "2025-09-26",
+    "naam": "De Ronde Venen Wegwielrennen",
+    "duurMin": 70,
+    "piek1200W": 201
+  },
+  {
+    "activityIdExt": "i99511256",
+    "datum": "2025-09-30",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 75,
+    "piek1200W": 183
+  },
+  {
+    "activityIdExt": "i99568645",
+    "datum": "2025-09-30",
+    "naam": "De Ronde Venen Wegwielrennen",
+    "duurMin": 68,
+    "piek1200W": 242
+  },
+  {
+    "activityIdExt": "i99751498",
+    "datum": "2025-10-01",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 61,
+    "piek1200W": 212
+  },
+  {
+    "activityIdExt": "i100277382",
+    "datum": "2025-10-04",
+    "naam": "Basis",
+    "duurMin": 29,
+    "piek1200W": 177
+  },
+  {
+    "activityIdExt": "i100414467",
+    "datum": "2025-10-05",
+    "naam": "Haarlem - Drempel",
+    "duurMin": 46,
+    "piek1200W": 265
+  },
+  {
+    "activityIdExt": "i100707204",
+    "datum": "2025-10-07",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 80,
+    "piek1200W": 176
+  },
+  {
+    "activityIdExt": "i100771681",
+    "datum": "2025-10-07",
+    "naam": "De Ronde Venen Wegwielrennen",
+    "duurMin": 70,
+    "piek1200W": 258
+  },
+  {
+    "activityIdExt": "i101042106",
+    "datum": "2025-10-09",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 73,
+    "piek1200W": 176
+  },
+  {
+    "activityIdExt": "i101115815",
+    "datum": "2025-10-09",
+    "naam": "De Ronde Venen Wegwielrennen",
+    "duurMin": 75,
+    "piek1200W": 203
+  },
+  {
+    "activityIdExt": "i101605484",
+    "datum": "2025-10-12",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 61,
+    "piek1200W": 242
+  },
+  {
+    "activityIdExt": "i101685503",
+    "datum": "2025-10-13",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 76,
+    "piek1200W": 171
+  },
+  {
+    "activityIdExt": "i101753393",
+    "datum": "2025-10-13",
+    "naam": "De Ronde Venen Wegwielrennen",
+    "duurMin": 74,
+    "piek1200W": 207
+  },
+  {
+    "activityIdExt": "i102263906",
+    "datum": "2025-10-16",
+    "naam": "De Ronde Venen Wegwielrennen",
+    "duurMin": 57,
+    "piek1200W": 195
+  },
+  {
+    "activityIdExt": "i102537590",
+    "datum": "2025-10-18",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 128,
+    "piek1200W": 247
+  },
+  {
+    "activityIdExt": "i102823590",
+    "datum": "2025-10-20",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 61,
+    "piek1200W": 268
+  },
+  {
+    "activityIdExt": "i103526410",
+    "datum": "2025-10-24",
+    "naam": "Benissa Wegwielrennen",
+    "duurMin": 316,
+    "piek1200W": 260
+  },
+  {
+    "activityIdExt": "i104571400",
+    "datum": "2025-10-31",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 81,
+    "piek1200W": 195
+  },
+  {
+    "activityIdExt": "i104651781",
+    "datum": "2025-10-31",
+    "naam": "De Ronde Venen Wegwielrennen",
+    "duurMin": 72,
+    "piek1200W": 194
+  },
+  {
+    "activityIdExt": "i104915419",
+    "datum": "2025-11-02",
+    "naam": "Amsterdam Wegwielrennen",
+    "duurMin": 105,
+    "piek1200W": 212
+  },
+  {
+    "activityIdExt": "i105222422",
+    "datum": "2025-11-04",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 78,
+    "piek1200W": 194
+  },
+  {
+    "activityIdExt": "i105290310",
+    "datum": "2025-11-04",
+    "naam": "De Ronde Venen Wegwielrennen",
+    "duurMin": 65,
+    "piek1200W": 241
+  },
+  {
+    "activityIdExt": "i105590758",
+    "datum": "2025-11-06",
+    "naam": "Haarlem - Sprint",
+    "duurMin": 44,
+    "piek1200W": 240
+  },
+  {
+    "activityIdExt": "i105687018",
+    "datum": "2025-11-07",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 80,
+    "piek1200W": 183
+  },
+  {
+    "activityIdExt": "i105753839",
+    "datum": "2025-11-07",
+    "naam": "De Ronde Venen Wegwielrennen",
+    "duurMin": 73,
+    "piek1200W": 200
+  },
+  {
+    "activityIdExt": "i105901622",
+    "datum": "2025-11-08",
+    "naam": "Haarlem Overige",
+    "duurMin": 95,
+    "piek1200W": 214
+  },
+  {
+    "activityIdExt": "i106317955",
+    "datum": "2025-11-11",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 77,
+    "piek1200W": 215
+  },
+  {
+    "activityIdExt": "i106391206",
+    "datum": "2025-11-11",
+    "naam": "De Ronde Venen Wegwielrennen",
+    "duurMin": 65,
+    "piek1200W": 230
+  },
+  {
+    "activityIdExt": "i106751592",
+    "datum": "2025-11-13",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 55,
+    "piek1200W": 177
+  },
+  {
+    "activityIdExt": "i107042278",
+    "datum": "2025-11-15",
+    "naam": "Haarlem - Anaeroob",
+    "duurMin": 67,
+    "piek1200W": 208
+  },
+  {
+    "activityIdExt": "i107176113",
+    "datum": "2025-11-16",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 110,
+    "piek1200W": 203
+  },
+  {
+    "activityIdExt": "i107577649",
+    "datum": "2025-11-18",
+    "naam": "De Ronde Venen Wegwielrennen",
+    "duurMin": 77,
+    "piek1200W": 210
+  },
+  {
+    "activityIdExt": "i107909123",
+    "datum": "2025-11-20",
+    "naam": "JOIN Cycling - 10 min kracht",
+    "duurMin": 50,
+    "piek1200W": 219
+  },
+  {
+    "activityIdExt": "i108690942",
+    "datum": "2025-11-25",
+    "naam": "Basis",
+    "duurMin": 49,
+    "piek1200W": 169
+  },
+  {
+    "activityIdExt": "i108912067",
+    "datum": "2025-11-27",
+    "naam": "Indoorcycling",
+    "duurMin": 50,
+    "piek1200W": 191
+  },
+  {
+    "activityIdExt": "i108966595",
+    "datum": "2025-11-27",
+    "naam": "Amsterdam Wegwielrennen",
+    "duurMin": 47,
+    "piek1200W": 190
+  },
+  {
+    "activityIdExt": "i109160692",
+    "datum": "2025-11-28",
+    "naam": "JOIN Cycling - Korte tempo inter",
+    "duurMin": 50,
+    "piek1200W": 217
+  },
+  {
+    "activityIdExt": "i109393510",
+    "datum": "2025-11-30",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 51,
+    "piek1200W": 258
+  },
+  {
+    "activityIdExt": "i109720656",
+    "datum": "2025-12-02",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 86,
+    "piek1200W": 179
+  },
+  {
+    "activityIdExt": "i109777556",
+    "datum": "2025-12-02",
+    "naam": "De Ronde Venen - JOIN Cycling - 2 sets 4x 1 min kracht",
+    "duurMin": 73,
+    "piek1200W": 202
+  },
+  {
+    "activityIdExt": "i110590045",
+    "datum": "2025-12-07",
+    "naam": "Haarlem - JOIN Cycling - 30-15's Rønnestad intervallen",
+    "duurMin": 72,
+    "piek1200W": 245
+  },
+  {
+    "activityIdExt": "i111069822",
+    "datum": "2025-12-09",
+    "naam": "JOIN Cycling - 12x 4 min intensi",
+    "duurMin": 67,
+    "piek1200W": 196
+  },
+  {
+    "activityIdExt": "i111436343",
+    "datum": "2025-12-11",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 67,
+    "piek1200W": 189
+  },
+  {
+    "activityIdExt": "i111527576",
+    "datum": "2025-12-12",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 79,
+    "piek1200W": 183
+  },
+  {
+    "activityIdExt": "i111601429",
+    "datum": "2025-12-12",
+    "naam": "De Ronde Venen - JOIN Cycling - Waanzin",
+    "duurMin": 73,
+    "piek1200W": 201
+  },
+  {
+    "activityIdExt": "i112204372",
+    "datum": "2025-12-16",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 82,
+    "piek1200W": 191
+  },
+  {
+    "activityIdExt": "i112286162",
+    "datum": "2025-12-16",
+    "naam": "De Ronde Venen - JOIN Cycling - Toenemende tempo/omslagpunt interva",
+    "duurMin": 71,
+    "piek1200W": 208
+  },
+  {
+    "activityIdExt": "i112753735",
+    "datum": "2025-12-19",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 80,
+    "piek1200W": 176
+  },
+  {
+    "activityIdExt": "i112831736",
+    "datum": "2025-12-19",
+    "naam": "De Ronde Venen - JOIN Cycling - 2 sets 40-20's",
+    "duurMin": 74,
+    "piek1200W": 221
+  },
+  {
+    "activityIdExt": "i113062756",
+    "datum": "2025-12-21",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 106,
+    "piek1200W": 206
+  },
+  {
+    "activityIdExt": "i114291329",
+    "datum": "2025-12-28",
+    "naam": "Amsterdam Wegwielrennen",
+    "duurMin": 92,
+    "piek1200W": 186
+  },
+  {
+    "activityIdExt": "i114596390",
+    "datum": "2025-12-30",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 61,
+    "piek1200W": 186
+  },
+  {
+    "activityIdExt": "i116255746",
+    "datum": "2026-01-06",
+    "naam": "JOIN Cycling - 4x 5 min tempo in",
+    "duurMin": 52,
+    "piek1200W": 211
+  },
+  {
+    "activityIdExt": "i116866690",
+    "datum": "2026-01-09",
+    "naam": "JOIN Cycling - 10x 2 min intensi",
+    "duurMin": 53,
+    "piek1200W": 188
+  },
+  {
+    "activityIdExt": "i117283765",
+    "datum": "2026-01-11",
+    "naam": "JOIN Cycling - Intensieve duur",
+    "duurMin": 74,
+    "piek1200W": 202
+  },
+  {
+    "activityIdExt": "i117705340",
+    "datum": "2026-01-13",
+    "naam": "Innsbruck Overige",
+    "duurMin": 20,
+    "piek1200W": 227
+  },
+  {
+    "activityIdExt": "i118555834",
+    "datum": "2026-01-17",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 88,
+    "piek1200W": 228
+  },
+  {
+    "activityIdExt": "i118961106",
+    "datum": "2026-01-19",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 86,
+    "piek1200W": 184
+  },
+  {
+    "activityIdExt": "i119085638",
+    "datum": "2026-01-19",
+    "naam": "De Ronde Venen Wegwielrennen",
+    "duurMin": 72,
+    "piek1200W": 227
+  },
+  {
+    "activityIdExt": "i119808837",
+    "datum": "2026-01-22",
+    "naam": "JOIN Cycling - Toenemende tempo/",
+    "duurMin": 56,
+    "piek1200W": 216
+  },
+  {
+    "activityIdExt": "i120159182",
+    "datum": "2026-01-24",
+    "naam": "Haarlem - JOIN Cycling - 2 & 1 min Vo2max",
+    "duurMin": 89,
+    "piek1200W": 254
+  },
+  {
+    "activityIdExt": "i120400253",
+    "datum": "2026-01-25",
+    "naam": "Haarlem - JOIN Cycling - 2, 4 & 8 min intervallen",
+    "duurMin": 51,
+    "piek1200W": 251
+  },
+  {
+    "activityIdExt": "i120678156",
+    "datum": "2026-01-26",
+    "naam": "De Ronde Venen - JOIN Cycling - 5x 5 min kracht",
+    "duurMin": 75,
+    "piek1200W": 224
+  },
+  {
+    "activityIdExt": "i124115057",
+    "datum": "2026-02-10",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 84,
+    "piek1200W": 185
+  },
+  {
+    "activityIdExt": "i124237882",
+    "datum": "2026-02-10",
+    "naam": "De Ronde Venen - Anaeroob",
+    "duurMin": 73,
+    "piek1200W": 209
+  },
+  {
+    "activityIdExt": "i124528168",
+    "datum": "2026-02-11",
+    "naam": "JOIN Cycling - 5x 5 min tempo",
+    "duurMin": 49,
+    "piek1200W": 208
+  },
+  {
+    "activityIdExt": "i125667442",
+    "datum": "2026-02-16",
+    "naam": "JOIN Cycling - Sprint-Vo2max-spr",
+    "duurMin": 30,
+    "piek1200W": 211
+  },
+  {
+    "activityIdExt": "i126760241",
+    "datum": "2026-02-21",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 68,
+    "piek1200W": 219
+  },
+  {
+    "activityIdExt": "i127750902",
+    "datum": "2026-02-25",
+    "naam": "Haarlem - JOIN Cycling - 5x 5 min kracht",
+    "duurMin": 66,
+    "piek1200W": 217
+  },
+  {
+    "activityIdExt": "i128034724",
+    "datum": "2026-02-26",
+    "naam": "De Ronde Venen - JOIN Cycling - 40 sec sprints",
+    "duurMin": 79,
+    "piek1200W": 183
+  },
+  {
+    "activityIdExt": "i128138761",
+    "datum": "2026-02-27",
+    "naam": "Haarlem - JOIN Cycling - Pacing workout",
+    "duurMin": 79,
+    "piek1200W": 220
+  },
+  {
+    "activityIdExt": "i128443837",
+    "datum": "2026-02-28",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 162,
+    "piek1200W": 197
+  },
+  {
+    "activityIdExt": "i128963852",
+    "datum": "2026-03-02",
+    "naam": "De Ronde Venen Wegwielrennen",
+    "duurMin": 94,
+    "piek1200W": 254
+  },
+  {
+    "activityIdExt": "i129110523",
+    "datum": "2026-03-03",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 83,
+    "piek1200W": 168
+  },
+  {
+    "activityIdExt": "i129773155",
+    "datum": "2026-03-05",
+    "naam": "De Ronde Venen Wegwielrennen",
+    "duurMin": 115,
+    "piek1200W": 176
+  },
+  {
+    "activityIdExt": "i129904042",
+    "datum": "2026-03-06",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 77,
+    "piek1200W": 183
+  },
+  {
+    "activityIdExt": "i130724685",
+    "datum": "2026-03-09",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 63,
+    "piek1200W": 196
+  },
+  {
+    "activityIdExt": "i130980271",
+    "datum": "2026-03-10",
+    "naam": "Haarlem - Sprint",
+    "duurMin": 57,
+    "piek1200W": 225
+  },
+  {
+    "activityIdExt": "i132264995",
+    "datum": "2026-03-15",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 62,
+    "piek1200W": 216
+  },
+  {
+    "activityIdExt": "i132778961",
+    "datum": "2026-03-17",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 77,
+    "piek1200W": 192
+  },
+  {
+    "activityIdExt": "i132779033",
+    "datum": "2026-03-17",
+    "naam": "De Ronde Venen Wegwielrennen",
+    "duurMin": 64,
+    "piek1200W": 196
+  },
+  {
+    "activityIdExt": "i133325465",
+    "datum": "2026-03-19",
+    "naam": "De Bilt Wegwielrennen",
+    "duurMin": 145,
+    "piek1200W": 193
+  },
+  {
+    "activityIdExt": "i133926174",
+    "datum": "2026-03-22",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 63,
+    "piek1200W": 210
+  },
+  {
+    "activityIdExt": "i134479727",
+    "datum": "2026-03-24",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 55,
+    "piek1200W": 230
+  },
+  {
+    "activityIdExt": "i134971161",
+    "datum": "2026-03-26",
+    "naam": "Haarlem - Anaeroob",
+    "duurMin": 58,
+    "piek1200W": 216
+  },
+  {
+    "activityIdExt": "i135387352",
+    "datum": "2026-03-28",
+    "naam": "Haarlem - Drempel",
+    "duurMin": 63,
+    "piek1200W": 231
+  },
+  {
+    "activityIdExt": "i136085860",
+    "datum": "2026-03-31",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 77,
+    "piek1200W": 173
+  },
+  {
+    "activityIdExt": "i136231403",
+    "datum": "2026-03-31",
+    "naam": "De Ronde Venen - Anaeroob",
+    "duurMin": 80,
+    "piek1200W": 212
+  },
+  {
+    "activityIdExt": "i136614652",
+    "datum": "2026-04-02",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 76,
+    "piek1200W": 171
+  },
+  {
+    "activityIdExt": "i136709698",
+    "datum": "2026-04-02",
+    "naam": "De Ronde Venen - Drempel",
+    "duurMin": 77,
+    "piek1200W": 215
+  },
+  {
+    "activityIdExt": "i137187285",
+    "datum": "2026-04-04",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 68,
+    "piek1200W": 118
+  },
+  {
+    "activityIdExt": "i137328101",
+    "datum": "2026-04-05",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 138,
+    "piek1200W": 223
+  },
+  {
+    "activityIdExt": "i137532131",
+    "datum": "2026-04-06",
+    "naam": "Breda Wegwielrennen",
+    "duurMin": 78,
+    "piek1200W": 161
+  },
+  {
+    "activityIdExt": "i137884459",
+    "datum": "2026-04-07",
+    "naam": "De Ronde Venen - JOIN Cycling - 2 sets 40-20's",
+    "duurMin": 70,
+    "piek1200W": 217
+  },
+  {
+    "activityIdExt": "i138329233",
+    "datum": "2026-04-09",
+    "naam": "Haarlem - JOIN Cycling - Intensieve duur",
+    "duurMin": 78,
+    "piek1200W": 206
+  },
+  {
+    "activityIdExt": "i138876396",
+    "datum": "2026-04-11",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 204,
+    "piek1200W": 209
+  },
+  {
+    "activityIdExt": "i139542770",
+    "datum": "2026-04-13",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 54,
+    "piek1200W": 213
+  },
+  {
+    "activityIdExt": "i140166892",
+    "datum": "2026-04-15",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 76,
+    "piek1200W": 170
+  },
+  {
+    "activityIdExt": "i140627120",
+    "datum": "2026-04-17",
+    "naam": "Valkenburg aan de Geul Wegwielrennen",
+    "duurMin": 46,
+    "piek1200W": 172
+  },
+  {
+    "activityIdExt": "i140870867",
+    "datum": "2026-04-18",
+    "naam": "Valkenburg aan de Geul Wegwielrennen",
+    "duurMin": 340,
+    "piek1200W": 195
+  },
+  {
+    "activityIdExt": "i142099030",
+    "datum": "2026-04-22",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 62,
+    "piek1200W": 211
+  },
+  {
+    "activityIdExt": "i142470026",
+    "datum": "2026-04-24",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 74,
+    "piek1200W": 180
+  },
+  {
+    "activityIdExt": "i142593121",
+    "datum": "2026-04-24",
+    "naam": "De Ronde Venen Wegwielrennen",
+    "duurMin": 100,
+    "piek1200W": 202
+  },
+  {
+    "activityIdExt": "i143582029",
+    "datum": "2026-04-28",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 77,
+    "piek1200W": 184
+  },
+  {
+    "activityIdExt": "i143752554",
+    "datum": "2026-04-28",
+    "naam": "De Ronde Venen Wegwielrennen",
+    "duurMin": 69,
+    "piek1200W": 219
+  },
+  {
+    "activityIdExt": "i144137482",
+    "datum": "2026-04-29",
+    "naam": "Noordoostpolder Wegwielrennen",
+    "duurMin": 57,
+    "piek1200W": 211
+  },
+  {
+    "activityIdExt": "i144561167",
+    "datum": "2026-05-01",
+    "naam": "Noordoostpolder Wegwielrennen",
+    "duurMin": 129,
+    "piek1200W": 229
+  },
+  {
+    "activityIdExt": "i144964284",
+    "datum": "2026-05-03",
+    "naam": "Noordoostpolder - JOIN Cycling - 2 sets 1 min hoge/lage torque",
+    "duurMin": 51,
+    "piek1200W": 210
+  },
+  {
+    "activityIdExt": "i145242094",
+    "datum": "2026-05-04",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 78,
+    "piek1200W": 175
+  },
+  {
+    "activityIdExt": "i145375282",
+    "datum": "2026-05-04",
+    "naam": "De Ronde Venen - JOIN Cycling - 8 min sweetspot + 10 sec zittend ve",
+    "duurMin": 71,
+    "piek1200W": 225
+  },
+  {
+    "activityIdExt": "i146118335",
+    "datum": "2026-05-07",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 76,
+    "piek1200W": 183
+  },
+  {
+    "activityIdExt": "i146266592",
+    "datum": "2026-05-07",
+    "naam": "De Ronde Venen - JOIN Cycling - 10x 2 min intensieve duurintervalle",
+    "duurMin": 73,
+    "piek1200W": 183
+  },
+  {
+    "activityIdExt": "i147044934",
+    "datum": "2026-05-10",
+    "naam": "Haarlem - Basis",
+    "duurMin": 63,
+    "piek1200W": 180
+  },
+  {
+    "activityIdExt": "i147638977",
+    "datum": "2026-05-12",
+    "naam": "Haarlem - Drempel",
+    "duurMin": 61,
+    "piek1200W": 232
+  },
+  {
+    "activityIdExt": "i147753289",
+    "datum": "2026-05-13",
+    "naam": "Haarlem - JOIN Cycling - 2 sets 1 min hoge/lage torque",
+    "duurMin": 63,
+    "piek1200W": 202
+  },
+  {
+    "activityIdExt": "i148447971",
+    "datum": "2026-05-15",
+    "naam": "Berkelland Wegwielrennen",
+    "duurMin": 57,
+    "piek1200W": 232
+  },
+  {
+    "activityIdExt": "i149489552",
+    "datum": "2026-05-18",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 103,
+    "piek1200W": 191
+  },
+  {
+    "activityIdExt": "i150361115",
+    "datum": "2026-05-21",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 76,
+    "piek1200W": 182
+  },
+  {
+    "activityIdExt": "i150361168",
+    "datum": "2026-05-21",
+    "naam": "De Ronde Venen Wegwielrennen",
+    "duurMin": 74,
+    "piek1200W": 225
+  },
+  {
+    "activityIdExt": "i150584077",
+    "datum": "2026-05-22",
+    "naam": "Haarlem - JOIN Cycling - Sweets spot",
+    "duurMin": 62,
+    "piek1200W": 249
+  },
+  {
+    "activityIdExt": "i151184258",
+    "datum": "2026-05-24",
+    "naam": "Noord-Beveland Wegwielrennen",
+    "duurMin": 101,
+    "piek1200W": 237
+  },
+  {
+    "activityIdExt": "i151551495",
+    "datum": "2026-05-26",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 77,
+    "piek1200W": 176
+  },
+  {
+    "activityIdExt": "i151660593",
+    "datum": "2026-05-26",
+    "naam": "De Ronde Venen Wegwielrennen",
+    "duurMin": 72,
+    "piek1200W": 225
+  },
+  {
+    "activityIdExt": "i152498548",
+    "datum": "2026-05-29",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 81,
+    "piek1200W": 171
+  },
+  {
+    "activityIdExt": "i152521389",
+    "datum": "2026-05-29",
+    "naam": "De Ronde Venen - Sprint",
+    "duurMin": 77,
+    "piek1200W": 202
+  },
+  {
+    "activityIdExt": "i153156470",
+    "datum": "2026-05-30",
+    "naam": "Evening Fietsen",
+    "duurMin": 103,
+    "piek1200W": 209
+  },
+  {
+    "activityIdExt": "i153246901",
+    "datum": "2026-06-01",
+    "naam": "🚴 Coach: Sweet Spot 2×20 (Peak)",
+    "duurMin": 77,
+    "piek1200W": 251
+  },
+  {
+    "activityIdExt": "i153578669",
+    "datum": "2026-06-02",
+    "naam": "🚴 Coach: Lange Z2 (60 min)",
+    "duurMin": 66,
+    "piek1200W": 226
+  },
+  {
+    "activityIdExt": "i154364833",
+    "datum": "2026-06-04",
+    "naam": "🚴 Coach: Lange Z2 (60 min)",
+    "duurMin": 59,
+    "piek1200W": 266
+  },
+  {
+    "activityIdExt": "i155041128",
+    "datum": "2026-06-07",
+    "naam": "🚴 Coach: Threshold 2×20 (Peak, ingekort)",
+    "duurMin": 98,
+    "piek1200W": 239
+  },
+  {
+    "activityIdExt": "i155614893",
+    "datum": "2026-06-09",
+    "naam": "🚴 Coach: Tour-taper Z2 (60 min)",
+    "duurMin": 57,
+    "piek1200W": 171
+  },
+  {
+    "activityIdExt": "i156576994",
+    "datum": "2026-06-12",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 58,
+    "piek1200W": 175
+  },
+  {
+    "activityIdExt": "i157183377",
+    "datum": "2026-06-14",
+    "naam": "🚴 Coach: Lange Z2 (140 min)",
+    "duurMin": 181,
+    "piek1200W": 232
+  },
+  {
+    "activityIdExt": "i157434388",
+    "datum": "2026-06-15",
+    "naam": "Fontcoberta Wegwielrennen",
+    "duurMin": 163,
+    "piek1200W": 243
+  },
+  {
+    "activityIdExt": "i157723912",
+    "datum": "2026-06-16",
+    "naam": "Fontcoberta Wegwielrennen",
+    "duurMin": 266,
+    "piek1200W": 249
+  },
+  {
+    "activityIdExt": "i157996739",
+    "datum": "2026-06-17",
+    "naam": "Fontcoberta Wegwielrennen",
+    "duurMin": 79,
+    "piek1200W": 206
+  },
+  {
+    "activityIdExt": "i158575314",
+    "datum": "2026-06-19",
+    "naam": "Fontcoberta Wegwielrennen",
+    "duurMin": 120,
+    "piek1200W": 268
+  },
+  {
+    "activityIdExt": "i159474337",
+    "datum": "2026-06-22",
+    "naam": "🚴 Coach: Drempel over-under 3 sets",
+    "duurMin": 60,
+    "piek1200W": 233
+  },
+  {
+    "activityIdExt": "i160338742",
+    "datum": "2026-06-25",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 106,
+    "piek1200W": 199
+  },
+  {
+    "activityIdExt": "i160793889",
+    "datum": "2026-06-27",
+    "naam": "🚴 Coach: Drempel over-under lang",
+    "duurMin": 65,
+    "piek1200W": 239
+  },
+  {
+    "activityIdExt": "i161231615",
+    "datum": "2026-06-29",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 75,
+    "piek1200W": 189
+  },
+  {
+    "activityIdExt": "i161260547",
+    "datum": "2026-06-29",
+    "naam": "De Ronde Venen Wegwielrennen",
+    "duurMin": 75,
+    "piek1200W": 241
+  },
+  {
+    "activityIdExt": "i162180739",
+    "datum": "2026-07-02",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 105,
+    "piek1200W": 200
+  },
+  {
+    "activityIdExt": "i162542242",
+    "datum": "2026-07-04",
+    "naam": "🚴 Coach: Sweet spot over-under",
+    "duurMin": 62,
+    "piek1200W": 236
+  },
+  {
+    "activityIdExt": "i163340264",
+    "datum": "2026-07-06",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 125,
+    "piek1200W": 209
+  },
+  {
+    "activityIdExt": "i163855557",
+    "datum": "2026-07-08",
+    "naam": "🚴 Coach: Drempel over-under lang",
+    "duurMin": 61,
+    "piek1200W": 231
+  },
+  {
+    "activityIdExt": "i164546215",
+    "datum": "2026-07-10",
+    "naam": "🚴 Coach: Z2 progressief (Base, ingekort)",
+    "duurMin": 72,
+    "piek1200W": 188
+  },
+  {
+    "activityIdExt": "i164910400",
+    "datum": "2026-07-12",
+    "naam": "🚴 Coach: Sweet Spot kort 2×12",
+    "duurMin": 62,
+    "piek1200W": 190
+  },
+  {
+    "activityIdExt": "i165397945",
+    "datum": "2026-07-13",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 50,
+    "piek1200W": 202
+  },
+  {
+    "activityIdExt": "i166073333",
+    "datum": "2026-07-15",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 48,
+    "piek1200W": 261
+  },
+  {
+    "activityIdExt": "i166305106",
+    "datum": "2026-07-16",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 71,
+    "piek1200W": 209
+  },
+  {
+    "activityIdExt": "i166889759",
+    "datum": "2026-07-18",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 127,
+    "piek1200W": 237
+  },
+  {
+    "activityIdExt": "i167484593",
+    "datum": "2026-07-20",
+    "naam": "Haarlem - Basis",
+    "duurMin": 63,
+    "piek1200W": 203
+  },
+  {
+    "activityIdExt": "i167777709",
+    "datum": "2026-07-21",
+    "naam": "Haarlem - Sprint",
+    "duurMin": 65,
+    "piek1200W": 245
+  },
+  {
+    "activityIdExt": "i168490085",
+    "datum": "2026-07-23",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 57,
+    "piek1200W": 177
+  },
+  {
+    "activityIdExt": "i169183279",
+    "datum": "2026-07-25",
+    "naam": "🚴 Coach: Lange Z2 steady",
+    "duurMin": 106,
+    "piek1200W": 252
+  },
+  {
+    "activityIdExt": "i170681148",
+    "datum": "2026-07-30",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 82,
+    "piek1200W": 193
+  },
+  {
+    "activityIdExt": "i170820389",
+    "datum": "2026-07-30",
+    "naam": "De Ronde Venen Wegwielrennen",
+    "duurMin": 75,
+    "piek1200W": 240
+  },
+  {
+    "activityIdExt": "i171448183",
+    "datum": "2026-08-01",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 73,
+    "piek1200W": 225
+  },
+  {
+    "activityIdExt": "i172075652",
+    "datum": "2026-08-03",
+    "naam": "Haarlem Wegwielrennen",
+    "duurMin": 61,
+    "piek1200W": 199
+  },
+  {
+    "activityIdExt": "i172391866",
+    "datum": "2026-08-04",
+    "naam": "🚴 Coach: Z2 progressief",
+    "duurMin": 75,
+    "piek1200W": 195
+  }
+]

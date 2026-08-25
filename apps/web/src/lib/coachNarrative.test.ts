@@ -5,6 +5,7 @@ import {
   blokReviewRegel,
   coachNarrative,
   faseOvergangRegel,
+  ftpVoorstelRegel,
   schrijfMisluktRegel,
 } from "./coachNarrative";
 import type { EffectReferent } from "./effect";
@@ -620,5 +621,65 @@ describe("schrijfMisluktRegel (ROADMAP punt 73)", () => {
   it("draagt geen serverstring en geen statuscode", () => {
     const r = schrijfMisluktRegel("je doel is niet gewijzigd");
     expect(r).not.toMatch(/400|500|field|wrong type/);
+  });
+});
+
+// ── ROADMAP punt 69 — DE FTP-VOORSTELREGEL ───────────────────────────────────────────────────
+// DEZE ZIN IS DE REM. Het voorstel heeft geen plausibiliteitsgrens (die bleek niet te ijken), dus de
+// renner is de plausibiliteitstoets — en hij kan dat alleen als de zin hem vertelt WAAR de waarde
+// vandaan komt. Elke toets hieronder bewaakt één stuk van die herkomst.
+describe("ftpVoorstelRegel (ROADMAP punt 69)", () => {
+  const BASIS = {
+    naam: "De Ronde Venen - FTP build up",
+    datum: "2026-08-20",
+    duurMin: 88,
+    piek1200W: 310,
+    voorstelFtp: 295,
+    staandeFtp: 280,
+    factorPct: 95,
+  };
+
+  it("draagt de VOLLEDIGE herkomst: dag, rit, duur, vermogen, factor, oud en nieuw", () => {
+    const r = ftpVoorstelRegel(BASIS);
+    expect(r).toContain("20 augustus");
+    expect(r).toContain('"De Ronde Venen - FTP build up"');
+    expect(r).toContain("88 minuten");
+    expect(r).toContain("310 watt");
+    expect(r).toContain("95 procent");
+    expect(r).toContain("295 watt");
+    expect(r).toContain("280");
+  });
+
+  it("noemt het verschil met de staande waarde", () => {
+    expect(ftpVoorstelRegel(BASIS)).toContain("15 watt boven");
+  });
+
+  // DE BEVINDING UIT DE WEERLEGGINGSPAS. De eerste versie zei bij een lege ritnaam "je laatste rit",
+  // en dat is een RECENTHEIDSCLAIM die de keuze niet waarmaakt: `kiesFtpVoorstel` neemt de HOOGSTE
+  // piek, niet de nieuwste rit. Met twee openstaande ritten kan de gekozen rit dagen oud zijn.
+  it("claimt NOOIT dat het de laatste rit was (M55)", () => {
+    for (const naam of [null, "", "   "]) {
+      const r = ftpVoorstelRegel({ ...BASIS, naam });
+      expect(r).not.toContain("laatste rit");
+      expect(r).toContain("20 augustus"); // de dag draagt de identificatie
+    }
+  });
+
+  // "Jij weet of je die dag echt diep ging" verwees naar een dag die de zin niet noemde.
+  it("noemt de dag waarnaar de slotzin verwijst", () => {
+    const r = ftpVoorstelRegel({ ...BASIS, naam: null, duurMin: null });
+    expect(r).toContain("die dag");
+    expect(r).toContain("20 augustus");
+  });
+
+  it("laat de duur weg als die er niet is, zonder een gat te laten staan", () => {
+    const r = ftpVoorstelRegel({ ...BASIS, duurMin: null });
+    expect(r).not.toMatch(/van\s+minuten|\s{2,}/);
+    expect(r).toContain('"De Ronde Venen - FTP build up"');
+  });
+
+  it("beslist niets voor de renner — hij kan beide kanten op", () => {
+    const r = ftpVoorstelRegel(BASIS);
+    expect(r).toContain("neem hem over of laat hem staan");
   });
 });

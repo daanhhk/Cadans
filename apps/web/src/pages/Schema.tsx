@@ -1,6 +1,7 @@
 import type { DispositionReason, SettingsInput } from "@cadans/shared";
 import { useEffect, useState } from "react";
 import { SchemaView } from "../components/schema/SchemaView";
+import type { FtpVoorstelDto } from "../lib/api";
 import { postSyncActivities, postSyncWellness } from "../lib/api";
 import type { BlokReview, DosisTredeVoorstel } from "../lib/blok";
 import type { DoelPassendVoorstel } from "../lib/doelpassend";
@@ -42,6 +43,8 @@ interface SchemaData {
   dosisTredeVoorstel: DosisTredeVoorstel | null;
   eventOvernameVoorstel: EventOvernameVoorstel | null;
   doelPassendVoorstel: DoelPassendVoorstel | null;
+  /** ROADMAP punt 69 — het FTP-voorstel uit een gereden rit, of null. */
+  ftpVoorstel: FtpVoorstelDto | null;
   grenzen: readonly number[];
   weekMonday: string;
 }
@@ -195,6 +198,7 @@ export function Schema() {
       dosisTredeVoorstel={data.dosisTredeVoorstel}
       eventOvernameVoorstel={data.eventOvernameVoorstel}
       doelPassendVoorstel={data.doelPassendVoorstel}
+      ftpVoorstel={data.ftpVoorstel}
       grenzen={data.grenzen}
       testVoorstel={data.testVoorstel}
       ijkStaat={data.ijkStaat}

@@ -1332,4 +1332,258 @@ iets te kalibreren.
 Deze ronde kiest niet tussen A en B — dat is een besluit over Daans eigen training, en de meting geeft
 hem de grond eronder.
 
+---
+
+## 18. DE BOUW — WEG A, ZONDER REM (25-08-2026)
+
+Besluit van Daan: **bouw het voorstel ZONDER plausibiliteitsgrens; de renner is de plausibiliteitstoets.**
+Weg A uit §17. Deze sectie verantwoordt wat er gebouwd is.
+
+### 18.0 Omgevingsverklaring
+
+```
+werkpad          /c/Users/daan/Projects/cadans
+git-dir          .git       git-common-dir  .git      -> HOOFDCHECKOUT, geen worktree
+branch           main       origin/main     0 achter, 0 vooruit
+HEAD bij aanvang c081dce
+training         HEAD 3e8090a, gevolgde boom SCHOON
+```
+
+**Over `training`.** De gevolgde boom is schoon en HEAD staat op `3e8090a`, zoals voorgeschreven.
+`git status` meldt daar wél vier ONGEVOLGDE mappen — `_import-design/`, `_import-design-2/`,
+`_import-design-4/` en `design_handoff_cadans/`. Die zijn van 07 en 08-06-2026 en dus twee maanden
+ouder dan deze sessie; ze zijn niet door een ronde gemaakt. Vermeld omdat "onaangeroerd" anders een
+blindere bewering is dan zij hoort te zijn.
+
+**EEN GAT IN DEZE VERANTWOORDING, en het is beter het te melden dan het glad te strijken.** De prompt
+droeg drie genummerde verwachtingen, X1 tot en met X3. Die nummering is bij het omslaan van het
+contextvenster verloren gegaan en staat nergens in de repo, dus ik kan ze niet VERBATIM citeren — en
+ze parafraseren zou er precies het soort nieuwe regel van maken dat de werkwijze verbiedt. Wat
+hieronder staat is dus geordend naar INHOUD en niet naar hun etiket: het startpunt (18.2), de poort op
+de echte reeks (18.3) en het schrijfpad (18.4). Wie de nummering terug wil, leest de prompt van
+25-08-2026 na.
+
+### 18.1 Wat er gebouwd is
+
+| bestand | rol |
+| --- | --- |
+| `workers/api/drizzle/0014_mean_reaper.sql` | de kolom plus de SEED |
+| `workers/api/src/ftpvoorstel.ts` | de poortlogica, puur |
+| `workers/api/src/integrations/ritpiek.ts` | de RUNTIME-vuller van `piek_1200_w` |
+| `workers/api/src/db/repo.ts` | lezen, en het goedkeur-schrijfpad |
+| `workers/api/src/routes/api.ts` | `GET` en `PUT /api/ftp-voorstel`, plus de sync-inhaak |
+| `apps/web/src/components/schema/FtpVoorstelCard.tsx` | de kaart |
+| `apps/web/src/lib/coachNarrative.ts` | de zin die de herkomst draagt |
+
+De engine is NIET aangeraakt: `git diff --stat packages/engine` is leeg. `packages/shared` ook niet.
+
+### 18.2 HET STARTPUNT: de migratie SEEDT de antwoord-kolom
+
+De datum-constante uit §16 is vervallen. In haar plaats seedt de migratie zelf:
+
+```sql
+ALTER TABLE `activities` ADD `ftp_voorstel_antwoord` text;
+UPDATE `activities` SET `ftp_voorstel_antwoord` = 'geseed' WHERE `ftp_voorstel_antwoord` IS NULL;
+```
+
+**WAAROM DIT EN NIET EEN DATUM IN DE BRON.** Een grens `datum > D` is rekenkundig identiek aan een
+LEEFTIJDSGRENS en groeit elke dag mee zonder dat iemand daar nog een besluit over neemt. Deze seed is
+één handeling die daarna nooit meer verandert: wat er op het moment van migreren stond geldt als
+beantwoord, wat daarna binnenkomt doorloopt de poorten gewoon.
+
+**VORM-AFWIJKING, bewust en gemeld.** De migraties 0000 t/m 0013 zijn puur schema uit
+`drizzle-kit generate`. De `UPDATE` is met de hand toegevoegd en komt dus niet uit `schema.ts` terug.
+Dat is veilig omdat de generator alleen NIEUWE migraties schrijft en toegepaste bestanden niet
+herschrijft.
+
+**LOKAAL TOEGEPAST:** 262 rijen, 262 geseed, 0 open.
+
+**WAT DE SEED NIET IS.** Zij is een momentopname, geen invariant. Een rit met een OUDE datum die NA de
+migratie binnenkomt (late sync, handmatige upload, herstelde activiteit) is een volwaardige kandidaat,
+en omdat de hoogste piek wint kan hij een rit van vandaag verslaan. Dat is de bedoelde werking —
+kandidatuur hangt aan AANKOMST, niet aan ritdatum — maar het is precies de reden dat de kaart de
+DATUM moet tonen. Zie 18.6.
+
+### 18.3 DE POORT OP DE ECHTE REEKS
+
+`kiesFtpVoorstel` heeft vier poorten, in deze volgorde:
+
+1. `doel !== "FTP"` → niets. M93 randvoorwaarde (1).
+2. geen bruikbare staande waarde → niets.
+3. rit zonder waarde op het duurpunt → overslaan.
+4. `voorstel <= staand` → overslaan. **M94: alleen omhoog.**
+
+**POORT (2) IS EEN GEMETEN VAL EN GEEN FORMALITEIT.** `settings.ftp` is nullable — het is naast
+`user_id` de enige kolom zonder `NOT NULL` — en in JavaScript is `294 > null` **WAAR**, omdat `null`
+naar 0 wordt gedwongen, terwijl `294 > undefined` **ONWAAR** is. Dezelfde afwezigheid, de omgekeerde
+poort. Zonder deze expliciete toets zou ELKE rit een voorstel opleveren zodra het FTP-veld leeg staat:
+alle 215 tegelijk.
+
+**DE DAGKEUZE GAAT OP DE HOOGSTE PIEK, niet op de langste rit.** Gemeten: op 44 dagen dragen twee
+fietsritten allebei een waarde, met een mediaan verschil van 43 watt en een uitschieter van 156. Het
+huisidioom `mergeDone` kiest de LANGSTE rit, en dat is stelselmatig de rit met de LAGERE piek — op de
+enige dag die in de hele reeks een voorstel oplevert zou dat 154 W zijn in plaats van 310. Bij een
+GELIJKE piek wint de nieuwste rit.
+
+**DE REGRESSIE HEEFT TWEE HELFTEN, met opzet.** Een toets die alleen "nul voorstellen" meet, slaagt
+ook als de poort per ongeluk ALTIJD zwijgt — een typefout in een kolomnaam zou hem groen laten
+(CC-CHECKS CHECK 40).
+
+- **MET de seed:** nul kandidaten, dus nul voorstellen.
+- **ZONDER de seed:** precies **ÉÉN** voorstel over de 215 waarden, op **De Ronde Venen - FTP build
+  up**, piek **310 W**, voorstel **295 W**. De marge is schoon: geen enkele andere rit komt binnen
+  5 watt van de drempel.
+
+Die 295 is bovendien exact wat intervals' eigen `rolling_ftp` na die rit aanwees. Dat is een
+BEVESTIGING en geen ijkpunt — één samenval kalibreert niets, en dat is nu juist de grond waarop de
+plausibiliteitsgrens in §17 sneuvelde.
+
+### 18.4 HET SCHRIJFPAD
+
+`PUT /api/ftp-voorstel` neemt de WAARDE niet uit de body. Bij `goedgekeurd` berekent de route het
+voorstel OPNIEUW en geeft 409 als het niet bij de aangeleverde rit hoort. Een client kan dus geen
+willekeurige drempelwaarde wegschrijven en M93 staat op één plek.
+
+De FTP-kant is PARTIEEL. `writeSettings` is FULL-REPLACE — die schrijft `?? null` voor élk veld en zou
+vijftien andere instellingen wissen. Dat is exact het defect van punt 73.
+
+### 18.5 DE VULLER — de ontbrekende schakel die de eerste pas vond
+
+`piek_1200_w` werd tot deze ronde UITSLUITEND gevuld door `tools/backfill/piek1200.mjs`, een met de
+hand te starten script met `--local` hardcoded op regel 104. **Er was geen enkele runtime-schrijver.**
+Zonder vuller zou het voorstel na deployment permanent inert zijn geweest: poort (3) gaat per
+constructie nooit open, en op remote — waar de backfill nooit heeft gedraaid — vanaf dag één.
+`workers/api/src/integrations/ritpiek.ts` vult nu maximaal 5 ritten per sync-ronde, NIEUWSTE EERST, en
+hangt NIET-FATAAL achter de activiteiten-sync: een mislukte piek-ophaling mag een geslaagde sync niet
+in een 502 veranderen.
+
+### 18.6 DE TWEEDE WEERLEGGINGSPAS — vijf lenzen op de GEBOUWDE code
+
+Vijf lenzen (schrijfpad, startpunt, vuller, kaart, strings), elk gevolgd door een scepticus per
+bevinding met de opdracht te WEERLEGGEN. **Alle vijf VOLTOOID, geen enkele GESTORVEN.** 20 bevindingen,
+4 weerlegd, 16 overeind. Na eigen nameting bleven vier ECHTE gebreken over; de rest was dubbeltelling
+over lenzen of een verantwoorde ontwerpkeuze.
+
+**(a) DE KAART NOEMDE DE DAG NIET.** Drie lenzen kwamen hier onafhankelijk uit. De zin eindigde met
+*"Jij weet of je die dag echt diep ging"* terwijl "die dag" nergens genoemd werd, en bij een lege
+ritnaam viel hij terug op *"je laatste rit"* — een RECENTHEIDSCLAIM die de keuze niet waarmaakt, want
+de hoogste piek wint en de datum is enkel scheidsrechter. Met twee openstaande ritten krijgt de renner
+dus een voorstel toegeschreven aan de verkeerde rit, op de enige plek waar hij zijn oordeel moet
+vellen — en dat oordeel is sinds §17 de ENIGE rem die dit ontwerp nog heeft. **De datum staat nu
+vooraan in de zin en de fallback is weg.** Zes toetsen in `coachNarrative.test.ts`.
+
+**(b) TWEE LOSSE SCHRIJFACTIES BIJ GOEDKEUREN.** `settings.ftp` en de rit-markering stonden als twee
+losse `await`s. Slaagt de eerste en faalt de tweede, dan is de drempelwaarde WEL gewijzigd terwijl de
+kaart meldt *"je drempelwaarde is niet gewijzigd"* — een M55-overtreding. Het herstel was erger dan
+het gebrek: met de nieuwe waarde weggeschreven en de rit nog open levert de herberekening geen
+voorstel meer op (hij is immers niet langer HOGER), dus elke volgende poging kreeg een 409 en de rit
+bleef eeuwig open. **Nu één `db.batch`,** de vorm die `repo.ts` al kende.
+
+**(c) DE VULLER KENDE MAAR TWEE UITKOMSTEN.** "Gelukt" en "mislukt", en bij mislukt schreef hij niets
+zodat de rit terugkwam. Dat is juist bij een 429, maar bij een rit die op intervals verwijderd is een
+val: de wachtrij is ritdatum-aflopend met een venster van 5, dus vijf zulke ritten aan de nieuwe kant
+zetten de vuller PERMANENT vast, zonder één zichtbaar teken. Daarbij was `resp.json()` onbewaakt: een
+2xx met een onleesbare body sleurde de HELE ronde mee, elke keer opnieuw. **Nu drie uitkomsten** —
+`kromme`, `definitief` (403/404/410 en een onleesbare body: stempelen en uit de rij) en `tijdelijk`
+(429, 5xx, netwerk: openlaten). Tien toetsen in `ritpiek.test.ts`, waar er nul waren.
+
+**(d) EEN DOCSTRING DIE HET BESLUIT VAN DEZELFDE RONDE TEGENSPRAK.** Zie 18.7.
+
+### 18.7 IS EEN GOEDGEKEURD VOORSTEL EEN IJKING? NEE.
+
+De vraag lag voor de hand: de renner bevestigt daar een drempelwaarde die uit een ECHT gereden
+twintigminutenvermogen volgt — waarom telt dat niet als vierde meetgelegenheid-bron?
+
+**Omdat `laatsteGelegenheid` niet meet of de WAARDE klopt, maar of er een MAXIMUM gezet is.** De
+voorstel-poort eist geen maximale inspanning; ze eist alleen dat 0,95 × de piek boven de staande
+waarde uitkomt. Staat die te laag, dan vuurt ze op een gewone tempo-rit. Goedkeuren betekent dan "mijn
+getal stond verkeerd", niet "ik ging vol". Dat is dezelfde grens die M91 trekt, alleen andersom: een
+proxy vervangt de ijking niet, en een waardecorrectie vervangt de inspanning niet.
+
+**GEVOLG, en het is het bedoelde gevolg:** na een goedkeuring blijft het testaanbod staan en blijft de
+ijk-staat de laatste ECHTE meting noemen. Twee datums op twee schermen, twee grootheden, twee woorden.
+
+Ik had het omgekeerde al in een docstring gezet vóór ik deze afweging maakte, en de pas vond dat terug:
+`readLaatsteGoedgekeurdVoorstel` droeg *"Dit is de vierde meetgelegenheid-bron"* terwijl `effect.ts` in
+dezelfde ronde het tegendeel vastlegde. De functie werd bovendien bij elke pageload bevraagd en door
+niemand gelezen. **Beide zijn weg**, en de grond staat nu bij `MetingBron` in
+`apps/web/src/lib/effect.ts` — waar de volgende ronde hem zoekt.
+
+### 18.8 M93 RANDVOORWAARDE (2) IS BIJGEWERKT
+
+`docs/TRAININGSMODEL.md`, **M93** (geen nieuw nummer; M3 gerespecteerd — er is niets hernummerd). De
+eis van een plausibiliteitsgrens is VERVALLEN, met de meting eronder: de grens bleek niet te leggen
+zolang de reeks geen gemerkte maximale inspanning bevat. Wat de rem moest tegenhouden is intussen van
+twee kanten dichtgezet — de LAGE kant door M94 (alleen omhoog), de HOGE kant door M10 (de renner
+bevestigt). Herkomst-etiket: **BELEID — een Daan-besluit** van 25-08-2026. Komt er ooit een reeks mét
+gemerkte maximale inspanningen, dan is de grens opnieuw te overwegen.
+
+De kruisverwijzing vanuit M94 naar "het geval dat M93 randvoorwaarde (2) noemt" blijft kloppen: het
+Z2-geval staat er nog, alleen niet langer als grond voor een grens.
+
+### 18.9 De poort staat, maar hij vuurt voorlopig niet
+
+**Op de huidige gegevens doet deze functie NIETS, en dat hoort zo.** Alles wat er nu staat is geseed;
+de staande drempelwaarde is 280 en er is geen openstaande rit die 0,95 × piek daarboven brengt. Het
+eerste voorstel kan pas komen na een rit die na de migratie binnenkomt én hard genoeg is. Het
+ijkaanbod van **2026-09-21** is de eerstvolgende geplande gelegenheid.
+
+Dat is geen tekortkoming maar de meetbare vorm van het ontwerp: de historie zwijgt, de toekomst
+spreekt.
+
+### 18.10 VISUELE VERIFICATIE — en zij ving een gebrek dat GEEN toets kon zien
+
+De kaart is nieuw en was nog nooit gerenderd. Lokaal gezaaid (één open rit, piek 310, staande 280),
+beide dev-servers op, en de kaart opgehaald van het schema-scherm.
+
+**WAT ER STOND:**
+
+> Op 24 augustus, in "De Ronde Venen - FTP build up" van 88 minuten, hield je twintig minuten 310 watt
+> vol. Dat is 95 procent daarvan: 295 watt, 15 watt boven de 280 die er nu staat. Jij weet of je die
+> dag echt diep ging — neem hem over of laat hem staan.
+
+Met de knoppen "Neem 295 watt over" en "Laat staan", en de uitleg eronder. Per verwachting één
+uitspraak: de kaart rendert — **KLOPT**. De zin noemt dag, rit, duur, vermogen, factor, oud en nieuw —
+**KLOPT**. De knop draagt de waarde — **KLOPT**. Tikken schrijft en de kaart verdwijnt zonder
+herlaadslag — **KLOPT** (`settings.ftp` 280 → 295, rit op `goedgekeurd`, en `lthr` 178 plus `doel`
+ONGEWIJZIGD, dus het partiële schrijfpad houdt ook buiten de toetsen). Console schoon op één
+bestaande 404 na (`/api/checkin/2026-08-25`, geen check-in vandaag — niet van deze ronde).
+
+**MAAR DE EERSTE POGING LAS ANDERS,** en dat is de opbrengst:
+
+> Op 2026-08-24T09:12:00, in "De Ronde Venen - FTP build up" ...
+
+`activities.datum` draagt een VOLLE TIJDSTEMPEL. `datumKort_` matcht op een ANKERD patroon
+`^\d{4}-\d{2}-\d{2}$` en geeft bij een tijdstempel de rauwe string terug. **Geen enkele toets kon dit
+zien:** de unit-toetsen voeren kale datums in, en de 215-fixture draagt ze ook — de fixture is op dat
+punt niet representatief voor de tabel waar hij uit komt. Gerepareerd bij de bron
+(`readFtpVoorstelKandidaten` snijdt op tien tekens), met een routetoets die de tijdstempel wél
+aanbiedt.
+
+De lokale zaai is daarna teruggedraaid: de rij is weg, `settings.ftp` staat weer op 280, 262 rijen in
+`activities` — de stand van vóór de controle.
+
+**LES, en zij hoort bij CHECK 43 en niet los ervan:** een fixture die een kolom NETTER aanlevert dan
+de tabel doet, maakt elke toets erop blind voor precies dat verschil.
+
+### 18.11 WAT DAAN MOET BEKIJKEN — één zin die vreemd zal lezen
+
+Op hetzelfde scherm als de kaart staat de ijk-staat-regel, en die luidt vandaag:
+
+> Ik heb je drempel nog nooit gemeten.
+
+Na een goedkeuring blijft die zin staan. **Dat is de bedoelde uitwerking van het besluit in 18.7** —
+een goedgekeurd voorstel is geen ijking, want er is geen maximale inspanning vastgesteld — en de zin
+is dus letterlijk waar. Maar hij komt direct onder een kaart te staan waarin de app zojuist 295 watt
+uit een rit heeft overgenomen, en dat leest wrang.
+
+**Dit is een BESLISPUNT voor Daan en geen defect, en ik heb het daarom niet stilzwijgend veranderd.**
+Het gladstrijken vraagt namelijk precies het besluit dat in 18.7 op gronden is afgewezen. De derde weg
+— een eigen zin die zegt dat de drempelwaarde is BIJGESTELD zonder te beweren dat er gemeten is — is
+niet gebouwd, want zij raakt de ijk-staat-copy en die staat vol met toetsen die deze ronde met rust
+moest laten.
+
+**WAAR HIJ KIJKT:** het schema-scherm, direct onder de weekbelasting, zodra hij een voorstel heeft
+goedgekeurd. De vraag is of "nog nooit gemeten" daar mag blijven staan.
+
 <!-- EINDE docs/PUNT69-BOUW.md -->

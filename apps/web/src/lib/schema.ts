@@ -20,6 +20,7 @@ import {
   type SettingsInput,
 } from "@cadans/shared";
 import { type ActValuesRow, parseActivityRows } from "./activities";
+import type { FtpVoorstelDto } from "./api";
 import {
   getActivities,
   getCheckin,
@@ -29,6 +30,7 @@ import {
   getEventOvername,
   getEvents,
   getFatigueShift,
+  getFtpVoorstel,
   getIjking,
   getOverrides,
   getPlanner,
@@ -1330,6 +1332,9 @@ export async function loadSchemaWeek(): Promise<{
   /** ROADMAP punt 9 fase B — de overname-vraag, of null als er niets te vragen valt. */
   eventOvernameVoorstel: EventOvernameVoorstel | null;
   doelPassendVoorstel: DoelPassendVoorstel | null;
+  /** ROADMAP punt 69 — het FTP-voorstel uit een gereden rit, of null. De WORKER rekent het uit
+   * (daar staan de kolommen); deze laag geeft het alleen door aan de kaart. */
+  ftpVoorstel: FtpVoorstelDto | null;
   /** De zone-grenzen waarop dit beeld is gerekend (ROADMAP punt 6 fase 2). */
   grenzen: readonly number[];
   /** De maandag van de getoonde week (de sleutel van de goedkeuring). */
@@ -1363,6 +1368,7 @@ export async function loadSchemaWeek(): Promise<{
     eventOvernameRow,
     doelPassendRow,
     ijkingRow,
+    ftpVoorstelRow,
     plannerVorige1,
     plannerVorige2,
     plannerVorige3,
@@ -1395,6 +1401,7 @@ export async function loadSchemaWeek(): Promise<{
         { label: "event-overname", laad: () => getEventOvername() },
         { label: "doel-passendheid", laad: () => getDoelPassend() },
         { label: "ijking", laad: () => getIjking() },
+        { label: "ftp-voorstel", laad: () => getFtpVoorstel() },
         // M87 — de referent-weken. Ze voeden UITSLUITEND `plannerHistorie`; de bestaande
         // "weekplanner"-rij hierboven blijft de enige bron voor het grid en wordt niet breder.
         { label: "weekplanner -1", laad: () => getPlanner(maandagVoor(1)) },
@@ -1418,6 +1425,7 @@ export async function loadSchemaWeek(): Promise<{
           Awaited<ReturnType<typeof getEventOvername>>,
           Awaited<ReturnType<typeof getDoelPassend>>,
           Awaited<ReturnType<typeof getIjking>>,
+          Awaited<ReturnType<typeof getFtpVoorstel>>,
           Awaited<ReturnType<typeof getPlanner>>,
           Awaited<ReturnType<typeof getPlanner>>,
           Awaited<ReturnType<typeof getPlanner>>,
@@ -1761,6 +1769,7 @@ export async function loadSchemaWeek(): Promise<{
     dosisTredeVoorstel: kaarten.dosisTrede,
     eventOvernameVoorstel: kaarten.eventOvername,
     doelPassendVoorstel: kaarten.doelPassend,
+    ftpVoorstel: ftpVoorstelRow?.voorstel ?? null,
     // ROADMAP punt 10 fase B: de weekstem rekent per zone en heeft dus de GESYNCHRONISEERDE
     // grenzen nodig. Ze gaan mee in de payload in plaats van client-zijde opnieuw afgeleid te
     // worden — één bron, dezelfde die de blok-terugblik al gebruikt.

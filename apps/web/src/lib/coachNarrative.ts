@@ -932,3 +932,60 @@ export function faseOvergangRegel(o: {
 export function schrijfMisluktRegel(watNietGebeurde: string): string {
   return `Niet gelukt — ${watNietGebeurde}. Probeer het zo nog eens.`;
 }
+
+/**
+ * ROADMAP punt 69 — DE COACH-REGEL BIJ HET FTP-VOORSTEL.
+ *
+ * DEZE ZIN DRAAGT DE HERKOMST, en dat is hier geen sier. Het voorstel heeft bewust GEEN
+ * plausibiliteitsgrens (die bleek niet te ijken zolang de reeks geen maximale inspanning bevat), dus
+ * de renner IS de plausibiliteitstoets — M10. Hij kan dat alleen zijn als hij in één blik ziet
+ * waaruit de waarde volgt: welke rit, hoe lang, welk vermogen, welke factor.
+ *
+ * M55: de zin claimt niets dat niet gebeurd is. Hij zegt wat er gemeten is en wat de app daaruit
+ * afleidt, en laat het oordeel bij de renner.
+ *
+ * DE DATUM STAAT VOOROP, en dat is een correctie uit de weerleggingspas die op nameting standhield.
+ * De eerste versie noemde alleen naam, duur, vermogen en factor, en sloot af met *"Jij weet of je
+ * die dag echt diep ging"* — terwijl "die dag" nergens genoemd werd. Bij een lege ritnaam viel hij
+ * bovendien terug op "je laatste rit", en dat is een RECENTHEIDSCLAIM die de keuze niet waarmaakt:
+ * `kiesFtpVoorstel` neemt de HOOGSTE piek uit alle openstaande ritten, met de datum alleen als
+ * scheidsrechter bij gelijke pieken. Staan er twee open, dan wint een rit van vorige week gerust van
+ * die van vanochtend. De renner kreeg dus een voorstel toegeschreven aan een verkeerde rit, op de
+ * enige plek waar hij zijn oordeel moet vellen — en dat oordeel is sinds het vervallen van de
+ * plausibiliteitsgrens de ENIGE rem die dit ontwerp nog heeft. Zonder de dag kan hij hem niet
+ * bedienen.
+ */
+export function ftpVoorstelRegel(o: {
+  naam: string | null;
+  datum: string;
+  duurMin: number | null;
+  piek1200W: number;
+  voorstelFtp: number;
+  staandeFtp: number;
+  factorPct: number;
+}): string {
+  const duur = o.duurMin != null ? ` van ${o.duurMin} minuten` : "";
+  const rit = o.naam?.trim() ? `in "${o.naam.trim()}"` : "in een rit";
+  const verschil = o.voorstelFtp - o.staandeFtp;
+  return (
+    `Op ${datumKort_(o.datum)}, ${rit}${duur}, hield je twintig minuten ${o.piek1200W} watt vol. ` +
+    `Dat is ${o.factorPct} procent daarvan: ${o.voorstelFtp} watt, ` +
+    `${verschil} watt boven de ${o.staandeFtp} die er nu staat. ` +
+    `Jij weet of je die dag echt diep ging — neem hem over of laat hem staan.`
+  );
+}
+
+/** De knop die de nieuwe drempelwaarde overneemt. */
+export function ftpVoorstelOvernemenLabel(voorstelFtp: number): string {
+  return `Neem ${voorstelFtp} watt over`;
+}
+
+/** De knop die het voorstel laat liggen. De drempelwaarde blijft dan staan zoals hij stond. */
+export function ftpVoorstelAfwijzenLabel(): string {
+  return "Laat staan";
+}
+
+/** Onder de knoppen: wat "laat staan" betekent, zonder iets te beloven. */
+export function ftpVoorstelUitleg(): string {
+  return "Laat je hem staan, dan verandert er niets en komt dit voorstel niet terug.";
+}

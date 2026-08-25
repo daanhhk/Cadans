@@ -481,3 +481,53 @@ export function postSyncActivities(): Promise<SyncResult> {
 export function postSyncWellness(): Promise<SyncResult> {
   return postSync("/api/sync/wellness");
 }
+
+// ── ftp-voorstel (ROADMAP punt 69) ────────────────────────────────────
+/** Wat de worker teruggeeft als er een FTP-voorstel klaarstaat. */
+export type FtpVoorstelDto = {
+  activityIdExt: string;
+  datum: string;
+  naam: string | null;
+  duurMin: number | null;
+  piek1200W: number;
+  voorstelFtp: number;
+  staandeFtp: number;
+  factorPct: number;
+};
+
+/**
+ * GET /api/ftp-voorstel — het openstaande voorstel, of null.
+ *
+ * EEN EIGEN ROUTE EN GEEN VELD OP DE ACTIVITEITEN-RESPONS: die is een positionele 17-koloms
+ * engine-rij en blijft ongemoeid.
+ *
+ * De respons droeg eerder ook de datum van het laatst GOEDGEKEURDE voorstel, bedoeld als vierde
+ * meetgelegenheid-bron. Dat besluit is in dezelfde ronde teruggedraaid — zie `MetingBron` in
+ * `./effect` — en het veld had daarna geen lezer meer.
+ */
+export function getFtpVoorstel(): Promise<{
+  voorstel: FtpVoorstelDto | null;
+}> {
+  return apiGet<{ voorstel: FtpVoorstelDto | null }>("/api/ftp-voorstel");
+}
+
+/**
+ * PUT /api/ftp-voorstel — beantwoordt het voorstel voor één rit.
+ *
+ * De WAARDE gaat bewust NIET mee: de worker leidt hem opnieuw af uit M93, zodat een client geen
+ * willekeurige drempelwaarde kan wegschrijven. Bij `goedgekeurd` schrijft hij `settings.ftp`.
+ */
+export async function putFtpVoorstel(
+  activityIdExt: string,
+  antwoord: "goedgekeurd" | "afgewezen",
+): Promise<void> {
+  const resp = await fetch("/api/ftp-voorstel", {
+    method: "PUT",
+    headers: { "content-type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ activityIdExt, antwoord }),
+  });
+  if (!resp.ok) {
+    const parsed = await parseBody(resp);
+    throw new Error(errMessage(parsed, resp.status));
+  }
+}

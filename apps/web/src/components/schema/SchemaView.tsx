@@ -1,6 +1,7 @@
 import { mesoFactor } from "@cadans/engine";
 import type { DispositionReason, SettingsInput } from "@cadans/shared";
 import { useMemo, useState } from "react";
+import type { FtpVoorstelDto } from "../../lib/api";
 import type { BlokReview, DosisTredeVoorstel } from "../../lib/blok";
 import {
   coachNarrative,
@@ -43,6 +44,7 @@ import { DosisTredeCard } from "./DosisTredeCard";
 import { EventOvernameCard } from "./EventOvernameCard";
 import { FaseOvergangCard } from "./FaseOvergangCard";
 import { FatigueCard, isFatigueAfgewezen } from "./FatigueCard";
+import { FtpVoorstelCard } from "./FtpVoorstelCard";
 import { GarminPushButton } from "./GarminPushButton";
 import { GemistCard } from "./GemistCard";
 import { OverriddenDetail } from "./OverriddenDetail";
@@ -130,6 +132,7 @@ export function SchemaView({
   dosisTredeVoorstel = null,
   eventOvernameVoorstel = null,
   doelPassendVoorstel = null,
+  ftpVoorstel = null,
   grenzen,
   testVoorstel = null,
   ijkStaat = null,
@@ -149,6 +152,8 @@ export function SchemaView({
   dosisTredeVoorstel?: DosisTredeVoorstel | null;
   eventOvernameVoorstel?: EventOvernameVoorstel | null;
   doelPassendVoorstel?: DoelPassendVoorstel | null;
+  /** ROADMAP punt 69 — het FTP-voorstel uit een gereden rit; null = geen kaart. */
+  ftpVoorstel?: FtpVoorstelDto | null;
   /** ROADMAP punt 6 fase 2 — de zone-grenzen. VERPLICHT: een default hier zou de
    * gesynchroniseerde zones stil kunnen maskeren. */
   grenzen: readonly number[];
@@ -345,6 +350,23 @@ export function SchemaView({
           settings={
             (settings ?? null) as unknown as Record<string, unknown> | null
           }
+          coachNaam={view.coachNaam}
+        />
+      )}
+
+      {/* ROADMAP punt 69 — HET FTP-VOORSTEL, onder de doel-passendheid en boven de weekbelasting:
+          ook dit is een voorstel dat een actie vraagt. Alle poorten zitten in de worker
+          (`kiesFtpVoorstel`); is er niets voor te stellen, dan is `ftpVoorstel` null en rendert er
+          niets. */}
+      {/* DE KEY IS DRAGEND en geen React-hygiëne. De kaart houdt `saving` in eigen state en zet die
+          op het geslaagde pad bewust niet terug — de knoppen horen dood te blijven tot de herlaadslag
+          er is. Zonder key hergebruikt React dezelfde instantie zodra er een TWEEDE voorstel
+          verschijnt, en dan erft dat nieuwe voorstel de oude `saving` plus een oude foutregel: een
+          kaart die niets meer doet als je erop tikt. Op de rit-id herstart de state. */}
+      {ftpVoorstel && (
+        <FtpVoorstelCard
+          key={ftpVoorstel.activityIdExt}
+          voorstel={ftpVoorstel}
           coachNaam={view.coachNaam}
         />
       )}

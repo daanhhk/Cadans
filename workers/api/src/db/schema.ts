@@ -113,6 +113,21 @@ export const activities = sqliteTable(
      * een lege `piek_1200_w` niet te onderscheiden zijn van een nog-niet-opgehaalde rit, en dan
      * probeert elke herstart de kansloze ritten opnieuw. */
     piekGehaaldOp: text("piek_gehaald_op"),
+    /** ROADMAP punt 69 — het ANTWOORD op het FTP-voorstel voor DEZE rit: `'goedgekeurd'`,
+     * `'afgewezen'`, of NULL zolang er niets beantwoord is. Zodra hij gevuld is, komt het voorstel
+     * voor deze rit niet meer terug.
+     *
+     * DEZE KOLOM DRAAGT OOK HET STARTPUNT, en dat is de reden dat migratie 0014 hem SEEDT. Alles wat
+     * er op het moment van de migratie al stond, wordt op `'geseed'` gezet en levert dus geen
+     * voorstel. Zonder die seed zou de app op dag één een verhoging voorstellen op grond van een rit
+     * van meer dan een jaar oud — gemeten: de enige rit die vuurt is 404 dagen oud. Een DATUM-grens
+     * zou hetzelfde doen, maar die is een leeftijdsgrens in vermomming (`datum > D` is identiek aan
+     * `leeftijd < vandaag - D`) en groeit elke dag mee zonder dat iemand dat besluit. Een geseede
+     * kolom is één handeling die daarna nooit meer verandert.
+     *
+     * STAAT BEWUST NIET IN `actValsFromRow`, net als de twee kolommen hierboven: `upsertActivity`
+     * gebruikt dat vaste object als `set`, dus wat er niet in staat overleeft elke resync. */
+    ftpVoorstelAntwoord: text("ftp_voorstel_antwoord"),
   },
   (t) => [
     // mergeById_-idempotente upsert-sleutel; meerdere ritten/dag mogen (multi-sessie).

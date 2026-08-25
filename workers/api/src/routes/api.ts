@@ -8,7 +8,7 @@
  * User = CURRENT_USER_ID (vervalt in de auth-fase).
  */
 
-import { DOEL_OPTIONS, DOSIS_TREDE_MAX } from "@cadans/engine";
+import { DOEL_OPTIONS, DOSIS_TREDE_MAX, normalizeDoel_ } from "@cadans/engine";
 import {
   type DayOverride,
   type DispositionReason,
@@ -32,6 +32,7 @@ import {
   readEventOvername,
   readEvents,
   readFatigueShift,
+  readFtpVoorstelKandidaten,
   readIjking,
   readOverrides,
   readPlannerDays,
@@ -49,6 +50,8 @@ import {
   writeEventOvername,
   writeEvents,
   writeFatigueShift,
+  writeFtpGoedkeuring,
+  writeFtpVoorstelAntwoord,
   writeIjking,
   writeOverride,
   writePlannerDays,
@@ -56,6 +59,7 @@ import {
   writeSettings,
   writeWeekplan,
 } from "../db/repo";
+import { kiesFtpVoorstel } from "../ftpvoorstel";
 import { type IntervalsEnv, syncActivities } from "../integrations/intervals";
 import {
   readNormalizedPowerCurve,
@@ -63,6 +67,7 @@ import {
 } from "../integrations/powercurve";
 import { type PushDay, pushWorkouts } from "../integrations/push";
 import { fetchRideDetail } from "../integrations/ride";
+import { vulRitPieken } from "../integrations/ritpiek";
 import { syncWellness } from "../integrations/wellness";
 import { mergeFrozenWeekplan } from "../weekplanFreeze";
 
@@ -802,6 +807,82 @@ api.put("/ijking", async (c) => {
   return c.json({ ok: true });
 });
 
+// ── ftp-voorstel (ROADMAP punt 69) ───────────────────────────────────
+// Waarom een EIGEN route en niet een veld op de activiteiten-respons: die respons is een
+// POSITIONELE 17-koloms engine-rij en die blijft ongemoeid (de engine is bron van waarheid). De
+// berekening hoort bovendien waar de kolommen staan.
+api.get("/ftp-voorstel", async (c) => {
+  const db = makeDb(c.env.DB);
+  const [s, kandidaten] = await Promise.all([
+    readSettings(db, CURRENT_USER_ID),
+    readFtpVoorstelKandidaten(db, CURRENT_USER_ID),
+  ]);
+  const voorstel = kiesFtpVoorstel({
+    doel: normalizeDoel_(s?.doel ?? null),
+    staandeFtp: s?.ftp ?? null,
+    kandidaten,
+  });
+  // ALLEEN het voorstel. Een eerdere versie stuurde ook de datum van de laatste GOEDGEKEURDE rit
+  // mee, als vierde meetgelegenheid-bron. Dat is in dezelfde ronde verworpen — zie de docstring bij
+  // `MetingBron` in `apps/web/src/lib/effect.ts`: deze functie stelt een WAARDE bij en stelt niet
+  // vast dat er een MAXIMUM gereden is. Het veld had daarmee geen lezer meer en is weg; een respons
+  // die iets meedraagt wat niemand leest, nodigt uit tot precies de verwarring die dat besluit
+  // wegnam.
+  return c.json({ voorstel });
+});
+
+api.put("/ftp-voorstel", async (c) => {
+  const db = makeDb(c.env.DB);
+  const body = await readJsonObject(c);
+  const activityIdExt = body.activityIdExt;
+  const antwoord = body.antwoord;
+  // Elke afwijzing VÓÓR de schrijfactie, zodat een 400 ook echt betekent dat er niets is
+  // weggeschreven — zelfde vorm als PUT /api/ijking.
+  if (typeof activityIdExt !== "string" || !activityIdExt) {
+    throw new HTTPException(400, {
+      message: "invalid activityIdExt, expected a non-empty string",
+    });
+  }
+  if (antwoord !== "goedgekeurd" && antwoord !== "afgewezen") {
+    throw new HTTPException(400, {
+      message: "invalid antwoord, expected 'goedgekeurd' or 'afgewezen'",
+    });
+  }
+
+  // GOEDKEUREN SCHRIJFT DE DREMPELWAARDE, en het voorstel wordt hier OPNIEUW berekend in plaats van
+  // uit de body overgenomen. Een client die zelf een getal aanlevert, zou elke waarde kunnen
+  // wegschrijven; door hem hier af te leiden staat M93 op één plek en kan de route niets zetten wat
+  // de poorten niet toelaten.
+  if (antwoord === "goedgekeurd") {
+    const [s, kandidaten] = await Promise.all([
+      readSettings(db, CURRENT_USER_ID),
+      readFtpVoorstelKandidaten(db, CURRENT_USER_ID),
+    ]);
+    const voorstel = kiesFtpVoorstel({
+      doel: normalizeDoel_(s?.doel ?? null),
+      staandeFtp: s?.ftp ?? null,
+      kandidaten,
+    });
+    if (!voorstel || voorstel.activityIdExt !== activityIdExt) {
+      throw new HTTPException(409, {
+        message: "no current proposal for that activity",
+      });
+    }
+    // ÉÉN handeling, niet twee. Zie `writeFtpGoedkeuring`: half slagen maakt de foutmelding op de
+    // kaart onwaar en zet de rit bovendien klem achter een 409 die nooit meer opent.
+    await writeFtpGoedkeuring(
+      db,
+      CURRENT_USER_ID,
+      activityIdExt,
+      voorstel.voorstelFtp,
+    );
+    return c.json({ ok: true });
+  }
+
+  await writeFtpVoorstelAntwoord(db, CURRENT_USER_ID, activityIdExt, antwoord);
+  return c.json({ ok: true });
+});
+
 // ── Fase 4b — intervals-SYNC (POST) + power-curve-READ (GET) ──────────
 // Ambient global fetch (geen fetchImpl); athleteId uit c.env. Een niet-2xx
 // upstream → de fetch-wrapper GOOIT → hier vertaald naar 502. Bad params
@@ -815,7 +896,20 @@ api.post("/sync/activities", async (c) => {
       CURRENT_USER_ID,
       days === undefined ? {} : { daysBack: days },
     );
-    return c.json(r);
+    // ROADMAP punt 69 — DE ENIGE RUNTIME-VOEDING van `activities.piek_1200_w`. Zonder deze stap
+    // blijft die kolom voor nieuwe ritten leeg, gaat poort (2) van het FTP-voorstel per constructie
+    // nooit open en doet de functie permanent niets. Gedoseerd (MAX_PER_RONDE) en nieuwste eerst.
+    //
+    // BEWUST NA de sync en BEWUST NIET FATAAL: een mislukte piek-ophaling mag een geslaagde
+    // activiteiten-sync niet omzetten in een 502. Wat blijft liggen, komt de volgende ronde terug —
+    // `piek_gehaald_op` draagt de voortgang.
+    let pieken = { opgehaald: 0, gevuld: 0 };
+    try {
+      pieken = await vulRitPieken(makeDb(c.env.DB), c.env, CURRENT_USER_ID);
+    } catch (e) {
+      console.error("ritpiek fill failed (non-fatal)", e);
+    }
+    return c.json({ ...r, pieken });
   } catch (e) {
     console.error("sync activities failed", e);
     throw new HTTPException(502, { message: "intervals sync failed" });

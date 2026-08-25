@@ -208,7 +208,21 @@ export function blokGelegenheid(input: {
 
 /** De bronnen die als MEETMOMENT tellen. `test` en `race` zijn GELEGENHEDEN (de app kende ze
  * vooraf); `inspanning` is een sprong in de reeks zelf — achteraf zichtbaar bewijs dat er een
- * maximum gezet is, zonder dat de app weet wat voor rit het was. */
+ * maximum gezet is, zonder dat de app weet wat voor rit het was.
+ *
+ * HET GOEDGEKEURDE FTP-VOORSTEL IS HIER GEEN VIERDE BRON, en dat is op 25-08-2026 bewust besloten
+ * (ROADMAP punt 69). De vraag lag voor de hand — de renner bevestigt daar een drempelwaarde die uit
+ * een ECHT gereden twintigminutenvermogen volgt, dus waarom telt dat niet als ijking? Omdat deze
+ * lijst niet meet of de WAARDE klopt, maar of er een MAXIMUM gezet is; de docstring van
+ * `laatsteGelegenheid` zegt het met zoveel woorden. De voorstel-poort eist geen maximale inspanning:
+ * ze eist alleen dat 0,95 x de piek boven de staande waarde uitkomt. Staat die waarde te laag, dan
+ * vuurt ze op een gewone tempo-rit. Goedkeuren betekent dan "mijn getal stond verkeerd", niet "ik
+ * ging vol". Dat is dezelfde grens die M91 trekt, alleen andersom: een proxy vervangt de ijking
+ * niet, en een waardecorrectie vervangt de inspanning niet.
+ *
+ * GEVOLG, en het is het bedoelde gevolg: na een goedkeuring blijft het testaanbod staan en blijft
+ * de ijk-staat de laatste ECHTE meting noemen. Twee datums op twee schermen, twee grootheden, twee
+ * woorden — precies zoals hieronder bij `negeerSprong` al beschreven staat. */
 export type MetingBron = GelegenheidBron | "inspanning";
 
 /**

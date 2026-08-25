@@ -2050,6 +2050,41 @@ punten staat onder *Gesloten — vindplaats*.
     `settings.ftp` (punt 73, anders kan de goedkeuring niets wegschrijven), een poort die vaststelt
     dat de test ook echt GEREDEN is (§5.2 — `testResultaat` doet dat NIET), een plausibiliteitsgrens
     (§5.3), en migratie 0013. Die migratie is een prod-handeling met een eigen goedkeuring.
+    **DE PLAUSIBILITEITSGRENS IS NIET TE LEGGEN, en dat is gemeten en niet gevoeld —
+    `docs/PUNT69-BOUW.md` §17.** Een grens ijk je tegen inspanningen waarvan je WEET dat ze maximaal
+    waren, en de reeks bevat er geen: over 215 teruggehaalde twintigminutenwaarden vuurt de
+    omrekening precies ÉÉN keer, en de band uit intervals' eigen modellen bleek op verse gegevens
+    LEEG. **Daan koos op 25-08-2026 weg A: bouwen ZONDER rem, met de renner als
+    plausibiliteitstoets (M10).** M93 randvoorwaarde (2) is daarop bijgewerkt in
+    `docs/TRAININGSMODEL.md` §13 — de eis is VERVALLEN, met de meting als grond en een
+    herkomst-etiket. Wat de rem moest tegenhouden zit nu van twee kanten dicht: de LAGE kant door
+    M94, de HOGE kant door de bevestiging van de renner.
+    **AF per 25-08-2026 · WORKER plus CLIENT plus DATA.** Gebouwd en verantwoord in
+    `docs/PUNT69-BOUW.md` §18. Migratie **0014** draagt de kolom `ftp_voorstel_antwoord` én SEEDT
+    haar: alles wat bij het migreren al in de tabel stond geldt als beantwoord, zodat de historie
+    zwijgt en alleen nieuwe ritten de poorten doorlopen. Dat vervangt de datum-constante uit §16,
+    die rekenkundig een meegroeiende LEEFTIJDSGRENS was. Nieuw: `workers/api/src/ftpvoorstel.ts`
+    (vier poorten, dagkeuze op de HOOGSTE piek en niet op de langste rit),
+    `workers/api/src/integrations/ritpiek.ts` en `FtpVoorstelCard.tsx`.
+    **DE EERSTE WEERLEGGINGSPAS VOND DE ONTBREKENDE SCHAKEL:** `piek_1200_w` had GEEN enkele
+    runtime-schrijver — alleen het handmatige `tools/backfill/piek1200.mjs` met `--local` hardcoded
+    — dus het voorstel zou na deployment permanent inert zijn geweest, op remote vanaf dag één.
+    **DE TWEEDE PAS, op de gebouwde code, hield vier gebreken over:** de kaart noemde de DAG niet
+    (terwijl de keuze op hoogste piek gaat, dus de getoonde rit hoeft niet de laatste te zijn — en
+    het oordeel van de renner is de enige rem die dit ontwerp nog heeft); goedkeuren schreef in twee
+    losse statements, zodat een halve val de foutmelding onwaar maakte én de rit achter een
+    onherstelbare 409 klemzette; de vuller kende geen verschil tussen een 429 en een verwijderde
+    rit, waardoor vijf dode ritten hem permanent konden vastzetten; en één docstring beweerde het
+    tegenovergestelde van wat dezelfde ronde besloot. Alle vier gerepareerd en getoetst.
+    **BESLIST EN VASTGELEGD: een goedgekeurd voorstel is GEEN vierde meetgelegenheid-bron.**
+    `laatsteGelegenheid` meet niet of de WAARDE klopt maar of er een MAXIMUM gezet is, en de
+    voorstel-poort eist geen maximale inspanning. Goedkeuren betekent "mijn getal stond verkeerd",
+    niet "ik ging vol" — dezelfde grens die M91 trekt, andersom. De grond staat bij `MetingBron` in
+    `apps/web/src/lib/effect.ts`.
+    **WAT OPENSTAAT:** de poort vuurt op de huidige gegevens NIETS — alles is geseed en er is geen
+    openstaande rit die de staande 280 overtreft. Het eerstvolgende moment is het ijkaanbod van
+    **2026-09-21**. **PUNT 66 BLIJFT OPEN:** dit punt lost het pas op zodra er werkelijk een
+    goedkeuring heeft plaatsgevonden.
 
 73. **`PUT /api/settings` kan een instelling niet wijzigen zonder de rest te wissen, en de bestaande
     doel-wissel loopt daar STIL op stuk** — **AF per 24-08-2026 · WORKER plus CLIENT.** Was een LIVE
