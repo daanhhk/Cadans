@@ -13,6 +13,75 @@ live tot cutover.
 
 ## Stand
 
+STAND 2026-08-25 — **ER IS NIETS MIS MET HET TOKEN, EN DAAN HAD GELIJK.** Diagnose-ronde, read-only:
+geen mutatie, geen migratie, geen deploy. **ROADMAP punt 76 is INGETROKKEN — mijn diagnose van
+gisteren was fout.**
+- **DE FOUT, en het is er een van mij.** Ik concludeerde dat het wrangler-token de `d1`-scope miste.
+  Dat werd een ROADMAP-punt, stond in een rapport, en blokkeerde een migratie. **Het token draagt
+  `d1:write` wél** — de grant telt **28 scopes**. Twee keer dezelfde fout in een andere vorm: eerst
+  las ik de scopes uit een met `head`/`tail` AFGEKAPTE `whoami`-uitvoer en concludeerde afwezigheid
+  uit een lijst die ik niet heel had gezien; daarna haalde ik ze uit het bestand met het patroon
+  `"[a-z_:]+"` — **dat geen CIJFERS toelaat, en `d1:write` draagt er een.** Ik zag er 23 van de 28.
+  Vastgelegd als CC-CHECKS **CHECK 42**.
+- **LANGS WELKE WEG WRANGLER AUTHENTICEERT.** Niet via een omgevingsvariabele: `CLOUDFLARE_API_TOKEN`,
+  `CLOUDFLARE_API_KEY`, `CLOUDFLARE_EMAIL`, `CLOUDFLARE_ACCOUNT_ID`, `CF_API_TOKEN` en
+  `WRANGLER_API_TOKEN` zijn **alle zes NIET GEZET**. En niet via `.dev.vars` — dat draagt alleen
+  `INTERVALS_API_KEY` en `INTERVALS_ATHLETE_ID`, en het is sowieso de verkeerde plek: dat bestand
+  vult de BINDINGS van de Worker, niet de authenticatie van wrangler zelf. Wat er wél is: een
+  **OAuth-login die wrangler zelf bewaart** in `…\.wrangler\config\default.toml` (sleutels
+  `oauth_token`, `refresh_token`, `expiration_time`, `scopes`). Dat is de ENIGE credential-bron op
+  deze machine — dus deploy en `d1 execute --remote` gebruiken per constructie dezelfde.
+- **DE WEIGERING WAS TRANSIENT, en dat is met de logs hard te maken.** Op de dag van de mislukking
+  raakte `--remote` het D1-`/query`-endpoint **twaalf keer met `OK 200`** (07:36 t/m 09:19 UTC) en
+  precies **één keer met `Forbidden 403`** (14:06:27 UTC). Vandaag: **vijf van vijf geslaagd**, plus
+  een geslaagde `d1 migrations list --remote`. Van de vijf logbestanden die ooit `7403` droegen gaan
+  er vier over D1 en nooit één over een deploy.
+- **N1 HOUDT** (één credential, dus een scope-vraag en geen configuratie-vraag). **N2 VALT op ALLEBEI
+  zijn helften**: het lag niet aan de rechten, én niet aan de account of de database — het account-id
+  `9218229b9be1015defcbacc8c430ca34` en database-id `aa302c17-915b-44cb-8823-89c416974f50` in het
+  mislukte verzoek zijn byte-voor-byte dezelfde als in de verzoeken die nu slagen.
+- **DE OORZAAK VAN DIE ENE WEIGERING IS NIET VASTGESTELD**, en dat zeg ik liever dan een verhaal te
+  verzinnen: het token-verversen gebeurt in zowel de geslaagde als de mislukte runs, dus dat
+  onderscheidt niets. Wat vaststaat is waar het NIET aan lag.
+- **MIGRATIE 0013 STAAT NOG NIET OP REMOTE — nu GEMETEN in plaats van afgeleid.**
+  `d1 migrations list cadans --remote` toont hem read-only onder "Migrations to be applied". Het is
+  een prod-handeling en die vraagt Daans akkoord; er is geen technische blokkade meer.
+- **NIEUW BESLUIT VAN DAAN, en het draagt de bouwronde: een ONGEPLANDE diepe rit kan de drempelwaarde
+  alleen OMHOOG bijstellen. Omlaag kan uitsluitend na een test die de renner BEWUST is aangegaan.**
+  GROND: geen trainer verlaagt een drempel op een slechte dag. En de kalibratie van gisteren liet zien
+  dat er geen herkenner te ijken viel — 0 van 73 ritten op IF ≥ 90 in twee kwartalen (punt 77).
+  **Daarmee vervalt de behoefte aan een gekozen drempel**: de app vergelijkt met de staande waarde.
+  Dit besluit vervangt de open vraag die het vorige blok nog stelde over de richting van het voorstel.
+- **NUL MUTATIES.** Geen migratie, geen deploy, geen schrijfactie op remote D1, geen nieuw token. De
+  enige remote-aanroepen waren SELECT's en een `migrations list`. **Geen enkele credential-waarde
+  staat in dit blok, in het rapport of in een commit** — alleen namen en vindplaatsen.
+- **VLOEREN: lees ze zelf uit de suite.** Neem geen getal over uit een blok.
+- **OPENSTAAND, elk item opnieuw te greppen in `docs/ROADMAP.md`:** 32 · 34 (alleen (d)) · 35 · 48 ·
+  49 · 51 (alleen (3)) · 53 · 54 · 56 · 61 · 63 · 64 · 65 (alleen de REPARATIE) · 66 · 67 · 68 · 69 ·
+  71 · 72 · 74 · 75 · 77.
+
+FOCUS VOLGENDE CHAT, in deze volgorde:
+1. **MIGRATIE 0013 OP REMOTE.** Punt 76 is ingetrokken en er is geen blokkade meer; wat rest is de
+   handeling zelf, met Daans akkoord en een gemeten weg terug vooraf. Loopt hij tegen die ene
+   weigering aan, dan is OPNIEUW PROBEREN het juiste antwoord — geen nieuw token.
+2. **DAARNA: ROADMAP punt 69 (2), het VOORSTEL BOUWEN.** M93 is een norm zonder uitvoerder: rijdt Daan
+   de aangeboden test op **2026-09-21**, dan eindigt de keten bij een gereden rit en gebeurt er niets.
+   `docs/PUNT69-BOUW.md` §6 is die ontbrekende schakel, §15 beschrijft wat eraan verandert.
+   **BOUW HEM MET DE RICHTINGSREGEL HIERBOVEN:** een ongeplande rit stelt alleen OMHOOG voor, omlaag
+   alleen na een bewust aangegane test. Poort (ii) uit §6 stap 3 vervalt. De grondstof staat er: 215
+   waarden in `activities.piek_1200_w`.
+   **HET SCHERPSTE HOUVAST:** op de enige rit met een echte maximale inspanning reproduceert M93
+   intervals' eigen schatting tot op een halve watt — `0,95 × 310 = 294,5` tegenover `rolling_ftp`
+   **295**.
+
+**DE OMGEVINGSVERKLARING BLIJFT EEN STOP-CONDITIE.** Deze ronde: pad `/c/Users/daan/Projects/cadans`,
+`git rev-parse --git-dir` en `--git-common-dir` allebei `.git` dus HOOFDCHECKOUT, branch `main`, 0
+achter en 0 vooruit op `origin/main`, versie `2.1.208 (Claude Code)`, boom schoon bij aanvang.
+Agent-discovery blijft NIET GEMETEN: deze sessie is ouder dan `.claude/agents/recon.md`.
+
+CONTEXT: Daan fietst voorlopig niet, beschikbaarheid 0, planner leeg vanaf 2026-08-09 — **dat is
+geen defect.** Daan GEBRUIKT de gedeployde app; prod is geen proefopstelling. Verse chat.
+
 STAND 2026-08-24 (ZESDE BLOK VAN DEZE DAG) — **ER IS GEEN HERKENNER, EN DAT IS DE UITKOMST.** Punt 69
 (1), meetronde met een backfill. Geen bouw, geen deploy. **De ronde heeft twee keer haar eigen
 conclusie moeten terugnemen, en dat is de waarde ervan.**
@@ -31,7 +100,9 @@ conclusie moeten terugnemen, en dat is de waarde ervan.**
 - **DE BACKFILL IS GEDRAAID, met akkoord.** 222 verzoeken (harde bovengrens 230, GOOIT), **215
   waarden**, 1 rit zonder 1200-punt (duurt 8 minuten), 6 mislukt, **216 rijen weggeschreven**, 6 open
   en herstartbaar. Migratie **0013** (`piek_1200_w` plus `piek_gehaald_op` op `activities`) is LOKAAL
-  toegepast; **remote niet — punt 76, het token mist de `d1`-scope.**
+  toegepast; ~~**remote niet — punt 76, het token mist de `d1`-scope.**~~ **DIE GROND IS ONJUIST, zie
+  het bovenste blok: het token draagt `d1:write` wél. 0013 staat nog steeds niet op remote, maar
+  omdat het een prod-handeling is die Daans akkoord vraagt — niet omdat er iets stuk is.**
 - **DE MEETKETEN IS ONAFHANKELIJK GEVALIDEERD.** Beide gecachte vensters wijzen op `secs = 1200` een
   rit aan, en diezelfde rit draagt in `activities` exact dezelfde waarde — twee treffers op twee. Op
   het 90d-venster is de dekking 50 van 50 en daarmee sluitend. Dekking totaal **215 van 222 = 96,85
@@ -79,92 +150,6 @@ waarden in `activities.piek_1200_w`, plus intervals' eigen modellen als tweede r
 **HET SCHERPSTE HOUVAST:** op de enige rit met een echte maximale inspanning reproduceert M93
 intervals' eigen schatting tot op een halve watt — `0,95 × 310 = 294,5` tegenover `rolling_ftp` **295**.
 **EN LET OP PUNT 76:** migratie 0013 staat lokaal en moet nog naar remote.
-
-**DE OMGEVINGSVERKLARING BLIJFT EEN STOP-CONDITIE.** Deze ronde: pad `/c/Users/daan/Projects/cadans`,
-`git rev-parse --git-dir` en `--git-common-dir` allebei `.git` dus HOOFDCHECKOUT, branch `main`, 0
-achter en 0 vooruit op `origin/main`, versie `2.1.208 (Claude Code)`, boom schoon bij aanvang.
-Agent-discovery blijft NIET GEMETEN: deze sessie is ouder dan `.claude/agents/recon.md`.
-
-CONTEXT: Daan fietst voorlopig niet, beschikbaarheid 0, planner leeg vanaf 2026-08-09 — **dat is
-geen defect.** Daan GEBRUIKT de gedeployde app; prod is geen proefopstelling. Verse chat.
-
-STAND 2026-08-24 (VIJFDE BLOK VAN DEZE DAG) — **EEN LIVE DEFECT IS WEG EN PUNT 69 IS ONTBLOKT.**
-Punt 73, kleine reparatieronde. De doel-wissel-knop deed sinds zijn bouw niets en zei niets; dat is
-gerepareerd, getest en uitgerold.
-- **HET DEFECT, in één zin.** `PUT /api/settings` weigerde een expliciete `null` met een 400, terwijl
-  het wire-type `Partial<SettingsInput>` elk veld als `T | null` typeert — de route ging tegen zijn
-  eigen gepubliceerde type in. Onder FULL-REPLACE betekent een WEGGELATEN veld al "wissen"; een
-  expliciete null hoort hetzelfde te betekenen. **De reparatie is dat en niet meer:** `numField` en
-  `strField` geven nu `null` terug, de `doelStart`-tak accepteert null, en de drie presentatie-velden
-  gebruiken `?.slice(0, 24) ?? null`.
-- **DE OMVANG WAS GROTER DAN ÉÉN KOLOM.** GEMETEN op de settings-rij: **21 kolommen, VIJF op NULL**
-  (`threshold_pace`, `fase`, `ftp_auto_update`, `weight_auto_update`, `email_digest`), en GEEN ENKELE
-  datakolom draagt `.notNull()`. Alle zestien velden die de route accepteert konden dus een 400 geven.
-  En `fase` was niet de algemene dader: de negen `numField`-poorten staan op positie 1 t/m 9 en `fase`
-  pas op 11, dus een leeggelaten `doelDuur` of `lthr` gooit eerder. Dat het hier `fase` was, is een
-  eigenschap van díe rij.
-- **ROOD GEMETEN, en dat is de kern van het bewijs.** De regressietest faalde vóór de reparatie met
-  precies `expected 400 to be 200` op een volledig settings-object met nulls — het live defect,
-  gereproduceerd in de harness. Daarna groen.
-- **ER IS GEEN ENKELE BESTAANDE TEST GEWIJZIGD**, en dat is de toets dat de semantiek niet verschoven
-  is. Full-replace staat, weglaten cleart nog steeds, en de lassing tussen `doel` en `doelStart` is
-  intact — een body met alleen `doel` wist `doelStart`, precies zoals punt 28 nodig heeft.
-- **DE WEERLEGGINGSPAS VERANDERDE HET ONTWERP, en dat is de belangrijkste opbrengst.** Ik wilde van
-  PUT een MERGE maken. Pas 1 (**4 van 4 VOLTOOID**, drie weerlegd) haalde dat onderuit: een merge
-  maakt de doel/doelStart-lassing STIL los, geen van de aanroepers heeft haar nodig, en zij kantelt
-  negen tests waar de gekozen vorm er nul kantelt. **DRIE AANROEPERS, niet één** — en de derde,
-  `tools/shots/shot.mjs`, had het probleem al opgelost: hij filtert nulls eruit en legt de reden
-  erbij uit.
-- **PAS 2 (3 van 3 VOLTOOID) WEERLEGDE DE REPARATIE NIET**, maar ving wel drie dingen: een OVERCLAIM
-  van mij (ik schreef dat de merge in `docs/UI-SYNC-SETTINGS-RECON.md` "afgewezen" was — hij staat
-  daar als OPEN BESLISPUNT), drie docstrings die het oude contract bleven verkondigen, en een gat in
-  mijn eigen regressietest (dertien van de zestien sleutels; precies de drie herschreven
-  presentatie-velden ontbraken). Alle drie rechtgezet.
-- **DE LEGE STRING IS IETS DERDES**, en dat is nu vastgepind: `""` passeert `strField` en landt als
-  `''` in D1, niet als NULL. Dat was al zo en is niet gewijzigd; de docstrings beweerden er ten
-  onrechte "geeft 400" over.
-- **NIEUW: ROADMAP PUNT 75** — er zijn **14 stille `catch`-blokken over 12 coach-kaartbestanden**, een
-  gekopieerd sjabloon, en er is GEEN gedeelde foutmelding. Deze ronde repareerde er één (de kaart waar
-  het defect zat) en liet de rest bewust staan. `coachNarrative.ts` draagt sinds nu één
-  mislukking-regel, `schrijfMisluktRegel` — het begin van het idiom, niet het einde.
-- **NIEUW: ROADMAP PUNT 76 — PROD-D1 IS NIET TE LEZEN met deze sessie.** `wrangler d1 execute
-  --remote` geeft `code 7403`; `wrangler whoami` toont een token met `workers`- en
-  `workers_scripts`-scopes maar **zonder `d1`**. Daardoor is verwachting R3 **NIET GEMETEN**: of de
-  PROD-rij ook een null-veld draagt, staat niet vast. De AFLEIDING is sterk — het formulier biedt voor
-  `fase` alleen "" (Automatisch) en "maintain", dus wie nooit "maintain" koos heeft null — maar een
-  afleiding is geen meting en wordt hier ook niet als meting gepresenteerd.
-- **M93 DRAAGT NU EEN EIGEN NUMMER.** Het factor-besluit van vorige ronde leefde als blokquote onder
-  M92; het is gepromoveerd tot **M93 (NORM)** — M92 gaat over de PLAATSING van de ijking, M93 over de
-  REKENREGEL. Tegelijk rechtgezet: die eerste versie schond **M2** (geen bestandsnamen of
-  regelnummers in de canon); de vindplaatsen staan nu in het verdict-document.
-- **DE REPARATIE IS UITGEROLD**, met Daans akkoord en niet onder auto. Nieuwe worker-versie
-  **`0fcb0ddf-1796-4084-ae6e-0062c7033a28`** (100%, `2026-08-24T14:53:25.510Z`); de weg terug is
-  VOORAF geverifieerd en luidt `npx wrangler rollback 940414c4-be95-4968-9eef-542a188db563`. Geen
-  migratie, geen D1-mutatie — remote D1 draagt onveranderd 0000 t/m 0012. Volledig in
-  `docs/PROD-STAND.md`.
-- **WAT NA DE DEPLOY NIET IS VASTGESTELD, en dat is geen detail.** CC-CHECKS 37 is opnieuw NIET
-  gedraaid (basic-auth-gate, deploy-only secret); er is alleen een NAAM-vergelijking van de bundel
-  (`assets/index-DTgN90UH.js`, gelijk aan de lokale `index.html`). En of de doel-wissel op PROD landt,
-  heb ik niet kunnen toetsen — dezelfde gate, én de kaart vuurt alleen bij een doel MET urenvloer,
-  dus niet bij `FTP`. Wat Daan moet aanklikken staat in `docs/PROD-STAND.md`.
-- **VLOEREN: lees ze zelf uit de suite.** Neem geen getal over uit een blok.
-- **OPENSTAAND, elk item opnieuw te greppen in `docs/ROADMAP.md`:** 32 · 34 (alleen (d)) · 35 · 48 ·
-  49 · 51 (alleen (3)) · 53 · 54 · 56 · 61 · 63 · 64 · 65 (alleen de REPARATIE) · 66 · 67 · 68 · 69 ·
-  71 · 72 · 74 · 75 · 76.
-
-FOCUS VOLGENDE CHAT: **ROADMAP punt 69 — HET FTP-VOORSTEL NA EEN GEREDEN TEST BOUWEN.** Alles wat het
-blokkeerde is weg: de factor staat als **M93** in de canon (95 procent van het beste
-twintigminutenvermogen, afgelezen op `secs = 1200`) en het schrijfpad werkt sinds punt 73, dus een
-goedgekeurde FTP kan landen. Het ontwerp ligt volledig in `docs/PUNT69-BOUW.md` §6.
-**WAT DIE RONDE NOG MOET OPLOSSEN, en het is allebei GEMETEN:** (1) de koppeling plan→rit is ZWAK —
-`testResultaat` leest alleen de override en raakt geen enkele activiteit; de enige koppeling is
-dezelfde kalenderdag plus een vloer van 15 fietsminuten, en bij twee ritten houdt `done.idExt` de
-LANGSTE. (2) De app kan NIET zien of er vol gereden is: een Z2-rit gaf 195 W, waaruit 185 W zou volgen
-tegen een gezette FTP van 280 — een verlaging van **34 procent**. **DE PLAUSIBILITEITSGRENS DIE DAT
-MOET VANGEN IS EEN DREMPEL EN WORDT OP DE ECHTE REEKS GEIJKT, nooit in een gesprek gekozen.** De
-backfill van ongeveer **255** per-rit-krommes (ongeveer **1,4 MB**, één verzoek per rit) levert
-daarvoor de kalibratieset en is daarmee méér dan compleetheid. Randvoorwaarden van Daan: gedoseerd,
-teller, HARDE bovengrens die GOOIT, HERSTARTBAAR, alleen lezen.
 
 **DE OMGEVINGSVERKLARING BLIJFT EEN STOP-CONDITIE.** Deze ronde: pad `/c/Users/daan/Projects/cadans`,
 `git rev-parse --git-dir` en `--git-common-dir` allebei `.git` dus HOOFDCHECKOUT, branch `main`, 0
