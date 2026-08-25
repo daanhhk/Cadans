@@ -3296,8 +3296,35 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
     De backfill is gedraaid (222 verzoeken, 215 waarden, 216 rijen, 6 open) met migratie **0013**
     lokaal toegepast en remote nog niet (punt 76). Volledig in `docs/PUNT69-BOUW.md` §13 t/m §15.
     **DE VOLGENDE IS 11d-11.**
-11d-11b. **69 (3) — DE TWEE GRENZEN IJKEN.** **DIT IS DE EERSTVOLGENDE RONDE**, en het is een
-    MEETRONDE en geen bouwronde. Poging 11d-11 stopte op V1 omdat er tóch twee getallen gekozen moeten
+11d-11c. **61 (+ 54) — DE DOELCHECK.** **DIT IS DE EERSTVOLGENDE RONDE.** Punt 69 ligt stil op een
+    besluit van Daan (weg A of weg B uit `docs/PUNT69-BOUW.md` §17) en het heeft geen zin daar nog een
+    ronde op te zetten voordat dat besluit er is. De doelcheck is bovendien het enige deel van punt 47
+    dat nooit is aangeraakt, en hij draagt een KALENDERGROND: in februari sluit het onderhoudsblok en
+    dan is de vraag of de FTP het gehouden heeft, vóór de Amstel-Gold-voorbereiding begint.
+    GEEN BACKFILL NODIG — die is gedaan. Wat er wél in de weg staat:
+    `const ALLOWED_WINDOWS = new Set<string>(["90d", "1y"]);` naast
+    `export type PowerCurveWindow = "90d" | "1y";`, terwijl `DOELEN-SPEC` §3.2 om ZES WEKEN vraagt. En
+    §3.2 draagt TWEE criteria op TWEE grootheden terwijl een venster er één levert.
+11d-11b. **69 (3) — DE TWEE GRENZEN IJKEN.** ~~**DIT IS DE EERSTVOLGENDE RONDE**~~ **GEDAAN
+    25-08-2026, GEEN CODE — de plausibiliteitsgrens is niet te leggen, en dat is een rekensom.**
+    De grens uit intervals' `powerModels` valt op vier gronden. (a) GEEN EIGEN WERKGEBIED: het
+    venstermaximum op `secs = 1200` IS de hoogste `piek_1200_w` in dat venster (gemeten, 3 van 3
+    vensters), en de hoogste modelschatting ligt daar altijd BOVEN — marge +22,4 / +15,4 / +16,1 W —
+    dus een rit BINNEN het venster kan de grens per constructie nooit raken. (b) NIET TE IJKEN: alle
+    zes kandidaatgrenzen blokkeren dezelfde ene rit en laten er nul over; tussen 249 en 294,4 ligt geen
+    enkele rit, dus de meting kan 283 niet boven 249 verkiezen (CHECK 40). (c) **OP VERSE DATA IS DE
+    BAND LEEG**: hoogste model 277 (1y) en 270 (90d) tegen een staande FTP van 280 — M94 eist boven
+    280, de grens eist onder 277, dus de functie zou NOOIT vuren. (d) CIRCULAIR: op een tweejaarsvenster
+    nemen alle vier de modellen het te beoordelen punt `(1200, 310)` als inputpunt van hun eigen fit.
+    En normatief is `powerModels` dezelfde grootheid als `rolling_ftp`, op 23-08-2026 bij naam verworpen.
+    OOK DE REEKS-VARIANT VALT: één rit overschrijdt het beste van de voorafgaande 90 dagen met meer dan
+    6 procent, en dat is juist de enige echte doorbraak (1,245×). Kalibreren vraagt twee klassen en deze
+    reeks heeft er één (punt 77).
+    W1 VALT (de datum-constante is een vermomde leeftijdsgrens; beter is de "beantwoord"-kolom SEEDEN
+    bij de migratie), W2 VALT als toets (drie oorzaken voor dezelfde nul), W3 niet uitgeput.
+    **ER LIGGEN NU TWEE WEGEN VOOR DAAN**, uitgeschreven in `docs/PUNT69-BOUW.md` §17: **A** het
+    voorstel bouwen ZONDER grens, want M10 maakt Daan zelf de plausibiliteitstoets; of **B** wachten
+    tot het ijkaanbod van **2026-09-21** een echte maximale inspanning in de reeks zet. Poging 11d-11 stopte op V1 omdat er tóch twee getallen gekozen moeten
     worden: een LEEFTIJDSGRENS (de enige vurende rit is 404 dagen oud en de poorten kennen geen
     leeftijd) en een PLAUSIBILITEITSGRENS (het voorstel van 294 W ligt 11 W boven intervals' hoogste
     eigen schatting). M93 randvoorwaarde (2) eist die tweede met zoveel woorden en schrijft voor hem op

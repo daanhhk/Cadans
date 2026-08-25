@@ -1179,4 +1179,157 @@ Punt 66 blijft dus open, en de weg ernaartoe loopt niet via deze ingreep.
 3. **BESLIS WAAR HET ANTWOORD LANDT.** Dat vraagt een kolom en dus een migratie.
 4. **LAAT §5(e) LIGGEN** tot punt 66 een weg heeft die de canon niet tegenspreekt.
 
+---
+
+## 17. DE PLAUSIBILITEITSGRENS IS NIET TE LEGGEN — en dat is meetbaar, niet gevoelsmatig
+
+Ronde van 25-08-2026, tweede poging. **Er is opnieuw geen code geschreven, en deze keer op een
+sluitende rekensom in plaats van een afweging.** §2 van de opdracht had dit geval voor-geautoriseerd:
+*"VALT ER GEEN WERKBARE GRENS TE LEGGEN, dan bouw je het voorstel NIET en meld je dat."*
+
+### Omgevingsverklaring
+
+```
+werkpad          /c/Users/daan/Projects/cadans
+git-dir          .git       git-common-dir  .git      -> HOOFDCHECKOUT, geen worktree
+branch           main       origin/main     0 achter, 0 vooruit
+HEAD bij aanvang 943ec25    boom            schoon
+claude --version 2.1.208 (Claude Code)
+migratiestand    lokaal 0000-0013 · remote 0000-0013 — GELIJK
+```
+
+Nummer: punt 69, volgorde `11d-11b`. Agent-discovery blijft **NIET GEMETEN**.
+
+### De grens uit intervals' modellen — DRIE keer onderuit, en de derde is dodelijk
+
+Het voorstel was: laat de hoogste FTP-schatting uit `powerModels` de bovengrens zijn. Die schatting
+ligt al in `power_curve_cache`, dus er is geen extra ophaling nodig. Dat klonk zuinig. Het werkt niet,
+en de reden is rekenkundig.
+
+**(1) DE GRENS HEEFT GEEN EIGEN WERKGEBIED.** Het venstermaximum op `secs = 1200` IS precies de
+hoogste `piek_1200_w` van de ritten in dat venster. Zelf nagemeten op drie vensters, alle drie gelijk:
+
+```
+1y  venster 2025-08-25..2026-08-25  n=180  curve@1200 268  = max piek   GELIJK
+90d venster 2026-05-27..2026-08-25  n= 38  curve@1200 268  = max piek   GELIJK
+42d venster 2026-07-14..2026-08-25  n= 12  curve@1200 261  = max piek   GELIJK
+```
+
+En de hoogste modelschatting ligt op elk van die vensters BOVEN `0,95 × curve@1200`:
+
+```
+1y   hoogste model 277  tegenover 0,95 x 268 = 254,6   marge +22,4 W
+90d  hoogste model 270  tegenover 0,95 x 268 = 254,6   marge +15,4 W
+42d  hoogste model 264  tegenover 0,95 x 261 = 247,9   marge +16,1 W
+```
+
+Voor élke rit BINNEN het venster geldt dus `0,95 × piek ≤ 0,95 × curve < hoogste model`. **De grens
+kan een rit in het venster nooit tegenhouden.** Hij kan alleen ritten BUITEN het venster raken — en
+dat is precies wat het startpunt al doet. Een poort zonder eigen gevallen.
+
+**(2) OP DE REEKS IS HIJ NIET TE IJKEN, alleen te bevestigen.** Van de 215 ritten vuurt er één op M94
+(294 W). Alle zes kandidaatgrenzen — 249, 266, 271, 272, 277, 283 — blokkeren precies die ene, en
+laten er precies nul over. Tussen 249 en 294,4 ligt geen enkele rit. De meting kan 283 dus niet boven
+249 verkiezen; zij geeft voor elke kandidaat hetzelfde antwoord. **Dat is geen ijking maar een
+bevestiging van een grens die elders al gekozen is** — precies wat M93 randvoorwaarde (2) uitsluit,
+en precies de vorm die CHECK 40 verbiedt: een meting die niet kan falen.
+
+**(3) EN OP VERSE DATA IS DE TOEGESTANE BAND LEEG.** Dit is de dodelijke. Op de ophaling van 24-08
+staat de hoogste van de zes modellen op **277** (1y) en **270** (90d), terwijl `settings.ftp` op
+**280** staat:
+
+```
+M94 eist    : voorstel > 280
+de grens eist: voorstel <= 277
+```
+
+**Geen enkele waarde voldoet aan allebei.** De functie zou niet zelden vuren maar NOOIT. De 283 uit
+het ontwerp bestaat alleen in de GECACHTE 90d-rij; op verse data is datzelfde model naar 253 gezakt.
+De enige kandidaat die ooit boven de staande 280 uitkwam, is ook de meest beweeglijke.
+
+**(4) EN HIJ IS CIRCULAIR.** Op een tweejaarsvenster nemen alle vier de modellen het punt
+`(1200, 310)` — de rit die beoordeeld moet worden — als INPUTPUNT van hun eigen fit. De grens wordt
+dan een functie van zijn eigen invoer, en welk model je pakt bepaalt de uitslag: ECP blokkeert, MORTON
+laat door. Dezelfde circulariteit die de code al bij naam verbiedt in `apps/web/src/lib/effect.ts:220`.
+
+**(5) NORMATIEF STAAT HIJ OOK NIET.** `powerModels` is intervals' eigen drempelschatting — dezelfde
+grootheid als `rolling_ftp`, die op 23-08-2026 BIJ NAAM is verworpen als proxy in de zin die M91
+verbiedt. En §13 van dit document legde al vast dat die grond **niet van de polariteit afhangt**: hij
+geldt even hard of de proxy het aanbod onderdrukt of aanzet. Een geblokkeerd voorstel is materieel een
+onderdrukt aanbod: geen voorstel, geen antwoord, geen zichtbare staat.
+
+### Waarom de grens ook op de reeks zelf niet te leggen was
+
+De andere weg die §2 openliet — een grens die op de reeks zelf rust — is gemeten en valt op haar eigen
+manier. Hoe ver kan één rit boven het beste van de voorafgaande periode liggen?
+
+```
+venster 90d, n=209   med 0,769   p90 0,911   p95 0,963   p99 1,008   max 1,245
+ritten boven 1,10: 1     boven 1,15: 1     boven 1,20: 1
+```
+
+Eén enkele rit overschrijdt het recente beste met meer dan 6 procent, en dat is met **1,245×** juist de
+rit die wij op vier onafhankelijke gronden voor echt houden. **Een grens die strak genoeg zit om iets
+te betekenen, verwerpt precies de enige echte doorbraak in de reeks.** Er zijn geen valse positieven om
+hem van te onderscheiden, want de reeks bevat vrijwel geen maximale inspanningen (punt 77).
+
+**Dat is de kern: kalibreren vraagt twee klassen, en deze reeks heeft er één.**
+
+### De verwachtingen
+
+| | uitkomst |
+| --- | --- |
+| **W1** — het startpunt is te dragen zonder tweede migratie en zonder nieuwe staat | **VALT** |
+| **W2** — met startpunt én grens vuurt het op nul van de 215 | **VALT als TOETS** |
+| **W3** — goedkeuren schrijft via de vorm uit punt 73 | **NIET UITGEPUT** |
+
+**W1 VALT**, en de weerleggingspas wees een betere weg. Het project draagt al een vijfvoudig idiom voor
+"dit voorstel mag niet terugkomen", en dat is ALTIJD een sleutel in DATA en nooit een constante in
+code. Erger: `datum > D` is rekenkundig identiek aan `leeftijd < (vandaag − D)` — de constante ÍS de
+leeftijdsgrens die het ontwerp zei te vermijden, en hij groeit elke dag met een dag zonder dat iemand
+dat besluit. **Het alternatief kost niets extra:** laat de migratie die er tóch komt de
+"beantwoord"-kolom SEEDEN voor elke rit die op dat moment al bestaat. Dan is het startpunt een
+datafeit in plaats van een getal in de bron.
+
+**W2 VALT ALS TOETS, en dat is een aparte vondst.** De nul die hij zou meten heeft DRIE onafhankelijke
+oorzaken — de grens, het startpunt, en de vergelijkingsreferentie — en elk is in zijn eentje
+voldoende. Een toets die één getal rapporteert waar drie oorzaken op uitkomen, onderscheidt niets. Wat
+erbij hoort is een POSITIEVE CONTROLE: dezelfde ECHTE functie, met het startpunt verzet en de grens
+uit, moet dan precies één keer vuren op een bij naam genoemde rit.
+
+**W3 is opnieuw niet uitgeput**, want er is geen goedkeurpad gebouwd.
+
+### De weerleggingspas
+
+**VOOROP GEDRAAID, vóór er een regel gebouwd was. VIER VAN DE VIER VOLTOOID, nul gestorven, alle vier
+weerlegd.**
+
+| lens | uitkomst |
+| --- | --- |
+| `grens` | **VOLTOOID** · weerlegd — de band is leeg op verse data |
+| `startpunt` | **VOLTOOID** · weerlegd — de constante is een vermomde leeftijdsgrens |
+| `nul-vuring` | **VOLTOOID** · weerlegd — drie oorzaken, één getal |
+| `schrijfpad` | **VOLTOOID** · weerlegd |
+
+**PAS 2 IS NIET GEDRAAID**: er is geen code om aan te vallen.
+
+### Wat er nu voorligt, en het is een keuze voor Daan
+
+De app kan de waarde uitrekenen. Wat zij niet kan, is zelfstandig beoordelen of die waarde geloofwaardig
+is — niet uit intervals' modellen (die kunnen het per constructie niet), en niet uit de reeks (die
+bevat maar één klasse). Er blijven twee wegen:
+
+**A. BOUW HET VOORSTEL ZONDER GRENS.** De app STELT VOOR en Daan BEVESTIGT — dat is M10, en daarmee is
+hij zelf de plausibiliteitstoets. Hij ziet de rit, de duur, het vermogen en de factor naast de staande
+waarde staan, en hij weet of hij die dag diep is gegaan. Een grens die het voorstel tegenhoudt, neemt
+hem juist dat oordeel af. Wat er dan nog nodig is: het startpunt via de geseede kolom, en de
+antwoord-kolom.
+
+**B. WACHT TOT ER EEN ECHTE TEST IN DE DATA ZIT.** Het ijkaanbod komt op **2026-09-21**. Rijdt Daan die
+test, dan draagt de reeks voor het eerst een maximale inspanning binnen het venster, en pas dan valt er
+iets te kalibreren.
+
+Deze ronde kiest niet tussen A en B — dat is een besluit over Daans eigen training, en de meting geeft
+hem de grond eronder.
+
 <!-- EINDE docs/PUNT69-BOUW.md -->
