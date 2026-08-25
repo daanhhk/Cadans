@@ -13,6 +13,78 @@ live tot cutover.
 
 ## Stand
 
+STAND 2026-08-25 (DERDE BLOK VAN DEZE DAG) — **DE PLAUSIBILITEITSGRENS IS NIET TE LEGGEN, EN DAT IS EEN
+REKENSOM.** Punt 69 (3). Opnieuw geen code, maar deze keer op een sluitend bewijs in plaats van een
+afweging — en **er ligt nu een keuze voor Daan** die de knoop doorhakt.
+- **DE GRENS UIT INTERVALS' `powerModels` HEEFT GEEN EIGEN WERKGEBIED.** Gemeten op drie vensters: het
+  venstermaximum op `secs = 1200` **IS** de hoogste `piek_1200_w` van de ritten in dat venster (3 van 3
+  gelijk). En de hoogste modelschatting ligt daar altijd BOVEN: marge **+22,4 / +15,4 / +16,1 W**. Voor
+  elke rit BINNEN het venster geldt dus `0,95 × piek ≤ 0,95 × curve < hoogste model`. **De grens kan een
+  rit in het venster per constructie nooit tegenhouden** — hij raakt alleen ritten buiten het venster,
+  en dat doet het startpunt al.
+- **EN OP VERSE DATA IS DE TOEGESTANE BAND LEEG. Dit is de dodelijke.** Ophaling van 24-08: hoogste
+  model **277** (1y) en **270** (90d), tegen een staande `settings.ftp` van **280**. M94 eist een
+  voorstel BOVEN 280; de grens eist ONDER 277. **Geen enkele waarde voldoet aan allebei — de functie
+  zou nooit vuren.** De 283 uit het ontwerp bestaat alleen in de GECACHTE 90d-rij; datzelfde model staat
+  vers op 253.
+- **NIET TE IJKEN, alleen te bevestigen.** Alle zes kandidaatgrenzen (249 · 266 · 271 · 272 · 277 · 283)
+  blokkeren dezelfde ene rit en laten er nul over; tussen 249 en 294,4 ligt geen enkele rit. De meting
+  kan 283 dus niet boven 249 verkiezen — precies wat M93 randvoorwaarde (2) uitsluit en wat CHECK 40
+  verbiedt.
+- **EN HIJ IS CIRCULAIR:** op een tweejaarsvenster nemen alle vier de modellen het te beoordelen punt
+  `(1200, 310)` als INPUTPUNT van hun eigen fit. Normatief staat hij ook niet: `powerModels` is dezelfde
+  grootheid als `rolling_ftp`, op 23-08-2026 bij naam verworpen, en die grond hangt niet van de
+  polariteit af.
+- **DE REEKS-VARIANT VALT OOK.** Eén enkele rit overschrijdt het beste van de voorafgaande 90 dagen met
+  meer dan 6 procent, en dat is met **1,245×** juist de rit die we op vier gronden voor echt houden. Een
+  grens die strak genoeg zit om iets te betekenen, verwerpt de enige echte doorbraak. **Kalibreren
+  vraagt twee klassen en deze reeks heeft er één** (punt 77).
+- **W1 VALT, en de pas wees een betere weg.** Het project draagt al een vijfvoudig idiom voor "dit
+  voorstel mag niet terugkomen", en dat is ALTIJD een sleutel in DATA, nooit een constante in code.
+  Erger: `datum > D` is rekenkundig identiek aan `leeftijd < (vandaag − D)` — de constante ÍS de
+  leeftijdsgrens die zij zei te vermijden, en groeit elke dag mee. **Het alternatief kost niets:** laat
+  de migratie die er tóch komt de "beantwoord"-kolom SEEDEN voor elke rit die dan al bestaat.
+- **W2 VALT ALS TOETS.** De nul die hij zou meten heeft DRIE onafhankelijke oorzaken — de grens, het
+  startpunt en de vergelijkingsreferentie — en elk is in zijn eentje voldoende. Er hoort een POSITIEVE
+  CONTROLE bij: dezelfde ECHTE functie, startpunt verzet en grens uit, moet dan precies één keer vuren
+  op een bij naam genoemde rit. **W3 opnieuw NIET UITGEPUT.**
+- **DE WEERLEGGINGSPAS: 4 van 4 VOLTOOID, nul gestorven, alle vier weerlegd** — vooropgedraaid, vóór er
+  een regel bestond. **Derde ronde op rij dat de pas een bouw uitspaart die niet had gewerkt.**
+- **NUL MUTATIES DEZE RONDE.** Geen migratie (lokaal en remote staan allebei op 0000 t/m 0013), geen
+  deploy, geen verzoek aan intervals.icu. De Worker draait onveranderd op
+  `0fcb0ddf-1796-4084-ae6e-0062c7033a28`.
+- **VLOEREN: lees ze zelf uit de suite.** Neem geen getal over uit een blok.
+- **OPENSTAAND, elk item opnieuw te greppen in `docs/ROADMAP.md`:** 32 · 34 (alleen (d)) · 35 · 48 ·
+  49 · 51 (alleen (3)) · 53 · 54 · 56 · 61 · 63 · 64 · 65 (alleen de REPARATIE) · 66 · 67 · 68 · 69 ·
+  71 · 72 · 74 · 75 · 77 · 78.
+
+**EERST DIT AAN DAAN VOORLEGGEN — punt 69 ligt stil tot hij kiest.** De app kan de waarde uitrekenen;
+wat zij niet kan is zelf beoordelen of die geloofwaardig is. Twee wegen, uitgeschreven in
+`docs/PUNT69-BOUW.md` §17:
+**A. BOUW HET VOORSTEL ZONDER GRENS.** De app STELT VOOR en Daan BEVESTIGT — dat is M10, en daarmee is
+hij zelf de plausibiliteitstoets. Hij ziet rit, duur, vermogen en factor naast de staande waarde, en hij
+weet of hij die dag diep ging. Een grens die het voorstel tegenhoudt, neemt hem juist dat oordeel af.
+Nodig: het startpunt via de geseede kolom, plus de antwoord-kolom — samen één migratie.
+**B. WACHT TOT ER EEN ECHTE TEST IN DE DATA ZIT.** Het ijkaanbod komt op **2026-09-21**; pas daarna
+draagt de reeks een maximale inspanning binnen het venster en valt er iets te kalibreren.
+
+FOCUS VOLGENDE CHAT: **ROADMAP punt 61 (+ 54) — DE DOELCHECK**, de tweede helft van M89 en het enige
+deel van punt 47 dat nooit is aangeraakt. Grond voor die plek: punt 69 ligt stil op Daans keuze
+hierboven, en de doelcheck draagt een KALENDERGROND — in februari sluit het onderhoudsblok en dan is de
+vraag of de FTP het gehouden heeft, vóór de Amstel-Gold-voorbereiding begint. **Geen backfill nodig**,
+die is gedaan. Wat er wél in de weg staat:
+`const ALLOWED_WINDOWS = new Set<string>(["90d", "1y"]);` naast
+`export type PowerCurveWindow = "90d" | "1y";`, terwijl `DOELEN-SPEC` §3.2 om ZES WEKEN vraagt — en §3.2
+draagt TWEE criteria op TWEE grootheden terwijl een venster er één levert.
+
+**DE OMGEVINGSVERKLARING BLIJFT EEN STOP-CONDITIE.** Deze ronde: pad `/c/Users/daan/Projects/cadans`,
+`git rev-parse --git-dir` en `--git-common-dir` allebei `.git` dus HOOFDCHECKOUT, branch `main`, 0
+achter en 0 vooruit op `origin/main`, versie `2.1.208 (Claude Code)`, boom schoon bij aanvang.
+Agent-discovery blijft NIET GEMETEN: deze sessie is ouder dan `.claude/agents/recon.md`.
+
+CONTEXT: Daan fietst voorlopig niet, beschikbaarheid 0, planner leeg vanaf 2026-08-09 — **dat is
+geen defect.** Daan GEBRUIKT de gedeployde app; prod is geen proefopstelling. Verse chat.
+
 STAND 2026-08-25 (TWEEDE BLOK VAN DEZE DAG) — **DE MIGRATIE IS GELAND, DE NORM STAAT, EN DE BOUW IS
 GESTOPT OP V1.** Punt 69 (2). Er is GEEN regel code geschreven aan het voorstel, en dat is de uitkomst:
 het ontwerp bleek tóch twee gekozen getallen nodig te hebben waar er nul begroot waren.
@@ -79,77 +151,6 @@ voorschrijft. De grondstof staat er: **215 waarden** in `activities.piek_1200_w`
 modelschattingen uit `power_curve_cache`. In dezelfde ronde te beslissen: **welke rit telt** op een dag
 met twee ritten, en **waar het antwoord landt** dat een voorstel beantwoord is — dat laatste vraagt een
 kolom en dus een migratie. Pas daarna de bouw.
-
-**DE OMGEVINGSVERKLARING BLIJFT EEN STOP-CONDITIE.** Deze ronde: pad `/c/Users/daan/Projects/cadans`,
-`git rev-parse --git-dir` en `--git-common-dir` allebei `.git` dus HOOFDCHECKOUT, branch `main`, 0
-achter en 0 vooruit op `origin/main`, versie `2.1.208 (Claude Code)`, boom schoon bij aanvang.
-Agent-discovery blijft NIET GEMETEN: deze sessie is ouder dan `.claude/agents/recon.md`.
-
-CONTEXT: Daan fietst voorlopig niet, beschikbaarheid 0, planner leeg vanaf 2026-08-09 — **dat is
-geen defect.** Daan GEBRUIKT de gedeployde app; prod is geen proefopstelling. Verse chat.
-
-STAND 2026-08-25 (EERSTE BLOK VAN DEZE DAG) — **ER IS NIETS MIS MET HET TOKEN, EN DAAN HAD GELIJK.** Diagnose-ronde, read-only:
-geen mutatie, geen migratie, geen deploy. **ROADMAP punt 76 is INGETROKKEN — mijn diagnose van
-gisteren was fout.**
-- **DE FOUT, en het is er een van mij.** Ik concludeerde dat het wrangler-token de `d1`-scope miste.
-  Dat werd een ROADMAP-punt, stond in een rapport, en blokkeerde een migratie. **Het token draagt
-  `d1:write` wél** — de grant telt **28 scopes**. Twee keer dezelfde fout in een andere vorm: eerst
-  las ik de scopes uit een met `head`/`tail` AFGEKAPTE `whoami`-uitvoer en concludeerde afwezigheid
-  uit een lijst die ik niet heel had gezien; daarna haalde ik ze uit het bestand met het patroon
-  `"[a-z_:]+"` — **dat geen CIJFERS toelaat, en `d1:write` draagt er een.** Ik zag er 23 van de 28.
-  Vastgelegd als CC-CHECKS **CHECK 42**.
-- **LANGS WELKE WEG WRANGLER AUTHENTICEERT.** Niet via een omgevingsvariabele: `CLOUDFLARE_API_TOKEN`,
-  `CLOUDFLARE_API_KEY`, `CLOUDFLARE_EMAIL`, `CLOUDFLARE_ACCOUNT_ID`, `CF_API_TOKEN` en
-  `WRANGLER_API_TOKEN` zijn **alle zes NIET GEZET**. En niet via `.dev.vars` — dat draagt alleen
-  `INTERVALS_API_KEY` en `INTERVALS_ATHLETE_ID`, en het is sowieso de verkeerde plek: dat bestand
-  vult de BINDINGS van de Worker, niet de authenticatie van wrangler zelf. Wat er wél is: een
-  **OAuth-login die wrangler zelf bewaart** in `…\.wrangler\config\default.toml` (sleutels
-  `oauth_token`, `refresh_token`, `expiration_time`, `scopes`). Dat is de ENIGE credential-bron op
-  deze machine — dus deploy en `d1 execute --remote` gebruiken per constructie dezelfde.
-- **DE WEIGERING WAS TRANSIENT, en dat is met de logs hard te maken.** Op de dag van de mislukking
-  raakte `--remote` het D1-`/query`-endpoint **twaalf keer met `OK 200`** (07:36 t/m 09:19 UTC) en
-  precies **één keer met `Forbidden 403`** (14:06:27 UTC). Vandaag: **vijf van vijf geslaagd**, plus
-  een geslaagde `d1 migrations list --remote`. Van de vijf logbestanden die ooit `7403` droegen gaan
-  er vier over D1 en nooit één over een deploy.
-- **N1 HOUDT** (één credential, dus een scope-vraag en geen configuratie-vraag). **N2 VALT op ALLEBEI
-  zijn helften**: het lag niet aan de rechten, én niet aan de account of de database — het account-id
-  `9218229b9be1015defcbacc8c430ca34` en database-id `aa302c17-915b-44cb-8823-89c416974f50` in het
-  mislukte verzoek zijn byte-voor-byte dezelfde als in de verzoeken die nu slagen.
-- **DE OORZAAK VAN DIE ENE WEIGERING IS NIET VASTGESTELD**, en dat zeg ik liever dan een verhaal te
-  verzinnen: het token-verversen gebeurt in zowel de geslaagde als de mislukte runs, dus dat
-  onderscheidt niets. Wat vaststaat is waar het NIET aan lag.
-- **MIGRATIE 0013 STAAT NOG NIET OP REMOTE — nu GEMETEN in plaats van afgeleid.**
-  `d1 migrations list cadans --remote` toont hem read-only onder "Migrations to be applied". Het is
-  een prod-handeling en die vraagt Daans akkoord; er is geen technische blokkade meer.
-- **NIEUW BESLUIT VAN DAAN, en het draagt de bouwronde: een ONGEPLANDE diepe rit kan de drempelwaarde
-  alleen OMHOOG bijstellen. Omlaag kan uitsluitend na een test die de renner BEWUST is aangegaan.**
-  GROND: geen trainer verlaagt een drempel op een slechte dag. En de kalibratie van gisteren liet zien
-  dat er geen herkenner te ijken viel — 0 van 73 ritten op IF ≥ 90 in twee kwartalen (punt 77).
-  ~~**Daarmee vervalt de behoefte aan een gekozen drempel**: de app vergelijkt met de staande
-  waarde.~~ **DIE GEVOLGTREKKING IS OP 25-08-2026 GEMETEN EN ONJUIST GEBLEKEN — zie het bovenste blok.
-  Er zijn tóch TWEE gekozen getallen nodig: een leeftijdsgrens en een plausibiliteitsgrens.** Het
-  besluit zelf staat wel, en is nu norm **M94**.
-- **NUL MUTATIES.** Geen migratie, geen deploy, geen schrijfactie op remote D1, geen nieuw token. De
-  enige remote-aanroepen waren SELECT's en een `migrations list`. **Geen enkele credential-waarde
-  staat in dit blok, in het rapport of in een commit** — alleen namen en vindplaatsen.
-- **VLOEREN: lees ze zelf uit de suite.** Neem geen getal over uit een blok.
-- **OPENSTAAND, elk item opnieuw te greppen in `docs/ROADMAP.md`:** 32 · 34 (alleen (d)) · 35 · 48 ·
-  49 · 51 (alleen (3)) · 53 · 54 · 56 · 61 · 63 · 64 · 65 (alleen de REPARATIE) · 66 · 67 · 68 · 69 ·
-  71 · 72 · 74 · 75 · 77.
-
-FOCUS VOLGENDE CHAT, in deze volgorde:
-1. **MIGRATIE 0013 OP REMOTE.** Punt 76 is ingetrokken en er is geen blokkade meer; wat rest is de
-   handeling zelf, met Daans akkoord en een gemeten weg terug vooraf. Loopt hij tegen die ene
-   weigering aan, dan is OPNIEUW PROBEREN het juiste antwoord — geen nieuw token.
-2. **DAARNA: ROADMAP punt 69 (2), het VOORSTEL BOUWEN.** M93 is een norm zonder uitvoerder: rijdt Daan
-   de aangeboden test op **2026-09-21**, dan eindigt de keten bij een gereden rit en gebeurt er niets.
-   `docs/PUNT69-BOUW.md` §6 is die ontbrekende schakel, §15 beschrijft wat eraan verandert.
-   **BOUW HEM MET DE RICHTINGSREGEL HIERBOVEN:** een ongeplande rit stelt alleen OMHOOG voor, omlaag
-   alleen na een bewust aangegane test. Poort (ii) uit §6 stap 3 vervalt. De grondstof staat er: 215
-   waarden in `activities.piek_1200_w`.
-   **HET SCHERPSTE HOUVAST:** op de enige rit met een echte maximale inspanning reproduceert M93
-   intervals' eigen schatting tot op een halve watt — `0,95 × 310 = 294,5` tegenover `rolling_ftp`
-   **295**.
 
 **DE OMGEVINGSVERKLARING BLIJFT EEN STOP-CONDITIE.** Deze ronde: pad `/c/Users/daan/Projects/cadans`,
 `git rev-parse --git-dir` en `--git-common-dir` allebei `.git` dus HOOFDCHECKOUT, branch `main`, 0
