@@ -13,6 +13,81 @@ live tot cutover.
 
 ## Stand
 
+STAND 2026-08-25 (VIERDE BLOK VAN DEZE DAG) — **HET FTP-VOORSTEL IS GEBOUWD, ZONDER REM.** Punt 69 AF.
+Daan koos weg A; de renner is zelf de plausibiliteitstoets (M10). Commit `8a9c0fa`.
+- **MIGRATIE 0014 DRAAGT DE ANTWOORD-KOLOM ÉN SEEDT HAAR.** Alles wat bij het migreren al in de tabel
+  stond geldt als beantwoord, dus de historie zwijgt en alleen wat NA de migratie binnenkomt doorloopt
+  de poorten. Dat vervangt de datum-constante uit ronde 2, die rekenkundig een MEEGROEIENDE
+  leeftijdsgrens was. Lokaal toegepast: 262 rijen, 262 geseed, 0 open. **OP REMOTE STAAT HIJ NOG NIET
+  — dat is de eerstvolgende openstaande handeling, met een eigen akkoord.** En daarna pas de deploy;
+  nooit omgekeerd.
+- **M93 RANDVOORWAARDE (2) IS BIJGEWERKT, geen nieuw nummer** (M3: niets hernummerd). De eis van een
+  plausibiliteitsgrens is VERVALLEN, met de meting als grond en herkomst-etiket BELEID. Wat de rem
+  moest tegenhouden zit van twee kanten dicht: de LAGE kant door M94, de HOGE kant door de bevestiging
+  van de renner. Heropening staat erbij: komt er ooit een reeks mét gemerkte maximale inspanningen,
+  dan is de grens opnieuw te overwegen.
+- **DE POORT VUURT VANDAAG NIETS, en dat hoort zo.** Alles is geseed, de staande waarde is 280, en er
+  is geen openstaande rit die daarboven uitkomt. Eerstvolgende gelegenheid: het ijkaanbod van
+  **2026-09-21**. Verwacht dus GEEN kaart op het scherm na de deploy.
+- **PAS 1 VOND HET ONTWERPGAT:** `piek_1200_w` had GEEN enkele runtime-schrijver — alleen een handmatig
+  script met `--local` hardcoded — dus het voorstel zou na deployment permanent inert zijn geweest, op
+  remote vanaf dag één. Nu `workers/api/src/integrations/ritpiek.ts`, 5 ritten per sync-ronde,
+  nieuwste eerst, NIET-FATAAL achter de sync.
+- **PAS 2, op de GEBOUWDE code, hield VIER gebreken over.** 5 van 5 lenzen VOLTOOID, nul gestorven, 20
+  bevindingen, 4 weerlegd. (1) De kaart noemde de DAG niet, terwijl de keuze op de HOOGSTE piek gaat en
+  de getoonde rit dus niet de laatste hoeft te zijn; de terugval "je laatste rit" was een
+  recentheidsclaim die de selectie niet waarmaakt (M55). Het oordeel van de renner is de enige rem die
+  dit ontwerp nog heeft, en hij kon hem niet bedienen. (2) Goedkeuren schreef in TWEE losse statements:
+  een halve val maakte de foutmelding onwaar én zette de rit klem achter een 409 die nooit meer opengaat
+  — nu één `db.batch`. (3) De vuller kende geen verschil tussen een 429 en een VERWIJDERDE rit, dus vijf
+  dode ritten konden zijn venster van vijf permanent blokkeren, geruisloos. (4) Een docstring beweerde
+  dat een goedgekeurd voorstel een IJKING is terwijl ik in dezelfde ronde het tegendeel vastlegde.
+- **VISUELE VERIFICATIE VING EEN VIJFDE die GEEN toets kon zien.** `activities.datum` draagt een VOLLE
+  tijdstempel en `datumKort_` matcht op een ANKERD patroon, dus de kaart las "Op 2026-08-24T09:12:00".
+  De unit-toetsen én de 215-rij-fixture dragen allemaal KALE datums — een fixture die netter aanlevert
+  dan de tabel maakt elke toets erop blind voor precies dat verschil. Gerepareerd bij de bron.
+- **BESLIST: een goedgekeurd voorstel is GEEN vierde meetgelegenheid-bron.** `laatsteGelegenheid` meet
+  of er een MAXIMUM gezet is, niet of de WAARDE klopt, en de voorstel-poort eist geen maximale
+  inspanning. Goedkeuren betekent "mijn getal stond verkeerd", niet "ik ging vol" — dezelfde grens die
+  M91 trekt, andersom. Grond vastgelegd bij `MetingBron` in `apps/web/src/lib/effect.ts`.
+- **EEN ZIN OM AAN DAAN VOOR TE LEGGEN, en ik heb hem NIET stilzwijgend veranderd.** Op hetzelfde scherm
+  staat de ijk-staat-regel "Ik heb je drempel nog nooit gemeten", en die blijft na een goedkeuring
+  staan. Dat is de bedoelde uitwerking van het besluit hierboven en letterlijk waar, maar het leest
+  wrang onder een kaart waarin de app net 295 watt uit een rit overnam. Gladstrijken vraagt precies het
+  besluit dat op gronden is afgewezen. Zie `docs/PUNT69-BOUW.md` §18.11.
+- **PUNT 66 BLIJFT OPEN.** Dit punt lost het pas op zodra er werkelijk een goedkeuring is geweest.
+- **CHECK 43 ERBIJ**, conditie ALTIJD: schrijf je een string die de gebruiker een OORDEEL laat vellen,
+  controleer dan of elke grootheid die hij daarvoor nodig heeft ook in die zin staat — en of geen
+  aanwijzend woord ("die dag") naar iets wijst dat de zin niet noemt.
+- **NUL DEPLOYS, NUL REMOTE-MUTATIES, NUL verzoeken aan intervals.icu.** De Worker draait onveranderd
+  op `0fcb0ddf-1796-4084-ae6e-0062c7033a28`. De lokale zaai voor de visuele controle is teruggedraaid:
+  262 rijen, `settings.ftp` weer op 280.
+- **VLOEREN: lees ze zelf uit de suite.** Neem geen getal over uit een blok.
+- **OPENSTAAND, elk item opnieuw te greppen in `docs/ROADMAP.md`:** 32 · 34 (alleen (d)) · 35 · 48 ·
+  49 · 51 (alleen (3)) · 53 · 54 · 56 · 61 · 63 · 64 · 65 (alleen de REPARATIE) · 66 · 67 · 68 · 71 ·
+  72 · 74 · 75 · 77 · 78.
+
+FOCUS VOLGENDE CHAT: **ROADMAP punt 61 (+ 54) — DE DOELCHECK**, de tweede helft van M89 en het enige
+deel van punt 47 dat nooit is aangeraakt. Die focus stond al in het vorige blok en punt 69 blokkeert
+hem niet meer. Kalendergrond: in februari sluit het onderhoudsblok en dan is de vraag of de FTP het
+gehouden heeft, vóór de Amstel-Gold-voorbereiding begint. **Geen backfill nodig.** Wat er wél in de weg
+staat: `const ALLOWED_WINDOWS = new Set<string>(["90d", "1y"]);` naast
+`export type PowerCurveWindow = "90d" | "1y";`, terwijl `DOELEN-SPEC` §3.2 om ZES WEKEN vraagt — en
+§3.2 draagt TWEE criteria op TWEE grootheden terwijl een venster er één levert.
+
+**EERST AFMAKEN WAT HIER OPENSTAAT:** migratie 0014 op remote D1, daarna de deploy. Beide vragen een
+expliciet akkoord van Daan en draaien niet onder auto.
+
+**DE OMGEVINGSVERKLARING BLIJFT EEN STOP-CONDITIE.** Deze ronde: pad `/c/Users/daan/Projects/cadans`,
+`git rev-parse --git-dir` en `--git-common-dir` allebei `.git` dus HOOFDCHECKOUT, branch `main`, 0
+achter en 0 vooruit op `origin/main` bij aanvang, boom schoon bij aanvang, HEAD `c081dce`.
+`daanhhk/training` staat op `3e8090a` met een SCHONE gevolgde boom; er staan daar wel vier ONGEVOLGDE
+mappen (`_import-design/`, `_import-design-2/`, `_import-design-4/`, `design_handoff_cadans/`) van 07
+en 08-06-2026 — twee maanden ouder dan deze sessie en niet door een ronde gemaakt.
+
+CONTEXT: Daan fietst voorlopig niet, beschikbaarheid 0, planner leeg vanaf 2026-08-09 — **dat is
+geen defect.** Daan GEBRUIKT de gedeployde app; prod is geen proefopstelling.
+
 STAND 2026-08-25 (DERDE BLOK VAN DEZE DAG) — **DE PLAUSIBILITEITSGRENS IS NIET TE LEGGEN, EN DAT IS EEN
 REKENSOM.** Punt 69 (3). Opnieuw geen code, maar deze keer op een sluitend bewijs in plaats van een
 afweging — en **er ligt nu een keuze voor Daan** die de knoop doorhakt.
@@ -76,81 +151,6 @@ die is gedaan. Wat er wél in de weg staat:
 `const ALLOWED_WINDOWS = new Set<string>(["90d", "1y"]);` naast
 `export type PowerCurveWindow = "90d" | "1y";`, terwijl `DOELEN-SPEC` §3.2 om ZES WEKEN vraagt — en §3.2
 draagt TWEE criteria op TWEE grootheden terwijl een venster er één levert.
-
-**DE OMGEVINGSVERKLARING BLIJFT EEN STOP-CONDITIE.** Deze ronde: pad `/c/Users/daan/Projects/cadans`,
-`git rev-parse --git-dir` en `--git-common-dir` allebei `.git` dus HOOFDCHECKOUT, branch `main`, 0
-achter en 0 vooruit op `origin/main`, versie `2.1.208 (Claude Code)`, boom schoon bij aanvang.
-Agent-discovery blijft NIET GEMETEN: deze sessie is ouder dan `.claude/agents/recon.md`.
-
-CONTEXT: Daan fietst voorlopig niet, beschikbaarheid 0, planner leeg vanaf 2026-08-09 — **dat is
-geen defect.** Daan GEBRUIKT de gedeployde app; prod is geen proefopstelling. Verse chat.
-
-STAND 2026-08-25 (TWEEDE BLOK VAN DEZE DAG) — **DE MIGRATIE IS GELAND, DE NORM STAAT, EN DE BOUW IS
-GESTOPT OP V1.** Punt 69 (2). Er is GEEN regel code geschreven aan het voorstel, en dat is de uitkomst:
-het ontwerp bleek tóch twee gekozen getallen nodig te hebben waar er nul begroot waren.
-- **MIGRATIE 0013 STAAT OP REMOTE**, met Daans akkoord, niet onder auto, **en in ÉÉN poging** — geen
-  spoor van de transiente weigering van eergisteren. VÓÓR: 0013 open, `activities` 19 kolommen, 255
-  rijen (215 fietsritten). NA: "No migrations to apply!", **21 kolommen**, 255 rijen (215 fietsritten),
-  `met_piek` 0 — precies de verwachte stand, want de backfill draaide alleen lokaal. Weg terug vooraf
-  gemeten: D1 Time Travel, bookmark `0000012f-00000000-000050d2-4de266acc7b50e97248a245a7c7729b0`.
-  **Hiermee is de laatste divergentie tussen lokaal en prod gesloten**: remote draagt 0000 t/m 0013.
-- **NIEUWE NORM M94:** een ONGEPLANDE inspanning stelt de drempelwaarde alleen OMHOOG bij; omlaag kan
-  uitsluitend na een inspanning die de renner BEWUST als test is aangegaan. Herkomst BELEID. **Erbij
-  vastgelegd dat M94 nog NIET uitvoerbaar is** — zie punt 78 — want de app kan die twee niet scheiden.
-  Dat is een beperking van de UITVOERING en geen versoepeling van de norm (M5).
-- **V1 VALT, en dat stopte de bouw.** Twee getallen blijken nodig. (1) **EEN LEEFTIJDSGRENS**: de enige
-  rit die vuurt is **404 dagen oud**, en de poorten kennen geen leeftijd — bij oplevering zou de app
-  dus meteen een verhoging voorstellen op grond van een rit van ruim een jaar terug. `piek_gehaald_op`
-  helpt niet: die staat bij **alle 216** ritten op dezelfde dag. (2) **EEN PLAUSIBILITEITSGRENS**: dat
-  voorstel van **294 W** ligt **11 W boven de hoogste van intervals' zes eigen modelschattingen**
-  (MS_2P 283) en 17 W boven de jaarschatting (277). M93 randvoorwaarde (2) eist die grens én schrijft
-  voor hem op de ECHTE reeks te ijken — dus niet in een bouwronde. Mijn eigen §6 eiste haar al als
-  poort (iii); het ontwerp dat ik daarna maakte had haar laten vallen in de veronderstelling dat de
-  richtingsregel haar verving. **Dat doet zij niet: die dekt alleen de OMLAAG-kant.**
-- **V3 VALT ook, maar de vuring is TERECHT.** 1 van 215 in plaats van 0, en het is
-  `De Ronde Venen - FTP build up` (88 min, IF 92,22, piek 310 W → voorstel 294 W). Vier onafhankelijke
-  signalen wijzen die rit aan: hoogste piek van de reeks met **39 W** voorsprong, de grootste
-  `rolling_ftp`-sprong, een naam die de inspanning benoemt, en IF 92,22. De premisse onder V3 was te
-  ruim — punt 77 mat nul maximale inspanningen in de laatste twee KWARTALEN, niet in de hele reeks.
-  **De marge-structuur is bovendien schoon:** de nummer twee ligt 28 W ONDER de staande waarde en er
-  is geen rit binnen 5 W aan weerskanten, dus de poort staat nergens op een mesrand.
-- **POORT 3 IS GEEN POORT (punt 78).** `day_state` draagt **6 rijen**, alle tussen 2026-07-14 en
-  2026-07-22, over 394 dagen met 209 fietsdagen. Elke rit geldt dus als ongepland — ook die "FTP build
-  up" — en de meest test-achtige rit van de reeks (20 min binnen op **IF 100,77**) zou juist als
-  ongepland geweigerd worden. M94 klapt op deze data dicht tot "alleen omhoog".
-- **OP 44 DAGEN IS NIET BEPAALD WELKE RIT TELT**, en het bestaande idiom kiest gemeten de verkeerde: de
-  LANGSTE rit wint, maar op 2025-07-08 draagt die piek 184 tegen 240, en op 2025-07-11 173 tegen 249.
-- **§5(e) IS NIET GEBOUWD, en dat is een botsing tussen de opdracht en de canon.** De opdracht vroeg de
-  meetgelegenheid aan de GOEDKEURING te hangen; `TRAININGSMODEL` §13 zegt verbatim dat een reeds gedane
-  maximale inspanning het aanbod zonder vraag laat vervallen, en dat staat als poort (7) in
-  `testvoorstel.ts`. Hang je het om, dan vraagt de app opnieuw om een test die net gereden is terwijl
-  dezelfde paragraaf elke herkansing uitsluit. **82 `it`-blokken** staan bovendien op het huidige
-  gedrag. Punt 66 blijft open.
-- **DE WEERLEGGINGSPAS: 4 van 4 VOLTOOID, nul gestorven, alle vier weerlegd** — en hij draaide VOOROP,
-  vóór er een regel gebouwd was. Zonder die pas was hier een voorstel gebouwd dat op dag één een
-  verhoging had voorgesteld op een rit van 404 dagen oud. Pas 2 is niet gedraaid: er is geen code om
-  aan te vallen.
-- **NUL DEPLOYS.** De Worker draait onveranderd op `0fcb0ddf-1796-4084-ae6e-0062c7033a28`. Nul
-  verzoeken aan intervals.icu deze ronde.
-- **VLOEREN: lees ze zelf uit de suite.** Neem geen getal over uit een blok.
-- **OPENSTAAND, elk item opnieuw te greppen in `docs/ROADMAP.md`:** 32 · 34 (alleen (d)) · 35 · 48 ·
-  49 · 51 (alleen (3)) · 53 · 54 · 56 · 61 · 63 · 64 · 65 (alleen de REPARATIE) · 66 · 67 · 68 · 69 ·
-  71 · 72 · 74 · 75 · 77 · 78.
-
-FOCUS VOLGENDE CHAT: **ROADMAP 11d-11b — punt 69 (3), DE TWEE GRENZEN IJKEN. Dat is een MEETRONDE en
-geen bouwronde.**
-
-**DIT WIJKT AF VAN DE PROMPT, die de DEPLOY als focus voorschreef.** Die focus ging ervan uit dat het
-voorstel gebouwd zou zijn; dat is niet gebeurd, dus er is niets om uit te rollen. De reparatie van punt
-73 staat trouwens al sinds 24-08 live.
-
-Wat die meetronde moet opleveren: (1) een **LEEFTIJDSGRENS** — hoe oud mag een rit zijn en toch een
-voorstel dragen; (2) een **PLAUSIBILITEITSGRENS** — hoeveel mag een voorstel afwijken van wat de reeks
-en intervals' eigen modellen dragen. Allebei op de ECHTE reeks geijkt, zoals M93 randvoorwaarde (2)
-voorschrijft. De grondstof staat er: **215 waarden** in `activities.piek_1200_w` plus zes
-modelschattingen uit `power_curve_cache`. In dezelfde ronde te beslissen: **welke rit telt** op een dag
-met twee ritten, en **waar het antwoord landt** dat een voorstel beantwoord is — dat laatste vraagt een
-kolom en dus een migratie. Pas daarna de bouw.
 
 **DE OMGEVINGSVERKLARING BLIJFT EEN STOP-CONDITIE.** Deze ronde: pad `/c/Users/daan/Projects/cadans`,
 `git rev-parse --git-dir` en `--git-common-dir` allebei `.git` dus HOOFDCHECKOUT, branch `main`, 0
