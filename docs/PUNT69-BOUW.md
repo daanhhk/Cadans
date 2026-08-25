@@ -1018,4 +1018,165 @@ maakt de app stil in precies het geval waarin er iets te zeggen valt (M91).
 **EN WAT DEZE RONDE TERLOOPS HEEFT OPGELOST:** punt 61, de doelcheck, stond geblokkeerd op de
 ontbrekende grondstof — het beste twintigminutenvermogen per rit over een venster. Die staat er nu.
 
+---
+
+## 16. DE BOUW IS GESTOPT OP V1 — er moet tóch een getal gekozen worden
+
+Ronde van 25-08-2026. **De migratie is geland, de norm is vastgelegd, en het voorstel is NIET
+gebouwd.** V1 viel om, en zijn eigen clausule schrijft dan stoppen voor: *"VALT als er toch een getal
+gekozen moet worden; dan stop je, want een drempel wordt op de echte reeks geijkt en niet in een
+bouwronde bedacht."*
+
+### Omgevingsverklaring
+
+```
+werkpad          /c/Users/daan/Projects/cadans
+git-dir          .git       git-common-dir  .git      -> HOOFDCHECKOUT, geen worktree
+branch           main       origin/main     0 achter, 0 vooruit
+HEAD bij aanvang 3664e67    boom            schoon
+claude --version 2.1.208 (Claude Code)
+```
+
+Nummer: punt 69, volgorde `11d-11`. Agent-discovery blijft **NIET GEMETEN**.
+
+### De migratie op remote — GEDAAN
+
+Met Daans akkoord, niet onder auto, en in één poging geslaagd.
+
+```
+VÓÓR   0013 open · activities 19 kolommen · 255 rijen (215 fietsritten)
+NA     "No migrations to apply!" · activities 21 kolommen · 255 rijen (215 fietsritten)
+       piek_1200_w en piek_gehaald_op bestaan · met_piek 0 (de backfill draaide alleen lokaal)
+weg terug, VOORAF gemeten: D1 Time Travel, bookmark
+       0000012f-00000000-000050d2-4de266acc7b50e97248a245a7c7729b0
+```
+
+**Daarmee is de laatste divergentie tussen lokaal en prod gesloten.** Rij-aantal en bestaande waarden
+zijn ongewijzigd; de ingreep was puur additief.
+
+### V1 — VALT. Er zijn TWEE getallen nodig, niet nul
+
+Het ontwerp leunde erop dat de richtingsregel elke drempel overbodig maakt: alles hangt op een
+vergelijking met de staande waarde. **Op Daans eigen data klopt dat niet, en het gat is groot.**
+
+**(a) DE POORTEN KENNEN GEEN LEEFTIJD, en dat is meteen fataal.** De enige rit die vuurt is
+`De Ronde Venen - FTP build up` van 2025-07-17 — **404 dagen oud**. Alle drie de poorten laten hem
+door: het doel is FTP, er is een waarde op `secs = 1200`, en 294 W is hoger dan de staande 280. **Bij
+oplevering zou de app dus onmiddellijk voorstellen om de drempelwaarde te verhogen op grond van een
+rit van meer dan een jaar geleden.**
+
+En het enige tijdstempel dat er is, helpt niet: `piek_gehaald_op` staat bij **alle 216** opgehaalde
+ritten op dezelfde dag, `2026-08-24`. Die kolom kan een verse rit niet van een backfill-rit
+onderscheiden. Er moet dus een LEEFTIJDSGRENS bij — en dat is een getal.
+
+**(b) HET VOORSTEL IS BOVENDIEN ONGELOOFWAARDIG, en dat is precies wat M93 randvoorwaarde (2) moet
+vangen.** De 294 W ligt boven élke schatting die intervals zelf op dezelfde data maakt:
+
+```
+venster 1y   FFT_CURVES 277 · ECP 271
+venster 90d  MS_2P 283 · FFT_CURVES 272 · ECP 266 · MORTON_3P 249
+voorstel     294        -> 11 W boven de hoogste van de zes, 17 W boven de jaarschatting
+```
+
+Mijn eigen §6 eiste die grens als poort (iii) — *"een plausibiliteitsgrens, want anders vuurt §5(3)"*
+— en het ontwerp dat ik daarna maakte had haar laten vallen, in de veronderstelling dat de
+richtingsregel haar verving. Dat doet zij niet: **de richtingsregel dekt alleen de OMLAAG-kant. Naar
+boven staat er niets tussen.**
+
+**Twee grenzen dus, allebei een gekozen getal, en M93 zegt met zoveel woorden dat zo'n grens op de
+echte reeks geijkt wordt en nooit in een gesprek. Daarom stopt de bouw hier.**
+
+### En nog drie dingen die eerst opgelost moeten worden
+
+**(c) POORT 3 IS GEEN POORT.** M94 onderscheidt ONGEPLAND van BEWUST AANGEGAAN, maar dat onderscheid
+staat niet in de gegevens: `day_state` draagt **6 rijen**, alle tussen 2026-07-14 en 2026-07-22, over
+een reeks van 394 dagen met 209 dagen waarop gefietst is. Elke rit geldt dus als ongepland — ook de
+rit die letterlijk "FTP build up" heet. En omgekeerd zou de meest test-achtige rit van de hele reeks
+(2026-01-13, 20 minuten binnen op IF 100,77) als ongepland geweigerd worden. **De richtingsregel klapt
+op deze data dicht tot "voorstel groter dan staande".**
+
+**(d) OP 44 DAGEN IS NIET BEPAALD WELKE RIT TELT.** Er zijn 44 dagen met twee fietsritten die allebei
+een twintigminutenwaarde dragen. Het ontwerp zegt niet welke het voorstel gebruikt, en het enige
+bestaande idiom — `mergeDone`, waar de LANGSTE rit wint — kiest stelselmatig de verkeerde:
+
+```
+2025-07-08   75 min, piek 184, IF 67,41   tegenover   64 min, piek 240, IF 83,70
+2025-07-11   72 min, piek 173, IF 62,96   tegenover   69 min, piek 249, IF 88,89
+```
+
+Dat is 56 respectievelijk 76 watt verschil, en de woon-werkrit wint.
+
+**(e) ER IS GEEN BEWAARPLAATS VOOR "DIT VOORSTEL IS BEANTWOORD".** Migratie 0013 voegt twee kolommen
+toe en geen ervan draagt een antwoord. Goedkeuren dooft zichzelf — de staande waarde stijgt naar het
+voorgestelde getal, dus de poort wordt vanzelf onwaar — maar AFWIJZEN heeft geheugen nodig, anders
+komt het voorstel bij elke laadronde terug. Hergebruik van `sync_state.ijking_*` botst bovendien met
+poort (2b): dat drietal vervalt bij een doelwissel, dus een afgewezen voorstel zou daarna terugkomen.
+Een eigen kolom vraagt een tweede migratie, en §6 van deze ronde verbiedt die.
+
+### V2 — NIET UITGEPUT
+
+Het schrijfpad uit punt 73 is niet op de proef gesteld, want er is geen goedkeurpad gebouwd. Wat
+ervoor pleit staat er wel: sinds punt 73 accepteert `PUT /api/settings` een expliciete `null`, dus een
+kaart die het volledige settings-object terugstuurt met een gewijzigde `ftp` landt zonder 400. Dat is
+een verwachting en geen meting.
+
+### V3 — VALT, en de vuring is TERECHT
+
+De regressie over alle 215 waarden geeft **1 vuring, niet 0** — tegen de staande 280 én tegen de FTP
+die op dat moment gold. V3's eigen clausule schrijft voor die rit te onderzoeken in plaats van de
+regel bij te stellen tot hij zwijgt, en dat onderzoek pleit vóór de rit:
+
+```
+2025-07-17  "De Ronde Venen - FTP build up"  88 min  IF 92,22
+piek 310 W -> voorstel 294 W   (staand 280, toen 270)
+```
+
+Vier onafhankelijke signalen wijzen dezelfde rit aan: de hoogste piek van de reeks met **39 W (14,4
+procent)** voorsprong op de nummer twee, de grootste `rolling_ftp`-sprong (+29), een naam die de
+inspanning benoemt, en een IF van 92,22. **Dit is geen vals alarm — dit is de regel die werkt.** De
+premisse onder V3 was dan ook te ruim: punt 77 mat nul maximale inspanningen in de laatste twee
+KWARTALEN, niet in de hele reeks van dertien maanden.
+
+**En de marge-structuur is opvallend schoon.** De op een na hoogste kandidaat ligt **28 W ONDER** de
+staande waarde, en er is geen enkele rit binnen 5 watt aan weerskanten. De poort staat dus nergens op
+een mesrand — wat meteen de zorg wegneemt dat er voorstellen van één watt zouden ontstaan.
+
+### De weerleggingspas
+
+**VOOROP GEDRAAID, vóór er een regel gebouwd was. VIER VAN DE VIER VOLTOOID, nul gestorven, en alle
+vier weerlegd.**
+
+| lens | uitkomst |
+| --- | --- |
+| `vals-alarm` | **VOLTOOID** · weerlegd — de 404 dagen oude rit, en 294 W boven élk model |
+| `regressie` | **VOLTOOID** · weerlegd |
+| `richting` | **VOLTOOID** · weerlegd |
+| `doorwerking` | **VOLTOOID** · weerlegd — §5(e) spreekt de canon tegen |
+
+**PAS 2 IS NIET GEDRAAID**, met dezelfde grond als eerder: er is geen code gebouwd om aan te vallen.
+
+### §5(e) MAG NIET GEBOUWD WORDEN — de opdracht botst hier met de canon
+
+De opdracht vroeg de meetgelegenheid aan de GOEDKEURING te hangen in plaats van aan het RIJDEN, om
+punt 66 op te lossen. **Dat spreekt een canon-zin tegen die vandaag al in code staat.**
+`docs/TRAININGSMODEL.md` §13, verbatim: *"Valt de opening binnen de meetinterval-afstand van een reeds
+gedane maximale inspanning, dan vervalt het aanbod zonder vraag: de drempel is dan vers en er valt
+niets te bevestigen."* Dat is poort (7) in `apps/web/src/lib/testvoorstel.ts:533-542`.
+
+Hang je de bron aan goedkeuring, dan telt een GEREDEN maar niet-goedgekeurde test niet meer als
+gedane inspanning, vervalt het aanbod niet, en vraagt de app opnieuw om een test die net gereden is —
+terwijl dezelfde paragraaf elke herkansing uitsluit. Daar komt bij dat **82 `it`-blokken** op het
+huidige gedrag staan.
+
+Punt 66 blijft dus open, en de weg ernaartoe loopt niet via deze ingreep.
+
+### Wat de volgende ronde moet doen
+
+1. **IJK DE TWEE GRENZEN OP DE ECHTE REEKS** — een leeftijdsgrens en een plausibiliteitsgrens. De
+   grondstof staat er: 215 waarden in `activities.piek_1200_w`, plus intervals' zes modelschattingen
+   als tweede referentie. M93 randvoorwaarde (2) eist dit met zoveel woorden.
+2. **BESLIS WELKE RIT TELT** op een dag met twee ritten. Niet de langste — dat is gemeten de verkeerde.
+3. **BESLIS WAAR HET ANTWOORD LANDT.** Dat vraagt een kolom en dus een migratie.
+4. **LAAT §5(e) LIGGEN** tot punt 66 een weg heeft die de canon niet tegenspreekt.
+
 <!-- EINDE docs/PUNT69-BOUW.md -->

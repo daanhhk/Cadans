@@ -621,6 +621,32 @@ staat één migratie klaar (`0013`). Dat is een prod-handeling en die vraagt jou
 woord en het is één opdracht. Loopt hij toevallig weer tegen die weigering aan, dan is opnieuw
 proberen het juiste antwoord, niet een nieuw token maken.
 
+## 2026-08-25 — MIGRATIE: 0013 op remote D1
+
+**Toegepast met Daans akkoord, niet onder auto, en in ÉÉN poging geslaagd** — geen spoor van de
+transiente weigering die de vorige ronde zag.
+
+```
+VÓÓR   0013 open · activities 19 kolommen · 255 rijen, waarvan 215 fietsritten
+NA     "No migrations to apply!" · activities 21 kolommen · 255 rijen, waarvan 215 fietsritten
+       piek_1200_w en piek_gehaald_op bestaan allebei · met_piek 0
+```
+
+`met_piek 0` is de verwachte stand: de backfill van 24-08 draaide alleen tegen de LOKALE D1, dus op
+remote zijn de twee kolommen leeg. Dat is geen gemis — de kolommen dragen daar nog niets omdat er
+nog niets is dat ze leest.
+
+**DE WEG TERUG, VOORAF gemeten en niet aangenomen:** D1 Time Travel, bookmark
+`0000012f-00000000-000050d2-4de266acc7b50e97248a245a7c7729b0`, te herstellen met
+`wrangler d1 time-travel restore cadans --bookmark=…`, bereik 30 dagen. Niet nodig gebleken.
+
+**DE INGREEP WAS PUUR ADDITIEF:** twee `ALTER TABLE … ADD COLUMN`, forward-only. Rij-aantal en
+bestaande waarden zijn na afloop ongewijzigd geverifieerd.
+
+**HIERMEE IS DE LAATSTE DIVERGENTIE TUSSEN LOKAAL EN PROD GESLOTEN.** Remote D1 draagt nu 0000 t/m
+0013, gelijk aan de repo. Er is deze ronde NIETS gedeployd — de Worker draait onveranderd op
+`0fcb0ddf-1796-4084-ae6e-0062c7033a28`.
+
 ## Wat een volgende ronde hier moet bijwerken
 
 - Elke toegepaste migratie: naam, `applied_at`, en of er backfill nodig was.

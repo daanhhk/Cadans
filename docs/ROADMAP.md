@@ -3296,7 +3296,21 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
     De backfill is gedraaid (222 verzoeken, 215 waarden, 216 rijen, 6 open) met migratie **0013**
     lokaal toegepast en remote nog niet (punt 76). Volledig in `docs/PUNT69-BOUW.md` §13 t/m §15.
     **DE VOLGENDE IS 11d-11.**
-11d-11. **69 (2) — HET VOORSTEL BOUWEN.** **DIT IS DE EERSTVOLGENDE RONDE.** M93 is vandaag een norm
+11d-11b. **69 (3) — DE TWEE GRENZEN IJKEN.** **DIT IS DE EERSTVOLGENDE RONDE**, en het is een
+    MEETRONDE en geen bouwronde. Poging 11d-11 stopte op V1 omdat er tóch twee getallen gekozen moeten
+    worden: een LEEFTIJDSGRENS (de enige vurende rit is 404 dagen oud en de poorten kennen geen
+    leeftijd) en een PLAUSIBILITEITSGRENS (het voorstel van 294 W ligt 11 W boven intervals' hoogste
+    eigen schatting). M93 randvoorwaarde (2) eist die tweede met zoveel woorden en schrijft voor hem op
+    de ECHTE reeks te ijken. De grondstof staat er: 215 waarden in `activities.piek_1200_w` plus zes
+    modelschattingen uit `power_curve_cache`.
+    IN DEZELFDE RONDE TE BESLISSEN: welke rit telt op een dag met twee ritten (44 zulke dagen; de
+    LANGSTE is gemeten de verkeerde), en waar het antwoord "dit voorstel is beantwoord" landt — dat
+    vraagt een kolom en dus een migratie.
+    **DAARNA pas de bouw.** Zie ook punt 78: zolang ONGEPLAND en BEWUST AANGEGAAN niet te scheiden
+    zijn, is M94 alleen in zijn omhoog-helft uitvoerbaar.
+11d-11. **69 (2) — HET VOORSTEL BOUWEN.** ~~**DIT IS DE EERSTVOLGENDE RONDE.**~~ **GEDAAN 25-08-2026
+    en GESTOPT OP V1, zonder code; zie 11d-11b.** Wat er wél landde: migratie 0013 op remote en norm
+    M94. M93 is vandaag een norm
     ZONDER UITVOERDER: `PUT /api/ijking` draagt alleen `blok`, `doel` en `antwoord`, en nergens staat
     een omrekening van een twintigminutenpiek naar een drempelwaarde. Rijdt Daan de test op
     2026-09-21, dan eindigt de keten bij een gereden rit en gebeurt er niets. `docs/PUNT69-BOUW.md`
@@ -3315,6 +3329,35 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
     HET SCHERPSTE HOUVAST: op de enige rit met een echte maximale inspanning reproduceert M93
     intervals' eigen schatting tot op een halve watt — `0,95 × 310 = 294,5` tegenover `rolling_ftp`
     295.
+    **POGING VAN 25-08-2026: GESTOPT OP V1, GEEN CODE.** Het ontwerp leunde erop dat de richtingsregel
+    elke drempel overbodig maakt. Gemeten dat dat niet klopt, en er zijn TWEE gekozen getallen nodig
+    waar er nul begroot waren. (1) EEN LEEFTIJDSGRENS: de enige vurende rit is **404 dagen oud** en de
+    poorten kennen geen leeftijd, dus bij oplevering zou de app meteen een verhoging voorstellen op
+    grond van een rit van ruim een jaar terug. `piek_gehaald_op` helpt niet — die staat bij alle 216
+    ritten op dezelfde dag. (2) EEN PLAUSIBILITEITSGRENS: dat voorstel van 294 W ligt **11 W boven de
+    hoogste van intervals' zes eigen modelschattingen** (MS_2P 283) en 17 W boven de jaarschatting
+    (277). M93 randvoorwaarde (2) eist die grens, en zegt erbij dat zij op de ECHTE reeks geijkt wordt
+    en nooit in een gesprek gekozen — dus niet in een bouwronde.
+    NOG DRIE DINGEN DIE EERST MOETEN: op **44 dagen** dragen twee fietsritten allebei een waarde en het
+    ontwerp zegt niet welke telt (het bestaande idiom kiest de LANGSTE, en dat is gemeten de verkeerde
+    — 184 tegen 240 op 2025-07-08, 173 tegen 249 op 2025-07-11); er is GEEN bewaarplaats voor "dit
+    voorstel is beantwoord", en die vraagt een migratie; en zie punt 78.
+    WAT ER WÉL LANDDE: migratie 0013 op remote (zie `docs/PROD-STAND.md`) en norm **M94**.
+
+78. **ONGEPLAND tegenover BEWUST AANGEGAAN is niet uit de gegevens te lezen** — open · DATA plus norm.
+    **GEMETEN 25-08-2026 in punt 69.** Norm **M94** maakt dat onderscheid — een ongeplande inspanning
+    stelt alleen OMHOOG bij, omlaag kan alleen na een bewust aangegane test — maar de app kan de twee
+    op dit moment niet scheiden. `day_state` draagt **6 rijen**, alle tussen 2026-07-14 en 2026-07-22,
+    over een reeks van 394 dagen met 209 dagen waarop gefietst is.
+    GEVOLG, en het gaat twee kanten op: élke rit geldt als ongepland, ook de rit die letterlijk
+    "FTP build up" heet en die de hoogste piek van de reeks draagt; en omgekeerd zou de meest
+    test-achtige rit van de hele reeks — 2026-01-13, 20 minuten binnen op IF 100,77, de enige rit met
+    IF ≥ 100 van 222 — als ongepland geweigerd worden. **M94 klapt op deze data dus dicht tot "alleen
+    omhoog", en de weg omlaag bestaat in de praktijk niet.**
+    DIT IS EEN BEPERKING VAN DE UITVOERING EN GEEN VERSOEPELING VAN DE NORM: de app mag niet doen alsof
+    zij het onderscheid maakt (M5). Wie M94 uitvoerbaar wil maken, moet eerst een drager verzinnen die
+    vastlegt dát een inspanning bewust als test is aangegaan — de huidige koppeling plan-naar-rit is
+    niet meer dan dezelfde kalenderdag plus een vloer van 15 fietsminuten.
 11d-9. **69** — het FTP-VOORSTEL NA EEN GEREDEN TEST. ~~**DIT IS DE EERSTVOLGENDE RONDE.**~~
     **ACHTERHAALD 24-08-2026: zie 11d-10 en 11d-11.** De factor is
     besloten (M93: 95 procent van het beste twintigminutenvermogen, afgelezen op `secs = 1200`) en het
