@@ -510,6 +510,117 @@ urenvloer (dus niet FTP) en weekuren daaronder. Staat die kaart er, dan is de to
 wisselen en de kaart te verdwijnen. Mislukt het toch, dan staat er sinds deze ronde een melding in
 plaats van stilte.
 
+## 2026-08-25 — DIAGNOSE: waarom weigerde remote D1, en wat is er mis met het token
+
+**KORTE UITKOMST: er is NIETS mis met het token, en Daans indruk was juist.** Mijn eerdere conclusie
+— "het token mist de `d1`-scope" (ROADMAP punt 76) — was ONJUIST, op twee eigen leesfouten. De
+weigering was TRANSIENT.
+
+### Langs welke weg authenticeert wrangler hier
+
+Niet via een omgevingsvariabele en niet via `.dev.vars`. Gemeten, op NAAM en zonder één waarde te
+tonen:
+
+```
+CLOUDFLARE_API_TOKEN · CLOUDFLARE_API_KEY · CLOUDFLARE_EMAIL
+CLOUDFLARE_ACCOUNT_ID · CF_API_TOKEN · WRANGLER_API_TOKEN     -> ALLE ZES NIET GEZET
+workers/api/.dev.vars  -> draagt alleen INTERVALS_API_KEY en INTERVALS_ATHLETE_ID
+```
+
+**`.dev.vars` is trouwens sowieso de verkeerde plek voor een Cloudflare-token** — dat bestand vult de
+BINDINGS van de Worker tijdens `wrangler dev`, niet de authenticatie van wrangler zelf. Er staat daar
+ook geen Cloudflare-token, dus dat is hier geen probleem; het is een valkuil die het waard is te
+noemen.
+
+Wat er wél is: een **OAuth-login die wrangler zelf bewaart**, in
+`C:\Users\daan\AppData\Roaming\xdg.config\.wrangler\config\default.toml`. Dat bestand draagt vier
+sleutels — `oauth_token`, `refresh_token`, `expiration_time` en `scopes` — en is de ENIGE
+credential-bron op deze machine. Het toegangstoken leeft één uur en wordt bij vrijwel elke aanroep
+ververst (`fetching auth token grant_type=refresh_token` staat in zowel geslaagde als mislukte runs).
+
+### Welke rechten die credential heeft
+
+**28 scopes, en `d1:write` staat erbij.** Uit hetzelfde bestand:
+
+```
+account:read · agent-memory:write · ai-search:run · ai-search:write · ai:write · artifacts:write
+browser:write · cloudchamber:write · connectivity:admin · containers:write · d1:write
+email_routing:write · email_sending:write · flagship:write · offline_access · pages:write
+pipelines:write · queues:write · secrets_store:write · ssl_certs:write · user:read · websearch.run
+workers:write · workers_kv:write · workers_routes:write · workers_scripts:write
+workers_tail:read · zone:read
+```
+
+**WAAROM IK DIT EERDER MIS HAD, twee keer.** (1) Ik las de scopes uit een `wrangler whoami`-uitvoer
+die ik met `head`/`tail` had afgekapt, en concludeerde afwezigheid uit een lijst die ik niet heel had
+gezien. (2) Toen ik ze daarna uit het bestand haalde, gebruikte ik een patroon zonder CIJFERS —
+waardoor juist `d1:write` onzichtbaar was. Twee keer dezelfde fout in een andere vorm: een conclusie
+trekken uit een onvolledig beeld zonder te toetsen of het beeld compleet was.
+
+### De volledige foutmelding, verbatim
+
+```
+-- START CF API REQUEST: POST https://api.cloudflare.com/client/v4/accounts/
+   9218229b9be1015defcbacc8c430ca34/d1/database/aa302c17-915b-44cb-8823-89c416974f50/query
+-- START CF API RESPONSE: Forbidden 403
+
+{ "error": { "text": "A request to the Cloudflare API (/accounts/9218229b9be1015defcbacc8c430ca34/
+  d1/database/aa302c17-915b-44cb-8823-89c416974f50/query) failed.",
+  "notes": [ { "text": "The given account is not valid or is not authorized to access this
+  service [code: 7403]" } ], "kind": "error", "name": "APIError", "code": 7403 } }
+```
+
+### N1 — HOUDT
+
+Er is één credential. Omdat er geen enkele omgevingsvariabele gezet is, kan zowel `wrangler deploy`
+als `wrangler d1 execute --remote` alleen de opgeslagen OAuth-login gebruiken. Deploy slaagt op
+`workers_scripts:write` uit diezelfde grant waar ook `d1:write` in staat. Het is dus geen
+configuratie-vraag met twee tokens.
+
+### N2 — VALT, en wel op ALLEBEI zijn helften
+
+De weigering kwam **niet** van de rechten (`d1:write` staat er), en **ook niet** van een verkeerde
+account of database: het account-id en het database-id in het mislukte verzoek zijn byte-voor-byte
+dezelfde als in de verzoeken die nu slagen.
+
+**HET WAS TRANSIENT, en dat is met de logs hard te maken.** Op dezelfde dag als de mislukking raakte
+`--remote` het D1-`/query`-endpoint TWAALF keer met `OK 200` (07:36 t/m 09:19 UTC) en precies ÉÉN keer
+met `Forbidden 403` (14:06:27 UTC). Vandaag: vijf van vijf geslaagd, plus een geslaagde
+`d1 migrations list --remote`. Van de vijf logbestanden die ooit `7403` droegen, gaan er vier over
+D1 (`d1 execute`, `d1 migrations list`) — verspreid over 04-08, 09-08, 21-08 en 24-08 — en nooit over
+een deploy.
+
+De OORZAAK van die ene weigering is **niet vastgesteld** en is met de beschikbare gegevens ook niet
+vast te stellen: het token-verversen gebeurt in zowel de geslaagde als de mislukte runs, dus dat
+onderscheidt niets. Wat wél vaststaat is dat het niet aan het token, de account of de database ligt.
+
+### (e) Is 0013 werkelijk niet toegepast op remote?
+
+**Vastgesteld, read-only, zonder één schrijfactie.** `wrangler d1 migrations list cadans --remote`
+antwoordt met "Migrations to be applied" en daaronder één regel: `0013_brown_sage.sql`. De migratie
+staat dus inderdaad open op remote, en dat is nu een MEETRESULTAAT in plaats van een afleiding.
+
+---
+
+### VOOR DAAN
+
+Er is niets mis met je token, en je hoefde er ook niets aan te doen — je had gelijk. Wrangler gebruikt
+de login die hij zelf bewaart nadat je ooit `wrangler login` hebt gedaan, en die login heeft alle
+rechten die nodig zijn, ook voor de database. Er staat nergens een los token dat verkeerd zou staan.
+
+Wat er gebeurde, was een eenmalige weigering van Cloudflare zelf. Op dezelfde dag ging dezelfde
+opdracht twaalf keer goed en één keer mis; vandaag gaat hij vijf van de vijf keer goed. **Mijn
+conclusie van gisteren — "het token mist een recht" — was fout, en dat lag aan mij: ik had de lijst
+met rechten twee keer onvolledig gelezen.**
+
+Er is dus geen handeling in het Cloudflare-dashboard nodig. Geen nieuw token, geen nieuwe rechten,
+niets kopiëren of ergens neerzetten.
+
+Wat er WEL nog moet gebeuren is de database-wijziging van gisteren op de echte database zetten: er
+staat één migratie klaar (`0013`). Dat is een prod-handeling en die vraagt jouw akkoord — zeg het
+woord en het is één opdracht. Loopt hij toevallig weer tegen die weigering aan, dan is opnieuw
+proberen het juiste antwoord, niet een nieuw token maken.
+
 ## Wat een volgende ronde hier moet bijwerken
 
 - Elke toegepaste migratie: naam, `applied_at`, en of er backfill nodig was.

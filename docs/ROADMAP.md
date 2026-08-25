@@ -2121,19 +2121,24 @@ punten staat onder *Gesloten — vindplaats*.
     onderscheiden. `apps/web/src/lib/coachNarrative.ts` draagt sinds punt 73 één mislukking-regel
     (`schrijfMisluktRegel`); dat is het begin van het idiom, niet het einde.
 
-76. **Het wrangler-token van de CC-sessie draagt geen `d1`-scope, dus prod-D1 is niet te LEZEN** —
-    open · TOOLING, klein maar het blokkeert metingen. GEMETEN 24-08-2026 in punt 73:
-    `npx wrangler d1 execute cadans --remote --command "SELECT ..."` geeft `code 7403`, *"The given
-    account is not valid or is not authorized to access this service"*. `npx wrangler whoami` toont
-    een OAuth-token voor account `9218229b9be1015defcbacc8c430ca34` met scopes voor `workers`,
-    `workers_scripts`, `workers_kv`, `pages` en meer — maar `d1` staat er niet tussen.
-    WAT DAT KOST: verwachting R3 van punt 73 kon niet gemeten worden (draagt de PROD-rij ook een
-    null-veld?), en elke volgende ronde die een prod-stand wil vaststellen loopt op dezelfde muur.
-    De migraties van 23-08-2026 kwamen er wél doorheen, dus de scope is sindsdien veranderd of het
-    token is opnieuw uitgegeven. Eén keer opnieuw inloggen met een token dat `d1` omvat lost het op.
-    **AANGESCHERPT 24-08-2026:** het blokkeert nu ook een MIGRATIE. `0013_brown_sage.sql` staat
-    lokaal toegepast en kon niet naar remote. Dat is geen fout van die ronde maar een openstaande
-    handeling.
+76. ~~**Het wrangler-token van de CC-sessie draagt geen `d1`-scope**~~ — **INGETROKKEN 25-08-2026: DIE
+    DIAGNOSE WAS ONJUIST.** Het token draagt `d1:write` wél. De volledige diagnose staat in
+    `docs/PROD-STAND.md`; wat ervan overblijft is een openstaande HANDELING en geen defect.
+    WAT ER ECHT AAN DE HAND WAS. Wrangler authenticeert hier via een OAuth-login die hij zelf bewaart
+    (`…\.wrangler\config\default.toml`, sleutels `oauth_token`, `refresh_token`, `expiration_time`,
+    `scopes`); er is GEEN enkele Cloudflare-omgevingsvariabele gezet en `.dev.vars` draagt alleen de
+    intervals-sleutels. Die grant telt **28 scopes en `d1:write` staat erbij**. De weigering was
+    TRANSIENT: op de dag van de mislukking raakte `--remote` het D1-`/query`-endpoint twaalf keer met
+    `OK 200` en precies één keer met `Forbidden 403`; op 25-08 slaagt dezelfde opdracht vijf van vijf
+    keer plus een `d1 migrations list --remote`.
+    **HOE DE FOUT ONTSTOND, en het was twee keer dezelfde fout van mij.** Eerst las ik de scopes uit
+    een met `head`/`tail` afgekapte `whoami`-uitvoer en concludeerde afwezigheid uit een lijst die ik
+    niet heel had gezien. Daarna haalde ik ze uit het bestand met een patroon zonder CIJFERS, precies
+    het teken dat `d1:write` draagt. Zie CC-CHECKS **CHECK 42**.
+    WAT ER OPENSTAAT: `0013_brown_sage.sql` is nog niet op remote toegepast — vastgesteld read-only
+    met `d1 migrations list --remote`, die hem als "Migrations to be applied" toont. Dat is een
+    prod-handeling en vraagt Daans akkoord. Verwachting R3 van punt 73 (draagt de PROD-rij ook een
+    null-veld?) is nu wél meetbaar en nog steeds niet gemeten.
 
 77. **ER IS IN EEN JAAR GEEN MAXIMALE TWINTIGMINUTENINSPANNING GEREDEN** — open · norm plus DATA.
     **GEMETEN 24-08-2026 in punt 69 (1), op 215 ritten met een echte twintigminutenwaarde.**
@@ -3296,13 +3301,17 @@ Zo kan geen enkel punt een sleepronde worden. Dezelfde vorm als punt 11 en punt 
     een omrekening van een twintigminutenpiek naar een drempelwaarde. Rijdt Daan de test op
     2026-09-21, dan eindigt de keten bij een gereden rit en gebeurt er niets. `docs/PUNT69-BOUW.md`
     §6 is die ontbrekende schakel.
-    DRIE DINGEN DIE ERBIJ HOREN, alle drie uit punt 69 (1): (1) bouw hem ZONDER richtingsbeperking —
-    niets in M91, M92 of M93 sluit een neerwaarts voorstel uit, en M93 randvoorwaarde (2) bestaat
-    juist omdát die in scope zijn; (2) poort (ii) uit §6 stap 3 VERVALT ("de rit hoort bij een
-    aangeboden test"); (3) de plausibiliteitsgrens is NIET "was dit een maximale inspanning" — die
-    vraag is gemeten en onbeantwoordbaar — maar een grens tegen een ONGELOOFWAARDIGE SPRONG in beide
-    richtingen. De backfill levert daarvoor 215 waarden, en intervals' eigen modellen (1y: 271 en
-    277) geven een tweede referentie.
+    DRIE DINGEN DIE ERBIJ HOREN: (1) **DE RICHTINGSREGEL, Daan-besluit van 25-08-2026 — een
+    ONGEPLANDE diepe rit stelt de drempelwaarde alleen OMHOOG bij; OMLAAG kan uitsluitend na een test
+    die de renner BEWUST is aangegaan.** GROND: geen trainer verlaagt een drempel op een slechte dag,
+    en de kalibratie liet zien dat er geen herkenner te ijken viel (punt 77: 0 van 73 ritten op
+    IF ≥ 90 in twee kwartalen). Dit vervangt wat punt 69 (1) hier nog als open liet — daar stond dat
+    niets in de canon een neerwaarts voorstel uitsluit, en dat klopt nog steeds, maar Daan sluit het
+    nu bij een ONGEPLANDE rit wél uit. (2) Poort (ii) uit §6 stap 3 VERVALT ("de rit hoort bij een
+    aangeboden test"). (3) **De behoefte aan een GEKOZEN drempel vervalt met besluit (1)**: de app
+    vergelijkt met de staande waarde in plaats van met een geijkte grens. De backfill levert de 215
+    waarden waarop dat te toetsen is, en intervals' eigen modellen (1y: 271 en 277) geven een tweede
+    referentie.
     HET SCHERPSTE HOUVAST: op de enige rit met een echte maximale inspanning reproduceert M93
     intervals' eigen schatting tot op een halve watt — `0,95 × 310 = 294,5` tegenover `rolling_ftp`
     295.
