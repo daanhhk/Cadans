@@ -21,16 +21,24 @@ volledige draaiende applicatie vervangt. Zie `docs/WERKWIJZE.md`, *Migraties en 
 | wat | waarde |
 | --- | --- |
 | D1-database | `cadans` |
-| migraties toegepast | **0000 t/m 0012**, dertien stuks, geen gaten |
-| laatste migratie | `0012_acoustic_living_mummy.sql`, toegepast `2026-08-23 17:17:43` (D1-klok, UTC) |
+| migraties toegepast | **0000 t/m 0014**, vijftien stuks, geen gaten (`SELECT COUNT(*) FROM d1_migrations` = 15) |
+| laatste migratie | `0014_mean_reaper.sql`, toegepast `2026-08-25 11:38:47` (D1-klok, UTC) |
 | openstaande migraties | **geen** |
 | Worker gedeployd | **JA** |
-| live versie | `940414c4-be95-4968-9eef-542a188db563` |
-| live sinds | `2026-08-24T05:35:36.574Z` |
-| live COMMIT | `46f2103ed7921ca12b9e855e3b2e46ceac204d88` — de eerste regel in dit logboek die de commit WEL noteert |
-| terugvaldoel | `e994c768-3d73-4aec-876b-b614b7fe1302` (de vorige live versie, sinds 2026-08-10) |
-| deployments totaal | **minimaal 11, totaal niet gemeten** — de CLI toont er tien, zie hieronder |
-| Worker loopt achter op main | **NEE, sinds 24-08-2026** — bij was hij tot dan ruim twee weken achter |
+| live versie | `53554724-b9e0-4558-bfd4-3edf290249c8` |
+| live sinds | `2026-08-25T11:40:11.962Z` |
+| live COMMIT | `ccaa4c6d4497da0ea898977272f374539dd1b383` |
+| terugvaldoel | `0fcb0ddf-1796-4084-ae6e-0062c7033a28` (de vorige live versie, sinds 2026-08-24T14:53) |
+| deployments totaal | **minimaal 13, totaal niet gemeten** — de CLI toont een venster, zie hieronder |
+| Worker loopt achter op main | **NEE** |
+| bereikbaar zonder inloggegevens | **NEE** — de hele Worker staat achter HTTP Basic (`WWW-Authenticate: Basic realm="Secure Area"`); elk pad geeft 401, ook `/api/health` |
+
+> **DEZE TABEL STOND OP 25-08-2026 EEN DEPLOY ACHTER, en dat is precies de faalwijze waarvoor dit
+> document is aangelegd.** Hij noteerde `940414c4` als live sinds `2026-08-24T05:35:36`, maar er is
+> diezelfde dag om `14:53` nóg een deploy gegaan — die van ROADMAP punt 73 — die `0fcb0ddf` live
+> zette. Dat is hier nooit bijgeschreven. Gevolg: het TERUGVALDOEL in deze tabel wees naar een versie
+> van twee deploys terug, en wie in een noodgeval op deze regel had teruggerold, had de reparatie van
+> punt 73 meegenomen in de val. Rechtgezet op de gemeten `wrangler deployments list`.
 
 > Bovenstaande tabel is de enige plek in de repo waar deze feiten staan. Werk hem bij in DEZELFDE
 > ronde waarin je er iets aan verandert; een stand die een ronde later wordt bijgewerkt is een stand
@@ -646,6 +654,67 @@ bestaande waarden zijn na afloop ongewijzigd geverifieerd.
 **HIERMEE IS DE LAATSTE DIVERGENTIE TUSSEN LOKAAL EN PROD GESLOTEN.** Remote D1 draagt nu 0000 t/m
 0013, gelijk aan de repo. Er is deze ronde NIETS gedeployd — de Worker draait onveranderd op
 `0fcb0ddf-1796-4084-ae6e-0062c7033a28`.
+
+## 2026-08-25 — MIGRATIE 0014 EN DEPLOY: het FTP-voorstel (ROADMAP punt 69)
+
+Twee handelingen, twee aparte goedkeuringen van Daan, in deze volgorde en nooit omgekeerd.
+
+**WAAROM DE VOLGORDE HIER DRAGEND IS en niet alleen netjes.** De nieuwe route `GET /api/ftp-voorstel`
+selecteert `ftp_voorstel_antwoord`. Op een database zonder die kolom geeft D1 een fout, geeft de route
+een 500, en faalt de laadslag van het schema-scherm — dus dan is niet de nieuwe functie stuk maar het
+hele scherm. Andersom kan niet misgaan: een additieve `ALTER TABLE … ADD` is onzichtbaar voor de oude
+code die er dan nog draait.
+
+### De migratie
+
+```
+VOOR : 255 rijen, 215 fietsritten, 21 kolommen, 0014 open
+NA   : 255 rijen, 215 fietsritten, 22 kolommen, "No migrations to apply!"
+       ftp_voorstel_antwoord = 'geseed' -> 255,  IS NULL -> 0
+       piek_1200_w IS NOT NULL -> 0
+```
+
+`0014_mean_reaper.sql`, `applied_at` **2026-08-25 11:38:47** (D1-klok, UTC). Drie commands uitgevoerd:
+de `ALTER TABLE`, de `UPDATE`-seed, en de bijschrijving in `d1_migrations`. Geen enkele rij gewonnen of
+verloren — dat is de toets die telt bij een migratie die óók data schrijft.
+
+**`met_piek` = 0 EN DAT IS DE VERWACHTE STAND, geen fout.** De backfill van `piek_1200_w` heeft alleen
+LOKAAL gedraaid; remote draagt die waarden niet. Ze worden voortaan door de runtime-vuller aangevuld,
+maximaal vijf ritten per sync-ronde, nieuwste eerst.
+
+**WEG TERUG, vooraf gemeten en niet achteraf bedacht:** D1 Time Travel, bookmark
+`00000134-00000000-000050d2-84dd924d1c14e1d11b43a38e477083fa`, opgehaald vóór de migratie.
+
+### De deploy
+
+```
+gebouwd  : pnpm build (assets-binding wijst naar apps/web/dist)
+gedeployd: wrangler deploy VANUIT workers/api
+versie   : 53554724-b9e0-4558-bfd4-3edf290249c8
+live om  : 2026-08-25T11:40:11.962Z, 100 procent
+commit   : ccaa4c6d4497da0ea898977272f374539dd1b383
+terugval : 0fcb0ddf-1796-4084-ae6e-0062c7033a28
+upload   : 3 van 66 assets nieuw, 335,80 KiB totaal, gzip 73,54 KiB, startup 7 ms
+```
+
+### CHECK 37 IS **NIET GEMETEN**, en dat is een meetresultaat en geen verzuim
+
+De check vraagt de live `index.html` op te halen, het asset te lezen waar hij naar wijst, en dat
+byte-voor-byte met de lokale build te vergelijken. **Dat kan vanaf hier niet:** de hele Worker staat
+achter HTTP Basic — `WWW-Authenticate: Basic realm="Secure Area"` — en elk pad geeft 401, ook
+`/api/health` en `/index.html`. Ik heb geen inloggegevens en vul er per instructie ook geen in.
+
+Wat er in de plaats WEL gemeten is: `wrangler deployments list` toont versie
+`53554724-b9e0-4558-bfd4-3edf290249c8` op **100 procent**, en `wrangler deploy` meldde drie nieuwe
+assets plus geslaagde triggers. Dat toont dat de nieuwe bundel LIVE staat; het toont niet dat de
+uitgeleverde bytes gelijk zijn aan de lokale build. **Wie CHECK 37 hier ooit echt wil draaien, heeft
+de Basic-inloggegevens nodig, en die horen niet in dit document.**
+
+**WAT DAAN ZELF MOET BEKIJKEN.** Open het schema-scherm in de gedeployde app. Verwacht **GEEN**
+voorstel-kaart: alles wat er nu in `activities` staat is geseed, en er is geen openstaande rit die 95
+procent van zijn twintigminutenvermogen boven de staande 280 brengt. Blijft het scherm gewoon laden en
+staat er geen kaart, dan is dat precies goed. Verschijnt er wél een kaart, of laadt het scherm niet,
+dan is dat het signaal om terug te rollen op `0fcb0ddf-1796-4084-ae6e-0062c7033a28`.
 
 ## Wat een volgende ronde hier moet bijwerken
 
